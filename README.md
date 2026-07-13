@@ -75,5 +75,6 @@ curl --fail-with-body http://127.0.0.1:8080/actuator/health
 - [本地开发与故障排查](docs/runbooks/local-development.md)
 - [被动聊天 HTTP 契约](docs/contracts/passive-chat-http.md)
 - [Python/Java Golden Test 夹具规范](docs/contracts/golden-test-fixtures.md)
+- [Python/Java 配置兼容契约](docs/contracts/python-java-configuration.md)
 - [MVP 设计](docs/specs/2026-07-12-passive-chat-mvp-design.md)
 - [轻量 Vibe Coding 工作流](docs/vibe-coding-workflow.md)

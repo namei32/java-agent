@@ -17,7 +17,7 @@
 
 | 能力 | Python 基准位置 | Java 位置 | 状态 | 主要差距/下一步 | 数据风险 |
 | --- | --- | --- | --- | --- | --- |
-| 配置加载 | `agent/config.py`、`agent/config_models.py`、`config.example.toml` | `agent-bootstrap/.../config`、环境变量 | 部分 | 缺 `config.toml` 字段映射、未知字段保留、动态配置 | 中 |
+| 配置加载 | `agent/config.py`、`agent/config_models.py`、`config.example.toml` | `agent-bootstrap/.../config`、环境变量 | 部分 | 只读双模式 Contract 已批准；TOML Resolver、Golden 和检查入口待实现 | 中 |
 | 启动与装配 | `bootstrap/app.py`、`bootstrap/wiring.py` | `agent-bootstrap` | 部分 | 当前只装配 HTTP 被动聊天 | 低 |
 | 入站 HTTP | Dashboard/Bootstrap API | `ChatController` | 完成 | 当前只支持同步 JSON API | 低 |
 | 消息总线 | `bus/` | 无 | 未开始 | 需定义版本化入站、出站和生命周期事件 | 中 |
@@ -80,6 +80,7 @@
 
 ## 当前优先级
 
-1. 补齐 Python 配置到 Java 配置的映射和版本化消息 Contract。
-2. 完成 R2 的剩余被动聊天能力对齐设计，再进入 R3 Tool Loop。
-3. 记忆、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。
+1. 实施已批准的 Python/Java 配置兼容 Contract 与配置 Golden。
+2. 冻结版本化消息、生命周期和 Tool Contract。
+3. 完成 R2 的剩余被动聊天能力对齐设计，再进入 R3 Tool Loop。
+4. 记忆、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。
