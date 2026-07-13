@@ -1,7 +1,7 @@
 # Python/Java 配置兼容实施计划
 
 - 状态：实施中
-- 当前执行状态：Task C3 已完成，下一步为 Task C4
+- 当前执行状态：Task C4 已完成，下一步为 Task C5
 - 日期：2026-07-13
 - Spec：[Python/Java 配置兼容设计](../specs/2026-07-13-python-java-configuration-compatibility-design.md)
 - Contract：[Python/Java 配置兼容契约](../contracts/python-java-configuration.md)
@@ -59,13 +59,21 @@
 - 无效 TOML 在 Application Context、Workspace 和 SQLite 创建前失败；Post-Processor 通过 `spring.factories` 注册。
 - C3 有效 RED 为 Post-Processor、Prompt 接口和注册缺失；聚焦 GREEN 实际执行 9 Tests，全部通过。
 
-## Task C4：无副作用配置检查
+## Task C4：无副作用配置检查（已完成）
 
 - 提供配置检查入口，输出字段路径、来源、状态和诊断码。
 - 对 Secret、Prompt 和 Plugin 值执行不可绕过的脱敏。
 - 证明检查过程不创建 Workspace、SQLite、HTTP Server 或模型客户端。
 
 聚焦验收：配置检查端到端测试一次 RED、一次 GREEN。
+
+实施结果：
+
+- 增加 `--agent.config-check` 启动前检查入口，支持通过 `--agent.config-file` 显式指定配置文件。
+- 检查入口复用生产 Resolver，只输出有效性、模式、字段来源、Secret 状态、Deferred/未知路径和稳定诊断码。
+- 输出不包含 API Key、System Prompt、Plugin 值、未知字段值或 Base URL 原值。
+- 检查在 Spring Application Context 创建前结束，不启动 HTTP Server、模型客户端，也不创建 Workspace 或 SQLite。
+- C4 有效 RED 为检查命令类型缺失；聚焦 GREEN 实际执行 3 Tests，全部通过。
 
 ## Task C5：运行手册与阶段门禁
 
