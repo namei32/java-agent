@@ -668,7 +668,7 @@ class ChatServiceTest {
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`./mvnw -pl agent-application -am test -Dtest=ChatServiceTest`
+运行：`./mvnw -pl agent-application -am test -Dtest=ChatServiceTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 预期：编译失败，提示缺少用例、Port 和模型类型。
 
