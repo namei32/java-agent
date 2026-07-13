@@ -1,7 +1,7 @@
 # 最小 Tool Loop 实施计划
 
 - 状态：实施中
-- 当前执行状态：Task T2 已完成，下一步为 Task T3
+- 当前执行状态：Task T3 已完成，下一步为 Task T4
 - 日期：2026-07-13
 - Spec：[最小 Tool Loop 设计](../specs/2026-07-13-minimal-tool-loop-design.md)
 - Contract：[核心消息、生命周期与 Tool 契约](../contracts/core-message-lifecycle-tool.md)
@@ -31,13 +31,22 @@
 - 生成器连续执行两次，Tool Message、Minimal Loop 和 Manifest 的 SHA-256 分别保持一致。
 - 聚焦验收实际执行 Manifest 1 Test、Tool Golden 2 Tests，全部通过。
 
-## Task T3：Kernel Tool 与 Lifecycle 协议
+## Task T3：Kernel Tool 与 Lifecycle 协议（已完成）
 
 - 增加 Tool Definition、Call、Result、Status、Risk。
 - 扩展模型消息、请求和响应。
 - 增加生命周期事件与 Observer Port。
 
 聚焦验收：Kernel Tool Contract 测试一次 RED、一次 GREEN。
+
+实施结果：
+
+- 增加纯 JDK Tool Definition、Risk、Call、Result 和预留状态，第一阶段在构造边界拒绝非只读工具。
+- 增加递归不可变 JSON Object 快照，避免调用参数或 Schema 在构造后被外部修改。
+- 模型消息扩展为普通文本、Assistant Tool Call 和关联 Tool Result，同时保持原有文本便利构造。
+- 模型请求携带 Tool Definition，模型响应携带 Tool Call 并拒绝空响应和重复 Call ID。
+- 增加安全 Lifecycle Event 与 Observer Port，事件类型不承载消息、参数、结果或异常正文。
+- T3 有效 RED 为协议类型缺失；聚焦 GREEN 实际执行 4 Tests，全部通过。
 
 ## Task T4：Application 最小 Tool Loop
 
