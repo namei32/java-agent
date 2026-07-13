@@ -14,10 +14,22 @@
 |---|---|---|
 | Task 1–4 / 阶段 A | 已完成 | 截至 `745e7f5`，默认构建、failure Profile 和并发稳定性验证通过 |
 | Task 5–6 / 阶段 B | 已完成 | 截至 `56cef3c`；SQLite 聚合验证 19/19、完整 Reactor 33/33、failure Profile 17/17 |
-| Task 7 | 当前任务 | 从聚焦 RED 重新开始 |
-| Task 8–13 / 阶段 C–D | 待执行 | 按后续任务和阶段门禁推进 |
+| Task 7 | 已完成 | 聚焦 RED 有效；`SpringAiChatModelAdapterTest` 5/5 GREEN |
+| Task 8 | 当前任务 | 装配 Spring Boot、配置和 System Prompt |
+| Task 9–13 / 阶段 C–D | 待执行 | 按后续任务和阶段门禁推进 |
 
 恢复执行时以本节和 Git 提交为准。每完成一个任务或阶段，立即更新本表；不维护额外的任务 brief、review package、执行报告或外部进度台账。
+
+## 未解决事项
+
+以下均为不阻塞当前阶段的 Minor，由阶段审查或最终整分支审查统一裁决：
+
+- Task 2：`ConversationHistorySelector` 的字符累计使用 `int`，极端长度可能溢出；多轮顺序、轮次间孤立消息和不可修改返回值缺少专项测试。
+- Task 3：`ChatResult` 尚未校验 null session、null assistant 和 ASSISTANT 角色不变量。
+- Task 4：超大 `Duration` 测试未强约束纳秒饱和值；串行测试的 `secondStarted` 存在极小调度假阳性窗口。
+- Task 5：缺少 Schema 初始化幂等、反向损坏表，以及主键、非空、默认值和唯一约束专项测试。
+- Task 6：缺少已有 Session 更新失败的完整状态回滚测试，以及恢复游标后继续追加 ID 的专项测试。
+- Task 7：Mockito 在 JDK 21 聚焦测试中提示动态加载代理的未来兼容警告；阶段 C 审查时评估改用无代理测试替身。
 
 ## 全局约束
 
