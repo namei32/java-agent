@@ -1,0 +1,371 @@
+{
+  "cases": [
+    {
+      "expectedAfterAppend": {
+        "messages": [
+          {
+            "content": "Python 问题",
+            "extra": "{}",
+            "id": "python-demo:0",
+            "role": "user",
+            "seq": 0,
+            "session_key": "python-demo",
+            "tool_chain": null,
+            "ts": "2026-07-13T08:00:00+08:00"
+          },
+          {
+            "content": "Python 回答",
+            "extra": "{}",
+            "id": "python-demo:1",
+            "role": "assistant",
+            "seq": 1,
+            "session_key": "python-demo",
+            "tool_chain": null,
+            "ts": "2026-07-13T08:00:01+08:00"
+          },
+          {
+            "content": "Java 问题",
+            "extra": "{}",
+            "id": "python-demo:2",
+            "role": "user",
+            "seq": 2,
+            "session_key": "python-demo",
+            "tool_chain": null,
+            "ts": "2026-07-13T08:01:00+08:00"
+          },
+          {
+            "content": "Java 回答",
+            "extra": "{}",
+            "id": "python-demo:3",
+            "role": "assistant",
+            "seq": 3,
+            "session_key": "python-demo",
+            "tool_chain": null,
+            "ts": "2026-07-13T08:01:01+08:00"
+          }
+        ],
+        "schema": {
+          "messages": [
+            {
+              "defaultValue": null,
+              "name": "id",
+              "notNull": false,
+              "primaryKey": true,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "session_key",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "seq",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "INTEGER"
+            },
+            {
+              "defaultValue": null,
+              "name": "role",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "content",
+              "notNull": false,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "tool_chain",
+              "notNull": false,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "extra",
+              "notNull": false,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "ts",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "TEXT"
+            }
+          ],
+          "sessions": [
+            {
+              "defaultValue": null,
+              "name": "key",
+              "notNull": false,
+              "primaryKey": true,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "created_at",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "updated_at",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": "0",
+              "name": "last_consolidated",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "INTEGER"
+            },
+            {
+              "defaultValue": null,
+              "name": "metadata",
+              "notNull": false,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "last_user_at",
+              "notNull": false,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "last_proactive_at",
+              "notNull": false,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": "0",
+              "name": "next_seq",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "INTEGER"
+            }
+          ],
+          "uniqueMessageKeys": [
+            [
+              "session_key",
+              "seq"
+            ]
+          ]
+        },
+        "sessions": [
+          {
+            "created_at": "2026-07-13T08:00:00+08:00",
+            "key": "python-demo",
+            "last_consolidated": 0,
+            "metadata": "{\"origin\": \"python\"}",
+            "next_seq": 4,
+            "updated_at": "2026-07-13T08:01:01+08:00"
+          }
+        ]
+      },
+      "expectedInitial": {
+        "messages": [
+          {
+            "content": "Python 问题",
+            "extra": "{}",
+            "id": "python-demo:0",
+            "role": "user",
+            "seq": 0,
+            "session_key": "python-demo",
+            "tool_chain": null,
+            "ts": "2026-07-13T08:00:00+08:00"
+          },
+          {
+            "content": "Python 回答",
+            "extra": "{}",
+            "id": "python-demo:1",
+            "role": "assistant",
+            "seq": 1,
+            "session_key": "python-demo",
+            "tool_chain": null,
+            "ts": "2026-07-13T08:00:01+08:00"
+          }
+        ],
+        "schema": {
+          "messages": [
+            {
+              "defaultValue": null,
+              "name": "id",
+              "notNull": false,
+              "primaryKey": true,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "session_key",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "seq",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "INTEGER"
+            },
+            {
+              "defaultValue": null,
+              "name": "role",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "content",
+              "notNull": false,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "tool_chain",
+              "notNull": false,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "extra",
+              "notNull": false,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "ts",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "TEXT"
+            }
+          ],
+          "sessions": [
+            {
+              "defaultValue": null,
+              "name": "key",
+              "notNull": false,
+              "primaryKey": true,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "created_at",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "updated_at",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": "0",
+              "name": "last_consolidated",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "INTEGER"
+            },
+            {
+              "defaultValue": null,
+              "name": "metadata",
+              "notNull": false,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "last_user_at",
+              "notNull": false,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": null,
+              "name": "last_proactive_at",
+              "notNull": false,
+              "primaryKey": false,
+              "type": "TEXT"
+            },
+            {
+              "defaultValue": "0",
+              "name": "next_seq",
+              "notNull": true,
+              "primaryKey": false,
+              "type": "INTEGER"
+            }
+          ],
+          "uniqueMessageKeys": [
+            [
+              "session_key",
+              "seq"
+            ]
+          ]
+        },
+        "sessions": [
+          {
+            "created_at": "2026-07-13T08:00:00+08:00",
+            "key": "python-demo",
+            "last_consolidated": 0,
+            "metadata": "{\"origin\": \"python\"}",
+            "next_seq": 2,
+            "updated_at": "2026-07-13T08:00:01+08:00"
+          }
+        ]
+      },
+      "id": "python-session-store-core",
+      "javaAppend": {
+        "assistant": "Java 回答",
+        "assistantAt": "2026-07-13T08:01:01+08:00",
+        "user": "Java 问题",
+        "userAt": "2026-07-13T08:01:00+08:00"
+      }
+    }
+  ],
+  "formatVersion": 1,
+  "normalization": [
+    {
+      "field": "sqlite_master",
+      "rule": "include-core-tables-only"
+    },
+    {
+      "field": "rows",
+      "rule": "explicit-column-order-and-sequence-sort"
+    },
+    {
+      "field": "last_user_at",
+      "rule": "excluded-until-python-java-write-contract"
+    }
+  ],
+  "pythonEvidence": {
+    "callable": "session.store.SessionStore",
+    "path": "session/store.py",
+    "projection": "sessions/messages 核心 Schema、游标和文本轮次"
+  },
+  "source": "python-reference",
+  "suite": "sqlite"
+}

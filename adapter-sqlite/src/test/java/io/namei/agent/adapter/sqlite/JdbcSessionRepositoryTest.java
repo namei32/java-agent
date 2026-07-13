@@ -17,6 +17,8 @@ import org.junit.jupiter.api.io.TempDir;
 class JdbcSessionRepositoryTest {
   private static final OffsetDateTime USER_AT = OffsetDateTime.parse("2026-07-13T08:00:00+08:00");
   private static final OffsetDateTime ASSISTANT_AT = USER_AT.plusSeconds(1);
+  private static final String USER_AT_STORED = "2026-07-13T08:00:00+08:00";
+  private static final String ASSISTANT_AT_STORED = "2026-07-13T08:00:01+08:00";
 
   @TempDir Path tempDir;
   private SqliteSchemaInitializer schema;
@@ -50,11 +52,11 @@ class JdbcSessionRepositoryTest {
                     FROM sessions WHERE key = 'demo'
                     """)) {
       assertThat(session.next()).isTrue();
-      assertThat(session.getString("created_at")).isEqualTo(USER_AT.toString());
-      assertThat(session.getString("updated_at")).isEqualTo(ASSISTANT_AT.toString());
+      assertThat(session.getString("created_at")).isEqualTo(USER_AT_STORED);
+      assertThat(session.getString("updated_at")).isEqualTo(ASSISTANT_AT_STORED);
       assertThat(session.getInt("last_consolidated")).isZero();
       assertThat(session.getString("metadata")).isEqualTo("{}");
-      assertThat(session.getString("last_user_at")).isEqualTo(USER_AT.toString());
+      assertThat(session.getString("last_user_at")).isEqualTo(USER_AT_STORED);
       assertThat(session.getObject("last_proactive_at")).isNull();
       assertThat(session.getLong("next_seq")).isEqualTo(2);
     }
@@ -67,8 +69,8 @@ class JdbcSessionRepositoryTest {
                     SELECT id, seq, role, content, tool_chain, extra, ts
                     FROM messages ORDER BY seq
                     """)) {
-      assertMessage(rows, "demo:0", 0, "user", "你好", USER_AT.toString());
-      assertMessage(rows, "demo:1", 1, "assistant", "你好！", ASSISTANT_AT.toString());
+      assertMessage(rows, "demo:0", 0, "user", "你好", USER_AT_STORED);
+      assertMessage(rows, "demo:1", 1, "assistant", "你好！", ASSISTANT_AT_STORED);
       assertThat(rows.next()).isFalse();
     }
   }

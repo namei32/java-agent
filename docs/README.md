@@ -6,7 +6,8 @@
 
 - 已完成：五模块 Maven 骨架、同步 HTTP 被动聊天、历史恢复、OpenAI-compatible 模型适配、SQLite 原子轮次写入、失败语义、单进程同会话串行化、健康检查与基础可观察性。
 - 已完成：MVP Minor 技术债加固和 Java 重写文档治理。
-- 下一里程碑：建立 Python/Java 契约与 Golden Test 基线，再实现 Tool Loop；不能直接跳到工具生态扩展。
+- 已完成：被动聊天共同投影的 Python/Java Golden Test 规范、历史、Prompt、SQLite、错误映射基准及 CI 门禁。
+- 下一里程碑：补齐配置与消息 Contract，再完成 Tool Loop 的 Golden 设计；不能直接跳到工具生态扩展。
 - 尚未覆盖：流式输出、工具调用、MCP、长期记忆、渠道、插件、主动任务、Drift 和 Subagent。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。
@@ -19,6 +20,8 @@
 4. [架构决策记录](adr/README.md)：已经固定的关键技术决策。
 5. 与当前变更相关的 `contracts/`、`specs/` 和 `plans/`。
 6. [本地开发运行手册](runbooks/local-development.md)。
+
+当前 Golden 资产从 [Python/Java Golden Test 夹具规范](contracts/golden-test-fixtures.md)进入。
 
 ## 目录职责
 

@@ -1,0 +1,141 @@
+# Python/Java Golden Test 夹具规范
+
+- 状态：已批准
+- 格式版本：1
+- 生效日期：2026-07-13
+
+## 1. 目的
+
+Golden Test 使用已经审查并提交到仓库的确定性夹具，验证 Java 在已迁移范围内仍保持 Python 参考行为或已批准迁移契约。它不替代 Java 单元测试，也不把 Python 的全部内部实现变成永久 API。
+
+CI 只读取已提交夹具，不克隆或执行 Python 仓库。重新生成夹具是显式维护操作。
+
+## 2. 目录与文件
+
+```text
+testdata/golden/
+├── manifest.json
+├── history/session-history.json
+├── prompt/message-envelope.json
+├── sqlite/session-store.json
+└── errors/http-error-mapping.json
+```
+
+所有文件必须是 UTF-8 JSON，使用两个空格缩进、键名排序，并以换行结束。禁止提交二进制 SQLite、真实工作区数据、密钥、用户记忆或真实对话。
+
+`manifest.json` 固定以下字段：
+
+```json
+{
+  "formatVersion": 1,
+  "pythonBaseline": {
+    "commit": "40 位 Git SHA",
+    "repository": "namei32/akashic-agent",
+    "sourceFiles": {
+      "relative/path.py": "sha256"
+    }
+  },
+  "fixtures": [
+    {
+      "id": "history/session-history",
+      "path": "history/session-history.json",
+      "sha256": "夹具内容 sha256",
+      "source": "python-reference"
+    }
+  ]
+}
+```
+
+每个业务夹具固定：
+
+- `formatVersion`：当前为 `1`。
+- `suite`：`history`、`prompt`、`sqlite` 或 `errors`。
+- `source`：`python-reference` 或 `migration-contract`。
+- `pythonEvidence`：参考类、函数和源码路径；没有等价 Python HTTP 行为时必须明确说明。
+- `normalization`：应用过的规范化规则；没有则为空数组。
+- `cases`：稳定的 `id`、输入和预期输出。
+
+未知顶层字段允许保留，但测试必须拒绝不支持的 `formatVersion`、重复 Case ID、缺失必需字段和 Manifest 校验和不一致。
+
+## 3. 当前四类行为投影
+
+### 3.1 历史
+
+基准来自 Python `session.manager.Session.get_history`。本阶段只比较 Java MVP 能表达的普通 `user/assistant` 文本消息：空历史、完整多轮、最新完整轮次和孤立 Assistant。Tool、Proactive、多模态、`reasoning_content` 和 Context Frame 留待相应能力迁移。
+
+字符上限是 Java MVP 的本地保护语义，不属于当前 Python Golden，由 Java 单元测试负责。
+
+### 3.2 Prompt
+
+基准来自 Python `agent.context.MessageEnvelopeBuilder`。当前只比较共同投影：
+
+```text
+system -> history -> current user
+```
+
+Python 当前用户消息的时间信封在生成时使用固定时间，并在共同投影中移除；完整 Prompt Block、Context Frame、渠道增强、多模态和动态时间将在 R2 能力对齐时增加独立夹具。
+
+### 3.3 SQLite
+
+基准由 Python `session.store.SessionStore` 创建临时数据库后规范化为 JSON。只固化核心表列、默认值、唯一约束、Session 游标和消息顺序。FTS 虚表、触发器与 SQLite 内部对象不属于当前 Java MVP。
+
+共同投影中的 Offset 时间使用 ISO-8601，并始终保留秒，例如 `2026-07-13T08:01:00+08:00`。小数秒仅在非零时保留。
+
+### 3.4 错误映射
+
+Python 没有与 Java 被动聊天 MVP 相同的 HTTP 入口。因此该夹具的 `source` 必须是 `migration-contract`：Python 的 Provider Timeout、Provider Failure 和 SQLite Failure 是迁移来源，HTTP Status、Title、Detail 与 Instance 由 Java [被动聊天 HTTP 契约](passive-chat-http.md)批准。
+
+禁止把这一夹具描述为逐字 Python HTTP 输出。
+
+## 4. 非确定字段
+
+| 字段 | 处理方式 |
+| --- | --- |
+| 当前时间、消息时间 | 注入固定时间；只在共同 Prompt 投影中移除时间信封 |
+| UUID、Request ID | 固定输入；生成值不进入 Golden |
+| 临时路径、端口 | 不写入夹具，或替换为语义占位符 |
+| SQLite `rowid`、内部表顺序 | 不进入 Golden；查询显式排序 |
+| JSON Object 键顺序 | 生成时排序；Array 顺序保持语义顺序 |
+| 模型自由文本 | 不调用真实模型；使用固定预期回答或 Fake |
+| 异常消息与堆栈 | 不进入 Golden，只比较稳定错误类别与公开字段 |
+| 耗时、线程名、日志时间 | 不进入 Golden |
+
+规范化必须最小化并写入 `normalization`；禁止使用“忽略整个响应”或删除业务字段的宽泛规则。
+
+## 5. 生成与验证
+
+从 Java 仓库根目录执行：
+
+```bash
+../akashic-agent/.venv/bin/python tools/golden/generate.py \
+  --python-repo ../akashic-agent \
+  --output testdata/golden
+```
+
+生成器必须：
+
+1. 检查 Python 仓库和所需源码文件存在。
+2. 记录 Python HEAD 和参考文件 SHA-256。
+3. 在临时目录运行，不读取真实工作区。
+4. 原子替换由其管理的夹具；不得修改错误迁移契约夹具。
+5. 生成 Manifest 并包含所有四类夹具校验和。
+
+Java 验证命令：
+
+```bash
+./mvnw -Pcompat verify
+```
+
+## 6. 更新审批
+
+Golden 不得因为测试失败而直接重录。更新 Pull Request 必须同时包含：
+
+1. 变更原因：Python 基准更新、批准的 Contract 变更、新增 Case 或生成器修复。
+2. 旧值与新值的语义差异。
+3. 对 Java 实现、数据兼容和回退的影响。
+4. 对应 Spec、Contract 或 ADR 链接。
+5. 生成命令、Python Commit、Java `compat` 验证结果。
+
+审批要求：至少一名了解迁移契约的 Reviewer 明确批准；涉及 SQLite 写入、公开 HTTP 字段或删除 Case 时，还必须由项目维护者批准。生成器、夹具和 Java 断言不得由一次未经审查的批量更新同时放宽。
+
+紧急修复也必须保留差异和事后审批记录。CI 中禁止自动提交 Golden。

@@ -1,0 +1,151 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "detail": "请求参数无效",
+        "instance": "/api/v1/chat",
+        "status": 400,
+        "title": "请求参数无效",
+        "type": "about:blank"
+      },
+      "id": "validation",
+      "input": {
+        "scenario": "VALIDATION"
+      },
+      "pythonFailureSource": null
+    },
+    {
+      "expected": {
+        "detail": "JSON 格式无效",
+        "instance": "/api/v1/chat",
+        "status": 400,
+        "title": "JSON 格式无效",
+        "type": "about:blank"
+      },
+      "id": "malformed-json",
+      "input": {
+        "scenario": "MALFORMED_JSON"
+      },
+      "pythonFailureSource": null
+    },
+    {
+      "expected": {
+        "detail": "模型调用失败",
+        "instance": "/api/v1/chat",
+        "status": 502,
+        "title": "模型调用失败",
+        "type": "about:blank"
+      },
+      "id": "provider-failure",
+      "input": {
+        "scenario": "MODEL_INVOCATION"
+      },
+      "pythonFailureSource": "agent.provider.Provider.chat RuntimeError"
+    },
+    {
+      "expected": {
+        "detail": "模型调用失败",
+        "instance": "/api/v1/chat",
+        "status": 502,
+        "title": "模型调用失败",
+        "type": "about:blank"
+      },
+      "id": "invalid-model-response",
+      "input": {
+        "scenario": "INVALID_MODEL_RESPONSE"
+      },
+      "pythonFailureSource": "agent.provider.Provider.chat invalid payload"
+    },
+    {
+      "expected": {
+        "detail": "请求执行超时",
+        "instance": "/api/v1/chat",
+        "status": 504,
+        "title": "请求执行超时",
+        "type": "about:blank"
+      },
+      "id": "provider-timeout",
+      "input": {
+        "scenario": "MODEL_TIMEOUT"
+      },
+      "pythonFailureSource": "agent.core.passive_turn asyncio.TimeoutError"
+    },
+    {
+      "expected": {
+        "detail": "请求执行超时",
+        "instance": "/api/v1/chat",
+        "status": 504,
+        "title": "请求执行超时",
+        "type": "about:blank"
+      },
+      "id": "session-lock-timeout",
+      "input": {
+        "scenario": "SESSION_LOCK_TIMEOUT"
+      },
+      "pythonFailureSource": null
+    },
+    {
+      "expected": {
+        "detail": "会话持久化失败",
+        "instance": "/api/v1/chat",
+        "status": 500,
+        "title": "会话持久化失败",
+        "type": "about:blank"
+      },
+      "id": "sqlite-failure",
+      "input": {
+        "scenario": "SQLITE"
+      },
+      "pythonFailureSource": "session.store sqlite3.Error"
+    },
+    {
+      "expected": {
+        "detail": "内部服务错误",
+        "instance": "/api/v1/chat",
+        "status": 500,
+        "title": "内部服务错误",
+        "type": "about:blank"
+      },
+      "id": "unexpected",
+      "input": {
+        "scenario": "UNEXPECTED"
+      },
+      "pythonFailureSource": "unclassified Python runtime failure"
+    },
+    {
+      "expected": {
+        "detail": "资源不存在",
+        "instance": "/api/v1/missing",
+        "status": 404,
+        "title": "资源不存在",
+        "type": "about:blank"
+      },
+      "id": "not-found",
+      "input": {
+        "scenario": "NOT_FOUND"
+      },
+      "pythonFailureSource": null
+    }
+  ],
+  "formatVersion": 1,
+  "normalization": [
+    {
+      "field": "X-Request-Id",
+      "rule": "excluded-generated-request-id"
+    },
+    {
+      "field": "exception-message-and-stack",
+      "rule": "excluded-sensitive-internal-data"
+    }
+  ],
+  "pythonEvidence": {
+    "note": "Python 没有等价 /api/v1/chat HTTP 入口；pythonFailureSource 只标识迁移来源，公开输出由 Java HTTP Contract 批准。",
+    "paths": [
+      "agent/provider.py",
+      "agent/core/passive_turn.py",
+      "session/store.py"
+    ]
+  },
+  "source": "migration-contract",
+  "suite": "errors"
+}

@@ -8,11 +8,24 @@ import io.namei.agent.kernel.port.SessionRepository;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Objects;
 
 public final class JdbcSessionRepository implements SessionRepository {
+  private static final DateTimeFormatter STORAGE_TIMESTAMP =
+      new DateTimeFormatterBuilder()
+          .appendPattern("uuuu-MM-dd'T'HH:mm:ss")
+          .optionalStart()
+          .appendFraction(ChronoField.NANO_OF_SECOND, 0, 9, true)
+          .optionalEnd()
+          .appendOffsetId()
+          .toFormatter();
+
   private final SqliteSchemaInitializer schema;
 
   public JdbcSessionRepository(SqliteSchemaInitializer schema) {
@@ -49,22 +62,22 @@ public final class JdbcSessionRepository implements SessionRepository {
       connection.setAutoCommit(false);
       try {
         long userSequence =
-            ensureSessionAndReadNext(connection, sessionId, turn.userAt().toString());
+            ensureSessionAndReadNext(connection, sessionId, timestamp(turn.userAt()));
         long assistantSequence = Math.addExact(userSequence, 1);
         long followingSequence = Math.addExact(userSequence, 2);
-        insertMessage(connection, sessionId, userSequence, turn.user(), turn.userAt().toString());
+        insertMessage(connection, sessionId, userSequence, turn.user(), timestamp(turn.userAt()));
         insertMessage(
             connection,
             sessionId,
             assistantSequence,
             turn.assistant(),
-            turn.assistantAt().toString());
+            timestamp(turn.assistantAt()));
         updateSession(
             connection,
             sessionId,
             followingSequence,
-            turn.userAt().toString(),
-            turn.assistantAt().toString());
+            timestamp(turn.userAt()),
+            timestamp(turn.assistantAt()));
         connection.commit();
       } catch (SQLException | RuntimeException exception) {
         rollbackPreservingFailure(connection, exception);
@@ -200,5 +213,9 @@ public final class JdbcSessionRepository implements SessionRepository {
     } catch (SQLException rollbackException) {
       failure.addSuppressed(rollbackException);
     }
+  }
+
+  private static String timestamp(OffsetDateTime value) {
+    return STORAGE_TIMESTAMP.format(value);
   }
 }

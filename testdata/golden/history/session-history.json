@@ -1,0 +1,179 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "messages": []
+      },
+      "id": "empty",
+      "input": {
+        "maxCharacters": 100000,
+        "maxMessages": 40,
+        "messages": []
+      },
+      "pythonInvocation": {
+        "maxMessages": 40,
+        "startIndex": 0
+      }
+    },
+    {
+      "expected": {
+        "messages": [
+          {
+            "content": "第一问",
+            "role": "user"
+          },
+          {
+            "content": "第一答",
+            "role": "assistant"
+          },
+          {
+            "content": "第二问",
+            "role": "user"
+          },
+          {
+            "content": "第二答",
+            "role": "assistant"
+          }
+        ]
+      },
+      "id": "two-complete-turns",
+      "input": {
+        "maxCharacters": 100000,
+        "maxMessages": 4,
+        "messages": [
+          {
+            "content": "第一问",
+            "role": "user"
+          },
+          {
+            "content": "第一答",
+            "role": "assistant"
+          },
+          {
+            "content": "第二问",
+            "role": "user"
+          },
+          {
+            "content": "第二答",
+            "role": "assistant"
+          }
+        ]
+      },
+      "pythonInvocation": {
+        "maxMessages": 4,
+        "startIndex": null
+      }
+    },
+    {
+      "expected": {
+        "messages": [
+          {
+            "content": "新问题",
+            "role": "user"
+          },
+          {
+            "content": "新回答",
+            "role": "assistant"
+          }
+        ]
+      },
+      "id": "newest-complete-turn",
+      "input": {
+        "maxCharacters": 100000,
+        "maxMessages": 2,
+        "messages": [
+          {
+            "content": "旧问题",
+            "role": "user"
+          },
+          {
+            "content": "旧回答",
+            "role": "assistant"
+          },
+          {
+            "content": "新问题",
+            "role": "user"
+          },
+          {
+            "content": "新回答",
+            "role": "assistant"
+          }
+        ]
+      },
+      "pythonInvocation": {
+        "maxMessages": 2,
+        "startIndex": null
+      }
+    },
+    {
+      "expected": {
+        "messages": [
+          {
+            "content": "有效问题",
+            "role": "user"
+          },
+          {
+            "content": "有效回答",
+            "role": "assistant"
+          }
+        ]
+      },
+      "id": "leading-orphan-assistant",
+      "input": {
+        "maxCharacters": 100000,
+        "maxMessages": 2,
+        "messages": [
+          {
+            "content": "孤立回答",
+            "role": "assistant"
+          },
+          {
+            "content": "有效问题",
+            "role": "user"
+          },
+          {
+            "content": "有效回答",
+            "role": "assistant"
+          }
+        ]
+      },
+      "pythonInvocation": {
+        "maxMessages": 2,
+        "startIndex": 0
+      }
+    },
+    {
+      "expected": {
+        "messages": []
+      },
+      "id": "assistant-only",
+      "input": {
+        "maxCharacters": 100000,
+        "maxMessages": 40,
+        "messages": [
+          {
+            "content": "回答一",
+            "role": "assistant"
+          },
+          {
+            "content": "回答二",
+            "role": "assistant"
+          }
+        ]
+      },
+      "pythonInvocation": {
+        "maxMessages": 40,
+        "startIndex": 0
+      }
+    }
+  ],
+  "formatVersion": 1,
+  "normalization": [],
+  "pythonEvidence": {
+    "callable": "session.manager.Session.get_history",
+    "path": "session/manager.py",
+    "projection": "普通 user/assistant 文本消息"
+  },
+  "source": "python-reference",
+  "suite": "history"
+}
