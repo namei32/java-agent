@@ -993,9 +993,9 @@ class KeyedSessionExecutionGateTest {
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`./mvnw -pl agent-application -am test -Dtest=KeyedSessionExecutionGateTest`
+运行：`./mvnw -pl agent-application -am test -Dtest=KeyedSessionExecutionGateTest -Dsurefire.failIfNoSpecifiedTests=false`
 
-预期：编译失败，提示缺少 `KeyedSessionExecutionGate`。
+预期：命令必须进入 `agent-application`，目标测试源码编译失败并提示缺少 `KeyedSessionExecutionGate`；不得以上游无匹配测试的失败代替目标模块 RED，后续 GREEN 必须由目标模块真实报告规定的 3 个测试。
 
 - [ ] **步骤 3：实现带引用计数的锁注册表**
 
@@ -1065,9 +1065,9 @@ public final class KeyedSessionExecutionGate implements SessionExecutionGate {
 
 - [ ] **步骤 4：运行测试并确认通过**
 
-运行：`./mvnw -pl agent-application -am test -Dtest=KeyedSessionExecutionGateTest`
+运行：`./mvnw -pl agent-application -am test -Dtest=KeyedSessionExecutionGateTest -Dsurefire.failIfNoSpecifiedTests=false`
 
-预期：3 个测试通过，进程在 5 秒内退出。
+预期：`agent-application` 必须真实报告 3 个测试通过，进程在 5 秒内退出；仅有 reactor `BUILD SUCCESS` 或上游无匹配测试不算有效验证。
 
 - [ ] **步骤 5：提交**
 
