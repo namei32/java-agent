@@ -1,0 +1,2 @@
+org.springframework.boot.EnvironmentPostProcessor=\
+io.namei.agent.bootstrap.config.AgentConfigurationEnvironmentPostProcessor

@@ -1,7 +1,7 @@
 # Python/Java 配置兼容实施计划
 
 - 状态：实施中
-- 当前执行状态：Task C2 已完成，下一步为 Task C3
+- 当前执行状态：Task C3 已完成，下一步为 Task C4
 - 日期：2026-07-13
 - Spec：[Python/Java 配置兼容设计](../specs/2026-07-13-python-java-configuration-compatibility-design.md)
 - Contract：[Python/Java 配置兼容契约](../contracts/python-java-configuration.md)
@@ -42,7 +42,7 @@
 - Python 配置 Golden、迁移校验 Golden、文件不改写和脱敏 `toString()` 均由 5 个聚焦测试覆盖。
 - C2 有效 RED 为 Resolver 类型缺失；聚焦 GREEN 为 5 Tests 全部通过。审查发现的来源定位和输入脱敏缺陷均补充了方法级 RED/GREEN。
 
-## Task C3：Spring Boot 启动装配
+## Task C3：Spring Boot 启动装配（已完成）
 
 - 在 Spring AI 自动配置之前注入已解析模型字段。
 - TOML 模式接入 System Prompt 和历史消息数。
@@ -50,6 +50,14 @@
 - 调整 Provider Guard，使其消费统一解析结果且不泄露值。
 
 聚焦验收：Bootstrap 配置集成测试一次 RED、一次 GREEN。
+
+实施结果：
+
+- 通过 Boot 4 `EnvironmentPostProcessor` 在 Config Data 之后、自动配置之前注入 TOML 活动字段。
+- TOML 模式接入 Spring AI Base URL、API Key、Model、历史消息数和 System Prompt；Prompt 使用 Base64 内部传递，避免 Spring 二次展开。
+- 环境变量模式不增加兼容 PropertySource，继续沿用现有 `application.yml` 和 Provider Guard。
+- 无效 TOML 在 Application Context、Workspace 和 SQLite 创建前失败；Post-Processor 通过 `spring.factories` 注册。
+- C3 有效 RED 为 Post-Processor、Prompt 接口和注册缺失；聚焦 GREEN 实际执行 9 Tests，全部通过。
 
 ## Task C4：无副作用配置检查
 
