@@ -52,12 +52,7 @@ public final class JdbcSessionRepository implements SessionRepository {
             ensureSessionAndReadNext(connection, sessionId, turn.userAt().toString());
         long assistantSequence = Math.addExact(userSequence, 1);
         long followingSequence = Math.addExact(userSequence, 2);
-        insertMessage(
-            connection,
-            sessionId,
-            userSequence,
-            turn.user(),
-            turn.userAt().toString());
+        insertMessage(connection, sessionId, userSequence, turn.user(), turn.userAt().toString());
         insertMessage(
             connection,
             sessionId,
@@ -137,8 +132,8 @@ public final class JdbcSessionRepository implements SessionRepository {
     return Math.max(fromSession, fromMessages);
   }
 
-  private static long ensureSessionAndReadNext(
-      Connection connection, String sessionId, String now) throws SQLException {
+  private static long ensureSessionAndReadNext(Connection connection, String sessionId, String now)
+      throws SQLException {
     try (var insert =
         connection.prepareStatement(
             """
@@ -157,11 +152,7 @@ public final class JdbcSessionRepository implements SessionRepository {
   }
 
   private static void insertMessage(
-      Connection connection,
-      String sessionId,
-      long sequence,
-      ChatMessage message,
-      String timestamp)
+      Connection connection, String sessionId, long sequence, ChatMessage message, String timestamp)
       throws SQLException {
     try (var insert =
         connection.prepareStatement(

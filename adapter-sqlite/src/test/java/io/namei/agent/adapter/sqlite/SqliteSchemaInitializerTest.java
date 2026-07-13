@@ -72,8 +72,7 @@ class SqliteSchemaInitializerTest {
   private static Set<String> tableNames(Connection connection) throws Exception {
     var names = new HashSet<String>();
     try (var statement = connection.createStatement();
-        var rows =
-            statement.executeQuery("SELECT name FROM sqlite_master WHERE type = 'table'")) {
+        var rows = statement.executeQuery("SELECT name FROM sqlite_master WHERE type = 'table'")) {
       while (rows.next()) {
         names.add(rows.getString("name"));
       }

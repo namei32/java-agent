@@ -54,8 +54,7 @@ public final class SqliteSchemaInitializer {
   private final int busyTimeoutMillis;
 
   public SqliteSchemaInitializer(Path database, int busyTimeoutMillis) {
-    this.jdbcUrl =
-        "jdbc:sqlite:" + Objects.requireNonNull(database, "database").toAbsolutePath();
+    this.jdbcUrl = "jdbc:sqlite:" + Objects.requireNonNull(database, "database").toAbsolutePath();
     this.busyTimeoutMillis = busyTimeoutMillis;
   }
 
@@ -72,8 +71,7 @@ public final class SqliteSchemaInitializer {
       requireColumns(connection, "sessions", SESSION_COLUMNS);
       requireColumns(connection, "messages", MESSAGE_COLUMNS);
     } catch (SQLException exception) {
-      throw new SqliteRepositoryException(
-          "Schema 初始化失败: " + exception.getMessage(), exception);
+      throw new SqliteRepositoryException("Schema 初始化失败: " + exception.getMessage(), exception);
     }
   }
 
@@ -102,8 +100,8 @@ public final class SqliteSchemaInitializer {
     }
   }
 
-  private static void requireColumns(
-      Connection connection, String table, Set<String> required) throws SQLException {
+  private static void requireColumns(Connection connection, String table, Set<String> required)
+      throws SQLException {
     requireColumns(table, required, columns(connection, table));
   }
 

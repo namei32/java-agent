@@ -15,8 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 @Tag("failure")
 class JdbcSessionRepositoryTest {
-  private static final OffsetDateTime USER_AT =
-      OffsetDateTime.parse("2026-07-13T08:00:00+08:00");
+  private static final OffsetDateTime USER_AT = OffsetDateTime.parse("2026-07-13T08:00:00+08:00");
   private static final OffsetDateTime ASSISTANT_AT = USER_AT.plusSeconds(1);
 
   @TempDir Path tempDir;
@@ -39,8 +38,7 @@ class JdbcSessionRepositoryTest {
     assertThat(reopened.nextSequence()).isEqualTo(2);
     assertThat(reopened.messages())
         .containsExactly(
-            new ChatMessage(MessageRole.USER, "你好"),
-            new ChatMessage(MessageRole.ASSISTANT, "你好！"));
+            new ChatMessage(MessageRole.USER, "你好"), new ChatMessage(MessageRole.ASSISTANT, "你好！"));
     try (var connection = schema.openConnection();
         var session =
             connection
@@ -69,10 +67,8 @@ class JdbcSessionRepositoryTest {
                     SELECT id, seq, role, content, tool_chain, extra, ts
                     FROM messages ORDER BY seq
                     """)) {
-      assertMessage(
-          rows, "demo:0", 0, "user", "你好", USER_AT.toString());
-      assertMessage(
-          rows, "demo:1", 1, "assistant", "你好！", ASSISTANT_AT.toString());
+      assertMessage(rows, "demo:0", 0, "user", "你好", USER_AT.toString());
+      assertMessage(rows, "demo:1", 1, "assistant", "你好！", ASSISTANT_AT.toString());
       assertThat(rows.next()).isFalse();
     }
   }
@@ -92,7 +88,8 @@ class JdbcSessionRepositoryTest {
             new ChatMessage(MessageRole.ASSISTANT, "较晚回答"));
 
     try (var connection = schema.openConnection();
-        var update = connection.prepareStatement("UPDATE sessions SET next_seq = 9 WHERE key = ?")) {
+        var update =
+            connection.prepareStatement("UPDATE sessions SET next_seq = 9 WHERE key = ?")) {
       update.setString(1, "recovered");
       update.executeUpdate();
     }
@@ -128,7 +125,8 @@ class JdbcSessionRepositoryTest {
 
   @Test
   void rollsBackWholeTurnWhenAssistantInsertFails() throws Exception {
-    try (var connection = schema.openConnection(); var statement = connection.createStatement()) {
+    try (var connection = schema.openConnection();
+        var statement = connection.createStatement()) {
       statement.execute(
           """
           CREATE TRIGGER fail_assistant BEFORE INSERT ON messages
