@@ -10,10 +10,14 @@ import java.util.function.Supplier;
 
 public final class KeyedSessionExecutionGate implements SessionExecutionGate {
   private final ConcurrentHashMap<String, Entry> entries = new ConcurrentHashMap<>();
-  private final Duration waitTimeout;
+  private final long waitTimeoutNanos;
 
   public KeyedSessionExecutionGate(Duration waitTimeout) {
-    this.waitTimeout = Objects.requireNonNull(waitTimeout, "waitTimeout");
+    Objects.requireNonNull(waitTimeout, "waitTimeout");
+    if (waitTimeout.isNegative()) {
+      throw new IllegalArgumentException("waitTimeout 不能为负数");
+    }
+    this.waitTimeoutNanos = toNanosSaturated(waitTimeout);
   }
 
   @Override
@@ -28,7 +32,7 @@ public final class KeyedSessionExecutionGate implements SessionExecutionGate {
             });
     boolean acquired = false;
     try {
-      acquired = entry.lock.tryLock(waitTimeout.toMillis(), TimeUnit.MILLISECONDS);
+      acquired = entry.lock.tryLock(waitTimeoutNanos, TimeUnit.NANOSECONDS);
       if (!acquired) {
         throw new SessionLockTimeoutException(sessionId);
       }
@@ -53,6 +57,14 @@ public final class KeyedSessionExecutionGate implements SessionExecutionGate {
 
   int activeEntryCount() {
     return entries.size();
+  }
+
+  private static long toNanosSaturated(Duration waitTimeout) {
+    try {
+      return waitTimeout.toNanos();
+    } catch (ArithmeticException exception) {
+      return Long.MAX_VALUE;
+    }
   }
 
   private static final class Entry {

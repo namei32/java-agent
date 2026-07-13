@@ -896,6 +896,7 @@ git commit -m "feat: 实现被动聊天应用用例"
 
 **文件：**
 
+- 修改：`pom.xml`
 - 创建：`agent-application/src/main/java/io/namei/agent/application/SessionLockTimeoutException.java`
 - 创建：`agent-application/src/main/java/io/namei/agent/application/KeyedSessionExecutionGate.java`
 - 创建：`agent-application/src/test/java/io/namei/agent/application/KeyedSessionExecutionGateTest.java`
@@ -905,8 +906,9 @@ git commit -m "feat: 实现被动聊天应用用例"
 - 消费：`SessionExecutionGate`
 - 产出：`KeyedSessionExecutionGate(Duration waitTimeout)`
 - 保证：同一 Key 串行、不同 Key 并行、超时抛出 `SessionLockTimeoutException`、空闲 Entry 被回收。
+- `waitTimeout`：拒绝负数；零表示立即尝试；正数保留纳秒精度；正数转换为纳秒溢出时饱和到 `Long.MAX_VALUE`。
 
-- [ ] **步骤 1：编写并发和回收失败测试**
+- [ ] **步骤 1：编写并发、回收和 Duration 边界失败测试**
 
 ```java
 package io.namei.agent.application;
@@ -991,11 +993,18 @@ class KeyedSessionExecutionGateTest {
 }
 ```
 
+在修改生产实现前补充以下边界测试：
+
+- `rejectsNegativeWaitTimeout`：`Duration.ofNanos(-1)` 必须被构造器拒绝。
+- `zeroWaitTimeoutAttemptsImmediately`：忙 session 上使用 `Duration.ZERO` 必须立即尝试并抛出受控超时异常，释放持锁者后 entry 归零。
+- `preservesPositiveNanosecondPrecision`：`Duration.ofNanos(1)` 必须以 1ns 保存，不能截断为 0ms。
+- `saturatesPositiveWaitTimeoutWhenNanosecondConversionOverflows`：`Duration.ofSeconds(Long.MAX_VALUE)` 不得因转换溢出而失败。
+
 - [ ] **步骤 2：运行测试并确认失败**
 
 运行：`./mvnw -pl agent-application -am test -Dtest=KeyedSessionExecutionGateTest -Dsurefire.failIfNoSpecifiedTests=false`
 
-预期：命令必须进入 `agent-application`，目标测试源码编译失败并提示缺少 `KeyedSessionExecutionGate`；不得以上游无匹配测试的失败代替目标模块 RED，后续 GREEN 必须由目标模块真实报告规定的 3 个测试。
+预期：初始实现阶段，命令必须进入 `agent-application`，目标测试源码编译失败并提示缺少 `KeyedSessionExecutionGate`；正式审查修复阶段，7 个测试中负值、纳秒精度和超大正值测试必须因旧语义失败。不得以上游无匹配测试的失败代替目标模块 RED。
 
 - [ ] **步骤 3：实现带引用计数的锁注册表**
 
@@ -1022,10 +1031,14 @@ import java.util.function.Supplier;
 
 public final class KeyedSessionExecutionGate implements SessionExecutionGate {
   private final ConcurrentHashMap<String, Entry> entries = new ConcurrentHashMap<>();
-  private final Duration waitTimeout;
+  private final long waitTimeoutNanos;
 
   public KeyedSessionExecutionGate(Duration waitTimeout) {
-    this.waitTimeout = Objects.requireNonNull(waitTimeout, "waitTimeout");
+    Objects.requireNonNull(waitTimeout, "waitTimeout");
+    if (waitTimeout.isNegative()) {
+      throw new IllegalArgumentException("waitTimeout 不能为负数");
+    }
+    this.waitTimeoutNanos = toNanosSaturated(waitTimeout);
   }
 
   @Override
@@ -1037,7 +1050,7 @@ public final class KeyedSessionExecutionGate implements SessionExecutionGate {
     });
     boolean acquired = false;
     try {
-      acquired = entry.lock.tryLock(waitTimeout.toMillis(), TimeUnit.MILLISECONDS);
+      acquired = entry.lock.tryLock(waitTimeoutNanos, TimeUnit.NANOSECONDS);
       if (!acquired) throw new SessionLockTimeoutException(sessionId);
       return action.get();
     } catch (InterruptedException exception) {
@@ -1056,6 +1069,14 @@ public final class KeyedSessionExecutionGate implements SessionExecutionGate {
     return entries.size();
   }
 
+  private static long toNanosSaturated(Duration waitTimeout) {
+    try {
+      return waitTimeout.toNanos();
+    } catch (ArithmeticException exception) {
+      return Long.MAX_VALUE;
+    }
+  }
+
   private static final class Entry {
     private final ReentrantLock lock = new ReentrantLock(true);
     private final AtomicInteger references = new AtomicInteger();
@@ -1067,13 +1088,58 @@ public final class KeyedSessionExecutionGate implements SessionExecutionGate {
 
 运行：`./mvnw -pl agent-application -am test -Dtest=KeyedSessionExecutionGateTest -Dsurefire.failIfNoSpecifiedTests=false`
 
-预期：`agent-application` 必须真实报告 3 个测试通过，进程在 5 秒内退出；仅有 reactor `BUILD SUCCESS` 或上游无匹配测试不算有效验证。
+预期：边界测试加入后，`agent-application` 必须真实报告 7 个测试通过；仅有 reactor `BUILD SUCCESS` 或上游无匹配测试不算有效验证。
 
-- [ ] **步骤 5：提交**
+- [ ] **步骤 5：增加清理回归测试和 failure Profile**
+
+新增两条既有行为的 regression tests；它们在生产修改前已经具备正确行为，因此应如实记录为即时通过，不伪造 RED：
+
+- `propagatesActionExceptionAndReclaimsEntry`：原始 action 异常按对象传播，同 session 随后可执行，entry 最终归零。
+- `interruptedWaiterReclaimsEntryAndPreservesInterruptStatus`：用 latch、线程状态和 interrupt 驱动等待线程，验证受控异常、interrupt flag、持锁者释放后的回收和同 session 后续执行；禁止使用 `Thread.sleep`。
+
+在 `KeyedSessionExecutionGateTest` 类上加入：
+
+```java
+@Tag("failure")
+```
+
+在父 POM 末尾加入实际筛选 JUnit Tag 的 Profile：
+
+```xml
+<profiles>
+  <profile>
+    <id>failure</id>
+    <build>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <groups>failure</groups>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+</profiles>
+```
+
+运行：
 
 ```bash
-git add agent-application/src/main/java/io/namei/agent/application/KeyedSessionExecutionGate.java agent-application/src/main/java/io/namei/agent/application/SessionLockTimeoutException.java agent-application/src/test/java/io/namei/agent/application/KeyedSessionExecutionGateTest.java
-git commit -m "feat: 保证同会话请求串行执行"
+./mvnw -pl agent-application -am test -Dtest=KeyedSessionExecutionGateTest -Dsurefire.failIfNoSpecifiedTests=false
+./mvnw spotless:apply
+./mvnw clean verify
+./mvnw -Pfailure verify
+```
+
+预期：聚焦测试真实报告 9 个测试通过；`clean verify` 运行默认全套测试；`failure verify` 不出现 Profile 缺失警告，只选择 `failure` tag，并在 `agent-application` 真实执行上述 9 个测试。
+
+- [ ] **步骤 6：提交正式审查修复**
+
+```bash
+git add pom.xml agent-application/src/main/java/io/namei/agent/application/KeyedSessionExecutionGate.java agent-application/src/test/java/io/namei/agent/application/KeyedSessionExecutionGateTest.java docs/superpowers/plans/2026-07-13-passive-chat-mvp-implementation.md
+git commit -m "fix: 完善会话执行闸门边界语义"
 ```
 
 ---
