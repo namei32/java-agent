@@ -70,9 +70,19 @@ set -a && source .env && set +a
 启动应用：
 
 ```bash
-cd "$(git rev-parse --show-toplevel)"
-java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar
+(
+  cd "$(git rev-parse --show-toplevel)" || exit 1
+  [[ -f .env ]] || { echo "未找到项目根目录下的 .env，请先从 .env.example 创建"; exit 1; }
+  [[ -f agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar ]] || \
+    { echo "未找到可执行 JAR，请先运行 ./mvnw clean verify"; exit 1; }
+  set -a
+  source .env || exit 1
+  set +a
+  java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar
+)
 ```
+
+圆括号会在独立的子 Shell 中加载 `.env`，不会改变当前终端的目录、`set -a` 状态或已导出的环境变量。停止应用时按 `Ctrl+C`。
 
 应用默认监听 `127.0.0.1:8080`。不要通过配置把它改为 `0.0.0.0`；MVP 没有远程认证和 TLS。
 

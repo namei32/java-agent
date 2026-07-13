@@ -21,6 +21,7 @@
 ## 4. 文档变更
 
 - 在环境准备、Workspace 创建、构建启动、测试 Profile 和缺少配置排查等所有依赖项目文件的命令块中，先动态切换到 Git 根目录。
+- 启动块在独立子 Shell 中检查并加载项目根目录下的 `.env`，同时检查可执行 JAR 已由构建生成；失败时给出可执行的修复提示。
 - 明确说明命令需要从本仓库内部启动；不在 Git 仓库中时，`git rev-parse --show-toplevel` 会失败。
 - 保持 Curl 等不读取仓库文件的命令独立，不增加无意义的目录切换。
 - 保持现有 API、配置键、运行流程和安全约束不变。
@@ -35,4 +36,4 @@
 
 ## 6. 验证记录
 
-2026-07-13 从 `docs/runbooks` 启动 Shell，动态解析得到项目根目录，并确认 `.env.example`、Maven Wrapper 和 `agent-bootstrap` 均能从根目录正确定位。`./mvnw spotless:check` 通过。
+2026-07-13 从 `docs/runbooks` 启动 Shell，动态解析得到项目根目录，并确认 `.env.example`、Maven Wrapper 和 `agent-bootstrap` 均能从根目录正确定位。启动块能够在子 Shell 中加载非空的 `OPENAI_BASE_URL`、`OPENAI_API_KEY` 和 `OPENAI_MODEL`，且退出后不改变父 Shell 环境。`./mvnw spotless:check` 通过。
