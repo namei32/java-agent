@@ -15,9 +15,7 @@ record ConfigurationInputs(
     Path workingDirectory, String commandLineConfigFile, Map<String, String> environment) {
   ConfigurationInputs {
     workingDirectory =
-        Objects.requireNonNull(workingDirectory, "workingDirectory")
-            .toAbsolutePath()
-            .normalize();
+        Objects.requireNonNull(workingDirectory, "workingDirectory").toAbsolutePath().normalize();
     environment = Map.copyOf(Objects.requireNonNull(environment, "environment"));
   }
 

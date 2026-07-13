@@ -1,0 +1,15 @@
+# DeepSeek 的 TOML 兼容模式示例。复制为 config.toml 后使用；Java 只读该文件。
+[llm]
+provider = "deepseek"
+
+[llm.main]
+model = "deepseek-chat"
+api_key = "${DEEPSEEK_API_KEY}"
+# deepseek 已有 Provider 预设，base_url 可省略；显式值如下：
+# base_url = "https://api.deepseek.com/v1"
+
+[agent]
+system_prompt = "You are a helpful assistant."
+
+[agent.context]
+memory_window = 40

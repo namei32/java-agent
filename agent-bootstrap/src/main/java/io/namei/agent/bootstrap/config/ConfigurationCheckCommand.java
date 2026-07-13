@@ -60,7 +60,10 @@ public final class ConfigurationCheckCommand {
     result.put("mode", resolution.mode().name());
     result.put(
         "configFile",
-        resolution.configFile().map(path -> path.toAbsolutePath().normalize().toString()).orElse(null));
+        resolution
+            .configFile()
+            .map(path -> path.toAbsolutePath().normalize().toString())
+            .orElse(null));
     result.put("active", activeFields(resolution.report()));
     result.put("deferredPaths", resolution.report().deferredPaths());
     result.put("unknownPaths", resolution.report().unknownPaths());
@@ -70,25 +73,26 @@ public final class ConfigurationCheckCommand {
 
   private static ArrayList<Map<String, String>> activeFields(ConfigurationReport report) {
     var fields = new ArrayList<Map<String, String>>();
-    report.activeSources().forEach(
-        (field, source) -> {
-          var item = new LinkedHashMap<String, String>();
-          item.put("field", field);
-          item.put("source", source.name());
-          SecretStatus status = report.sensitiveStatuses().get(field);
-          if (status != null) {
-            item.put("status", status.name());
-          }
-          fields.add(item);
-        });
+    report
+        .activeSources()
+        .forEach(
+            (field, source) -> {
+              var item = new LinkedHashMap<String, String>();
+              item.put("field", field);
+              item.put("source", source.name());
+              SecretStatus status = report.sensitiveStatuses().get(field);
+              if (status != null) {
+                item.put("status", status.name());
+              }
+              fields.add(item);
+            });
     return fields;
   }
 
   private static ArrayList<Map<String, String>> diagnostics(ConfigurationReport report) {
     var diagnostics = new ArrayList<Map<String, String>>();
     for (ConfigurationDiagnostic diagnostic : report.diagnostics()) {
-      diagnostics.add(
-          Map.of("code", diagnostic.code().name(), "field", diagnostic.field()));
+      diagnostics.add(Map.of("code", diagnostic.code().name(), "field", diagnostic.field()));
     }
     return diagnostics;
   }

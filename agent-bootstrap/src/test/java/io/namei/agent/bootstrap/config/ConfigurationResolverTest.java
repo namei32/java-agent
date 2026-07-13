@@ -30,11 +30,14 @@ class ConfigurationResolverTest {
       var environment = stringMap(testCase.path("input").path("environment"));
 
       var resolution =
-          resolver.resolve(new ConfigurationInputs(caseDirectory, configFile.toString(), environment));
+          resolver.resolve(
+              new ConfigurationInputs(caseDirectory, configFile.toString(), environment));
       var active = resolution.requireActive();
       JsonNode expected = testCase.path("expected").path("active");
 
-      assertThat(resolution.mode()).as(testCase.path("id").asString()).isEqualTo(ConfigurationMode.TOML);
+      assertThat(resolution.mode())
+          .as(testCase.path("id").asString())
+          .isEqualTo(ConfigurationMode.TOML);
       assertThat(active.provider()).isEqualTo(expected.path("provider").asString());
       assertThat(active.model()).isEqualTo(expected.path("model").asString());
       assertThat(active.apiKey().status().name())

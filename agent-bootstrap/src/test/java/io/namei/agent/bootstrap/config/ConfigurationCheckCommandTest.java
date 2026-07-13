@@ -59,8 +59,7 @@ class ConfigurationCheckCommandTest {
     assertThat(report.path("active").toString())
         .contains("apiKey", "PRESENT", "TOML_MODERN", "model", "PRESET");
     assertThat(report.path("deferredPaths").toString()).contains("plugins.example.enabled");
-    assertThat(report.path("unknownPaths").toString())
-        .contains("future_extension.value");
+    assertThat(report.path("unknownPaths").toString()).contains("future_extension.value");
     assertThat(rendered)
         .doesNotContain(
             "private-secret-must-not-be-printed",
@@ -100,8 +99,7 @@ class ConfigurationCheckCommandTest {
     assertThat(report.path("valid").asBoolean()).isFalse();
     assertThat(report.path("diagnostics").toString())
         .contains("CONFIG_URL_INVALID", "llm.main.base_url");
-    assertThat(rendered)
-        .doesNotContain("invalid-secret-value", "ftp://private.invalid.example");
+    assertThat(rendered).doesNotContain("invalid-secret-value", "ftp://private.invalid.example");
     assertThat(Files.exists(tempDir.resolve("workspace"))).isFalse();
     assertThat(Files.exists(tempDir.resolve("sessions.db"))).isFalse();
   }
@@ -110,13 +108,9 @@ class ConfigurationCheckCommandTest {
   void recognizesOnlyTheExplicitCheckSwitch() {
     assertThat(ConfigurationCheckCommand.isRequested(new String[] {"--agent.config-check"}))
         .isTrue();
-    assertThat(
-            ConfigurationCheckCommand.isRequested(
-                new String[] {"--agent.config-check=true"}))
+    assertThat(ConfigurationCheckCommand.isRequested(new String[] {"--agent.config-check=true"}))
         .isTrue();
-    assertThat(
-            ConfigurationCheckCommand.isRequested(
-                new String[] {"--agent.config-check=false"}))
+    assertThat(ConfigurationCheckCommand.isRequested(new String[] {"--agent.config-check=false"}))
         .isFalse();
     assertThat(ConfigurationCheckCommand.isRequested(new String[] {"--agent.config-file=x.toml"}))
         .isFalse();

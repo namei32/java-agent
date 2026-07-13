@@ -60,9 +60,10 @@ public final class AgentConfigurationEnvironmentPostProcessor
             prompt ->
                 properties.put(
                     "agent.compatibility.system-prompt-base64",
-                    Base64.getEncoder()
-                        .encodeToString(prompt.getBytes(StandardCharsets.UTF_8))));
-    environment.getPropertySources().addFirst(new MapPropertySource(PROPERTY_SOURCE_NAME, properties));
+                    Base64.getEncoder().encodeToString(prompt.getBytes(StandardCharsets.UTF_8))));
+    environment
+        .getPropertySources()
+        .addFirst(new MapPropertySource(PROPERTY_SOURCE_NAME, properties));
   }
 
   @Override

@@ -21,7 +21,7 @@
 
 | 阶段 | 名称 | 状态 | 主要结果 |
 | --- | --- | --- | --- |
-| R0 | 治理与基线 | 部分完成 | 被动聊天/配置 Golden、配置 Contract 与 Parser 选型已建立；配置实现、工具与事件 Contract 待补 |
+| R0 | 治理与基线 | 部分完成 | 被动聊天/配置 Golden 与配置兼容实现已建立；工具与事件 Contract 待补 |
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、五模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 未开始 | 工具协议、循环、审批与失败隔离 |
@@ -46,11 +46,11 @@
 - Java 历史、Prompt、SQLite、错误映射兼容测试及独立 CI Job。
 - Python/Java 配置文件定位、字段优先级、旧别名、未知字段和安全差异 Contract。
 - Python 配置解析、安全校验 Golden，以及 TomlJ Parser 选型 ADR。
+- Java 只读 TOML Resolver、环境变量双模式、Spring Boot 启动装配和无副作用配置检查。
 
 待交付：
 
 - 随能力迁移继续固化工具调用、Memory 和流式事件夹具。
-- 实现已批准的只读 TOML 兼容加载、启动装配和无副作用检查。
 - 为消息、工具、记忆、流式事件建立版本化 Contract。
 
 退出门禁：下一阶段所依赖的协议都有契约；相同夹具能在 Python 生成基准、在 Java 验证；Golden 变化必须人工批准。
@@ -87,7 +87,7 @@
 能力对齐缺口：
 
 - Python Message Bus/Chat Lane 入口、CLI/Telegram 入口尚未迁移。
-- 流式 Delta、生命周期事件、`config.toml` 兼容和完整 Prompt 组装尚未迁移。
+- 流式 Delta、生命周期事件和完整 Prompt 组装尚未迁移。
 - 当前 HTTP 契约是 Java MVP 契约，不等同于 Python 全部被动聊天能力。
 
 退出门禁：Minor 清单、默认、`failure`、`compat` 与被动聊天 Golden 基线已完成；真实模型 Smoke 由人工提供凭证后执行；完整 Python 被动能力仍按后续 Contract 分批对齐。

@@ -11,10 +11,7 @@ public class NameiAgentApplication {
     if (ConfigurationCheckCommand.isRequested(args)) {
       int exitCode =
           ConfigurationCheckCommand.run(
-              args,
-              System.getenv(),
-              Path.of(System.getProperty("user.dir", ".")),
-              System.out);
+              args, System.getenv(), Path.of(System.getProperty("user.dir", ".")), System.out);
       if (exitCode != 0) {
         System.exit(exitCode);
       }

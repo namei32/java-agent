@@ -139,13 +139,7 @@ final class ConfigurationResolver {
       active =
           Optional.of(
               new ActiveConfigurationSnapshot(
-                  "openai-compatible",
-                  model,
-                  apiKey,
-                  baseUrl,
-                  Optional.empty(),
-                  40,
-                  sources));
+                  "openai-compatible", model, apiKey, baseUrl, Optional.empty(), 40, sources));
     }
     return new ConfigurationResolution(
         ConfigurationMode.ENVIRONMENT,
@@ -292,13 +286,15 @@ final class ConfigurationResolver {
       String reportField,
       Map<String, ConfigurationSource> sources,
       List<ConfigurationDiagnostic> diagnostics) {
-    String environmentValue = environmentKey == null ? null : provided(environment.get(environmentKey));
+    String environmentValue =
+        environmentKey == null ? null : provided(environment.get(environmentKey));
     if (environmentValue != null) {
       sources.put(reportField, ConfigurationSource.ENV);
       return new ResolvedValue<>(environmentValue, ConfigurationSource.ENV, environmentKey);
     }
 
-    Candidate modern = stringCandidate(root, modernPath, ConfigurationSource.TOML_MODERN, diagnostics);
+    Candidate modern =
+        stringCandidate(root, modernPath, ConfigurationSource.TOML_MODERN, diagnostics);
     if (!modern.valid()) {
       return new ResolvedValue<>(null, null, modernPath);
     }
@@ -307,7 +303,8 @@ final class ConfigurationResolver {
       return new ResolvedValue<>(modern.value(), modern.source(), modernPath);
     }
 
-    Candidate legacy = stringCandidate(root, legacyPath, ConfigurationSource.TOML_LEGACY, diagnostics);
+    Candidate legacy =
+        stringCandidate(root, legacyPath, ConfigurationSource.TOML_LEGACY, diagnostics);
     if (!legacy.valid()) {
       return new ResolvedValue<>(null, null, legacyPath);
     }
@@ -352,21 +349,11 @@ final class ConfigurationResolver {
       List<ConfigurationDiagnostic> diagnostics) {
     if (root.contains(modernPath)) {
       return integerCandidate(
-          root,
-          modernPath,
-          ConfigurationSource.TOML_MODERN,
-          reportField,
-          sources,
-          diagnostics);
+          root, modernPath, ConfigurationSource.TOML_MODERN, reportField, sources, diagnostics);
     }
     if (root.contains(legacyPath)) {
       return integerCandidate(
-          root,
-          legacyPath,
-          ConfigurationSource.TOML_LEGACY,
-          reportField,
-          sources,
-          diagnostics);
+          root, legacyPath, ConfigurationSource.TOML_LEGACY, reportField, sources, diagnostics);
     }
     sources.put(reportField, ConfigurationSource.DEFAULT);
     return new ResolvedValue<>(fallback, ConfigurationSource.DEFAULT, modernPath);
@@ -531,8 +518,7 @@ final class ConfigurationResolver {
       Set<String> deferred,
       Set<String> unknown,
       List<ConfigurationDiagnostic> diagnostics) {
-    return new ConfigurationReport(
-        sources, sensitiveStatuses, deferred, unknown, diagnostics);
+    return new ConfigurationReport(sources, sensitiveStatuses, deferred, unknown, diagnostics);
   }
 
   private static ConfigurationSelection invalidSelection(

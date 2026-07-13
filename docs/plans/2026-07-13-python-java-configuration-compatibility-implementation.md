@@ -1,7 +1,7 @@
 # Python/Java 配置兼容实施计划
 
-- 状态：实施中
-- 当前执行状态：Task C4 已完成，下一步为 Task C5
+- 状态：已实现并验证
+- 当前执行状态：Task C1-C5 全部完成
 - 日期：2026-07-13
 - Spec：[Python/Java 配置兼容设计](../specs/2026-07-13-python-java-configuration-compatibility-design.md)
 - Contract：[Python/Java 配置兼容契约](../contracts/python-java-configuration.md)
@@ -75,7 +75,7 @@
 - 检查在 Spring Application Context 创建前结束，不启动 HTTP Server、模型客户端，也不创建 Workspace 或 SQLite。
 - C4 有效 RED 为检查命令类型缺失；聚焦 GREEN 实际执行 3 Tests，全部通过。
 
-## Task C5：运行手册与阶段门禁
+## Task C5：运行手册与阶段门禁（已完成）
 
 - 更新 `.env.example`、README 和本地开发运行手册。
 - 记录 DeepSeek TOML 启动、环境覆盖、故障排查和回退到环境变量模式的方法。
@@ -91,3 +91,13 @@
 ```
 
 同时执行 Secret、配置原文件未改写、Workspace/SQLite 副作用和 Git Diff 检查。真实模型 Smoke 不属于本计划的自动门禁。
+
+实施结果：
+
+- 更新 `.env.example`、根 README 和本地开发运行手册，覆盖环境变量/TOML 双模式、DeepSeek、来源优先级、只读检查、诊断和回退。
+- 增加可提交的 `config.example.toml`，并忽略根目录真实 `config.toml`，避免误提交本地配置和密钥。
+- 更新文档导航、Roadmap、能力矩阵和 Java 重写指南，使其反映配置兼容已经落地，下一步转为消息、生命周期和 Tool Contract。
+- `./mvnw spotless:check`、`./mvnw clean verify`、`./mvnw -Pfailure verify` 和最终 `./mvnw -Pcompat verify` 全部通过。
+- 首次 `compat` 门禁暴露注册测试错误地实例化全部 Spring Factory；改为直接验证 `spring.factories` 后，3 个聚焦 Tests 和完整 `compat` 均通过，且消除了 Deprecated API 编译告警。
+- Git Diff、敏感信息模式、Golden 未改动、禁止跟踪的真实配置/Workspace/SQLite/日志产物检查均通过；配置原文件不改写和配置检查无副作用由自动化测试覆盖。
+- 未运行真实模型 Smoke，不访问真实模型，不产生模型费用。

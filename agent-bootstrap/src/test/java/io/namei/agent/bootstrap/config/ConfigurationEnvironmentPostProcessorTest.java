@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.EnvironmentPostProcessor;
@@ -15,7 +16,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.core.env.CommandLinePropertySource;
 import org.springframework.core.env.SimpleCommandLinePropertySource;
 import org.springframework.core.env.StandardEnvironment;
-import org.springframework.core.io.support.SpringFactoriesLoader;
 
 class ConfigurationEnvironmentPostProcessorTest {
   @TempDir Path tempDir;
@@ -66,7 +66,9 @@ class ConfigurationEnvironmentPostProcessorTest {
     assertThat(
             new String(
                 Base64.getDecoder()
-                    .decode(environment.getRequiredProperty("agent.compatibility.system-prompt-base64")),
+                    .decode(
+                        environment.getRequiredProperty(
+                            "agent.compatibility.system-prompt-base64")),
                 StandardCharsets.UTF_8))
         .isEqualTo("包含 ${NOT_A_SPRING_PROPERTY} 的提示");
     assertThat(environment.getPropertySources().iterator().next().getName())
@@ -76,15 +78,20 @@ class ConfigurationEnvironmentPostProcessorTest {
   @Test
   void leavesEnvironmentModeUntouchedAndFailsTomlBeforeContextCreation() throws Exception {
     var environment = new StandardEnvironment();
-    environment.getPropertySources().addFirst(new org.springframework.core.env.MapPropertySource(
-        "test", Map.of("spring.ai.openai.chat.model", "existing-model")));
+    environment
+        .getPropertySources()
+        .addFirst(
+            new org.springframework.core.env.MapPropertySource(
+                "test", Map.of("spring.ai.openai.chat.model", "existing-model")));
     var processor = new AgentConfigurationEnvironmentPostProcessor(tempDir, Map.of());
 
     processor.postProcessEnvironment(environment, new SpringApplication(Object.class));
 
     assertThat(environment.getProperty("spring.ai.openai.chat.model")).isEqualTo("existing-model");
-    assertThat(environment.getPropertySources().contains(
-            AgentConfigurationEnvironmentPostProcessor.PROPERTY_SOURCE_NAME))
+    assertThat(
+            environment
+                .getPropertySources()
+                .contains(AgentConfigurationEnvironmentPostProcessor.PROPERTY_SOURCE_NAME))
         .isFalse();
     assertThat(tempDir).isEmptyDirectory();
 
@@ -99,18 +106,24 @@ class ConfigurationEnvironmentPostProcessorTest {
                 "--agent.config-file=" + invalid));
 
     assertThatThrownBy(
-            () -> processor.postProcessEnvironment(
-                invalidEnvironment, new SpringApplication(Object.class)))
+            () ->
+                processor.postProcessEnvironment(
+                    invalidEnvironment, new SpringApplication(Object.class)))
         .isInstanceOf(ConfigurationResolutionException.class)
         .hasMessageContaining("CONFIG_TOML_INVALID")
         .hasMessageNotContaining("deepseek");
   }
 
   @Test
-  void registersThePostProcessorThroughSpringFactories() {
-    assertThat(
-            SpringFactoriesLoader.loadFactoryNames(
-                EnvironmentPostProcessor.class, getClass().getClassLoader()))
+  void registersThePostProcessorThroughSpringFactories() throws Exception {
+    var factories = new Properties();
+    try (var resource =
+        getClass().getClassLoader().getResourceAsStream("META-INF/spring.factories")) {
+      assertThat(resource).isNotNull();
+      factories.load(resource);
+    }
+
+    assertThat(factories.getProperty(EnvironmentPostProcessor.class.getName()))
         .contains(AgentConfigurationEnvironmentPostProcessor.class.getName());
   }
 }

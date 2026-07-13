@@ -14,14 +14,18 @@ java -version
 
 两条命令都必须显示 JDK 21；Maven 必须由 `./mvnw` 启动。
 
-创建本地配置：
+项目支持环境变量模式和只读 TOML 兼容模式。两种模式都由 Shell 或部署平台提供进程环境；Java 不自动读取 `.env`。
+
+### 1.1 环境变量模式
+
+创建本地环境文件：
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 cp .env.example .env
 ```
 
-编辑 `.env`：
+编辑项目根目录的 `.env`：
 
 ```dotenv
 AKASHIC_WORKSPACE=./workspace
@@ -31,6 +35,35 @@ OPENAI_MODEL=gpt-4o-mini
 ```
 
 `OPENAI_BASE_URL` 是 OpenAI-compatible API 根路径。OpenAI 官方地址需要包含 `/v1`。`.env` 已被 Git 忽略，禁止提交真实密钥。
+
+未显式指定配置文件，且启动目录不存在 `config.toml` 时使用此模式。
+
+### 1.2 TOML 兼容模式（DeepSeek 示例）
+
+从仓库内的安全模板创建本地配置：
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+cp config.example.toml config.toml
+```
+
+根目录 `config.toml` 已被 Git 忽略。Java 只读该文件，不会格式化、迁移或写回。模板通过 `${DEEPSEEK_API_KEY}` 引用进程环境，因此 `.env` 应改为：
+
+```dotenv
+AKASHIC_WORKSPACE=./workspace-java
+DEEPSEEK_API_KEY=replace-me
+```
+
+删除或注释 `.env` 中的 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL`；它们是 TOML 活动字段的最高优先级覆盖值，保留模板值会覆盖 DeepSeek 配置。
+
+配置文件定位优先级固定为：
+
+1. 命令行 `--agent.config-file=/absolute/or/relative/path.toml`。
+2. 环境变量 `NAMEI_CONFIG_FILE`。
+3. 启动目录的 `./config.toml`。
+4. 都不存在时回退到环境变量模式。
+
+相对路径以 Java 进程启动目录为基准。本手册的命令会先进入项目根目录，避免从 `docs/runbooks` 等子目录启动时找错配置。
 
 ## 2. 工作区安全
 
@@ -59,13 +92,31 @@ AKASHIC_WORKSPACE=./workspace-java
 
 ## 3. 构建与启动
 
-加载环境变量并构建：
+构建项目：
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 set -a && source .env && set +a
 ./mvnw clean verify
 ```
+
+启动前先执行只读配置检查：
+
+```bash
+(
+  cd "$(git rev-parse --show-toplevel)" || exit 1
+  [[ -f .env ]] || { echo "未找到项目根目录下的 .env，请先从 .env.example 创建"; exit 1; }
+  [[ -f agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar ]] || \
+    { echo "未找到可执行 JAR，请先运行 ./mvnw clean verify"; exit 1; }
+  set -a
+  source .env || exit 1
+  set +a
+  java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar \
+    --agent.config-check
+)
+```
+
+显式检查其他 TOML 文件时，在同一条 `java -jar` 命令末尾追加 `--agent.config-file=/path/to/config.toml`。检查成功返回退出码 `0`，配置无效返回 `2`。输出只包含配置模式、规范化路径、字段来源、Secret 状态、Deferred/未知路径和诊断码；不会创建 Spring Application Context、Workspace、SQLite、HTTP Server 或模型客户端。
 
 启动应用：
 
@@ -154,18 +205,35 @@ cd "$(git rev-parse --show-toplevel)"
 
 ### 启动提示缺少模型配置
 
-确认已执行：
+环境变量模式先确认已执行：
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 set -a && source .env && set +a
 ```
 
-检查三个变量是否为非空值；不要在终端输出或聊天中粘贴 `OPENAI_API_KEY`。
+检查 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL` 是否为非空值；不要在终端输出或聊天中粘贴 `OPENAI_API_KEY`。
+
+TOML 模式先运行 `--agent.config-check`。如果诊断为 `CONFIG_ENV_UNRESOLVED`，确认 `api_key` 使用的完整占位符（例如 `${DEEPSEEK_API_KEY}`）已经导出且非空；不要把密钥直接粘贴到排障记录。
+
+### TOML 文件未生效
+
+确认命令从项目根目录启动，或显式使用 `--agent.config-file`/`NAMEI_CONFIG_FILE`。命令行优先于 `NAMEI_CONFIG_FILE`，后者优先于默认 `./config.toml`。修改配置后必须重启，当前不支持热更新。
+
+如果要回退到环境变量模式，先取消 `NAMEI_CONFIG_FILE`，并让启动目录不再存在 `config.toml`，然后提供三个 `OPENAI_*` 变量。Java 不会自动删除或改写 TOML。
+
+### 配置检查返回退出码 2
+
+根据 JSON 中的稳定诊断码和字段路径修复问题。报告不会返回错误原值：
+
+- `CONFIG_FILE_NOT_FOUND`/`CONFIG_FILE_INVALID`：检查文件路径、`.toml` 扩展名和普通文件类型。
+- `CONFIG_TOML_INVALID`/`CONFIG_TYPE_INVALID`：检查 UTF-8、TOML 语法和原生类型。
+- `CONFIG_REQUIRED_MISSING`/`CONFIG_ENV_UNRESOLVED`：补齐必填字段或占位符环境变量。
+- `CONFIG_URL_INVALID`：Base URL 必须是带 Host 的 `http` 或 `https` 绝对 URI。
 
 ### 模型返回 404
 
-首先检查 `OPENAI_BASE_URL` 是否包含服务要求的 API 根路径。OpenAI 官方地址应为 `https://api.openai.com/v1`，而不是只到域名。
+首先检查活动 Base URL 是否包含服务要求的 API 根路径。OpenAI 官方地址应为 `https://api.openai.com/v1`；DeepSeek 预设为 `https://api.deepseek.com/v1`。在 TOML 模式中还要确认没有遗留的 `OPENAI_BASE_URL` 覆盖配置。
 
 ### 返回 502
 

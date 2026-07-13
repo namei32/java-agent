@@ -7,8 +7,8 @@
 - 已完成：五模块 Maven 骨架、同步 HTTP 被动聊天、历史恢复、OpenAI-compatible 模型适配、SQLite 原子轮次写入、失败语义、单进程同会话串行化、健康检查与基础可观察性。
 - 已完成：MVP Minor 技术债加固和 Java 重写文档治理。
 - 已完成：被动聊天共同投影的 Python/Java Golden Test 规范、历史、Prompt、SQLite、错误映射基准及 CI 门禁。
-- 已完成：Python/Java 配置兼容 Contract、配置 Golden 与 TomlJ Parser 选型；生产 Resolver 尚未开始。
-- 下一里程碑：实现只读配置 Resolver、启动装配和无副作用检查，再冻结消息、生命周期和 Tool Contract；不能直接跳到工具生态扩展。
+- 已完成：Python/Java 配置兼容 Contract、配置 Golden、TomlJ Parser 选型、只读 Resolver、Spring Boot 启动装配和无副作用检查入口。
+- 下一里程碑：冻结核心消息、生命周期和 Tool Contract，再实现最小 Tool Loop；不能直接跳到工具生态扩展。
 - 尚未覆盖：流式输出、工具调用、MCP、长期记忆、渠道、插件、主动任务、Drift 和 Subagent。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。
@@ -22,8 +22,8 @@
 5. 与当前变更相关的 `contracts/`、`specs/` 和 `plans/`。
 6. [本地开发运行手册](runbooks/local-development.md)。
 
-当前 Golden 资产从 [Python/Java Golden Test 夹具规范](contracts/golden-test-fixtures.md)进入。
-配置迁移边界从 [Python/Java 配置兼容契约](contracts/python-java-configuration.md)进入。
+当前 Golden 资产从 [Python/Java Golden Test 夹具规范](contracts/golden-test-fixtures.md)进入，包含配置、历史、Prompt、SQLite 和错误映射基准。
+配置迁移边界从 [Python/Java 配置兼容契约](contracts/python-java-configuration.md)进入，实际启动与检查命令见[本地开发运行手册](runbooks/local-development.md)。
 
 ## 目录职责
 

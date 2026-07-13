@@ -5,6 +5,7 @@
 target/
 **/target/
 .env
+/config.toml
 workspace/
 *.db
 *.db-shm
