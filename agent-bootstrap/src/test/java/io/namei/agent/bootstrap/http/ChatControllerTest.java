@@ -45,16 +45,14 @@ class ChatControllerTest {
 
   @BeforeEach
   void resetUseCase() {
-    useCase.result =
-        new ChatResult("demo", new ChatMessage(MessageRole.ASSISTANT, "默认回答"));
+    useCase.result = new ChatResult("demo", new ChatMessage(MessageRole.ASSISTANT, "默认回答"));
     useCase.failure = null;
     useCase.command = null;
   }
 
   @Test
   void returnsAssistantMessageAndPreservesValidRequestId() throws Exception {
-    useCase.result =
-        new ChatResult("demo", new ChatMessage(MessageRole.ASSISTANT, "回答"));
+    useCase.result = new ChatResult("demo", new ChatMessage(MessageRole.ASSISTANT, "回答"));
 
     mvc.perform(
             post("/api/v1/chat")
@@ -87,10 +85,7 @@ class ChatControllerTest {
                     org.hamcrest.Matchers.not(org.hamcrest.Matchers.equalTo("bad request id"))))
         .andExpect(jsonPath("$.title").value("请求参数无效"));
 
-    mvc.perform(
-            post("/api/v1/chat")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{"))
+    mvc.perform(post("/api/v1/chat").contentType(MediaType.APPLICATION_JSON).content("{"))
         .andExpect(status().isBadRequest())
         .andExpect(header().exists(RequestIdFilter.HEADER))
         .andExpect(jsonPath("$.title").value("JSON 格式无效"));
@@ -105,13 +100,9 @@ class ChatControllerTest {
 
   @Test
   void rejectsDeclaredOversizedRequestBody() throws Exception {
-    String oversized =
-        "{\"sessionId\":\"demo\",\"message\":\"" + "x".repeat(65_536) + "\"}";
+    String oversized = "{\"sessionId\":\"demo\",\"message\":\"" + "x".repeat(65_536) + "\"}";
 
-    mvc.perform(
-            post("/api/v1/chat")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(oversized))
+    mvc.perform(post("/api/v1/chat").contentType(MediaType.APPLICATION_JSON).content(oversized))
         .andExpect(status().isPayloadTooLarge())
         .andExpect(header().exists(RequestIdFilter.HEADER))
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -153,19 +144,26 @@ class ChatControllerTest {
   @Test
   void mapsModelFailuresToBadGatewayWithoutLeakingCause() throws Exception {
     useCase.failure =
-        new ModelInvocationException(
-            "模型调用失败", new IllegalStateException("Bearer provider-secret"));
+        new ModelInvocationException("模型调用失败", new IllegalStateException("Bearer provider-secret"));
 
     performValidChat()
         .andExpect(status().isBadGateway())
         .andExpect(jsonPath("$.title").value("模型调用失败"))
-        .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("provider-secret"))));
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("provider-secret"))));
 
     useCase.failure = new InvalidModelResponseException("raw provider payload");
     performValidChat()
         .andExpect(status().isBadGateway())
         .andExpect(jsonPath("$.title").value("模型调用失败"))
-        .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("raw provider payload"))));
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("raw provider payload"))));
   }
 
   @Test
@@ -187,13 +185,21 @@ class ChatControllerTest {
     performValidChat()
         .andExpect(status().isInternalServerError())
         .andExpect(jsonPath("$.title").value("会话持久化失败"))
-        .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("database-secret"))));
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("database-secret"))));
 
     useCase.failure = new IllegalStateException("internal-secret");
     performValidChat()
         .andExpect(status().isInternalServerError())
         .andExpect(jsonPath("$.title").value("内部服务错误"))
-        .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("internal-secret"))));
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("internal-secret"))));
   }
 
   private org.springframework.test.web.servlet.ResultActions performValidChat() throws Exception {

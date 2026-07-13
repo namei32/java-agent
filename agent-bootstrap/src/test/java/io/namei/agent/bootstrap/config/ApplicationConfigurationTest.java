@@ -71,7 +71,9 @@ class ApplicationConfigurationTest {
     assertThatThrownBy(
             () ->
                 new AgentProperties(
-                    tempDir, new AgentProperties.History(-1, 10), new AgentProperties.Model(Duration.ZERO)))
+                    tempDir,
+                    new AgentProperties.History(-1, 10),
+                    new AgentProperties.Model(Duration.ZERO)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 

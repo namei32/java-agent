@@ -22,7 +22,6 @@ public class ChatController {
   ChatResponse chat(@Valid @RequestBody ChatRequest request) {
     var result = chat.chat(new ChatCommand(request.sessionId(), request.message()));
     return new ChatResponse(
-        result.sessionId(),
-        new ChatResponse.Message("assistant", result.assistant().content()));
+        result.sessionId(), new ChatResponse.Message("assistant", result.assistant().content()));
   }
 }

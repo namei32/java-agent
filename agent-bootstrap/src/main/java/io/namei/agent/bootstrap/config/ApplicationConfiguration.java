@@ -1,8 +1,8 @@
 package io.namei.agent.bootstrap.config;
 
+import io.namei.agent.adapter.springai.SpringAiAdapterConfiguration;
 import io.namei.agent.adapter.sqlite.JdbcSessionRepository;
 import io.namei.agent.adapter.sqlite.SqliteSchemaInitializer;
-import io.namei.agent.adapter.springai.SpringAiAdapterConfiguration;
 import io.namei.agent.application.ChatService;
 import io.namei.agent.application.ChatUseCase;
 import io.namei.agent.application.KeyedSessionExecutionGate;
@@ -73,8 +73,7 @@ public class ApplicationConfiguration {
         sessions,
         model,
         new ConversationHistorySelector(),
-        new HistoryLimits(
-            properties.history().maxMessages(), properties.history().maxCharacters()),
+        new HistoryLimits(properties.history().maxMessages(), properties.history().maxCharacters()),
         gate,
         prompt,
         Clock.systemUTC());

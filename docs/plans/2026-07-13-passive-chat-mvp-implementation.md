@@ -17,9 +17,10 @@
 | Task 7 | 已完成 | 提交 `c286b16`；`SpringAiChatModelAdapterTest` 5/5 GREEN |
 | Task 8 | 已完成 | 提交 `e5b6eb1`；聚焦 RED 有效，`ApplicationConfigurationTest` 5/5 GREEN，未访问外部模型 |
 | Task 9 | 已完成 | 提交 `c0d9948`；聚焦 RED 有效，`ChatControllerTest` 7/7 GREEN，覆盖未知请求长度的 64 KiB 上限 |
-| Task 10 | 已完成 | 聚焦 RED 有效；本地 `127.0.0.1` 桩协议测试 6/6 GREEN，未访问真实模型 |
-| 阶段 C | 当前门禁 | 集中执行格式化、模型 Adapter、Bootstrap、完整 Reactor 和 Kernel 依赖树验证 |
-| Task 11–13 / 阶段 D | 待执行 | 按后续任务和最终门禁推进 |
+| Task 10 | 已完成 | 提交 `163b7b6`；聚焦 RED 有效，本地 `127.0.0.1` 桩协议测试 6/6 GREEN，未访问真实模型 |
+| 阶段 C | 已完成 | Spotless、模型 Adapter、Bootstrap、干净 Reactor 均通过；完整构建 56/56，Kernel 仅含测试依赖 |
+| Task 11 | 当前任务 | 强制安全运行边界、健康检查和架构边界 |
+| Task 12–13 / 阶段 D | 待执行 | 按后续任务和最终门禁推进 |
 
 恢复执行时以本节和 Git 提交为准。每完成一个任务或阶段，立即更新本表；不维护额外的任务 brief、review package、执行报告或外部进度台账。
 
@@ -32,7 +33,7 @@
 - Task 4：超大 `Duration` 测试未强约束纳秒饱和值；串行测试的 `secondStarted` 存在极小调度假阳性窗口。
 - Task 5：缺少 Schema 初始化幂等、反向损坏表，以及主键、非空、默认值和唯一约束专项测试。
 - Task 6：缺少已有 Session 更新失败的完整状态回滚测试，以及恢复游标后继续追加 ID 的专项测试。
-- Task 7/9/10：Spring 测试基础设施在 JDK 21 下提示 Mockito 动态加载代理的未来兼容警告；Task 9 测试编译另有已过时 API 警告，阶段 C 审查时定位并裁决。
+- Task 7/9/10：Spring 测试基础设施在 JDK 21 下提示 Mockito 动态加载代理的未来兼容警告；Task 9 测试编译另有已过时 API 警告。阶段 C 不受影响，保留到最终门禁统一裁决。
 
 ## 全局约束
 
