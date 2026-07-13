@@ -144,7 +144,8 @@ class ChatControllerTest {
   @Test
   void mapsModelFailuresToBadGatewayWithoutLeakingCause() throws Exception {
     useCase.failure =
-        new ModelInvocationException("模型调用失败", new IllegalStateException("Bearer provider-secret"));
+        new ModelInvocationException(
+            "模型调用失败", new IllegalStateException("Bearer <provider-secret>"));
 
     performValidChat()
         .andExpect(status().isBadGateway())

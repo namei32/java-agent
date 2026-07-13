@@ -22,7 +22,7 @@ class ObservedPortsTest {
   void modelLogDoesNotContainPromptOrUpstreamMessage() {
     ChatModelPort failing =
         request -> {
-          throw new IllegalStateException("Bearer model-secret");
+          throw new IllegalStateException("Bearer <model-secret>");
         };
 
     String log =
@@ -45,12 +45,12 @@ class ObservedPortsTest {
         new SessionRepository() {
           @Override
           public SessionSnapshot load(String sessionId) {
-            throw new IllegalStateException("Bearer database-secret");
+            throw new IllegalStateException("Bearer <database-secret>");
           }
 
           @Override
           public void appendTurn(String sessionId, PersistedTurn turn) {
-            throw new IllegalStateException("Bearer database-secret");
+            throw new IllegalStateException("Bearer <database-secret>");
           }
         };
 

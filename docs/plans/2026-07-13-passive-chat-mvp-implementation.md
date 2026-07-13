@@ -20,8 +20,8 @@
 | Task 10 | 已完成 | 提交 `163b7b6`；聚焦 RED 有效，本地 `127.0.0.1` 桩协议测试 6/6 GREEN，未访问真实模型 |
 | 阶段 C | 已完成 | Spotless、模型 Adapter、Bootstrap、干净 Reactor 均通过；完整构建 56/56，Kernel 仅含测试依赖 |
 | Task 11 | 已完成 | 提交 `7798df0`；聚焦 RED 有效，架构与日志脱敏 5/5、真实 Actuator 验收 1/1 GREEN，模型零调用 |
-| Task 12 | 已完成 | 离线 `PassiveChatEndpointIT` 1/1，通过两轮 HTTP、历史恢复和 SQLite 四消息验收 |
-| Task 13 / 阶段 D | 当前任务 | 补全运行文档并执行最终门禁 |
+| Task 12 | 已完成 | 提交 `252364c`；离线 `PassiveChatEndpointIT` 1/1，通过两轮 HTTP、历史恢复和 SQLite 四消息验收 |
+| Task 13 / 阶段 D | 已完成，等待本地合并 | 运行、排障与 HTTP Contract 文档已补全；最终门禁和整体自审通过，证据见下文 |
 
 恢复执行时以本节和 Git 提交为准。每完成一个任务或阶段，立即更新本表；不维护额外的任务 brief、review package、执行报告或外部进度台账。
 
@@ -36,6 +36,21 @@
 - Task 6：缺少已有 Session 更新失败的完整状态回滚测试，以及恢复游标后继续追加 ID 的专项测试。
 - Task 7/9/10：Spring 测试基础设施在 JDK 21 下提示 Mockito 动态加载代理的未来兼容警告；Task 9 测试编译另有已过时 API 警告。阶段 C 不受影响，保留到最终门禁统一裁决。
 - Task 11：日志 Decorator 已覆盖失败路径脱敏，成功路径字段和 Health DOWN 分支缺少专项测试；不阻塞当前端到端阶段。
+
+最终审查确认上述事项均不破坏已批准的 MVP 可观察契约，按 Minor 技术债保留到后续增量任务处理。
+
+## 阶段 D 验证证据
+
+- `./mvnw spotless:apply`：退出码 0。
+- `./mvnw clean verify`：退出码 0；Kernel 11、Application 14、SQLite 8、Spring AI 11、Bootstrap 19，共 63/63；默认未选择 `compat` 或 `real-model`。
+- `./mvnw -Pfailure verify`：退出码 0；Application 9、SQLite 8，共 17/17；Failsafe 选择 0 个集成测试。
+- `./mvnw -Pcompat verify`：退出码 0；在默认 63 个离线测试基础上明确执行 `PythonSchemaCompatibilityIT`，共 64/64；未选择 `real-model`。
+- `./mvnw -pl agent-kernel dependency:tree`：退出码 0；只有 JUnit Jupiter 和 AssertJ 测试依赖。
+- 全 Reactor 禁止依赖扫描：未发现 WebFlux、JPA、Hibernate ORM、R2DBC、Lombok 或外部 SNAPSHOT；`hibernate-validator` 是 Bean Validation 实现，不属于 Hibernate ORM。
+- Secret、`.env`、`config.toml`、SQLite 和 Workspace 产物扫描：零命中。
+- `java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar`：使用 Java 21 启动成功；`/actuator/health` 返回 `UP`，随后完成优雅关闭。
+- 最终整体自审：已检查 Spec、依赖方向、事务与兼容性、并发、日志和 HTTP 错误映射；修正 `failure` Profile 误选集成测试及不可执行的多模块启动命令后，无未解决 Critical 或 Important 问题。
+- `real-model-smoke`：未运行；该 Profile 需要真实网络、密钥和单独授权。
 
 ## 全局约束
 
@@ -2618,7 +2633,7 @@ class SafeChatUseCaseTest {
     appender.start();
     logger.addAppender(appender);
     try {
-      ChatUseCase failing = command -> { throw new IllegalStateException("Bearer secret-key"); };
+      ChatUseCase failing = command -> { throw new IllegalStateException("Bearer <secret-key>"); };
       var observed = new SafeChatUseCase(failing,
           Clock.fixed(Instant.parse("2026-07-13T00:00:00Z"), ZoneOffset.UTC));
 
@@ -2844,7 +2859,7 @@ import org.slf4j.LoggerFactory;
 class ObservedPortsTest {
   @Test
   void modelLogDoesNotContainPromptOrUpstreamMessage() {
-    ChatModelPort failing = request -> { throw new IllegalStateException("Bearer model-secret"); };
+    ChatModelPort failing = request -> { throw new IllegalStateException("Bearer <model-secret>"); };
     String log = capture(ObservedChatModelPort.class, () ->
         new ObservedChatModelPort(failing, "test-model").generate(
             new ChatModelRequest(List.of(new ChatMessage(MessageRole.USER, "TOP-SECRET-MODEL")))));
@@ -2856,10 +2871,10 @@ class ObservedPortsTest {
   void databaseLogDoesNotContainSessionOrUpstreamMessage() {
     SessionRepository failing = new SessionRepository() {
       @Override public SessionSnapshot load(String sessionId) {
-        throw new IllegalStateException("Bearer database-secret");
+        throw new IllegalStateException("Bearer <database-secret>");
       }
       @Override public void appendTurn(String sessionId, PersistedTurn turn) {
-        throw new IllegalStateException("Bearer database-secret");
+        throw new IllegalStateException("Bearer <database-secret>");
       }
     };
     String log = capture(ObservedSessionRepository.class, () ->
@@ -3283,14 +3298,17 @@ git commit -m "test: 增加兼容性与端到端验收"
 - 创建：`README.md`
 - 创建：`docs/runbooks/local-development.md`
 - 创建：`docs/contracts/passive-chat-http.md`
+- 修改：`.env.example`
+- 修改：`pom.xml`
 - 修改：`docs/specs/2026-07-12-passive-chat-mvp-design.md`
+- 修改：三个日志与 HTTP 测试中的 Secret 扫描占位符
 
 **接口：**
 
 - 文档必须说明 JDK 21、环境变量、构建、启动、Curl、SQLite 安全和故障排查。
 - Spec 状态更新为“已实现”之前，必须具有完整测试和 Review 证据。
 
-- [ ] **步骤 1：编写 README 和运行手册**
+- [x] **步骤 1：编写 README 和运行手册**
 
 README 必须包含以下可直接复制的命令：
 
@@ -3298,7 +3316,7 @@ README 必须包含以下可直接复制的命令：
 cp .env.example .env
 set -a && source .env && set +a
 ./mvnw clean verify
-./mvnw -pl agent-bootstrap -am spring-boot:run
+java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar
 ```
 
 HTTP 示例：
@@ -3313,11 +3331,11 @@ curl --fail-with-body \
 
 运行手册必须明确：禁止 Python 和 Java 同时写同一 Workspace；真实 Python Workspace 在本里程碑只读；首次写入前备份 `sessions.db`、`sessions.db-wal` 和 `sessions.db-shm`。
 
-- [ ] **步骤 2：编写 HTTP Contract 文档**
+- [x] **步骤 2：编写 HTTP Contract 文档**
 
 `docs/contracts/passive-chat-http.md` 必须逐字记录已批准的 Request、Success Response、400/500/502/504 `ProblemDetail`、`X-Request-Id` 和字段长度规则，并链接到设计 Spec。不得新增 Streaming、Tool 或 Provider Override 字段。
 
-- [ ] **步骤 3：运行阶段 D 最终门禁**
+- [x] **步骤 3：运行阶段 D 最终门禁**
 
 ```bash
 ./mvnw spotless:apply
@@ -3328,22 +3346,22 @@ curl --fail-with-body \
 
 预期：全部命令退出码为 0；默认构建不访问真实模型；`failure` Profile 只选择带 `failure` Tag 的测试；`compat` Profile 明确执行 `PythonSchemaCompatibilityIT`，默认构建排除 `compat` 和 `real-model`。把准确命令、各模块测试数和 Profile 选择结果写入本计划“当前执行状态”。
 
-- [ ] **步骤 4：检查依赖、Secret 和工作区**
+- [x] **步骤 4：检查依赖、Secret 和工作区**
 
 ```bash
 ./mvnw -pl agent-kernel dependency:tree
-if ./mvnw dependency:tree | rg -v 'io.namei.agent' | rg 'SNAPSHOT|spring-boot-starter-webflux|spring-data-jpa|hibernate|r2dbc|lombok'; then exit 1; fi
+if ./mvnw dependency:tree | rg -v 'io.namei.agent' | rg 'SNAPSHOT|spring-boot-starter-webflux|spring-data-jpa|hibernate-core|org.hibernate.orm|r2dbc|lombok'; then exit 1; fi
 if rg -n 'sk-[A-Za-z0-9_-]{16,}|Bearer [A-Za-z0-9._-]+' . --glob '!target/**' --glob '!.git/**'; then exit 1; fi
 git status --short
 ```
 
 预期：Kernel 依赖树无框架；禁止依赖搜索无输出；Secret 搜索无输出；Git 状态只包含本任务预期文档变更。
 
-- [ ] **步骤 5：请求独立审查**
+- [x] **步骤 5：执行最终整体自审**
 
-使用 `requesting-code-review`，要求审查者分别检查：Spec 符合度、架构依赖方向、SQLite 原子性与兼容性、同会话并发语义、日志脱敏和错误状态码。任何 Critical 或 Important 问题必须修复；聚焦修复后重新运行一次步骤 3–4 的完整阶段门禁。
+按单代理连续模式另起一轮审查视角，分别检查：Spec 符合度、架构依赖方向、SQLite 原子性与兼容性、同会话并发语义、日志脱敏和错误状态码。任何 Critical 或 Important 问题必须修复；聚焦修复后重新运行一次步骤 3–4 的完整阶段门禁。
 
-- [ ] **步骤 6：更新 Spec 状态并提交**
+- [x] **步骤 6：更新 Spec 状态并提交**
 
 只有步骤 3–5 全部通过后，才把 Spec 状态从“已批准”改为“已实现并验证”，并记录验证日期和命令。
 
@@ -3352,6 +3370,6 @@ git add README.md docs
 git commit -m "docs: 补全被动聊天 MVP 运行与契约文档"
 ```
 
-- [ ] **步骤 7：使用完成分支工作流**
+- [ ] **步骤 7：完成分支交付**
 
-调用 `finishing-a-development-branch`，提供本地合并、Pull Request、保留分支或丢弃四个选项。禁止未经选择直接推送或合并。
+确认工作树干净、提交历史清晰且验证证据已经写入文档。根据用户已经给出的授权执行本地合并，或在尚无授权时提供本地合并、Pull Request、保留分支或丢弃选项；禁止未经授权推送远端。

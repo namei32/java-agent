@@ -24,7 +24,7 @@ class SafeChatUseCaseTest {
     try {
       ChatUseCase failing =
           command -> {
-            throw new IllegalStateException("Bearer secret-key");
+            throw new IllegalStateException("Bearer <secret-key>");
           };
       var observed =
           new SafeChatUseCase(

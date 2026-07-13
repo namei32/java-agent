@@ -136,6 +136,13 @@
               <groups>failure</groups>
             </configuration>
           </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <groups>failure</groups>
+            </configuration>
+          </plugin>
         </plugins>
       </build>
     </profile>
