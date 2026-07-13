@@ -12,12 +12,13 @@ class ConversationHistorySelectorTest {
 
   @Test
   void keepsNewestCompleteTurnsWithinBothLimits() {
-    var history = List.of(
-        new ChatMessage(MessageRole.ASSISTANT, "孤立响应"),
-        new ChatMessage(MessageRole.USER, "旧问题123"),
-        new ChatMessage(MessageRole.ASSISTANT, "旧回答123"),
-        new ChatMessage(MessageRole.USER, "新问题"),
-        new ChatMessage(MessageRole.ASSISTANT, "新回答"));
+    var history =
+        List.of(
+            new ChatMessage(MessageRole.ASSISTANT, "孤立响应"),
+            new ChatMessage(MessageRole.USER, "旧问题123"),
+            new ChatMessage(MessageRole.ASSISTANT, "旧回答123"),
+            new ChatMessage(MessageRole.USER, "新问题"),
+            new ChatMessage(MessageRole.ASSISTANT, "新回答"));
 
     assertThat(selector.select(history, new HistoryLimits(4, 6)))
         .containsExactly(
@@ -27,9 +28,10 @@ class ConversationHistorySelectorTest {
 
   @Test
   void neverReturnsAnOrphanAssistantMessage() {
-    assertThat(selector.select(
-            List.of(new ChatMessage(MessageRole.ASSISTANT, "孤立响应")),
-            new HistoryLimits(40, 100_000)))
+    assertThat(
+            selector.select(
+                List.of(new ChatMessage(MessageRole.ASSISTANT, "孤立响应")),
+                new HistoryLimits(40, 100_000)))
         .isEmpty();
   }
 }
