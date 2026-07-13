@@ -1,0 +1,98 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "CONFIG_REQUIRED_MISSING",
+            "field": "llm.main.model"
+          }
+        ],
+        "tomlSyntax": "VALID"
+      },
+      "id": "missing-required-model",
+      "input": {
+        "environment": {},
+        "toml": "[llm]\nprovider = \"deepseek\"\n\n[llm.main]\napi_key = \"__GOLDEN_SECRET__\"\n"
+      }
+    },
+    {
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "CONFIG_ENV_UNRESOLVED",
+            "field": "llm.main.api_key"
+          }
+        ],
+        "tomlSyntax": "VALID"
+      },
+      "id": "unresolved-api-key-environment",
+      "input": {
+        "environment": {},
+        "toml": "[llm]\nprovider = \"deepseek\"\n\n[llm.main]\nmodel = \"deepseek-chat\"\napi_key = \"${NAMEI_GOLDEN_MISSING_KEY}\"\n"
+      }
+    },
+    {
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "CONFIG_TYPE_INVALID",
+            "field": "agent.context.memory_window"
+          }
+        ],
+        "tomlSyntax": "VALID"
+      },
+      "id": "invalid-memory-window-type",
+      "input": {
+        "environment": {},
+        "toml": "[llm]\nprovider = \"deepseek\"\n\n[llm.main]\nmodel = \"deepseek-chat\"\napi_key = \"__GOLDEN_SECRET__\"\n\n[agent.context]\nmemory_window = \"forty\"\n"
+      }
+    },
+    {
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "CONFIG_URL_INVALID",
+            "field": "llm.main.base_url"
+          }
+        ],
+        "tomlSyntax": "VALID"
+      },
+      "id": "invalid-base-url",
+      "input": {
+        "environment": {},
+        "toml": "[llm]\nprovider = \"deepseek\"\n\n[llm.main]\nmodel = \"deepseek-chat\"\napi_key = \"__GOLDEN_SECRET__\"\nbase_url = \"ftp://invalid.example.test/v1\"\n"
+      }
+    },
+    {
+      "expected": {
+        "diagnostics": [
+          {
+            "code": "CONFIG_TOML_INVALID",
+            "field": "$document"
+          }
+        ],
+        "tomlSyntax": "INVALID"
+      },
+      "id": "invalid-toml",
+      "input": {
+        "environment": {},
+        "toml": "[llm]\nprovider = [\"deepseek\"\n"
+      }
+    }
+  ],
+  "formatVersion": 1,
+  "normalization": [
+    {
+      "field": "expected.diagnostics",
+      "rule": "stable-code-and-field-only"
+    }
+  ],
+  "pythonEvidence": {
+    "callable": "agent.config.load_config",
+    "path": "agent/config.py",
+    "projection": "Python 仅提供迁移来源；严格类型、URL 和未展开密钥是已批准 Java 安全契约"
+  },
+  "source": "migration-contract",
+  "suite": "configuration"
+}

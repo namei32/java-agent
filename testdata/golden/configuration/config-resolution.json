@@ -1,0 +1,167 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "active": {
+          "apiKeyStatus": "PRESENT",
+          "baseUrl": "https://api.deepseek.com/v1",
+          "historyMaxMessages": 24,
+          "model": "deepseek-chat",
+          "provider": "deepseek",
+          "systemPrompt": "你是配置兼容测试助手。"
+        }
+      },
+      "id": "modern-deepseek",
+      "input": {
+        "environment": {},
+        "toml": "[llm]\nprovider = \"deepseek\"\n\n[llm.main]\nmodel = \"deepseek-chat\"\napi_key = \"__GOLDEN_SECRET__\"\nbase_url = \"https://api.deepseek.com/v1\"\n\n[agent]\nsystem_prompt = \"你是配置兼容测试助手。\"\n\n[agent.context]\nmemory_window = 24\n",
+        "tomlSha256": "9b8822126346e268fd385f18070d1c4449016b7052de55167190fb2a646d4c8a"
+      },
+      "pythonInvocation": {
+        "callable": "agent.config.load_config"
+      }
+    },
+    {
+      "expected": {
+        "active": {
+          "apiKeyStatus": "PRESENT",
+          "baseUrl": "https://legacy.example.test/v1",
+          "historyMaxMessages": 12,
+          "model": "legacy-model",
+          "provider": "openai",
+          "systemPrompt": "旧版系统提示。"
+        }
+      },
+      "id": "legacy-root",
+      "input": {
+        "environment": {},
+        "toml": "provider = \"openai\"\nmodel = \"legacy-model\"\napi_key = \"__GOLDEN_SECRET__\"\nbase_url = \"https://legacy.example.test/v1\"\nsystem_prompt = \"旧版系统提示。\"\nmemory_window = 12\n",
+        "tomlSha256": "a506d6b566e43c0c6b7c52b3e9bcf608a56edf418e5e5f06cb661019c9ad6856"
+      },
+      "pythonInvocation": {
+        "callable": "agent.config.load_config"
+      }
+    },
+    {
+      "expected": {
+        "active": {
+          "apiKeyStatus": "PRESENT",
+          "baseUrl": "https://modern.example.test/v1",
+          "historyMaxMessages": 16,
+          "model": "modern-model",
+          "provider": "deepseek",
+          "systemPrompt": "现代提示。"
+        }
+      },
+      "id": "modern-overrides-legacy",
+      "input": {
+        "environment": {},
+        "toml": "provider = \"legacy-provider\"\nmodel = \"legacy-model\"\napi_key = \"__LEGACY_SECRET__\"\nbase_url = \"https://legacy.example.test/v1\"\nsystem_prompt = \"旧版提示。\"\nmemory_window = 8\n\n[llm]\nprovider = \"deepseek\"\n\n[llm.main]\nmodel = \"modern-model\"\napi_key = \"__GOLDEN_SECRET__\"\nbase_url = \"https://modern.example.test/v1\"\n\n[agent]\nsystem_prompt = \"现代提示。\"\n\n[agent.context]\nmemory_window = 16\n",
+        "tomlSha256": "546dd2a1ae247325ec873b6793aa2f76a4b2d09d72bee59b278f2aa5cbf20f32"
+      },
+      "pythonInvocation": {
+        "callable": "agent.config.load_config"
+      }
+    },
+    {
+      "expected": {
+        "active": {
+          "apiKeyStatus": "PRESENT",
+          "baseUrl": "https://legacy.example.test/v1",
+          "historyMaxMessages": 40,
+          "model": "legacy-model",
+          "provider": "openai",
+          "systemPrompt": "旧版提示。"
+        }
+      },
+      "id": "blank-modern-falls-back-to-legacy",
+      "input": {
+        "environment": {},
+        "toml": "provider = \"openai\"\nmodel = \"legacy-model\"\napi_key = \"__GOLDEN_SECRET__\"\nbase_url = \"https://legacy.example.test/v1\"\nsystem_prompt = \"旧版提示。\"\n\n[llm]\nprovider = \"\"\n\n[llm.main]\nmodel = \"\"\napi_key = \"\"\nbase_url = \"\"\n\n[agent]\nsystem_prompt = \"\"\n",
+        "tomlSha256": "3a8010ae076809c531c8e823f8ad17d677177fc62a587570f5cc7f4b574f9d38"
+      },
+      "pythonInvocation": {
+        "callable": "agent.config.load_config"
+      }
+    },
+    {
+      "expected": {
+        "active": {
+          "apiKeyStatus": "PRESENT",
+          "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+          "historyMaxMessages": 40,
+          "model": "qwen-plus",
+          "provider": "qwen",
+          "systemPrompt": "You are a helpful assistant."
+        }
+      },
+      "id": "qwen-provider-preset",
+      "input": {
+        "environment": {},
+        "toml": "[llm]\nprovider = \"qwen\"\n\n[llm.main]\nmodel = \"qwen-plus\"\napi_key = \"__GOLDEN_SECRET__\"\n",
+        "tomlSha256": "20f289951f51ea79e5b0b2a616eef0d8bb24b25d67a16c3013387a133028f52a"
+      },
+      "pythonInvocation": {
+        "callable": "agent.config.load_config"
+      }
+    },
+    {
+      "expected": {
+        "active": {
+          "apiKeyStatus": "PRESENT",
+          "baseUrl": "https://api.openai.com/v1",
+          "historyMaxMessages": 40,
+          "model": "gpt-compatible",
+          "provider": "openai",
+          "systemPrompt": "You are a helpful assistant."
+        }
+      },
+      "id": "api-key-environment",
+      "input": {
+        "environment": {
+          "NAMEI_GOLDEN_MODEL_KEY": "__GOLDEN_SECRET__"
+        },
+        "toml": "[llm]\nprovider = \"openai\"\n\n[llm.main]\nmodel = \"gpt-compatible\"\napi_key = \"${NAMEI_GOLDEN_MODEL_KEY}\"\n",
+        "tomlSha256": "dc486e9b4a9d8adddbdf0949d6b0ce51796766cf318d44c39386a443de7b6d18"
+      },
+      "pythonInvocation": {
+        "callable": "agent.config.load_config"
+      }
+    },
+    {
+      "expected": {
+        "active": {
+          "apiKeyStatus": "PRESENT",
+          "baseUrl": "https://api.deepseek.com/v1",
+          "historyMaxMessages": 40,
+          "model": "deepseek-chat",
+          "provider": "deepseek",
+          "systemPrompt": "You are a helpful assistant."
+        }
+      },
+      "id": "deferred-and-unknown-fields",
+      "input": {
+        "environment": {},
+        "toml": "[llm]\nprovider = \"deepseek\"\n\n[llm.main]\nmodel = \"deepseek-chat\"\napi_key = \"__GOLDEN_SECRET__\"\nenable_thinking = true\n\n[llm.fast]\nmodel = \"deferred-fast-model\"\napi_key = \"__DEFERRED_SECRET__\"\n\n[agent]\nmax_iterations = 20\n\n[agent.tools]\nsearch_enabled = true\n\n[plugins.example]\nenabled = true\ncredential = \"__DEFERRED_SECRET__\"\n\n[future_extension]\nunknown_value = \"保留但不激活\"\n",
+        "tomlSha256": "09cd4321a64e10e9b610487227d455e7f3fe2f8615df37dbf60ac3a6997c9a13"
+      },
+      "pythonInvocation": {
+        "callable": "agent.config.load_config"
+      }
+    }
+  ],
+  "formatVersion": 1,
+  "normalization": [
+    {
+      "field": "expected.active.apiKey",
+      "rule": "replace-secret-with-presence-status"
+    }
+  ],
+  "pythonEvidence": {
+    "callable": "agent.config.load_config",
+    "path": "agent/config.py",
+    "projection": "主模型活动字段；API Key 只保留 PRESENT/MISSING/UNRESOLVED 状态"
+  },
+  "source": "python-reference",
+  "suite": "configuration"
+}

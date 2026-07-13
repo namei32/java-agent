@@ -19,6 +19,18 @@
       "source": "python-reference"
     },
     {
+      "id": "configuration/config-resolution",
+      "path": "configuration/config-resolution.json",
+      "sha256": "1c0916ede25b9db02247ffe2ba2ab0953a0d0d57064faab95ad9d307fbf5d701",
+      "source": "python-reference"
+    },
+    {
+      "id": "configuration/config-validation",
+      "path": "configuration/config-validation.json",
+      "sha256": "968605e8e6ebd15617ec3a9deacd4eacd7f37d0f88650367fd93b8a083765d69",
+      "source": "migration-contract"
+    },
+    {
       "id": "errors/http-error-mapping",
       "path": "errors/http-error-mapping.json",
       "sha256": "93ef9a9f1ccbd8aead0a8e6cf68e7b35aad8ee7e9d9e6b79bce9c43889effbbf",
@@ -30,9 +42,14 @@
     "commit": "b65a5430e332c8733b981dfc2dfbc3eb1967e9ef",
     "repository": "namei32/akashic-agent",
     "sourceFiles": {
+      "agent/config.py": "73ddc1de2bed396c1b16811d173b4a5d626184c4788af7cc83dec82c37ff5746",
+      "agent/config_models.py": "fcdf7ed979ff4121ec1cba7618c7dea948f523a1af4c1e5ac55629fad7e9d355",
       "agent/context.py": "9e57923a315cc37fe669c43d0862deeab10005bdd548ae7b051ee84696241fc6",
       "agent/core/passive_turn.py": "6c3af88ddd875b4f41ba4221d1974f4142a03dc65a7c3bd7a57a872f4a6fdf5b",
       "agent/provider.py": "06f5fffcdf9f81db83ab8cf801c119e6980779611541a390cde65b9205d84c36",
+      "config.example.toml": "7d3f2024e2812dddc0ec4f51cd057566eefa0ac522fa1ca647c4212fc29540ad",
+      "proactive_v2/config.py": "a91c05b9186c23f5fbfa4570ea8deca642f4a8d3c7132259c46431ad9d10a268",
+      "proactive_v2/config_loader.py": "2c5d79ac52fd29c595a07ea7f6db6c3be7f63c188054e5773fcfbc7224a949e5",
       "session/manager.py": "d2f232ecfb437bd78ebb0cf4d5050f75f135e12fb60933efceacf473fc26f973",
       "session/store.py": "7be4bcd5f6f4ea8fd3fd85c2d9ec86d5ef38e218fc47d9c775bb2a28ab8e2c18"
     }

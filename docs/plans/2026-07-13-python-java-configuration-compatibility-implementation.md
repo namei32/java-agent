@@ -1,13 +1,14 @@
 # Python/Java 配置兼容实施计划
 
-- 状态：待实施
+- 状态：实施中
+- 当前执行状态：Task C1 已完成，下一步为 Task C2
 - 日期：2026-07-13
 - Spec：[Python/Java 配置兼容设计](../specs/2026-07-13-python-java-configuration-compatibility-design.md)
 - Contract：[Python/Java 配置兼容契约](../contracts/python-java-configuration.md)
 
-本计划只安排后续实现；本次契约设计不执行这些任务。
+本计划记录配置兼容从 Golden 到启动接入的连续实施状态。
 
-## Task C1：配置 Golden 与 Parser 选型
+## Task C1：配置 Golden 与 Parser 选型（已完成）
 
 - 为 Python Golden 生成器增加配置共同投影。
 - 固化现代 DeepSeek、根级旧字段、优先级、Provider 预设、环境变量和 Deferred Case。
@@ -15,6 +16,14 @@
 - 在 `agent-bootstrap` 增加测试范围依赖和夹具读取，不新增 Maven 模块。
 
 聚焦验收：Python 生成器重复运行字节一致；Manifest Hash 更新经过审查。
+
+实施结果：
+
+- 新增 Python 配置解析共同投影 7 Case，以及已批准 Java 安全校验 5 Case。
+- Manifest 记录 Python `b65a5430e332c8733b981dfc2dfbc3eb1967e9ef` 和配置参考文件 Hash。
+- 选择 `org.tomlj:tomlj:1.1.1`，Task C1 以测试 Scope 接入 `agent-bootstrap`；决策和风险见 ADR-0004。
+- Java 聚焦兼容测试验证夹具可读、TOML 原生整数类型、语法错误区分和输入 Hash。
+- 生成器重复运行字节一致；聚焦命令实际执行 Manifest 1 Test、配置夹具 2 Tests，全部通过。
 
 ## Task C2：只读文档与 Resolver
 

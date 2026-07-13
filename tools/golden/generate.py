@@ -4,16 +4,23 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sqlite3
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 FORMAT_VERSION = 1
 REFERENCE_FILES = (
+    "agent/config.py",
+    "agent/config_models.py",
+    "config.example.toml",
+    "proactive_v2/config.py",
+    "proactive_v2/config_loader.py",
     "session/manager.py",
     "session/store.py",
     "agent/context.py",
@@ -32,10 +39,16 @@ def main() -> None:
     history = build_history_fixture()
     prompt = build_prompt_fixture()
     sqlite = build_sqlite_fixture()
+    configuration = build_configuration_fixture()
+    configuration_validation = build_configuration_validation_fixture()
 
     write_json(output / "history/session-history.json", history)
     write_json(output / "prompt/message-envelope.json", prompt)
     write_json(output / "sqlite/session-store.json", sqlite)
+    write_json(output / "configuration/config-resolution.json", configuration)
+    write_json(
+        output / "configuration/config-validation.json", configuration_validation
+    )
 
     errors = output / "errors/http-error-mapping.json"
     if not errors.is_file():
@@ -46,6 +59,16 @@ def main() -> None:
         ("history/session-history", "history/session-history.json", "python-reference"),
         ("prompt/message-envelope", "prompt/message-envelope.json", "python-reference"),
         ("sqlite/session-store", "sqlite/session-store.json", "python-reference"),
+        (
+            "configuration/config-resolution",
+            "configuration/config-resolution.json",
+            "python-reference",
+        ),
+        (
+            "configuration/config-validation",
+            "configuration/config-validation.json",
+            "migration-contract",
+        ),
         ("errors/http-error-mapping", "errors/http-error-mapping.json", "migration-contract"),
     ):
         fixtures.append(
@@ -172,6 +195,313 @@ def history_case(
 
 def message(role: str, content: str) -> dict[str, str]:
     return {"content": content, "role": role}
+
+
+def build_configuration_fixture() -> dict[str, Any]:
+    from agent.config import load_config
+
+    synthetic_secret = "__GOLDEN_SECRET__"
+    cases = [
+        configuration_case(
+            load_config,
+            "modern-deepseek",
+            """[llm]
+provider = "deepseek"
+
+[llm.main]
+model = "deepseek-chat"
+api_key = "__GOLDEN_SECRET__"
+base_url = "https://api.deepseek.com/v1"
+
+[agent]
+system_prompt = "你是配置兼容测试助手。"
+
+[agent.context]
+memory_window = 24
+""",
+        ),
+        configuration_case(
+            load_config,
+            "legacy-root",
+            """provider = "openai"
+model = "legacy-model"
+api_key = "__GOLDEN_SECRET__"
+base_url = "https://legacy.example.test/v1"
+system_prompt = "旧版系统提示。"
+memory_window = 12
+""",
+        ),
+        configuration_case(
+            load_config,
+            "modern-overrides-legacy",
+            """provider = "legacy-provider"
+model = "legacy-model"
+api_key = "__LEGACY_SECRET__"
+base_url = "https://legacy.example.test/v1"
+system_prompt = "旧版提示。"
+memory_window = 8
+
+[llm]
+provider = "deepseek"
+
+[llm.main]
+model = "modern-model"
+api_key = "__GOLDEN_SECRET__"
+base_url = "https://modern.example.test/v1"
+
+[agent]
+system_prompt = "现代提示。"
+
+[agent.context]
+memory_window = 16
+""",
+        ),
+        configuration_case(
+            load_config,
+            "blank-modern-falls-back-to-legacy",
+            """provider = "openai"
+model = "legacy-model"
+api_key = "__GOLDEN_SECRET__"
+base_url = "https://legacy.example.test/v1"
+system_prompt = "旧版提示。"
+
+[llm]
+provider = ""
+
+[llm.main]
+model = ""
+api_key = ""
+base_url = ""
+
+[agent]
+system_prompt = ""
+""",
+        ),
+        configuration_case(
+            load_config,
+            "qwen-provider-preset",
+            """[llm]
+provider = "qwen"
+
+[llm.main]
+model = "qwen-plus"
+api_key = "__GOLDEN_SECRET__"
+""",
+        ),
+        configuration_case(
+            load_config,
+            "api-key-environment",
+            """[llm]
+provider = "openai"
+
+[llm.main]
+model = "gpt-compatible"
+api_key = "${NAMEI_GOLDEN_MODEL_KEY}"
+""",
+            {"NAMEI_GOLDEN_MODEL_KEY": synthetic_secret},
+        ),
+        configuration_case(
+            load_config,
+            "deferred-and-unknown-fields",
+            """[llm]
+provider = "deepseek"
+
+[llm.main]
+model = "deepseek-chat"
+api_key = "__GOLDEN_SECRET__"
+enable_thinking = true
+
+[llm.fast]
+model = "deferred-fast-model"
+api_key = "__DEFERRED_SECRET__"
+
+[agent]
+max_iterations = 20
+
+[agent.tools]
+search_enabled = true
+
+[plugins.example]
+enabled = true
+credential = "__DEFERRED_SECRET__"
+
+[future_extension]
+unknown_value = "保留但不激活"
+""",
+        ),
+    ]
+    return {
+        "cases": cases,
+        "formatVersion": FORMAT_VERSION,
+        "normalization": [
+            {
+                "field": "expected.active.apiKey",
+                "rule": "replace-secret-with-presence-status",
+            }
+        ],
+        "pythonEvidence": {
+            "callable": "agent.config.load_config",
+            "path": "agent/config.py",
+            "projection": "主模型活动字段；API Key 只保留 PRESENT/MISSING/UNRESOLVED 状态",
+        },
+        "source": "python-reference",
+        "suite": "configuration",
+    }
+
+
+def configuration_case(
+    load_config: Any,
+    case_id: str,
+    toml: str,
+    environment: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    environment = environment or {}
+    with tempfile.TemporaryDirectory(prefix="namei-config-golden-") as directory:
+        path = Path(directory) / "config.toml"
+        path.write_text(toml, encoding="utf-8")
+        original_hash = sha256(path)
+        with temporary_environment(environment):
+            config = load_config(path)
+        if sha256(path) != original_hash:
+            raise RuntimeError(f"Python 配置加载器修改了输入文件: {case_id}")
+
+    return {
+        "expected": {
+            "active": {
+                "apiKeyStatus": secret_status(config.api_key),
+                "baseUrl": config.base_url or "",
+                "historyMaxMessages": config.memory_window,
+                "model": config.model,
+                "provider": config.provider,
+                "systemPrompt": config.system_prompt,
+            }
+        },
+        "id": case_id,
+        "input": {
+            "environment": environment,
+            "toml": toml,
+            "tomlSha256": hashlib.sha256(toml.encode("utf-8")).hexdigest(),
+        },
+        "pythonInvocation": {"callable": "agent.config.load_config"},
+    }
+
+
+def build_configuration_validation_fixture() -> dict[str, Any]:
+    cases = [
+        configuration_validation_case(
+            "missing-required-model",
+            """[llm]
+provider = "deepseek"
+
+[llm.main]
+api_key = "__GOLDEN_SECRET__"
+""",
+            [{"code": "CONFIG_REQUIRED_MISSING", "field": "llm.main.model"}],
+        ),
+        configuration_validation_case(
+            "unresolved-api-key-environment",
+            """[llm]
+provider = "deepseek"
+
+[llm.main]
+model = "deepseek-chat"
+api_key = "${NAMEI_GOLDEN_MISSING_KEY}"
+""",
+            [{"code": "CONFIG_ENV_UNRESOLVED", "field": "llm.main.api_key"}],
+        ),
+        configuration_validation_case(
+            "invalid-memory-window-type",
+            """[llm]
+provider = "deepseek"
+
+[llm.main]
+model = "deepseek-chat"
+api_key = "__GOLDEN_SECRET__"
+
+[agent.context]
+memory_window = "forty"
+""",
+            [
+                {
+                    "code": "CONFIG_TYPE_INVALID",
+                    "field": "agent.context.memory_window",
+                }
+            ],
+        ),
+        configuration_validation_case(
+            "invalid-base-url",
+            """[llm]
+provider = "deepseek"
+
+[llm.main]
+model = "deepseek-chat"
+api_key = "__GOLDEN_SECRET__"
+base_url = "ftp://invalid.example.test/v1"
+""",
+            [{"code": "CONFIG_URL_INVALID", "field": "llm.main.base_url"}],
+        ),
+        configuration_validation_case(
+            "invalid-toml",
+            """[llm]
+provider = ["deepseek"
+""",
+            [{"code": "CONFIG_TOML_INVALID", "field": "$document"}],
+            toml_syntax="INVALID",
+        ),
+    ]
+    return {
+        "cases": cases,
+        "formatVersion": FORMAT_VERSION,
+        "normalization": [
+            {
+                "field": "expected.diagnostics",
+                "rule": "stable-code-and-field-only",
+            }
+        ],
+        "pythonEvidence": {
+            "callable": "agent.config.load_config",
+            "path": "agent/config.py",
+            "projection": "Python 仅提供迁移来源；严格类型、URL 和未展开密钥是已批准 Java 安全契约",
+        },
+        "source": "migration-contract",
+        "suite": "configuration",
+    }
+
+
+def configuration_validation_case(
+    case_id: str,
+    toml: str,
+    diagnostics: list[dict[str, str]],
+    *,
+    toml_syntax: str = "VALID",
+) -> dict[str, Any]:
+    return {
+        "expected": {"diagnostics": diagnostics, "tomlSyntax": toml_syntax},
+        "id": case_id,
+        "input": {"environment": {}, "toml": toml},
+    }
+
+
+def secret_status(secret: str) -> str:
+    if not secret:
+        return "MISSING"
+    if secret.startswith("${") and secret.endswith("}"):
+        return "UNRESOLVED"
+    return "PRESENT"
+
+
+@contextmanager
+def temporary_environment(values: dict[str, str]):
+    previous = {key: os.environ.get(key) for key in values}
+    try:
+        os.environ.update(values)
+        yield
+    finally:
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
 
 def build_prompt_fixture() -> dict[str, Any]:
