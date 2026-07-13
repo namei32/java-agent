@@ -1,7 +1,7 @@
 # Python/Java 配置兼容实施计划
 
 - 状态：实施中
-- 当前执行状态：Task C1 已完成，下一步为 Task C2
+- 当前执行状态：Task C2 已完成，下一步为 Task C3
 - 日期：2026-07-13
 - Spec：[Python/Java 配置兼容设计](../specs/2026-07-13-python-java-configuration-compatibility-design.md)
 - Contract：[Python/Java 配置兼容契约](../contracts/python-java-configuration.md)
@@ -25,7 +25,7 @@
 - Java 聚焦兼容测试验证夹具可读、TOML 原生整数类型、语法错误区分和输入 Hash。
 - 生成器重复运行字节一致；聚焦命令实际执行 Manifest 1 Test、配置夹具 2 Tests，全部通过。
 
-## Task C2：只读文档与 Resolver
+## Task C2：只读文档与 Resolver（已完成）
 
 - 先用测试固定文件定位、双模式和来源优先级。
 - 实现只读 `ConfigurationDocument`、类型化活动快照和结构化诊断。
@@ -33,6 +33,14 @@
 - 确认未知/Deferred 字段不会失败，原配置文件字节不变。
 
 聚焦验收：只运行 `agent-bootstrap` 配置 Resolver 测试一次 RED、一次 GREEN。
+
+实施结果：
+
+- TomlJ 提升为 `agent-bootstrap` 生产依赖，并封装在 Bootstrap 配置包内。
+- 实现环境变量/TOML 双模式、配置文件定位、现代/旧字段优先级、Provider 预设和严格原生类型。
+- 实现只读 UTF-8 加载、API Key 完整占位符、安全状态、Deferred/未知路径分类和聚合诊断。
+- Python 配置 Golden、迁移校验 Golden、文件不改写和脱敏 `toString()` 均由 5 个聚焦测试覆盖。
+- C2 有效 RED 为 Resolver 类型缺失；聚焦 GREEN 为 5 Tests 全部通过。审查发现的来源定位和输入脱敏缺陷均补充了方法级 RED/GREEN。
 
 ## Task C3：Spring Boot 启动装配
 
