@@ -1,6 +1,6 @@
 # 运行手册命令路径无关化设计
 
-- 状态：待书面复核
+- 状态：已实现并验证
 - 日期：2026-07-13
 - 范围：`docs/runbooks/local-development.md`
 
@@ -32,3 +32,7 @@
 3. 文档不包含 `/Users/namei/...` 等机器专属路径。
 4. 每个相关命令块都是自包含的，不依赖之前的命令块改变 Shell 当前目录。
 5. Spotless 文档格式检查通过。
+
+## 6. 验证记录
+
+2026-07-13 从 `docs/runbooks` 启动 Shell，动态解析得到项目根目录，并确认 `.env.example`、Maven Wrapper 和 `agent-bootstrap` 均能从根目录正确定位。`./mvnw spotless:check` 通过。

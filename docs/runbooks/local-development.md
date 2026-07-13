@@ -1,10 +1,13 @@
 # 本地开发与故障排查
 
+本手册中依赖项目文件的命令块会先通过 Git 动态切换到项目根目录。因此，即使终端当前位于 `docs/runbooks` 或仓库内其他子目录，也可以独立执行任意一个完整命令块。命令必须从本 Git 仓库内部启动；如果当前目录不属于该仓库，`git rev-parse --show-toplevel` 会明确失败。
+
 ## 1. 环境准备
 
 确认 Java 版本：
 
 ```bash
+cd "$(git rev-parse --show-toplevel)"
 java -version
 ./mvnw -version
 ```
@@ -14,6 +17,7 @@ java -version
 创建本地配置：
 
 ```bash
+cd "$(git rev-parse --show-toplevel)"
 cp .env.example .env
 ```
 
@@ -43,6 +47,7 @@ Python 和 Java 禁止同时写同一个 Workspace。真实 Python Workspace 在
 推荐为 Java 创建独立目录：
 
 ```bash
+cd "$(git rev-parse --show-toplevel)"
 mkdir -p ./workspace-java
 ```
 
@@ -57,6 +62,7 @@ AKASHIC_WORKSPACE=./workspace-java
 加载环境变量并构建：
 
 ```bash
+cd "$(git rev-parse --show-toplevel)"
 set -a && source .env && set +a
 ./mvnw clean verify
 ```
@@ -64,6 +70,7 @@ set -a && source .env && set +a
 启动应用：
 
 ```bash
+cd "$(git rev-parse --show-toplevel)"
 java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar
 ```
 
@@ -94,24 +101,28 @@ curl --fail-with-body \
 默认离线验证：
 
 ```bash
+cd "$(git rev-parse --show-toplevel)"
 ./mvnw clean verify
 ```
 
 故障语义：
 
 ```bash
+cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pfailure verify
 ```
 
 Python Schema 固定样本兼容性：
 
 ```bash
+cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pcompat verify
 ```
 
 真实模型 Smoke Test 不属于常规验证。只有获得真实网络调用授权并确认可能产生费用后，才运行：
 
 ```bash
+cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Preal-model-smoke verify
 ```
 
@@ -122,6 +133,7 @@ Python Schema 固定样本兼容性：
 确认已执行：
 
 ```bash
+cd "$(git rev-parse --show-toplevel)"
 set -a && source .env && set +a
 ```
 
