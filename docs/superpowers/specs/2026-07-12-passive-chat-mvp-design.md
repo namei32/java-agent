@@ -1,6 +1,6 @@
 # 被动聊天 MVP 设计
 
-- 状态：设计已批准，待书面复核
+- 状态：已批准
 - 日期：2026-07-12
 - 最后更新：2026-07-13
 - 项目：Namei Agent Java 重写
@@ -254,9 +254,8 @@ spring:
       base-url: ${OPENAI_BASE_URL}
       api-key: ${OPENAI_API_KEY}
       chat:
-        options:
-          model: ${OPENAI_MODEL}
-          temperature: 0.7
+        model: ${OPENAI_MODEL}
+        temperature: 0.7
 ```
 
 API Key 只能来自环境变量或外部密钥管理机制。仓库可以包含 `.env.example`，但禁止包含 `.env` 或真实凭据。
