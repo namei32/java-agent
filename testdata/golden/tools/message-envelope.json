@@ -1,0 +1,179 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "messages": [
+          {
+            "content": null,
+            "role": "assistant",
+            "tool_calls": [
+              {
+                "function": {
+                  "arguments": "{\"query\": \"配置\"}",
+                  "name": "golden_lookup"
+                },
+                "id": "call-001",
+                "type": "function"
+              }
+            ]
+          },
+          {
+            "content": "固定工具结果",
+            "role": "tool",
+            "tool_call_id": "call-001"
+          }
+        ]
+      },
+      "id": "single-tool-success",
+      "input": {
+        "assistantContent": null,
+        "toolCalls": [
+          {
+            "arguments": {
+              "query": "配置"
+            },
+            "id": "call-001",
+            "name": "golden_lookup"
+          }
+        ],
+        "toolDefinitions": [
+          {
+            "function": {
+              "description": "查询固定 Golden 数据",
+              "name": "golden_lookup",
+              "parameters": {
+                "additionalProperties": false,
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "query"
+                ],
+                "type": "object"
+              }
+            },
+            "type": "function"
+          }
+        ],
+        "toolResults": [
+          {
+            "callId": "call-001",
+            "content": "固定工具结果",
+            "name": "golden_lookup"
+          }
+        ]
+      }
+    },
+    {
+      "expected": {
+        "messages": [
+          {
+            "content": "正在查询",
+            "role": "assistant",
+            "tool_calls": [
+              {
+                "function": {
+                  "arguments": "{\"query\": \"第一项\"}",
+                  "name": "golden_lookup"
+                },
+                "id": "call-101",
+                "type": "function"
+              },
+              {
+                "function": {
+                  "arguments": "{\"query\": \"第二项\"}",
+                  "name": "golden_lookup"
+                },
+                "id": "call-102",
+                "type": "function"
+              }
+            ]
+          },
+          {
+            "content": "第一项结果",
+            "role": "tool",
+            "tool_call_id": "call-101"
+          },
+          {
+            "content": "第二项结果",
+            "role": "tool",
+            "tool_call_id": "call-102"
+          }
+        ]
+      },
+      "id": "multiple-tools-preserve-order",
+      "input": {
+        "assistantContent": "正在查询",
+        "toolCalls": [
+          {
+            "arguments": {
+              "query": "第一项"
+            },
+            "id": "call-101",
+            "name": "golden_lookup"
+          },
+          {
+            "arguments": {
+              "query": "第二项"
+            },
+            "id": "call-102",
+            "name": "golden_lookup"
+          }
+        ],
+        "toolDefinitions": [
+          {
+            "function": {
+              "description": "查询固定 Golden 数据",
+              "name": "golden_lookup",
+              "parameters": {
+                "additionalProperties": false,
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "query"
+                ],
+                "type": "object"
+              }
+            },
+            "type": "function"
+          }
+        ],
+        "toolResults": [
+          {
+            "callId": "call-101",
+            "content": "第一项结果",
+            "name": "golden_lookup"
+          },
+          {
+            "callId": "call-102",
+            "content": "第二项结果",
+            "name": "golden_lookup"
+          }
+        ]
+      }
+    }
+  ],
+  "formatVersion": 1,
+  "normalization": [
+    {
+      "field": "expected.messages[].tool_calls[].function.arguments",
+      "rule": "parse-json-object-before-cross-language-comparison"
+    }
+  ],
+  "pythonEvidence": {
+    "callables": [
+      "agent.tool_runtime.build_tool_schemas",
+      "agent.tool_runtime.append_assistant_tool_calls",
+      "agent.tool_runtime.append_tool_result"
+    ],
+    "path": "agent/tool_runtime.py",
+    "projection": "OpenAI-compatible Tool Definition、Assistant Tool Call 和 Tool Result 文本消息"
+  },
+  "source": "python-reference",
+  "suite": "tools"
+}

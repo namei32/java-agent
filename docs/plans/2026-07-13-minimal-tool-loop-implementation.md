@@ -1,7 +1,7 @@
 # 最小 Tool Loop 实施计划
 
 - 状态：实施中
-- 当前执行状态：Task T1 已完成，下一步为 Task T2
+- 当前执行状态：Task T2 已完成，下一步为 Task T3
 - 日期：2026-07-13
 - Spec：[最小 Tool Loop 设计](../specs/2026-07-13-minimal-tool-loop-design.md)
 - Contract：[核心消息、生命周期与 Tool 契约](../contracts/core-message-lifecycle-tool.md)
@@ -14,7 +14,7 @@
 
 验收：文档自审，不运行 Maven。
 
-## Task T2：Tool Golden
+## Task T2：Tool Golden（已完成）
 
 - 扩展 Python 生成器，生成 Tool Message Python Reference。
 - 增加最小循环 Migration Contract 夹具。
@@ -22,6 +22,14 @@
 - 在 Java Application 建立兼容测试，只验证夹具与当前协议投影，不人为制造生产 RED。
 
 聚焦验收：生成器重复运行字节一致；Tool Golden 测试全部通过。
+
+实施结果：
+
+- Python Reference 固化 2 个 Tool Message Case，直接调用生产 `build_tool_schemas`、`append_assistant_tool_calls` 和 `append_tool_result`。
+- Migration Contract 固化 7 个最小循环 Case，覆盖直接回答、单/多工具、未知工具、工具异常、非法响应和迭代上限。
+- Manifest 增加 4 个 Python Tool/Lifecycle 参考文件 Hash，以及 2 个新夹具 Hash。
+- 生成器连续执行两次，Tool Message、Minimal Loop 和 Manifest 的 SHA-256 分别保持一致。
+- 聚焦验收实际执行 Manifest 1 Test、Tool Golden 2 Tests，全部通过。
 
 ## Task T3：Kernel Tool 与 Lifecycle 协议
 

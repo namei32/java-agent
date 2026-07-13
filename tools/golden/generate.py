@@ -26,6 +26,10 @@ REFERENCE_FILES = (
     "agent/context.py",
     "agent/provider.py",
     "agent/core/passive_turn.py",
+    "agent/tool_runtime.py",
+    "agent/tools/base.py",
+    "agent/tools/registry.py",
+    "bus/events_lifecycle.py",
 )
 
 
@@ -41,6 +45,8 @@ def main() -> None:
     sqlite = build_sqlite_fixture()
     configuration = build_configuration_fixture()
     configuration_validation = build_configuration_validation_fixture()
+    tool_messages = build_tool_message_fixture()
+    tool_loop = build_tool_loop_fixture()
 
     write_json(output / "history/session-history.json", history)
     write_json(output / "prompt/message-envelope.json", prompt)
@@ -49,6 +55,8 @@ def main() -> None:
     write_json(
         output / "configuration/config-validation.json", configuration_validation
     )
+    write_json(output / "tools/message-envelope.json", tool_messages)
+    write_json(output / "tools/minimal-loop.json", tool_loop)
 
     errors = output / "errors/http-error-mapping.json"
     if not errors.is_file():
@@ -69,6 +77,8 @@ def main() -> None:
             "configuration/config-validation.json",
             "migration-contract",
         ),
+        ("tools/message-envelope", "tools/message-envelope.json", "python-reference"),
+        ("tools/minimal-loop", "tools/minimal-loop.json", "migration-contract"),
         ("errors/http-error-mapping", "errors/http-error-mapping.json", "migration-contract"),
     ):
         fixtures.append(
@@ -557,6 +567,393 @@ def build_prompt_fixture() -> dict[str, Any]:
         "source": "python-reference",
         "suite": "prompt",
     }
+
+
+def build_tool_message_fixture() -> dict[str, Any]:
+    from agent.provider import ToolCall
+    from agent.tool_runtime import (
+        append_assistant_tool_calls,
+        append_tool_result,
+        build_tool_schemas,
+    )
+    from agent.tools.base import Tool
+
+    class GoldenLookupTool(Tool):
+        name = "golden_lookup"
+        description = "查询固定 Golden 数据"
+        parameters = {
+            "additionalProperties": False,
+            "properties": {"query": {"type": "string"}},
+            "required": ["query"],
+            "type": "object",
+        }
+
+        async def execute(self, **kwargs: Any) -> str:
+            return "固定工具结果"
+
+    definitions = build_tool_schemas([GoldenLookupTool()])
+    cases = [
+        tool_message_case(
+            append_assistant_tool_calls,
+            append_tool_result,
+            ToolCall,
+            "single-tool-success",
+            None,
+            [
+                {
+                    "arguments": {"query": "配置"},
+                    "id": "call-001",
+                    "name": "golden_lookup",
+                    "result": "固定工具结果",
+                }
+            ],
+            definitions,
+        ),
+        tool_message_case(
+            append_assistant_tool_calls,
+            append_tool_result,
+            ToolCall,
+            "multiple-tools-preserve-order",
+            "正在查询",
+            [
+                {
+                    "arguments": {"query": "第一项"},
+                    "id": "call-101",
+                    "name": "golden_lookup",
+                    "result": "第一项结果",
+                },
+                {
+                    "arguments": {"query": "第二项"},
+                    "id": "call-102",
+                    "name": "golden_lookup",
+                    "result": "第二项结果",
+                },
+            ],
+            definitions,
+        ),
+    ]
+    return {
+        "cases": cases,
+        "formatVersion": FORMAT_VERSION,
+        "normalization": [
+            {
+                "field": "expected.messages[].tool_calls[].function.arguments",
+                "rule": "parse-json-object-before-cross-language-comparison",
+            }
+        ],
+        "pythonEvidence": {
+            "callables": [
+                "agent.tool_runtime.build_tool_schemas",
+                "agent.tool_runtime.append_assistant_tool_calls",
+                "agent.tool_runtime.append_tool_result",
+            ],
+            "path": "agent/tool_runtime.py",
+            "projection": "OpenAI-compatible Tool Definition、Assistant Tool Call 和 Tool Result 文本消息",
+        },
+        "source": "python-reference",
+        "suite": "tools",
+    }
+
+
+def tool_message_case(
+    append_assistant_tool_calls: Any,
+    append_tool_result: Any,
+    tool_call_type: Any,
+    case_id: str,
+    content: str | None,
+    calls: list[dict[str, Any]],
+    definitions: list[dict[str, Any]],
+) -> dict[str, Any]:
+    tool_calls = [
+        tool_call_type(item["id"], item["name"], dict(item["arguments"]))
+        for item in calls
+    ]
+    messages: list[dict[str, Any]] = []
+    append_assistant_tool_calls(
+        messages, content=content, tool_calls=tool_calls, provider_fields=None
+    )
+    for item in calls:
+        append_tool_result(
+            messages,
+            tool_call_id=item["id"],
+            content=item["result"],
+            tool_name=item["name"],
+        )
+    return {
+        "expected": {"messages": messages},
+        "id": case_id,
+        "input": {
+            "assistantContent": content,
+            "toolCalls": [
+                {
+                    "arguments": item["arguments"],
+                    "id": item["id"],
+                    "name": item["name"],
+                }
+                for item in calls
+            ],
+            "toolDefinitions": definitions,
+            "toolResults": [
+                {
+                    "callId": item["id"],
+                    "content": item["result"],
+                    "name": item["name"],
+                }
+                for item in calls
+            ],
+        },
+    }
+
+
+def build_tool_loop_fixture() -> dict[str, Any]:
+    return {
+        "cases": [
+            tool_loop_case(
+                "direct-answer",
+                3,
+                [],
+                [{"content": "直接回答", "toolCalls": []}],
+                "COMPLETED",
+                "直接回答",
+                True,
+                [],
+                [
+                    event("TURN_STARTED", 0),
+                    event("MODEL_REQUESTED", 1),
+                    event("MODEL_COMPLETED", 1, status="FINAL"),
+                    event("TURN_COMMITTING", 0),
+                    event("TURN_COMMITTED", 0),
+                ],
+            ),
+            tool_loop_case(
+                "single-tool-success",
+                3,
+                [tool_behavior("lookup", "SUCCESS", "固定结果")],
+                [
+                    model_tool_calls(tool_call("call-001", "lookup", {"query": "配置"})),
+                    {"content": "查询完成", "toolCalls": []},
+                ],
+                "COMPLETED",
+                "查询完成",
+                True,
+                ["lookup"],
+                tool_success_trace([(1, "call-001", "lookup", "SUCCESS")], final_iteration=2),
+            ),
+            tool_loop_case(
+                "multiple-tools-preserve-order",
+                3,
+                [
+                    tool_behavior("first", "SUCCESS", "第一结果"),
+                    tool_behavior("second", "SUCCESS", "第二结果"),
+                ],
+                [
+                    model_tool_calls(
+                        tool_call("call-101", "first", {}),
+                        tool_call("call-102", "second", {}),
+                    ),
+                    {"content": "两个工具都已完成", "toolCalls": []},
+                ],
+                "COMPLETED",
+                "两个工具都已完成",
+                True,
+                ["first", "second"],
+                tool_success_trace(
+                    [
+                        (1, "call-101", "first", "SUCCESS"),
+                        (1, "call-102", "second", "SUCCESS"),
+                    ],
+                    final_iteration=2,
+                ),
+            ),
+            tool_loop_case(
+                "unknown-tool-recovers",
+                3,
+                [],
+                [
+                    model_tool_calls(tool_call("call-201", "missing", {})),
+                    {"content": "工具不可用，改为直接回答", "toolCalls": []},
+                ],
+                "COMPLETED",
+                "工具不可用，改为直接回答",
+                True,
+                ["missing"],
+                tool_success_trace(
+                    [(1, "call-201", "missing", "ERROR")], final_iteration=2
+                ),
+            ),
+            tool_loop_case(
+                "tool-error-recovers",
+                3,
+                [tool_behavior("failing", "ERROR", "不应泄露的内部异常")],
+                [
+                    model_tool_calls(tool_call("call-301", "failing", {})),
+                    {"content": "工具失败，给出替代回答", "toolCalls": []},
+                ],
+                "COMPLETED",
+                "工具失败，给出替代回答",
+                True,
+                ["failing"],
+                tool_success_trace(
+                    [(1, "call-301", "failing", "ERROR")], final_iteration=2
+                ),
+            ),
+            tool_loop_case(
+                "invalid-model-response",
+                2,
+                [],
+                [{"content": "", "toolCalls": []}],
+                "INVALID_MODEL_RESPONSE",
+                None,
+                False,
+                [],
+                [
+                    event("TURN_STARTED", 0),
+                    event("MODEL_REQUESTED", 1),
+                    event("MODEL_COMPLETED", 1, status="INVALID"),
+                    event("TURN_FAILED", 0, status="INVALID_MODEL_RESPONSE"),
+                ],
+            ),
+            tool_loop_case(
+                "iteration-limit-does-not-commit",
+                2,
+                [tool_behavior("lookup", "SUCCESS", "固定结果")],
+                [
+                    model_tool_calls(tool_call("call-401", "lookup", {"step": 1})),
+                    model_tool_calls(tool_call("call-402", "lookup", {"step": 2})),
+                ],
+                "TOOL_LOOP_LIMIT_EXCEEDED",
+                None,
+                False,
+                ["lookup", "lookup"],
+                [
+                    event("TURN_STARTED", 0),
+                    event("MODEL_REQUESTED", 1),
+                    event("MODEL_COMPLETED", 1, status="TOOL_CALLS"),
+                    event("TOOL_CALL_STARTED", 1, "call-401", "lookup"),
+                    event(
+                        "TOOL_CALL_COMPLETED",
+                        1,
+                        "call-401",
+                        "lookup",
+                        "SUCCESS",
+                    ),
+                    event("MODEL_REQUESTED", 2),
+                    event("MODEL_COMPLETED", 2, status="TOOL_CALLS"),
+                    event("TOOL_CALL_STARTED", 2, "call-402", "lookup"),
+                    event(
+                        "TOOL_CALL_COMPLETED",
+                        2,
+                        "call-402",
+                        "lookup",
+                        "SUCCESS",
+                    ),
+                    event("TURN_FAILED", 0, status="TOOL_LOOP_LIMIT_EXCEEDED"),
+                ],
+            ),
+        ],
+        "formatVersion": FORMAT_VERSION,
+        "normalization": [
+            {
+                "field": "expected.trace",
+                "rule": "exclude-message-arguments-results-time-and-exception-details",
+            },
+            {
+                "field": "input.tools[].result",
+                "rule": "synthetic-values-only-never-copied-to-expected-trace",
+            },
+        ],
+        "pythonEvidence": {
+            "callables": [
+                "agent.core.passive_turn.AgentReasoner.run",
+                "agent.tools.registry.ToolRegistry.execute",
+                "bus.events_lifecycle.ToolCallStarted",
+                "bus.events_lifecycle.ToolCallCompleted",
+            ],
+            "path": "agent/core/passive_turn.py",
+            "projection": "Python 提供循环来源；迭代上限、提交决策和安全事件字段按已批准迁移契约固定",
+        },
+        "source": "migration-contract",
+        "suite": "tools",
+    }
+
+
+def tool_loop_case(
+    case_id: str,
+    max_iterations: int,
+    tools: list[dict[str, Any]],
+    model_responses: list[dict[str, Any]],
+    outcome: str,
+    assistant: str | None,
+    committed: bool,
+    execution_order: list[str],
+    trace: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "expected": {
+            "assistant": assistant,
+            "committed": committed,
+            "executionOrder": execution_order,
+            "outcome": outcome,
+            "trace": trace,
+        },
+        "id": case_id,
+        "input": {
+            "maxIterations": max_iterations,
+            "modelResponses": model_responses,
+            "tools": tools,
+        },
+    }
+
+
+def tool_behavior(name: str, behavior: str, result: str) -> dict[str, str]:
+    return {"behavior": behavior, "name": name, "result": result}
+
+
+def tool_call(call_id: str, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    return {"arguments": arguments, "id": call_id, "name": name}
+
+
+def model_tool_calls(*calls: dict[str, Any]) -> dict[str, Any]:
+    return {"content": None, "toolCalls": list(calls)}
+
+
+def event(
+    event_type: str,
+    iteration: int,
+    call_id: str | None = None,
+    tool_name: str | None = None,
+    status: str | None = None,
+) -> dict[str, Any]:
+    value: dict[str, Any] = {"iteration": iteration, "type": event_type}
+    if call_id is not None:
+        value["callId"] = call_id
+    if tool_name is not None:
+        value["toolName"] = tool_name
+    if status is not None:
+        value["status"] = status
+    return value
+
+
+def tool_success_trace(
+    calls: list[tuple[int, str, str, str]], *, final_iteration: int
+) -> list[dict[str, Any]]:
+    trace = [
+        event("TURN_STARTED", 0),
+        event("MODEL_REQUESTED", 1),
+        event("MODEL_COMPLETED", 1, status="TOOL_CALLS"),
+    ]
+    for iteration, call_id, name, status in calls:
+        trace.append(event("TOOL_CALL_STARTED", iteration, call_id, name))
+        trace.append(event("TOOL_CALL_COMPLETED", iteration, call_id, name, status))
+    trace.extend(
+        [
+            event("MODEL_REQUESTED", final_iteration),
+            event("MODEL_COMPLETED", final_iteration, status="FINAL"),
+            event("TURN_COMMITTING", 0),
+            event("TURN_COMMITTED", 0),
+        ]
+    )
+    return trace
 
 
 def build_sqlite_fixture() -> dict[str, Any]:
