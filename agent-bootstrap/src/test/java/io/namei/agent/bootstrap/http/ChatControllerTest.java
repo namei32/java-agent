@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
 import io.namei.agent.adapter.sqlite.SqliteRepositoryException;
 import io.namei.agent.application.ChatCommand;
@@ -22,29 +23,22 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(ChatController.class)
-@Import({
-  ApiExceptionHandler.class,
-  RequestIdFilter.class,
-  ContentLengthLimitFilter.class,
-  ChatControllerTest.StubConfiguration.class
-})
 class ChatControllerTest {
-  @Autowired MockMvc mvc;
-  @Autowired StubChatUseCase useCase;
+  private MockMvc mvc;
+  private final StubChatUseCase useCase = new StubChatUseCase();
 
   @BeforeEach
   void resetUseCase() {
+    mvc =
+        standaloneSetup(new ChatController(useCase))
+            .setControllerAdvice(new ApiExceptionHandler())
+            .addFilters(new RequestIdFilter(), new ContentLengthLimitFilter())
+            .build();
     useCase.result = new ChatResult("demo", new ChatMessage(MessageRole.ASSISTANT, "默认回答"));
     useCase.failure = null;
     useCase.command = null;
@@ -103,7 +97,7 @@ class ChatControllerTest {
     String oversized = "{\"sessionId\":\"demo\",\"message\":\"" + "x".repeat(65_536) + "\"}";
 
     mvc.perform(post("/api/v1/chat").contentType(MediaType.APPLICATION_JSON).content(oversized))
-        .andExpect(status().isPayloadTooLarge())
+        .andExpect(status().isContentTooLarge())
         .andExpect(header().exists(RequestIdFilter.HEADER))
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
         .andExpect(jsonPath("$.title").value("请求体过大"));
@@ -116,11 +110,6 @@ class ChatControllerTest {
     rawRequest.setContent("x".repeat(65_537).getBytes(StandardCharsets.UTF_8));
     var unknownLengthRequest =
         new HttpServletRequestWrapper(rawRequest) {
-          @Override
-          public int getContentLength() {
-            return -1;
-          }
-
           @Override
           public long getContentLengthLong() {
             return -1;
@@ -208,14 +197,6 @@ class ChatControllerTest {
         post("/api/v1/chat")
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"sessionId\":\"demo\",\"message\":\"问题\"}"));
-  }
-
-  @TestConfiguration(proxyBeanMethods = false)
-  static class StubConfiguration {
-    @Bean
-    StubChatUseCase chatUseCase() {
-      return new StubChatUseCase();
-    }
   }
 
   static final class StubChatUseCase implements ChatUseCase {

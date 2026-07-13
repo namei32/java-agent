@@ -58,9 +58,12 @@ class KeyedSessionExecutionGateTest {
   }
 
   @Test
-  void saturatesPositiveWaitTimeoutWhenNanosecondConversionOverflows() {
+  void saturatesPositiveWaitTimeoutWhenNanosecondConversionOverflows() throws Exception {
     var gate = new KeyedSessionExecutionGate(Duration.ofSeconds(Long.MAX_VALUE));
+    var timeoutField = KeyedSessionExecutionGate.class.getDeclaredField("waitTimeoutNanos");
+    timeoutField.setAccessible(true);
 
+    assertThat(timeoutField.getLong(gate)).isEqualTo(Long.MAX_VALUE);
     assertThat(gate.execute("same", () -> "done")).isEqualTo("done");
     assertThat(gate.activeEntryCount()).isZero();
   }
@@ -118,7 +121,7 @@ class KeyedSessionExecutionGateTest {
       assertThat(waiterStarted.await(1, TimeUnit.SECONDS)).isTrue();
 
       try {
-        awaitWaiting(waiterThread.get());
+        awaitWaiting(waiterThread);
         waiterThread.get().interrupt();
         var observation = waiter.get(1, TimeUnit.SECONDS);
         assertThat(observation.exception()).isInstanceOf(SessionLockTimeoutException.class);
@@ -143,7 +146,7 @@ class KeyedSessionExecutionGateTest {
     var gate = new KeyedSessionExecutionGate(Duration.ofSeconds(2));
     var firstEntered = new CountDownLatch(1);
     var releaseFirst = new CountDownLatch(1);
-    var secondStarted = new CountDownLatch(1);
+    var secondThread = new AtomicReference<Thread>();
     var secondEntered = new CountDownLatch(1);
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
       var first =
@@ -161,7 +164,7 @@ class KeyedSessionExecutionGateTest {
       var second =
           executor.submit(
               () -> {
-                secondStarted.countDown();
+                secondThread.set(Thread.currentThread());
                 return gate.execute(
                     "same",
                     () -> {
@@ -169,8 +172,8 @@ class KeyedSessionExecutionGateTest {
                       return "second";
                     });
               });
-      assertThat(secondStarted.await(1, TimeUnit.SECONDS)).isTrue();
-      assertThat(secondEntered.await(100, TimeUnit.MILLISECONDS)).isFalse();
+      awaitWaiting(secondThread);
+      assertThat(secondEntered.getCount()).isEqualTo(1);
 
       releaseFirst.countDown();
       assertThat(first.get(1, TimeUnit.SECONDS)).isEqualTo("first");
@@ -236,9 +239,14 @@ class KeyedSessionExecutionGateTest {
     }
   }
 
-  private static void awaitWaiting(Thread thread) {
+  private static void awaitWaiting(AtomicReference<Thread> threadReference) {
     long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
     while (System.nanoTime() < deadline) {
+      var thread = threadReference.get();
+      if (thread == null) {
+        Thread.onSpinWait();
+        continue;
+      }
       var state = thread.getState();
       if (state == Thread.State.WAITING || state == Thread.State.TIMED_WAITING) {
         return;
@@ -248,7 +256,8 @@ class KeyedSessionExecutionGateTest {
       }
       Thread.onSpinWait();
     }
-    throw new AssertionError("等待线程未进入等待状态: " + thread.getState());
+    var thread = threadReference.get();
+    throw new AssertionError("等待线程未进入等待状态: " + (thread == null ? "未启动" : thread.getState()));
   }
 
   private record InterruptObservation(SessionLockTimeoutException exception, boolean interrupted) {}
