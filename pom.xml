@@ -32,6 +32,7 @@
     <spotless.version>3.8.0</spotless.version>
     <jacoco.version>0.8.15</jacoco.version>
     <maven-enforcer.version>3.6.3</maven-enforcer.version>
+    <excluded.test.groups>compat,real-model</excluded.test.groups>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
@@ -113,6 +114,9 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <excludedGroups>${excluded.test.groups}</excludedGroups>
+        </configuration>
         <executions>
           <execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution>
         </executions>
@@ -134,6 +138,18 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>compat</id>
+      <properties>
+        <excluded.test.groups>real-model</excluded.test.groups>
+      </properties>
+    </profile>
+    <profile>
+      <id>real-model-smoke</id>
+      <properties>
+        <excluded.test.groups>compat</excluded.test.groups>
+      </properties>
     </profile>
   </profiles>
 </project>

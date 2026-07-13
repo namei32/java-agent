@@ -19,9 +19,9 @@
 | Task 9 | 已完成 | 提交 `c0d9948`；聚焦 RED 有效，`ChatControllerTest` 7/7 GREEN，覆盖未知请求长度的 64 KiB 上限 |
 | Task 10 | 已完成 | 提交 `163b7b6`；聚焦 RED 有效，本地 `127.0.0.1` 桩协议测试 6/6 GREEN，未访问真实模型 |
 | 阶段 C | 已完成 | Spotless、模型 Adapter、Bootstrap、干净 Reactor 均通过；完整构建 56/56，Kernel 仅含测试依赖 |
-| Task 11 | 已完成 | 聚焦 RED 有效；架构与日志脱敏 5/5、真实 Actuator 验收 1/1 GREEN，模型零调用 |
-| Task 12 | 当前任务 | 加入 Python Schema 兼容测试和端到端验收 |
-| Task 13 / 阶段 D | 待执行 | 补全文档并执行最终门禁 |
+| Task 11 | 已完成 | 提交 `7798df0`；聚焦 RED 有效，架构与日志脱敏 5/5、真实 Actuator 验收 1/1 GREEN，模型零调用 |
+| Task 12 | 已完成 | 离线 `PassiveChatEndpointIT` 1/1，通过两轮 HTTP、历史恢复和 SQLite 四消息验收 |
+| Task 13 / 阶段 D | 当前任务 | 补全运行文档并执行最终门禁 |
 
 恢复执行时以本节和 Git 提交为准。每完成一个任务或阶段，立即更新本表；不维护额外的任务 brief、review package、执行报告或外部进度台账。
 
