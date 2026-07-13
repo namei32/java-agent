@@ -1,6 +1,7 @@
 package io.namei.agent.kernel.history;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.namei.agent.kernel.model.ChatMessage;
@@ -49,6 +50,51 @@ class ConversationHistorySelectorTest {
         .containsExactly(
             new ChatMessage(MessageRole.USER, "新问题"),
             new ChatMessage(MessageRole.ASSISTANT, "新回答"));
+  }
+
+  @Test
+  void returnsMultipleCompleteTurnsInChronologicalOrder() {
+    var history =
+        List.of(
+            new ChatMessage(MessageRole.USER, "第一问"),
+            new ChatMessage(MessageRole.ASSISTANT, "第一答"),
+            new ChatMessage(MessageRole.USER, "第二问"),
+            new ChatMessage(MessageRole.ASSISTANT, "第二答"));
+
+    assertThat(selector.select(history, new HistoryLimits(4, 100_000)))
+        .containsExactlyElementsOf(history);
+  }
+
+  @Test
+  void ignoresOrphanMessagesBetweenCompleteTurns() {
+    var firstUser = new ChatMessage(MessageRole.USER, "第一问");
+    var firstAssistant = new ChatMessage(MessageRole.ASSISTANT, "第一答");
+    var secondUser = new ChatMessage(MessageRole.USER, "第二问");
+    var secondAssistant = new ChatMessage(MessageRole.ASSISTANT, "第二答");
+
+    assertThat(
+            selector.select(
+                List.of(
+                    firstUser,
+                    firstAssistant,
+                    new ChatMessage(MessageRole.ASSISTANT, "孤立响应"),
+                    secondUser,
+                    secondAssistant),
+                new HistoryLimits(4, 100_000)))
+        .containsExactly(firstUser, firstAssistant, secondUser, secondAssistant);
+  }
+
+  @Test
+  void returnsAnUnmodifiableList() {
+    var selected =
+        selector.select(
+            List.of(
+                new ChatMessage(MessageRole.USER, "问题"),
+                new ChatMessage(MessageRole.ASSISTANT, "回答")),
+            new HistoryLimits(2, 100_000));
+
+    assertThatExceptionOfType(UnsupportedOperationException.class)
+        .isThrownBy(() -> selected.add(new ChatMessage(MessageRole.USER, "新问题")));
   }
 
   @Test

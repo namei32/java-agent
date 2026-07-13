@@ -150,6 +150,67 @@ class JdbcSessionRepositoryTest {
   }
 
   @Test
+  void rollsBackExistingSessionStateWhenSecondAssistantInsertFails() throws Exception {
+    repository.appendTurn("existing", turn("第一问", "第一答"));
+    var before = sessionState("existing");
+    try (var connection = schema.openConnection();
+        var statement = connection.createStatement()) {
+      statement.execute(
+          """
+          CREATE TRIGGER fail_second_assistant BEFORE INSERT ON messages
+          WHEN NEW.role = 'assistant' AND NEW.seq = 3
+          BEGIN SELECT RAISE(ABORT, 'boom'); END
+          """);
+    }
+    var secondUserAt = USER_AT.plusMinutes(1);
+    var secondTurn =
+        new PersistedTurn(
+            new ChatMessage(MessageRole.USER, "第二问"),
+            secondUserAt,
+            new ChatMessage(MessageRole.ASSISTANT, "第二答"),
+            secondUserAt.plusSeconds(1));
+
+    assertThatThrownBy(() -> repository.appendTurn("existing", secondTurn))
+        .isInstanceOf(SqliteRepositoryException.class)
+        .hasMessageContaining("写入完整对话轮次失败");
+
+    assertThat(sessionState("existing")).isEqualTo(before);
+    assertThat(repository.load("existing").messages())
+        .containsExactly(
+            new ChatMessage(MessageRole.USER, "第一问"),
+            new ChatMessage(MessageRole.ASSISTANT, "第一答"));
+  }
+
+  @Test
+  void appendsAfterRecoveredMessageCursorWithoutReusingIds() throws Exception {
+    insertSession("recovered-append", 1);
+    insertMessage("recovered-append", 4, "user", "较晚问题");
+    insertMessage("recovered-append", 5, "assistant", "较晚回答");
+
+    repository.appendTurn("recovered-append", turn("新问题", "新回答"));
+
+    assertThat(repository.load("recovered-append").nextSequence()).isEqualTo(8);
+    try (var connection = schema.openConnection();
+        var rows =
+            connection
+                .createStatement()
+                .executeQuery(
+                    "SELECT id, seq FROM messages WHERE session_key = 'recovered-append' ORDER BY seq")) {
+      assertThat(rows.next()).isTrue();
+      assertThat(rows.getString("id")).isEqualTo("recovered-append:4");
+      assertThat(rows.next()).isTrue();
+      assertThat(rows.getString("id")).isEqualTo("recovered-append:5");
+      assertThat(rows.next()).isTrue();
+      assertThat(rows.getString("id")).isEqualTo("recovered-append:6");
+      assertThat(rows.getLong("seq")).isEqualTo(6);
+      assertThat(rows.next()).isTrue();
+      assertThat(rows.getString("id")).isEqualTo("recovered-append:7");
+      assertThat(rows.getLong("seq")).isEqualTo(7);
+      assertThat(rows.next()).isFalse();
+    }
+  }
+
+  @Test
   void reportsWhetherSQLiteCanBeOpened() {
     assertThat(repository.isAvailable()).isTrue();
 
@@ -205,6 +266,29 @@ class JdbcSessionRepositoryTest {
     }
   }
 
+  private SessionState sessionState(String sessionId) throws Exception {
+    try (var connection = schema.openConnection();
+        var statement =
+            connection.prepareStatement(
+                """
+                SELECT created_at, updated_at, metadata, last_user_at,
+                       last_proactive_at, next_seq
+                FROM sessions WHERE key = ?
+                """)) {
+      statement.setString(1, sessionId);
+      try (var row = statement.executeQuery()) {
+        assertThat(row.next()).isTrue();
+        return new SessionState(
+            row.getString("created_at"),
+            row.getString("updated_at"),
+            row.getString("metadata"),
+            row.getString("last_user_at"),
+            row.getString("last_proactive_at"),
+            row.getLong("next_seq"));
+      }
+    }
+  }
+
   private static void assertMessage(
       java.sql.ResultSet rows,
       String id,
@@ -222,4 +306,12 @@ class JdbcSessionRepositoryTest {
     assertThat(rows.getString("extra")).isEqualTo("{}");
     assertThat(rows.getString("ts")).isEqualTo(timestamp);
   }
+
+  private record SessionState(
+      String createdAt,
+      String updatedAt,
+      String metadata,
+      String lastUserAt,
+      String lastProactiveAt,
+      long nextSequence) {}
 }

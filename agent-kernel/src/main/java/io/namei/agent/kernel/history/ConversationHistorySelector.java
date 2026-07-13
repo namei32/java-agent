@@ -9,7 +9,7 @@ import java.util.List;
 public final class ConversationHistorySelector {
   public List<ChatMessage> select(List<ChatMessage> history, HistoryLimits limits) {
     var selectedReversed = new ArrayList<ChatMessage>();
-    int characters = 0;
+    long characters = 0;
     int index = history.size() - 1;
     while (index > 0) {
       ChatMessage assistant = history.get(index);
@@ -18,7 +18,7 @@ public final class ConversationHistorySelector {
         index--;
         continue;
       }
-      int pairCharacters = user.content().length() + assistant.content().length();
+      long pairCharacters = (long) user.content().length() + assistant.content().length();
       if (selectedReversed.size() + 2 > limits.maxMessages()
           || characters + pairCharacters > limits.maxCharacters()) {
         break;

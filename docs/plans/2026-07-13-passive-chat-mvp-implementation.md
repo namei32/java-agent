@@ -6,7 +6,7 @@
 
 **架构：** 项目采用五模块 Ports and Adapters 模块化单体。`agent-kernel` 定义领域模型和 Port，`agent-application` 编排用例与会话串行语义，两个 Adapter 分别连接 Spring AI 和 SQLite，`agent-bootstrap` 只负责 Spring Boot、HTTP、配置和装配。
 
-**技术栈：** JDK 21、Maven Wrapper 3.9.16、Spring Boot 4.1.0、Spring AI 2.0.0、SQLite JDBC 3.53.2.0、JUnit Jupiter、AssertJ、Mockito、ArchUnit 1.4.2、Spotless 3.8.0、JaCoCo 0.8.15、Maven Enforcer 3.6.3。
+**技术栈：** JDK 21、Maven Wrapper 3.9.16、Spring Boot 4.1.0、Spring AI 2.0.0、SQLite JDBC 3.53.2.0、JUnit Jupiter、AssertJ、ArchUnit 1.4.2、Spotless 3.8.0、JaCoCo 0.8.15、Maven Enforcer 3.6.3。
 
 ## 当前执行状态
 
@@ -25,19 +25,19 @@
 
 恢复执行时以本节和 Git 提交为准。每完成一个任务或阶段，立即更新本表；不维护额外的任务 brief、review package、执行报告或外部进度台账。
 
-## 未解决事项
+## Minor 加固状态
 
-以下均为不阻塞当前阶段的 Minor，由阶段审查或最终整分支审查统一裁决：
+原最终审查记录的以下 Minor 已于 2026-07-13 在[被动聊天 MVP Minor 加固实施计划](2026-07-13-mvp-hardening-implementation.md)中全部关闭：
 
 - Task 2：`ConversationHistorySelector` 的字符累计使用 `int`，极端长度可能溢出；多轮顺序、轮次间孤立消息和不可修改返回值缺少专项测试。
 - Task 3：`ChatResult` 尚未校验 null session、null assistant 和 ASSISTANT 角色不变量。
 - Task 4：超大 `Duration` 测试未强约束纳秒饱和值；串行测试的 `secondStarted` 存在极小调度假阳性窗口。
 - Task 5：缺少 Schema 初始化幂等、反向损坏表，以及主键、非空、默认值和唯一约束专项测试。
 - Task 6：缺少已有 Session 更新失败的完整状态回滚测试，以及恢复游标后继续追加 ID 的专项测试。
-- Task 7/9/10：Spring 测试基础设施在 JDK 21 下提示 Mockito 动态加载代理的未来兼容警告；Task 9 测试编译另有已过时 API 警告。阶段 C 不受影响，保留到最终门禁统一裁决。
+- Task 7/9/10：Spring 测试基础设施在 JDK 21 下提示 Mockito 动态加载代理的未来兼容警告；Task 9 测试编译另有已过时 API 警告。
 - Task 11：日志 Decorator 已覆盖失败路径脱敏，成功路径字段和 Health DOWN 分支缺少专项测试；不阻塞当前端到端阶段。
 
-最终审查确认上述事项均不破坏已批准的 MVP 可观察契约，按 Minor 技术债保留到后续增量任务处理。
+加固后默认 79/79、`failure` 22/22、`compat` 80/80；Mockito 动态 Agent 和 Deprecated API 告警已消除。此处保留原问题描述用于历史追溯，不再视为未解决事项。
 
 ## 阶段 D 验证证据
 

@@ -1,0 +1,13 @@
+# 架构决策记录
+
+ADR（Architecture Decision Record）记录会长期约束多个模块、协议或里程碑的决策。局部实现细节写入 Spec，不为每个类创建 ADR。
+
+## 已接受决策
+
+- [ADR-0001：采用模块化单体与 Ports and Adapters](0001-modular-monolith-and-ports-adapters.md)
+- [ADR-0002：采用 SQLite 兼容优先的渐进迁移](0002-sqlite-compatible-incremental-migration.md)
+- [ADR-0003：将 Spring AI 限定在模型适配器边界](0003-spring-ai-at-adapter-boundary.md)
+
+## 状态与编号
+
+状态使用 `提议`、`已接受`、`已取代` 或 `已拒绝`。文件名为四位递增编号加英文短标题。修改已接受决策时，优先新增 ADR 并通过“取代/被取代”关系保留历史。

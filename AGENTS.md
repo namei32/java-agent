@@ -151,7 +151,10 @@
 
 实现前阅读与任务相关的文档：
 
+- `docs/README.md`
 - `docs/architecture/java-rewrite-guide.md`
+- `docs/architecture/python-java-capability-matrix.md`
+- `docs/roadmap/java-rewrite-roadmap.md`
 - `docs/adr/`
 - `docs/contracts/`
 - `docs/specs/`

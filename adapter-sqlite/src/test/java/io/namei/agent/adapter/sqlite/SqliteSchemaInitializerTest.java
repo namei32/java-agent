@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.jupiter.api.Tag;
@@ -55,6 +56,94 @@ class SqliteSchemaInitializerTest {
     try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database)) {
       assertThat(columns(connection, "sessions")).containsExactly("key");
       assertThat(tableNames(connection)).doesNotContain("messages");
+    }
+  }
+
+  @Test
+  void initializationIsIdempotentAndPreservesExistingDataAndUnknownColumns() throws Exception {
+    Path database = tempDir.resolve("idempotent.db");
+    var initializer = new SqliteSchemaInitializer(database, 5_000);
+    initializer.initialize();
+    try (var connection = initializer.openConnection();
+        var statement = connection.createStatement()) {
+      statement.execute("ALTER TABLE sessions ADD COLUMN legacy_note TEXT");
+      statement.execute(
+          """
+          INSERT INTO sessions (key, created_at, updated_at, metadata, legacy_note)
+          VALUES ('existing', 'created', 'updated', '{"unknown":true}', 'keep-me')
+          """);
+    }
+
+    initializer.initialize();
+
+    try (var connection = initializer.openConnection();
+        var rows =
+            connection
+                .createStatement()
+                .executeQuery(
+                    "SELECT metadata, legacy_note, next_seq FROM sessions WHERE key = 'existing'")) {
+      assertThat(columns(connection, "sessions")).contains("legacy_note");
+      assertThat(rows.next()).isTrue();
+      assertThat(rows.getString("metadata")).isEqualTo("{\"unknown\":true}");
+      assertThat(rows.getString("legacy_note")).isEqualTo("keep-me");
+      assertThat(rows.getLong("next_seq")).isZero();
+    }
+  }
+
+  @Test
+  void rejectsBrokenMessagesTableWithoutCreatingSessions() throws Exception {
+    Path database = tempDir.resolve("broken-messages.db");
+    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+        var statement = connection.createStatement()) {
+      statement.execute("CREATE TABLE messages (id TEXT PRIMARY KEY)");
+    }
+
+    assertThatThrownBy(() -> new SqliteSchemaInitializer(database, 5_000).initialize())
+        .isInstanceOf(SqliteRepositoryException.class)
+        .hasMessageContaining("messages 缺少必需列");
+
+    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database)) {
+      assertThat(columns(connection, "messages")).containsExactly("id");
+      assertThat(tableNames(connection)).doesNotContain("sessions");
+    }
+  }
+
+  @Test
+  void createsRequiredDefaultsAndUniqueMessageSequenceConstraint() throws Exception {
+    var initializer = new SqliteSchemaInitializer(tempDir.resolve("constraints.db"), 5_000);
+    initializer.initialize();
+
+    try (var connection = initializer.openConnection();
+        var statement = connection.createStatement()) {
+      statement.execute(
+          "INSERT INTO sessions (key, created_at, updated_at) VALUES ('session', 'c', 'u')");
+      try (var row =
+          statement.executeQuery(
+              "SELECT last_consolidated, next_seq FROM sessions WHERE key = 'session'")) {
+        assertThat(row.next()).isTrue();
+        assertThat(row.getLong("last_consolidated")).isZero();
+        assertThat(row.getLong("next_seq")).isZero();
+      }
+      statement.execute(
+          """
+          INSERT INTO messages (id, session_key, seq, role, ts)
+          VALUES ('first', 'session', 0, 'user', 't')
+          """);
+      assertThatThrownBy(
+              () ->
+                  statement.execute(
+                      """
+                      INSERT INTO messages (id, session_key, seq, role, ts)
+                      VALUES ('duplicate-sequence', 'session', 0, 'assistant', 't')
+                      """))
+          .isInstanceOf(SQLException.class)
+          .hasMessageContaining("UNIQUE constraint failed");
+      assertThatThrownBy(
+              () ->
+                  statement.execute(
+                      "INSERT INTO messages (id, session_key, seq, role) VALUES ('missing-ts', 'session', 1, 'user')"))
+          .isInstanceOf(SQLException.class)
+          .hasMessageContaining("NOT NULL constraint failed");
     }
   }
 

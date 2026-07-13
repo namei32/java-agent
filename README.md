@@ -66,8 +66,12 @@ curl --fail-with-body http://127.0.0.1:8080/actuator/health
 
 默认数据库位于 `${AKASHIC_WORKSPACE}/sessions.db`。首次让 Java 写入任何既有数据前，必须停止 Python 和 Java 进程，并一起备份 `sessions.db`、`sessions.db-wal`、`sessions.db-shm`。本里程碑不得写入真实 Python 工作区。
 
-详细说明见：
+文档入口：
 
+- [项目文档导航](docs/README.md)
+- [Java 重写 Roadmap](docs/roadmap/java-rewrite-roadmap.md)
+- [Python/Java 能力差距矩阵](docs/architecture/python-java-capability-matrix.md)
+- [Java 重写指南](docs/architecture/java-rewrite-guide.md)
 - [本地开发与故障排查](docs/runbooks/local-development.md)
 - [被动聊天 HTTP 契约](docs/contracts/passive-chat-http.md)
 - [MVP 设计](docs/specs/2026-07-12-passive-chat-mvp-design.md)
