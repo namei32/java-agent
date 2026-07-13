@@ -15,9 +15,10 @@
 | Task 1–4 / 阶段 A | 已完成 | 截至 `745e7f5`，默认构建、failure Profile 和并发稳定性验证通过 |
 | Task 5–6 / 阶段 B | 已完成 | 截至 `56cef3c`；SQLite 聚合验证 19/19、完整 Reactor 33/33、failure Profile 17/17 |
 | Task 7 | 已完成 | 提交 `c286b16`；`SpringAiChatModelAdapterTest` 5/5 GREEN |
-| Task 8 | 已完成 | 聚焦 RED 有效；`ApplicationConfigurationTest` 5/5 GREEN，未访问外部模型 |
-| Task 9 | 当前任务 | 实现 HTTP 契约、请求 ID 与错误映射 |
-| Task 10–13 / 阶段 C–D | 待执行 | 按后续任务和阶段门禁推进 |
+| Task 8 | 已完成 | 提交 `e5b6eb1`；聚焦 RED 有效，`ApplicationConfigurationTest` 5/5 GREEN，未访问外部模型 |
+| Task 9 | 已完成 | 聚焦 RED 有效；`ChatControllerTest` 7/7 GREEN，覆盖未知请求长度的 64 KiB 上限 |
+| Task 10 | 当前任务 | 使用本地 OpenAI-compatible 桩服务验证 Spring AI，随后执行阶段 C 门禁 |
+| Task 11–13 / 阶段 D | 待执行 | 按后续任务和最终门禁推进 |
 
 恢复执行时以本节和 Git 提交为准。每完成一个任务或阶段，立即更新本表；不维护额外的任务 brief、review package、执行报告或外部进度台账。
 
@@ -30,7 +31,7 @@
 - Task 4：超大 `Duration` 测试未强约束纳秒饱和值；串行测试的 `secondStarted` 存在极小调度假阳性窗口。
 - Task 5：缺少 Schema 初始化幂等、反向损坏表，以及主键、非空、默认值和唯一约束专项测试。
 - Task 6：缺少已有 Session 更新失败的完整状态回滚测试，以及恢复游标后继续追加 ID 的专项测试。
-- Task 7：Mockito 在 JDK 21 聚焦测试中提示动态加载代理的未来兼容警告；阶段 C 审查时评估改用无代理测试替身。
+- Task 7/9：Spring 测试基础设施在 JDK 21 下提示 Mockito 动态加载代理的未来兼容警告；Task 9 测试编译另有已过时 API 警告，阶段 C 审查时定位并裁决。
 
 ## 全局约束
 

@@ -2,6 +2,7 @@ package io.namei.agent.bootstrap.config;
 
 import io.namei.agent.adapter.sqlite.JdbcSessionRepository;
 import io.namei.agent.adapter.sqlite.SqliteSchemaInitializer;
+import io.namei.agent.adapter.springai.SpringAiAdapterConfiguration;
 import io.namei.agent.application.ChatService;
 import io.namei.agent.application.ChatUseCase;
 import io.namei.agent.application.KeyedSessionExecutionGate;
@@ -19,11 +20,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(AgentProperties.class)
+@Import(SpringAiAdapterConfiguration.class)
 public class ApplicationConfiguration {
   @Bean
   InitializingBean providerConfigurationGuard(Environment environment) {
