@@ -5,8 +5,8 @@
 ## 当前状态
 
 - 已完成：五模块 Maven 骨架、同步 HTTP 被动聊天、历史恢复、OpenAI-compatible 模型适配、SQLite 原子轮次写入、失败语义、单进程同会话串行化、健康检查与基础可观察性。
-- 正在完成：MVP Minor 技术债加固，以及 Java 重写文档治理。
-- 下一里程碑：先建立 Python/Java 契约与 Golden Test 基线，再实现 Tool Loop；不能直接跳到工具生态扩展。
+- 已完成：MVP Minor 技术债加固和 Java 重写文档治理。
+- 下一里程碑：建立 Python/Java 契约与 Golden Test 基线，再实现 Tool Loop；不能直接跳到工具生态扩展。
 - 尚未覆盖：流式输出、工具调用、MCP、长期记忆、渠道、插件、主动任务、Drift 和 Subagent。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。

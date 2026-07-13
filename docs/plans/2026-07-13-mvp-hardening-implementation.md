@@ -1,6 +1,6 @@
 # 被动聊天 MVP Minor 加固实施计划
 
-- 状态：实施中
+- 状态：已实现并验证
 - 日期：2026-07-13
 - 来源：[被动聊天 MVP 实施计划](2026-07-13-passive-chat-mvp-implementation.md)最终审查遗留的 Minor 技术债
 
@@ -70,4 +70,17 @@
 
 ## 实施结果
 
-完成后在此记录准确命令、测试数、告警和任何保留项，并同步更新原 MVP Plan、能力矩阵和 Roadmap。没有验证证据前不得把状态改为“已实现并验证”。
+完成日期：2026-07-13。
+
+- H1：第一次聚焦命令因测试断言 API 拼写错误导致编译失败，不计 RED；修正测试后，`ChatResultTest` 因三个缺失不变量产生有效 RED。最小实现后同一命令 GREEN：Kernel 8/8，Application 12/12。
+- H2：聚焦验收 GREEN 13/13；生产事务实现无需修改。
+- H3：聚焦 Reactor GREEN；成功日志、Health `UP/DOWN`、Spring AI Fake 和 Standalone MockMvc 均通过。阶段门禁发现 Spring Test 因类路径存在 Mockito 而加载动态 Agent，排除未使用依赖后完整复验不再出现动态 Agent 或 Deprecated API 告警。
+- `./mvnw spotless:apply`：退出码 0。
+- `./mvnw clean verify`：退出码 0，共 79/79；没有访问真实模型。
+- `./mvnw -Pfailure verify`：退出码 0，Application 9、SQLite 13，共 22/22。
+- `./mvnw -Pcompat verify`：退出码 0，在默认 79 个测试上增加 `PythonSchemaCompatibilityIT`，共 80/80。
+- `./mvnw -pl agent-kernel dependency:tree`：只有 JUnit Jupiter、AssertJ 及其测试传递依赖，不含框架或 Provider SDK。
+- Mockito 依赖过滤树、Secret 扫描和数据库/Workspace 跟踪文件扫描均为零命中。
+- `real-model-smoke` 未运行；仍需要真实网络、密钥、费用授权和单独的非确定性验收策略。
+
+本轮没有保留的 MVP Minor。Spring AI 在“空 choices”故障用例中输出一条预期 `WARN`，它是被测试的供应商异常路径，不是编译或运行时基础设施告警。
