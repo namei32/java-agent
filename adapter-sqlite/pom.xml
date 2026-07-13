@@ -1,0 +1,5 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>
+  <parent><groupId>io.namei.agent</groupId><artifactId>namei-agent-parent</artifactId><version>0.1.0-SNAPSHOT</version></parent>
+  <artifactId>adapter-sqlite</artifactId>
+  <dependencies><dependency><groupId>io.namei.agent</groupId><artifactId>agent-kernel</artifactId><version>${project.version}</version></dependency><dependency><groupId>org.xerial</groupId><artifactId>sqlite-jdbc</artifactId></dependency><dependency><groupId>tools.jackson.core</groupId><artifactId>jackson-databind</artifactId></dependency><dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency><dependency><groupId>org.assertj</groupId><artifactId>assertj-core</artifactId><scope>test</scope></dependency></dependencies>
+</project>

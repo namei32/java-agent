@@ -1,12 +1,56 @@
 # 被动聊天 MVP 实施计划
 
-> **执行智能体必读：** REQUIRED SUB-SKILL：使用 `subagent-driven-development`（推荐）或 `executing-plans`，按任务逐项实施。所有步骤使用 `- [ ]` 复选框跟踪。
+> **执行约定：** 默认由单个智能体从“当前任务”开始连续实施。每个任务只执行一次聚焦 RED/GREEN、自审并提交；只在阶段门禁运行格式化、完整构建、Profile 和整体审查。
 
 **目标：** 使用 JDK 21、Maven、Spring Boot 4.1.0 和 Spring AI 2.0.0，实现一个可通过同步 HTTP API 完成被动聊天、恢复历史并将完整对话轮次原子写入 SQLite 的最小闭环。
 
 **架构：** 项目采用五模块 Ports and Adapters 模块化单体。`agent-kernel` 定义领域模型和 Port，`agent-application` 编排用例与会话串行语义，两个 Adapter 分别连接 Spring AI 和 SQLite，`agent-bootstrap` 只负责 Spring Boot、HTTP、配置和装配。
 
 **技术栈：** JDK 21、Maven Wrapper 3.9.16、Spring Boot 4.1.0、Spring AI 2.0.0、SQLite JDBC 3.53.2.0、JUnit Jupiter、AssertJ、Mockito、ArchUnit 1.4.2、Spotless 3.8.0、JaCoCo 0.8.15、Maven Enforcer 3.6.3。
+
+## 当前执行状态
+
+| 范围 | 状态 | 证据 |
+|---|---|---|
+| Task 1–4 / 阶段 A | 已完成 | 截至 `745e7f5`，默认构建、failure Profile 和并发稳定性验证通过 |
+| Task 5–6 / 阶段 B | 已完成 | 截至 `56cef3c`；SQLite 聚合验证 19/19、完整 Reactor 33/33、failure Profile 17/17 |
+| Task 7 | 已完成 | 提交 `c286b16`；`SpringAiChatModelAdapterTest` 5/5 GREEN |
+| Task 8 | 已完成 | 提交 `e5b6eb1`；聚焦 RED 有效，`ApplicationConfigurationTest` 5/5 GREEN，未访问外部模型 |
+| Task 9 | 已完成 | 提交 `c0d9948`；聚焦 RED 有效，`ChatControllerTest` 7/7 GREEN，覆盖未知请求长度的 64 KiB 上限 |
+| Task 10 | 已完成 | 提交 `163b7b6`；聚焦 RED 有效，本地 `127.0.0.1` 桩协议测试 6/6 GREEN，未访问真实模型 |
+| 阶段 C | 已完成 | Spotless、模型 Adapter、Bootstrap、干净 Reactor 均通过；完整构建 56/56，Kernel 仅含测试依赖 |
+| Task 11 | 已完成 | 提交 `7798df0`；聚焦 RED 有效，架构与日志脱敏 5/5、真实 Actuator 验收 1/1 GREEN，模型零调用 |
+| Task 12 | 已完成 | 提交 `252364c`；离线 `PassiveChatEndpointIT` 1/1，通过两轮 HTTP、历史恢复和 SQLite 四消息验收 |
+| Task 13 / 阶段 D | 已完成并合并至 `main` | 提交 `829e937`；运行、排障与 HTTP Contract 文档已补全，最终门禁和整体自审通过 |
+
+恢复执行时以本节和 Git 提交为准。每完成一个任务或阶段，立即更新本表；不维护额外的任务 brief、review package、执行报告或外部进度台账。
+
+## 未解决事项
+
+以下均为不阻塞当前阶段的 Minor，由阶段审查或最终整分支审查统一裁决：
+
+- Task 2：`ConversationHistorySelector` 的字符累计使用 `int`，极端长度可能溢出；多轮顺序、轮次间孤立消息和不可修改返回值缺少专项测试。
+- Task 3：`ChatResult` 尚未校验 null session、null assistant 和 ASSISTANT 角色不变量。
+- Task 4：超大 `Duration` 测试未强约束纳秒饱和值；串行测试的 `secondStarted` 存在极小调度假阳性窗口。
+- Task 5：缺少 Schema 初始化幂等、反向损坏表，以及主键、非空、默认值和唯一约束专项测试。
+- Task 6：缺少已有 Session 更新失败的完整状态回滚测试，以及恢复游标后继续追加 ID 的专项测试。
+- Task 7/9/10：Spring 测试基础设施在 JDK 21 下提示 Mockito 动态加载代理的未来兼容警告；Task 9 测试编译另有已过时 API 警告。阶段 C 不受影响，保留到最终门禁统一裁决。
+- Task 11：日志 Decorator 已覆盖失败路径脱敏，成功路径字段和 Health DOWN 分支缺少专项测试；不阻塞当前端到端阶段。
+
+最终审查确认上述事项均不破坏已批准的 MVP 可观察契约，按 Minor 技术债保留到后续增量任务处理。
+
+## 阶段 D 验证证据
+
+- `./mvnw spotless:apply`：退出码 0。
+- `./mvnw clean verify`：退出码 0；Kernel 11、Application 14、SQLite 8、Spring AI 11、Bootstrap 19，共 63/63；默认未选择 `compat` 或 `real-model`。
+- `./mvnw -Pfailure verify`：退出码 0；Application 9、SQLite 8，共 17/17；Failsafe 选择 0 个集成测试。
+- `./mvnw -Pcompat verify`：退出码 0；在默认 63 个离线测试基础上明确执行 `PythonSchemaCompatibilityIT`，共 64/64；未选择 `real-model`。
+- `./mvnw -pl agent-kernel dependency:tree`：退出码 0；只有 JUnit Jupiter 和 AssertJ 测试依赖。
+- 全 Reactor 禁止依赖扫描：未发现 WebFlux、JPA、Hibernate ORM、R2DBC、Lombok 或外部 SNAPSHOT；`hibernate-validator` 是 Bean Validation 实现，不属于 Hibernate ORM。
+- Secret、`.env`、`config.toml`、SQLite 和 Workspace 产物扫描：零命中。
+- `java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar`：使用 Java 21 启动成功；`/actuator/health` 返回 `UP`，随后完成优雅关闭。
+- 最终整体自审：已检查 Spec、依赖方向、事务与兼容性、并发、日志和 HTTP 错误映射；修正 `failure` Profile 误选集成测试及不可执行的多模块启动命令后，无未解决 Critical 或 Important 问题。
+- `real-model-smoke`：未运行；该 Profile 需要真实网络、密钥和单独授权。
 
 ## 全局约束
 
@@ -23,7 +67,18 @@
 - 默认只监听 `127.0.0.1`，只开放 `/actuator/health`，不得记录 API Key、Prompt 或消息正文。
 - 默认构建禁止访问真实模型，不需要 API Key。
 - 文档使用中文；代码标识、协议、命令和必要专业术语保留英文。
-- 每个生产行为严格执行 Red-Green-Refactor，提交前必须运行当前任务的目标测试。
+- 每个小任务把全部新增行为合并为一次有效的聚焦 RED 和一次聚焦 GREEN；零测试、测试选择器或依赖错误不得作为证据。
+
+## 测试与验证节奏
+
+- 小任务只运行计划中明确列出的聚焦 RED/GREEN，不例行运行 Spotless、完整 Reactor、Maven Profile 或重复稳定性循环。
+- 只新增兼容性、端到端或验收测试且不改变生产行为的任务，不人为制造 RED，只运行一次聚焦验收命令。
+- 每个任务执行一次 Git diff、Spec、模块边界和异常路径自审；Critical 或 Important 行为修复只运行覆盖该缺陷的聚焦 RED/GREEN。
+- Task 6 后执行 SQLite 持久化阶段门禁：Spotless、`adapter-sqlite` 验证、完整 Reactor、`failure` Profile。
+- Task 10 后执行模型、装配与 HTTP 阶段门禁：Spotless、`adapter-spring-ai` 验证、`agent-bootstrap` 验证、完整 Reactor。
+- Task 13 后执行最终门禁：Spotless、完整 Reactor、`failure`、`compat`、架构依赖、Secret 和 Workspace 检查。
+- 阶段门禁失败时使用最小复现命令调试；所有聚焦修复完成后只重新运行一次完整阶段门禁。
+- Task 1–4 已产生的完整验证证据继续有效；Task 4 复审通过后不重复执行阶段 A 测试。
 
 ## 已核实版本与官方依据
 
@@ -293,7 +348,6 @@ java-agent/
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
     <dependency><groupId>com.tngtech.archunit</groupId><artifactId>archunit-junit5</artifactId><scope>test</scope></dependency>
   </dependencies>
-  <build><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin></plugins></build>
 </project>
 ```
 
@@ -347,6 +401,32 @@ class ChatMessageTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("消息内容不能为空");
   }
+
+  @Test
+  void stripsUnicodeWhitespace() {
+    assertThat(new ChatMessage(MessageRole.USER, "\u2003你好\u2003").content()).isEqualTo("你好");
+  }
+
+  @Test
+  void rejectsUnicodeBlankContent() {
+    assertThatThrownBy(() -> new ChatMessage(MessageRole.USER, "\u2003"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("消息内容不能为空");
+  }
+
+  @Test
+  void rejectsNullRole() {
+    assertThatThrownBy(() -> new ChatMessage(null, "你好"))
+        .isInstanceOf(NullPointerException.class)
+        .hasMessage("role");
+  }
+
+  @Test
+  void rejectsNullContent() {
+    assertThatThrownBy(() -> new ChatMessage(MessageRole.USER, null))
+        .isInstanceOf(NullPointerException.class)
+        .hasMessage("content");
+  }
 }
 ```
 
@@ -377,8 +457,8 @@ public record ChatMessage(MessageRole role, String content) {
   public ChatMessage {
     Objects.requireNonNull(role, "role");
     Objects.requireNonNull(content, "content");
-    content = content.trim();
-    if (content.isEmpty()) {
+    content = content.strip();
+    if (content.isBlank()) {
       throw new IllegalArgumentException("消息内容不能为空");
     }
   }
@@ -393,9 +473,10 @@ public record ChatMessage(MessageRole role, String content) {
 ./mvnw -pl agent-kernel test -Dtest=ChatMessageTest
 ./mvnw spotless:apply
 ./mvnw -pl agent-kernel test
+./mvnw clean verify
 ```
 
-预期：全部成功，测试数为 2，失败数为 0。
+预期：全部成功，`ChatMessageTest` 测试数为 6，失败数为 0，完整 Reactor 构建成功。
 
 - [ ] **步骤 7：提交**
 
@@ -642,7 +723,7 @@ class ChatServiceTest {
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`./mvnw -pl agent-application -am test -Dtest=ChatServiceTest`
+运行：`./mvnw -pl agent-application -am test -Dtest=ChatServiceTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 预期：编译失败，提示缺少用例、Port 和模型类型。
 
@@ -870,6 +951,7 @@ git commit -m "feat: 实现被动聊天应用用例"
 
 **文件：**
 
+- 修改：`pom.xml`
 - 创建：`agent-application/src/main/java/io/namei/agent/application/SessionLockTimeoutException.java`
 - 创建：`agent-application/src/main/java/io/namei/agent/application/KeyedSessionExecutionGate.java`
 - 创建：`agent-application/src/test/java/io/namei/agent/application/KeyedSessionExecutionGateTest.java`
@@ -879,8 +961,9 @@ git commit -m "feat: 实现被动聊天应用用例"
 - 消费：`SessionExecutionGate`
 - 产出：`KeyedSessionExecutionGate(Duration waitTimeout)`
 - 保证：同一 Key 串行、不同 Key 并行、超时抛出 `SessionLockTimeoutException`、空闲 Entry 被回收。
+- `waitTimeout`：拒绝负数；零表示立即尝试；正数保留纳秒精度；正数转换为纳秒溢出时饱和到 `Long.MAX_VALUE`。
 
-- [ ] **步骤 1：编写并发和回收失败测试**
+- [ ] **步骤 1：编写并发、回收和 Duration 边界失败测试**
 
 ```java
 package io.namei.agent.application;
@@ -965,11 +1048,18 @@ class KeyedSessionExecutionGateTest {
 }
 ```
 
+在修改生产实现前补充以下边界测试：
+
+- `rejectsNegativeWaitTimeout`：`Duration.ofNanos(-1)` 必须被构造器拒绝。
+- `zeroWaitTimeoutAttemptsImmediately`：忙 session 上使用 `Duration.ZERO` 必须立即尝试并抛出受控超时异常，释放持锁者后 entry 归零。
+- `preservesPositiveNanosecondPrecision`：`Duration.ofNanos(1)` 必须以 1ns 保存，不能截断为 0ms。
+- `saturatesPositiveWaitTimeoutWhenNanosecondConversionOverflows`：`Duration.ofSeconds(Long.MAX_VALUE)` 不得因转换溢出而失败。
+
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`./mvnw -pl agent-application -am test -Dtest=KeyedSessionExecutionGateTest`
+运行：`./mvnw -pl agent-application -am test -Dtest=KeyedSessionExecutionGateTest -Dsurefire.failIfNoSpecifiedTests=false`
 
-预期：编译失败，提示缺少 `KeyedSessionExecutionGate`。
+预期：初始实现阶段，命令必须进入 `agent-application`，目标测试源码编译失败并提示缺少 `KeyedSessionExecutionGate`；正式审查修复阶段，7 个测试中负值、纳秒精度和超大正值测试必须因旧语义失败。不得以上游无匹配测试的失败代替目标模块 RED。
 
 - [ ] **步骤 3：实现带引用计数的锁注册表**
 
@@ -996,10 +1086,14 @@ import java.util.function.Supplier;
 
 public final class KeyedSessionExecutionGate implements SessionExecutionGate {
   private final ConcurrentHashMap<String, Entry> entries = new ConcurrentHashMap<>();
-  private final Duration waitTimeout;
+  private final long waitTimeoutNanos;
 
   public KeyedSessionExecutionGate(Duration waitTimeout) {
-    this.waitTimeout = Objects.requireNonNull(waitTimeout, "waitTimeout");
+    Objects.requireNonNull(waitTimeout, "waitTimeout");
+    if (waitTimeout.isNegative()) {
+      throw new IllegalArgumentException("waitTimeout 不能为负数");
+    }
+    this.waitTimeoutNanos = toNanosSaturated(waitTimeout);
   }
 
   @Override
@@ -1011,7 +1105,7 @@ public final class KeyedSessionExecutionGate implements SessionExecutionGate {
     });
     boolean acquired = false;
     try {
-      acquired = entry.lock.tryLock(waitTimeout.toMillis(), TimeUnit.MILLISECONDS);
+      acquired = entry.lock.tryLock(waitTimeoutNanos, TimeUnit.NANOSECONDS);
       if (!acquired) throw new SessionLockTimeoutException(sessionId);
       return action.get();
     } catch (InterruptedException exception) {
@@ -1030,6 +1124,14 @@ public final class KeyedSessionExecutionGate implements SessionExecutionGate {
     return entries.size();
   }
 
+  private static long toNanosSaturated(Duration waitTimeout) {
+    try {
+      return waitTimeout.toNanos();
+    } catch (ArithmeticException exception) {
+      return Long.MAX_VALUE;
+    }
+  }
+
   private static final class Entry {
     private final ReentrantLock lock = new ReentrantLock(true);
     private final AtomicInteger references = new AtomicInteger();
@@ -1039,15 +1141,60 @@ public final class KeyedSessionExecutionGate implements SessionExecutionGate {
 
 - [ ] **步骤 4：运行测试并确认通过**
 
-运行：`./mvnw -pl agent-application -am test -Dtest=KeyedSessionExecutionGateTest`
+运行：`./mvnw -pl agent-application -am test -Dtest=KeyedSessionExecutionGateTest -Dsurefire.failIfNoSpecifiedTests=false`
 
-预期：3 个测试通过，进程在 5 秒内退出。
+预期：边界测试加入后，`agent-application` 必须真实报告 7 个测试通过；仅有 reactor `BUILD SUCCESS` 或上游无匹配测试不算有效验证。
 
-- [ ] **步骤 5：提交**
+- [ ] **步骤 5：增加清理回归测试和 failure Profile**
+
+新增两条既有行为的 regression tests；它们在生产修改前已经具备正确行为，因此应如实记录为即时通过，不伪造 RED：
+
+- `propagatesActionExceptionAndReclaimsEntry`：原始 action 异常按对象传播，同 session 随后可执行，entry 最终归零。
+- `interruptedWaiterReclaimsEntryAndPreservesInterruptStatus`：用 latch、线程状态和 interrupt 驱动等待线程，验证受控异常、interrupt flag、持锁者释放后的回收和同 session 后续执行；禁止使用 `Thread.sleep`。
+
+在 `KeyedSessionExecutionGateTest` 类上加入：
+
+```java
+@Tag("failure")
+```
+
+在父 POM 末尾加入实际筛选 JUnit Tag 的 Profile：
+
+```xml
+<profiles>
+  <profile>
+    <id>failure</id>
+    <build>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <groups>failure</groups>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+</profiles>
+```
+
+运行：
 
 ```bash
-git add agent-application/src/main/java/io/namei/agent/application/KeyedSessionExecutionGate.java agent-application/src/main/java/io/namei/agent/application/SessionLockTimeoutException.java agent-application/src/test/java/io/namei/agent/application/KeyedSessionExecutionGateTest.java
-git commit -m "feat: 保证同会话请求串行执行"
+./mvnw -pl agent-application -am test -Dtest=KeyedSessionExecutionGateTest -Dsurefire.failIfNoSpecifiedTests=false
+./mvnw spotless:apply
+./mvnw clean verify
+./mvnw -Pfailure verify
+```
+
+预期：聚焦测试真实报告 9 个测试通过；`clean verify` 运行默认全套测试；`failure verify` 不出现 Profile 缺失警告，只选择 `failure` tag，并在 `agent-application` 真实执行上述 9 个测试。
+
+- [ ] **步骤 6：提交正式审查修复**
+
+```bash
+git add pom.xml agent-application/src/main/java/io/namei/agent/application/KeyedSessionExecutionGate.java agent-application/src/test/java/io/namei/agent/application/KeyedSessionExecutionGateTest.java docs/plans/2026-07-13-passive-chat-mvp-implementation.md
+git commit -m "fix: 完善会话执行闸门边界语义"
 ```
 
 ---
@@ -1075,9 +1222,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
 import java.sql.DriverManager;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+@Tag("failure")
 class SqliteSchemaInitializerTest {
   @TempDir Path tempDir;
 
@@ -1118,7 +1267,7 @@ class SqliteSchemaInitializerTest {
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`./mvnw -pl adapter-sqlite -am test -Dtest=SqliteSchemaInitializerTest`
+运行：`./mvnw -pl adapter-sqlite -am test -Dtest=SqliteSchemaInitializerTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 预期：编译失败，提示缺少 Schema Initializer。
 
@@ -1206,7 +1355,7 @@ public final class SqliteSchemaInitializer {
 
 - [ ] **步骤 4：运行测试并确认通过**
 
-运行：`./mvnw -pl adapter-sqlite -am test -Dtest=SqliteSchemaInitializerTest`
+运行：`./mvnw -pl adapter-sqlite -am test -Dtest=SqliteSchemaInitializerTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 预期：2 个测试通过。
 
@@ -1244,9 +1393,11 @@ import io.namei.agent.kernel.model.*;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+@Tag("failure")
 class JdbcSessionRepositoryTest {
   @TempDir Path tempDir;
   private SqliteSchemaInitializer schema;
@@ -1301,7 +1452,7 @@ class JdbcSessionRepositoryTest {
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`./mvnw -pl adapter-sqlite -am test -Dtest=JdbcSessionRepositoryTest`
+运行：`./mvnw -pl adapter-sqlite -am test -Dtest=JdbcSessionRepositoryTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 预期：编译失败，提示缺少 `JdbcSessionRepository`。
 
@@ -1432,7 +1583,7 @@ public final class JdbcSessionRepository implements SessionRepository {
 
 - [ ] **步骤 4：运行测试并确认通过**
 
-运行：`./mvnw -pl adapter-sqlite -am test -Dtest=JdbcSessionRepositoryTest`
+运行：`./mvnw -pl adapter-sqlite -am test -Dtest=JdbcSessionRepositoryTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 预期：2 个测试通过；故障 Trigger 测试验证消息数为 0。
 
@@ -1442,6 +1593,19 @@ public final class JdbcSessionRepository implements SessionRepository {
 git add adapter-sqlite/src
 git commit -m "feat: 原子持久化完整聊天轮次"
 ```
+
+#### 阶段 B 门禁：SQLite 持久化
+
+Task 6 的任务自审通过后，由当前执行者统一运行，不把阶段门禁拆成新的小任务：
+
+```bash
+./mvnw spotless:apply
+./mvnw -pl adapter-sqlite -am verify
+./mvnw clean verify
+./mvnw -Pfailure verify
+```
+
+预期：全部命令退出码为 0；默认 Reactor 不访问真实模型；`failure` Profile 在 `adapter-sqlite` 实际执行带 `failure` Tag 的 Schema 和事务测试。把命令、测试数和 Profile 选择结果写入本计划“当前执行状态”，再进入 Task 7。
 
 ---
 
@@ -1528,7 +1692,7 @@ class SpringAiChatModelAdapterTest {
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`./mvnw -pl adapter-spring-ai -am test -Dtest=SpringAiChatModelAdapterTest`
+运行：`./mvnw -pl adapter-spring-ai -am test -Dtest=SpringAiChatModelAdapterTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 预期：编译失败，提示缺少适配器和模型异常类型。
 
@@ -1636,16 +1800,11 @@ public class SpringAiAdapterConfiguration {
 }
 ```
 
-- [ ] **步骤 4：运行测试并检查依赖方向**
+- [ ] **步骤 4：运行一次聚焦 GREEN**
 
-运行：
+运行：`./mvnw -pl adapter-spring-ai -am test -Dtest=SpringAiChatModelAdapterTest -Dsurefire.failIfNoSpecifiedTests=false`
 
-```bash
-./mvnw -pl adapter-spring-ai -am test
-./mvnw -pl agent-kernel dependency:tree
-```
-
-预期：适配器测试通过；`agent-kernel` 依赖树中不出现 Spring 或 Spring AI。
+预期：目标模块实际执行 2 个适配器测试并全部通过。Kernel 依赖方向统一在阶段 C 门禁检查。
 
 - [ ] **步骤 5：提交**
 
@@ -1660,6 +1819,7 @@ git commit -m "feat: 增加 Spring AI 模型适配器"
 
 **文件：**
 
+- 修改：`agent-bootstrap/pom.xml`
 - 创建：`agent-bootstrap/src/main/java/io/namei/agent/bootstrap/NameiAgentApplication.java`
 - 创建：`agent-bootstrap/src/main/java/io/namei/agent/bootstrap/config/AgentProperties.java`
 - 创建：`agent-bootstrap/src/main/java/io/namei/agent/bootstrap/config/ProviderConfigurationGuard.java`
@@ -1704,7 +1864,7 @@ class ApplicationConfigurationTest {
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`./mvnw -pl agent-bootstrap -am test -Dtest=ApplicationConfigurationTest`
+运行：`./mvnw -pl agent-bootstrap -am test -Dtest=ApplicationConfigurationTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 预期：编译失败，提示缺少配置类。
 
@@ -1831,6 +1991,19 @@ public class NameiAgentApplication {
 }
 ```
 
+创建 `NameiAgentApplication` 后，在 `agent-bootstrap/pom.xml` 中启用 Spring Boot repackage 插件：
+
+```xml
+<build>
+  <plugins>
+    <plugin>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-maven-plugin</artifactId>
+    </plugin>
+  </plugins>
+</build>
+```
+
 - [ ] **步骤 4：写入运行配置和默认 Prompt**
 
 ```yaml
@@ -1892,14 +2065,14 @@ OPENAI_MODEL=gpt-4o-mini
 
 - [ ] **步骤 5：运行配置测试和离线 Context Smoke Test**
 
-运行：`./mvnw -pl agent-bootstrap -am test -Dtest=ApplicationConfigurationTest`
+运行：`./mvnw -pl agent-bootstrap -am test -Dtest=ApplicationConfigurationTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 预期：测试通过；测试输出和 Surefire 报告中不出现 API Key 值。
 
 - [ ] **步骤 6：提交**
 
 ```bash
-git add .env.example agent-bootstrap/src
+git add .env.example agent-bootstrap/pom.xml agent-bootstrap/src
 git commit -m "feat: 装配被动聊天 Spring Boot 应用"
 ```
 
@@ -1994,7 +2167,7 @@ class ChatControllerTest {
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`./mvnw -pl agent-bootstrap -am test -Dtest=ChatControllerTest`
+运行：`./mvnw -pl agent-bootstrap -am test -Dtest=ChatControllerTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 预期：编译失败，提示缺少 HTTP 类型。
 
@@ -2155,7 +2328,7 @@ public class ApiExceptionHandler {
 
 - [ ] **步骤 5：运行目标测试**
 
-运行：`./mvnw -pl agent-bootstrap -am test -Dtest=ChatControllerTest`
+运行：`./mvnw -pl agent-bootstrap -am test -Dtest=ChatControllerTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 预期：4 个测试通过；错误响应不含异常类名或堆栈；超限请求返回 413。
 
@@ -2182,19 +2355,7 @@ git commit -m "feat: 提供被动聊天 HTTP API"
 - 网络只允许访问测试进程创建的 `127.0.0.1` 桩服务。
 - 覆盖成功、401、429、500、非法 JSON、空 Choices 和超时。
 
-- [ ] **步骤 1：加入仅测试使用的 OpenAI Starter**
-
-在 `adapter-spring-ai/pom.xml` 中加入：
-
-```xml
-<dependency>
-  <groupId>org.springframework.ai</groupId>
-  <artifactId>spring-ai-starter-model-openai</artifactId>
-  <scope>test</scope>
-</dependency>
-```
-
-- [ ] **步骤 2：创建无第三方依赖的本地 HTTP 桩服务**
+- [ ] **步骤 1：创建无第三方依赖的本地 HTTP 桩服务**
 
 ```java
 package io.namei.agent.adapter.springai;
@@ -2260,7 +2421,7 @@ final class OpenAiStubServer implements AutoCloseable {
 }
 ```
 
-- [ ] **步骤 3：编写 Spring Context 集成失败测试**
+- [ ] **步骤 2：编写 Spring Context 集成失败测试**
 
 ```java
 package io.namei.agent.adapter.springai;
@@ -2350,17 +2511,31 @@ class OpenAiCompatibleAdapterIT {
 }
 ```
 
-- [ ] **步骤 4：运行测试并确认首次失败原因**
+- [ ] **步骤 3：运行一次聚焦 RED**
 
-运行：`./mvnw -pl adapter-spring-ai -am verify -Dit.test=OpenAiCompatibleAdapterIT`
+运行：`./mvnw -pl adapter-spring-ai -am verify -Dit.test=OpenAiCompatibleAdapterIT -Dfailsafe.failIfNoSpecifiedTests=false`
 
-预期：成功响应测试通过；401、429、500 和非法 JSON 映射为 `ModelInvocationException`；空 Choices 映射为 `InvalidModelResponseException`；50ms 超时映射为 `ModelTimeoutException`。
+预期：目标模块 Context 因尚未加入 OpenAI Starter、缺少 `ChatModel` Bean 而失败。不得以连接真实模型、上游模块无匹配测试或端口占用作为 RED。
 
-- [ ] **步骤 5：修正 Adapter 后重新验证全部场景**
+- [ ] **步骤 4：加入测试依赖并完成最小协议修正**
 
-运行：`./mvnw -pl adapter-spring-ai -am verify`
+在 `adapter-spring-ai/pom.xml` 中加入：
 
-预期：成功、401、429、500、非法 JSON、空 Choices 和超时场景全部通过；测试日志中的目标 URL 只能是 `127.0.0.1`。
+```xml
+<dependency>
+  <groupId>org.springframework.ai</groupId>
+  <artifactId>spring-ai-starter-model-openai</artifactId>
+  <scope>test</scope>
+</dependency>
+```
+
+只修正聚焦测试暴露的 Adapter 映射问题，不改变 `ChatModelPort` 或聊天用例。
+
+- [ ] **步骤 5：运行一次聚焦 GREEN**
+
+运行：`./mvnw -pl adapter-spring-ai -am verify -Dit.test=OpenAiCompatibleAdapterIT -Dfailsafe.failIfNoSpecifiedTests=false`
+
+预期：成功、401、429、500、非法 JSON、空 Choices 和超时场景全部通过；目标模块实际执行该 Integration Test；测试日志中的目标 URL 只能是 `127.0.0.1`。
 
 - [ ] **步骤 6：提交**
 
@@ -2368,6 +2543,20 @@ class OpenAiCompatibleAdapterIT {
 git add adapter-spring-ai
 git commit -m "test: 验证 OpenAI-compatible 模型协议"
 ```
+
+#### 阶段 C 门禁：模型、装配与 HTTP
+
+Task 10 的任务自审通过后，由当前执行者统一运行：
+
+```bash
+./mvnw spotless:apply
+./mvnw -pl adapter-spring-ai -am verify
+./mvnw -pl agent-bootstrap -am verify
+./mvnw clean verify
+./mvnw -pl agent-kernel dependency:tree
+```
+
+预期：全部命令退出码为 0；所有模型网络请求只访问测试进程创建的 `127.0.0.1`；Kernel 依赖树不包含 Spring、Spring AI、JDBC、Reactor 或模型提供方 SDK。把证据写入本计划“当前执行状态”，再进入 Task 11。
 
 ---
 
@@ -2444,7 +2633,7 @@ class SafeChatUseCaseTest {
     appender.start();
     logger.addAppender(appender);
     try {
-      ChatUseCase failing = command -> { throw new IllegalStateException("Bearer secret-key"); };
+      ChatUseCase failing = command -> { throw new IllegalStateException("Bearer <secret-key>"); };
       var observed = new SafeChatUseCase(failing,
           Clock.fixed(Instant.parse("2026-07-13T00:00:00Z"), ZoneOffset.UTC));
 
@@ -2467,7 +2656,7 @@ class SafeChatUseCaseTest {
 
 - [ ] **步骤 2：运行测试并确认失败**
 
-运行：`./mvnw -pl agent-bootstrap -am test -Dtest=ArchitectureTest,SafeChatUseCaseTest`
+运行：`./mvnw -pl agent-bootstrap -am test -Dtest=ArchitectureTest,SafeChatUseCaseTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 预期：编译失败，提示缺少 `SafeChatUseCase`。若同时出现真实架构违规，必须修正依赖，禁止删除 ArchUnit 规则。
 
@@ -2670,7 +2859,7 @@ import org.slf4j.LoggerFactory;
 class ObservedPortsTest {
   @Test
   void modelLogDoesNotContainPromptOrUpstreamMessage() {
-    ChatModelPort failing = request -> { throw new IllegalStateException("Bearer model-secret"); };
+    ChatModelPort failing = request -> { throw new IllegalStateException("Bearer <model-secret>"); };
     String log = capture(ObservedChatModelPort.class, () ->
         new ObservedChatModelPort(failing, "test-model").generate(
             new ChatModelRequest(List.of(new ChatMessage(MessageRole.USER, "TOP-SECRET-MODEL")))));
@@ -2682,10 +2871,10 @@ class ObservedPortsTest {
   void databaseLogDoesNotContainSessionOrUpstreamMessage() {
     SessionRepository failing = new SessionRepository() {
       @Override public SessionSnapshot load(String sessionId) {
-        throw new IllegalStateException("Bearer database-secret");
+        throw new IllegalStateException("Bearer <database-secret>");
       }
       @Override public void appendTurn(String sessionId, PersistedTurn turn) {
-        throw new IllegalStateException("Bearer database-secret");
+        throw new IllegalStateException("Bearer <database-secret>");
       }
     };
     String log = capture(ObservedSessionRepository.class, () ->
@@ -2788,7 +2977,7 @@ class ActuatorExposureIT {
 }
 ```
 
-运行：`./mvnw -pl agent-bootstrap -am verify -Dit.test=ActuatorExposureIT`
+运行：`./mvnw -pl agent-bootstrap -am verify -Dit.test=ActuatorExposureIT -Dfailsafe.failIfNoSpecifiedTests=false`
 
 预期：Health 为 200，`/actuator/env` 为 404，健康检查期间 Fake Model 调用次数为 0。
 
@@ -2831,19 +3020,17 @@ git commit -m "feat: 强制本地安全与可观测性边界"
 <excludedGroups>${excluded.test.groups}</excludedGroups>
 ```
 
-在父 POM 末尾加入：
+在 Task 4 已创建的父 POM `<profiles>` 中追加以下两个 `<profile>`，不得再创建第二个 `<profiles>`：
 
 ```xml
-<profiles>
-  <profile>
-    <id>compat</id>
-    <properties><excluded.test.groups>real-model</excluded.test.groups></properties>
-  </profile>
-  <profile>
-    <id>real-model-smoke</id>
-    <properties><excluded.test.groups>compat</excluded.test.groups></properties>
-  </profile>
-</profiles>
+<profile>
+  <id>compat</id>
+  <properties><excluded.test.groups>real-model</excluded.test.groups></properties>
+</profile>
+<profile>
+  <id>real-model-smoke</id>
+  <properties><excluded.test.groups>compat</excluded.test.groups></properties>
+</profile>
 ```
 
 - [ ] **步骤 2：创建由 Python 当前 Schema 固定的测试数据**
@@ -2936,19 +3123,7 @@ class PythonSchemaCompatibilityIT {
 }
 ```
 
-- [ ] **步骤 4：运行默认构建并确认兼容测试未执行**
-
-运行：`./mvnw clean verify`
-
-预期：成功；Failsafe 报告中没有 `PythonSchemaCompatibilityIT`。
-
-- [ ] **步骤 5：运行兼容 Profile 并确认通过**
-
-运行：`./mvnw -Pcompat verify`
-
-预期：`PythonSchemaCompatibilityIT` 执行且通过，原有未知字段保持不变。
-
-- [ ] **步骤 6：编写 HTTP 到 SQLite 的端到端测试**
+- [ ] **步骤 4：编写 HTTP 到 SQLite 的端到端测试**
 
 ```java
 package io.namei.agent.bootstrap;
@@ -3037,11 +3212,11 @@ class PassiveChatEndpointIT {
 }
 ```
 
-运行：`./mvnw -pl agent-bootstrap -am verify -Dit.test=PassiveChatEndpointIT`
+运行：`./mvnw -pl agent-bootstrap -am verify -Dit.test=PassiveChatEndpointIT -Dfailsafe.failIfNoSpecifiedTests=false`
 
 预期：测试通过；临时 `sessions.db` 中有 4 条消息，第二次模型请求包含第一轮历史。
 
-- [ ] **步骤 7：加入真实模型 Smoke Test**
+- [ ] **步骤 5：加入真实模型 Smoke Test**
 
 ```java
 package io.namei.agent.bootstrap;
@@ -3103,16 +3278,16 @@ class RealModelSmokeIT {
 
 测试不得打印环境变量值。
 
-运行：`./mvnw -Preal-model-smoke verify`
+默认执行不运行 `real-model-smoke`。只有用户明确授权真实网络调用并提供三个环境变量时，才运行 `./mvnw -Preal-model-smoke verify`；测试不得输出环境变量值。
 
-预期：未设置环境变量时测试明确失败并只显示缺失变量名；设置后调用一次真实模型并通过。
-
-- [ ] **步骤 8：提交**
+- [ ] **步骤 6：提交**
 
 ```bash
 git add pom.xml adapter-sqlite/src/test agent-bootstrap/src/test
 git commit -m "test: 增加兼容性与端到端验收"
 ```
+
+本任务只新增验收测试，不修改生产行为。唯一聚焦验收命令是 `PassiveChatEndpointIT`；`PythonSchemaCompatibilityIT`、默认排除规则和完整 `compat` Profile 统一在 Task 13 阶段 D 门禁验证。
 
 ---
 
@@ -3123,14 +3298,17 @@ git commit -m "test: 增加兼容性与端到端验收"
 - 创建：`README.md`
 - 创建：`docs/runbooks/local-development.md`
 - 创建：`docs/contracts/passive-chat-http.md`
-- 修改：`docs/superpowers/specs/2026-07-12-passive-chat-mvp-design.md`
+- 修改：`.env.example`
+- 修改：`pom.xml`
+- 修改：`docs/specs/2026-07-12-passive-chat-mvp-design.md`
+- 修改：三个日志与 HTTP 测试中的 Secret 扫描占位符
 
 **接口：**
 
 - 文档必须说明 JDK 21、环境变量、构建、启动、Curl、SQLite 安全和故障排查。
 - Spec 状态更新为“已实现”之前，必须具有完整测试和 Review 证据。
 
-- [ ] **步骤 1：编写 README 和运行手册**
+- [x] **步骤 1：编写 README 和运行手册**
 
 README 必须包含以下可直接复制的命令：
 
@@ -3138,7 +3316,7 @@ README 必须包含以下可直接复制的命令：
 cp .env.example .env
 set -a && source .env && set +a
 ./mvnw clean verify
-./mvnw -pl agent-bootstrap -am spring-boot:run
+java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar
 ```
 
 HTTP 示例：
@@ -3153,55 +3331,45 @@ curl --fail-with-body \
 
 运行手册必须明确：禁止 Python 和 Java 同时写同一 Workspace；真实 Python Workspace 在本里程碑只读；首次写入前备份 `sessions.db`、`sessions.db-wal` 和 `sessions.db-shm`。
 
-- [ ] **步骤 2：编写 HTTP Contract 文档**
+- [x] **步骤 2：编写 HTTP Contract 文档**
 
 `docs/contracts/passive-chat-http.md` 必须逐字记录已批准的 Request、Success Response、400/500/502/504 `ProblemDetail`、`X-Request-Id` 和字段长度规则，并链接到设计 Spec。不得新增 Streaming、Tool 或 Provider Override 字段。
 
-- [ ] **步骤 3：运行格式化和目标测试**
+- [x] **步骤 3：运行阶段 D 最终门禁**
 
 ```bash
 ./mvnw spotless:apply
-./mvnw -pl agent-kernel,agent-application -am test
-./mvnw -pl adapter-sqlite -am test
-./mvnw -pl adapter-spring-ai -am verify
-./mvnw -pl agent-bootstrap -am verify
-```
-
-预期：每条命令退出码为 0；无测试失败或错误。
-
-- [ ] **步骤 4：运行完整兼容性验证**
-
-```bash
 ./mvnw clean verify
+./mvnw -Pfailure verify
 ./mvnw -Pcompat verify
 ```
 
-预期：两条命令退出码为 0；默认构建不访问真实模型；兼容 Profile 明确执行 `PythonSchemaCompatibilityIT`。
+预期：全部命令退出码为 0；默认构建不访问真实模型；`failure` Profile 只选择带 `failure` Tag 的测试；`compat` Profile 明确执行 `PythonSchemaCompatibilityIT`，默认构建排除 `compat` 和 `real-model`。把准确命令、各模块测试数和 Profile 选择结果写入本计划“当前执行状态”。
 
-- [ ] **步骤 5：检查依赖、Secret 和工作区**
+- [x] **步骤 4：检查依赖、Secret 和工作区**
 
 ```bash
 ./mvnw -pl agent-kernel dependency:tree
-if ./mvnw dependency:tree | rg -v 'io.namei.agent' | rg 'SNAPSHOT|spring-boot-starter-webflux|spring-data-jpa|hibernate|r2dbc|lombok'; then exit 1; fi
+if ./mvnw dependency:tree | rg -v 'io.namei.agent' | rg 'SNAPSHOT|spring-boot-starter-webflux|spring-data-jpa|hibernate-core|org.hibernate.orm|r2dbc|lombok'; then exit 1; fi
 if rg -n 'sk-[A-Za-z0-9_-]{16,}|Bearer [A-Za-z0-9._-]+' . --glob '!target/**' --glob '!.git/**'; then exit 1; fi
 git status --short
 ```
 
 预期：Kernel 依赖树无框架；禁止依赖搜索无输出；Secret 搜索无输出；Git 状态只包含本任务预期文档变更。
 
-- [ ] **步骤 6：请求独立审查**
+- [x] **步骤 5：执行最终整体自审**
 
-使用 `requesting-code-review`，要求审查者分别检查：Spec 符合度、架构依赖方向、SQLite 原子性与兼容性、同会话并发语义、日志脱敏和错误状态码。任何 Critical 或 Important 问题必须修复并重新运行步骤 3–5。
+按单代理连续模式另起一轮审查视角，分别检查：Spec 符合度、架构依赖方向、SQLite 原子性与兼容性、同会话并发语义、日志脱敏和错误状态码。任何 Critical 或 Important 问题必须修复；聚焦修复后重新运行一次步骤 3–4 的完整阶段门禁。
 
-- [ ] **步骤 7：更新 Spec 状态并提交**
+- [x] **步骤 6：更新 Spec 状态并提交**
 
-只有步骤 3–6 全部通过后，才把 Spec 状态从“已批准”改为“已实现并验证”，并记录验证日期和命令。
+只有步骤 3–5 全部通过后，才把 Spec 状态从“已批准”改为“已实现并验证”，并记录验证日期和命令。
 
 ```bash
 git add README.md docs
 git commit -m "docs: 补全被动聊天 MVP 运行与契约文档"
 ```
 
-- [ ] **步骤 8：使用完成分支工作流**
+- [x] **步骤 7：完成分支交付**
 
-调用 `finishing-a-development-branch`，提供本地合并、Pull Request、保留分支或丢弃四个选项。禁止未经选择直接推送或合并。
+确认工作树干净、提交历史清晰且验证证据已经写入文档。根据用户已经给出的授权执行本地合并，或在尚无授权时提供本地合并、Pull Request、保留分支或丢弃选项；禁止未经授权推送远端。

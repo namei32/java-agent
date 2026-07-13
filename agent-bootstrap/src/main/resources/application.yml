@@ -1,0 +1,39 @@
+server:
+  address: 127.0.0.1
+  shutdown: graceful
+spring:
+  main:
+    keep-alive: true
+  threads:
+    virtual:
+      enabled: true
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  ai:
+    model:
+      embedding: none
+    openai:
+      base-url: ${OPENAI_BASE_URL:}
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        model: ${OPENAI_MODEL:}
+        temperature: 0.7
+        timeout: ${AGENT_MODEL_TIMEOUT:60s}
+agent:
+  workspace: ${AKASHIC_WORKSPACE:./workspace}
+  history:
+    max-messages: 40
+    max-characters: 100000
+  model:
+    timeout: ${AGENT_MODEL_TIMEOUT:60s}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+    jmx:
+      exposure:
+        exclude: "*"
+  endpoint:
+    health:
+      show-details: never
