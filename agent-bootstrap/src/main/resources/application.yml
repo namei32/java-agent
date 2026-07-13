@@ -26,6 +26,8 @@ agent:
     max-characters: 100000
   model:
     timeout: ${AGENT_MODEL_TIMEOUT:60s}
+  tool-loop:
+    max-iterations: ${AGENT_TOOL_MAX_ITERATIONS:6}
 management:
   endpoints:
     web:

@@ -57,7 +57,7 @@ class PassiveChatEndpointIT {
 
     assertThat(model.requests).hasSize(2);
     assertThat(model.requests.get(1).messages())
-        .extracting(ChatMessage::content)
+        .extracting(io.namei.agent.kernel.model.ModelMessage::content)
         .containsSubsequence("第一问", "第一答", "第二问");
     try (var connection =
             DriverManager.getConnection(

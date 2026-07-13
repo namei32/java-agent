@@ -11,15 +11,18 @@ import io.namei.agent.bootstrap.health.SqliteHealthIndicator;
 import io.namei.agent.bootstrap.observability.ObservedChatModelPort;
 import io.namei.agent.bootstrap.observability.ObservedSessionRepository;
 import io.namei.agent.bootstrap.observability.SafeChatUseCase;
+import io.namei.agent.bootstrap.tool.CurrentTimeTool;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
 import io.namei.agent.kernel.port.ChatModelPort;
 import io.namei.agent.kernel.port.SessionRepository;
+import io.namei.agent.kernel.port.TurnLifecycleObserver;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Clock;
 import java.util.Base64;
+import java.util.List;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -87,7 +90,10 @@ public class ApplicationConfiguration {
                 properties.history().maxMessages(), properties.history().maxCharacters()),
             gate,
             prompt,
-            Clock.systemUTC());
+            Clock.systemUTC(),
+            List.of(new CurrentTimeTool(Clock.systemUTC())),
+            properties.toolLoop().maxIterations(),
+            TurnLifecycleObserver.noop());
     return new SafeChatUseCase(service, Clock.systemUTC());
   }
 

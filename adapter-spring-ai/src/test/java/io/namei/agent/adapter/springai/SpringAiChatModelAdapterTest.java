@@ -8,9 +8,16 @@ import io.namei.agent.kernel.error.ModelInvocationException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
 import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.ChatModelRequest;
+import io.namei.agent.kernel.model.AssistantToolCallMessage;
 import io.namei.agent.kernel.model.MessageRole;
+import io.namei.agent.kernel.model.ToolResultMessage;
+import io.namei.agent.kernel.tool.ToolCall;
+import io.namei.agent.kernel.tool.ToolDefinition;
+import io.namei.agent.kernel.tool.ToolResultStatus;
+import io.namei.agent.kernel.tool.ToolRisk;
 import java.net.SocketTimeoutException;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -19,6 +26,8 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.messages.ToolResponseMessage;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
 
 class SpringAiChatModelAdapterTest {
   @Test
@@ -44,6 +53,80 @@ class SpringAiChatModelAdapterTest {
     assertThat(chatModel.lastPrompt().getInstructions())
         .extracting(message -> message.getText())
         .containsExactly("系统", "问题", "历史回答");
+  }
+
+  @Test
+  void mapsToolDefinitionsAndEphemeralTranscriptWithoutExecutingCallbacks() {
+    var chatModel =
+        new StubChatModel(
+            prompt -> new ChatResponse(List.of(new Generation(new AssistantMessage("完成")))));
+    var call = new ToolCall("call-1", "lookup", Map.of("city", "上海"));
+    var definition =
+        new ToolDefinition(
+            "lookup",
+            "查询",
+            Map.of(
+                "type", "object",
+                "properties", Map.of("city", Map.of("type", "string"))),
+            ToolRisk.READ_ONLY);
+
+    new SpringAiChatModelAdapter(chatModel)
+        .generate(
+            new ChatModelRequest(
+                List.of(
+                    new ChatMessage(MessageRole.USER, "问题"),
+                    new AssistantToolCallMessage("查询中", List.of(call)),
+                    new ToolResultMessage(
+                        call.id(), call.name(), ToolResultStatus.SUCCESS, "晴")),
+                List.of(definition)));
+
+    assertThat(chatModel.lastPrompt().getInstructions().get(1))
+        .isInstanceOfSatisfying(
+            AssistantMessage.class,
+            message -> {
+              assertThat(message.getToolCalls()).hasSize(1);
+              assertThat(message.getToolCalls().getFirst().arguments())
+                  .isEqualTo("{\"city\":\"上海\"}");
+            });
+    assertThat(chatModel.lastPrompt().getInstructions().get(2))
+        .isInstanceOfSatisfying(
+            ToolResponseMessage.class,
+            message -> {
+              assertThat(message.getResponses()).hasSize(1);
+              assertThat(message.getResponses().getFirst().id()).isEqualTo("call-1");
+              assertThat(message.getResponses().getFirst().responseData()).isEqualTo("晴");
+            });
+    assertThat(chatModel.lastPrompt().getOptions())
+        .isInstanceOfSatisfying(
+            ToolCallingChatOptions.class,
+            options -> {
+              assertThat(options.getToolCallbacks()).hasSize(1);
+              var callback = options.getToolCallbacks().getFirst();
+              assertThat(callback.getToolDefinition().name()).isEqualTo("lookup");
+              assertThat(callback.getToolDefinition().inputSchema()).contains("\"city\"");
+              assertThatThrownBy(() -> callback.call("{}"))
+                  .isInstanceOf(UnsupportedOperationException.class);
+            });
+  }
+
+  @Test
+  void parsesProviderToolCallsIntoProjectProtocol() {
+    var output =
+        AssistantMessage.builder()
+            .content("")
+            .toolCalls(
+                List.of(
+                    new AssistantMessage.ToolCall(
+                        "call-1", "function", "lookup", "{\"city\":\"上海\"}")))
+            .build();
+    var chatModel =
+        new StubChatModel(prompt -> new ChatResponse(List.of(new Generation(output))));
+
+    var response = new SpringAiChatModelAdapter(chatModel).generate(request());
+
+    assertThat(response.content()).isEmpty();
+    assertThat(response.toolCalls()).containsExactly(
+        new ToolCall("call-1", "lookup", Map.of("city", "上海")));
   }
 
   @Test

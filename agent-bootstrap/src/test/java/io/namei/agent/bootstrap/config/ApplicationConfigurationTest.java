@@ -65,6 +65,7 @@ class ApplicationConfigurationTest {
     assertThat(defaults.history().maxMessages()).isEqualTo(40);
     assertThat(defaults.history().maxCharacters()).isEqualTo(100_000);
     assertThat(defaults.model().timeout()).isEqualTo(Duration.ofSeconds(60));
+    assertThat(defaults.toolLoop().maxIterations()).isEqualTo(6);
     assertThatThrownBy(() -> new AgentProperties(null, null, null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("agent.workspace 必填");
@@ -111,6 +112,9 @@ class ApplicationConfigurationTest {
     assertThat(Files.isRegularFile(workspace.resolve("sessions.db"))).isTrue();
     assertThat(result.assistant().content()).isEqualTo("离线回答");
     assertThat(capturedRequest.get().messages().getFirst().content()).isEqualTo("系统提示");
+    assertThat(capturedRequest.get().tools())
+        .extracting(io.namei.agent.kernel.tool.ToolDefinition::name)
+        .containsExactly("current_time");
     assertThat(jdbcRepository.load("demo").messages()).hasSize(2);
   }
 

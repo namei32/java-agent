@@ -1,7 +1,7 @@
 # 最小 Tool Loop 实施计划
 
 - 状态：实施中
-- 当前执行状态：Task T4 已完成，下一步为 Task T5
+- 当前执行状态：Task T5 已完成，下一步为 Task T6
 - 日期：2026-07-13
 - Spec：[最小 Tool Loop 设计](../specs/2026-07-13-minimal-tool-loop-design.md)
 - Contract：[核心消息、生命周期与 Tool 契约](../contracts/core-message-lifecycle-tool.md)
@@ -65,7 +65,7 @@
 - 达到模型调用预算时抛出稳定的 `ToolLoopLimitExceededException`，不追加一次隐式总结调用，也不提交不完整轮次。
 - T4 有效 RED 为循环异常和支持 Tool 的服务入口缺失；聚焦 GREEN 实际执行 4 Tests，全部通过。
 
-## Task T5：Spring AI Adapter 与 Bootstrap
+## Task T5：Spring AI Adapter 与 Bootstrap（已完成）
 
 - 映射工具定义、Assistant Tool Call 和 Tool Result。
 - 解析 Arguments JSON Object，不让 Spring AI 执行真实工具。
@@ -73,6 +73,15 @@
 - 保持公开 HTTP 与 SQLite Schema 不变。
 
 聚焦验收：Adapter/Bootstrap 相关测试一次 RED、一次 GREEN。
+
+实施结果：
+
+- Spring AI Adapter 已映射 Tool Definition、Assistant Tool Call 和 Tool Result，并把供应商 Arguments 严格解析为 JSON Object。
+- Adapter 只向 Spring AI 提供不可执行的 Schema Callback；真实工具仍由 Application Tool Loop 选择和执行。
+- Bootstrap 注册第一个内置只读工具 `current_time`，工具拒绝任何未声明参数。
+- 增加 `agent.tool-loop.max-iterations`，环境变量为 `AGENT_TOOL_MAX_ITERATIONS`，安全默认值为 `6`。
+- Tool Loop 耗尽统一映射为 HTTP 502，响应不包含内部 Call ID 或异常详情。
+- T5 有效 RED 为工具消息未映射和纯文本响应限制；完成两个局部编译兼容修正后，聚焦验收实际执行 Adapter 7 Tests、Bootstrap 14 Tests，全部通过。
 
 ## Task T6：文档与阶段门禁
 
