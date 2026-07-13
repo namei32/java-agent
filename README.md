@@ -1,6 +1,6 @@
 # Namei Agent Java
 
-Namei Agent Java 是 Akashic Agent 的渐进式 Java 重写项目。当前已实现第一个垂直切片：通过同步 HTTP API 完成被动聊天、恢复会话历史，并把完整的 `user/assistant` 对话轮次原子写入 SQLite。
+Namei Agent Java 是 Akashic Agent 的渐进式 Java 重写项目。当前已实现第一个垂直切片：通过同步 HTTP API 完成被动聊天、恢复会话历史，并把完整的 `user/assistant` 对话轮次原子写入 SQLite。启动配置支持原有环境变量模式，以及只读解析 Python `config.toml` 的兼容模式。
 
 项目使用 JDK 21、Maven Wrapper、Spring Boot 4.1、Spring AI 2.0 和 SQLite。默认仅监听 `127.0.0.1`，不提供远程访问认证，也不包含 Tool Loop、MCP、主动消息或流式响应。
 
@@ -31,6 +31,40 @@ java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar
 ```
 
 `.env.example` 中的值只是模板。使用 OpenAI 官方 API 时，`OPENAI_BASE_URL` 应包含 `/v1`；其他兼容服务按其文档填写对应的 API 根路径。
+
+## 配置模式
+
+未指定 TOML，且项目根目录不存在 `config.toml` 时，应用使用环境变量模式：
+
+- `OPENAI_BASE_URL`：OpenAI-compatible API 根路径。
+- `OPENAI_API_KEY`：模型服务密钥。
+- `OPENAI_MODEL`：模型名。
+- `AKASHIC_WORKSPACE`：Java 专用工作区，默认 `./workspace`。
+
+如需沿用 Python 风格配置，可从安全示例创建本地文件：
+
+```bash
+cp config.example.toml config.toml
+```
+
+随后在 `.env` 中删除 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL`，并提供示例引用的密钥：
+
+```dotenv
+AKASHIC_WORKSPACE=./workspace-java
+DEEPSEEK_API_KEY=replace-me
+```
+
+Java 自动发现项目根目录的 `config.toml`。也可以通过 `--agent.config-file=/path/to/config.toml` 或 `NAMEI_CONFIG_FILE` 指定；三者优先级依次为命令行、环境变量、当前目录默认文件。`OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL` 在 TOML 模式下仍是最高优先级覆盖值。
+
+启动前可执行只读检查；它不会启动 Spring、HTTP Server、模型客户端，也不会创建 Workspace 或 SQLite：
+
+```bash
+set -a && source .env && set +a
+java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar \
+  --agent.config-check
+```
+
+检查成功返回退出码 `0`，配置无效返回 `2`。JSON 只包含模式、配置路径、字段来源、Secret 状态、Deferred/未知路径和诊断码，不包含密钥或 Prompt 原文。完整步骤和 DeepSeek 排障见[本地开发运行手册](docs/runbooks/local-development.md)。
 
 启动后发送请求：
 

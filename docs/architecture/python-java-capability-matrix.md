@@ -17,8 +17,8 @@
 
 | 能力 | Python 基准位置 | Java 位置 | 状态 | 主要差距/下一步 | 数据风险 |
 | --- | --- | --- | --- | --- | --- |
-| 配置加载 | `agent/config.py`、`agent/config_models.py`、`config.example.toml` | `agent-bootstrap/.../config`、环境变量 | 部分 | Contract、配置 Golden 和 TomlJ 选型已完成；只读 Resolver、启动装配和检查入口待实现 | 中 |
-| 启动与装配 | `bootstrap/app.py`、`bootstrap/wiring.py` | `agent-bootstrap` | 部分 | 当前只装配 HTTP 被动聊天 | 低 |
+| 配置加载 | `agent/config.py`、`agent/config_models.py`、`config.example.toml` | `agent-bootstrap/.../config`、环境变量 | 完成 | 已实现批准范围内的只读 TOML/环境变量双模式、Golden、严格诊断和无副作用检查；Deferred 字段随能力迁移激活 | 中 |
+| 启动与装配 | `bootstrap/app.py`、`bootstrap/wiring.py` | `agent-bootstrap` | 部分 | 已装配配置兼容与 HTTP 被动聊天；消息总线、工具、渠道和后台能力待迁移 | 低 |
 | 入站 HTTP | Dashboard/Bootstrap API | `ChatController` | 完成 | 当前只支持同步 JSON API | 低 |
 | 消息总线 | `bus/` | 无 | 未开始 | 需定义版本化入站、出站和生命周期事件 | 中 |
 | 被动轮次编排 | `agent/core/passive_turn.py`、`agent/turns/orchestrator.py` | `ChatService`、`SafeChatUseCase` | 部分 | 核心请求—模型—提交闭环完成；生命周期阶段未对齐 | 中 |
@@ -80,7 +80,7 @@
 
 ## 当前优先级
 
-1. 实现已批准的只读配置文档与 Resolver。
-2. 冻结版本化消息、生命周期和 Tool Contract。
-3. 完成 R2 的剩余被动聊天能力对齐设计，再进入 R3 Tool Loop。
+1. 冻结版本化消息、生命周期和 Tool Contract。
+2. 完成 R2 的剩余被动聊天能力对齐设计，再进入 R3 Tool Loop。
+3. 为最小 Tool Loop 建立 Python/Java Golden 轨迹和失败语义。
 4. 记忆、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。

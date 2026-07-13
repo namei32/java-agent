@@ -103,6 +103,7 @@ class ApplicationConfigurationTest {
             configuration.sessionExecutionGate(properties),
             properties,
             "test-model",
+            "",
             new ByteArrayResource("  系统提示  ".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
     var result = useCase.chat(new io.namei.agent.application.ChatCommand("demo", "问题"));
 
@@ -111,5 +112,19 @@ class ApplicationConfigurationTest {
     assertThat(result.assistant().content()).isEqualTo("离线回答");
     assertThat(capturedRequest.get().messages().getFirst().content()).isEqualTo("系统提示");
     assertThat(jdbcRepository.load("demo").messages()).hasSize(2);
+  }
+
+  @Test
+  void prefersCompatibilityPromptWithoutSpringPlaceholderExpansion() throws Exception {
+    var configuration = new ApplicationConfiguration();
+    var resource =
+        new ByteArrayResource("  资源提示  ".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    String compatible = "TOML ${NOT_A_SPRING_PROPERTY} 提示";
+    String encoded =
+        java.util.Base64.getEncoder()
+            .encodeToString(compatible.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+    assertThat(configuration.systemPrompt("", resource)).isEqualTo("资源提示");
+    assertThat(configuration.systemPrompt(encoded, resource)).isEqualTo(compatible);
   }
 }

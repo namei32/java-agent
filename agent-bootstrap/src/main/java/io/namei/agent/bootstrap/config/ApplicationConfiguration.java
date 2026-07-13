@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Clock;
+import java.util.Base64;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -73,9 +74,10 @@ public class ApplicationConfiguration {
       SessionExecutionGate gate,
       AgentProperties properties,
       @Value("${spring.ai.openai.chat.model}") String modelName,
+      @Value("${agent.compatibility.system-prompt-base64:}") String compatibilityPrompt,
       @Value("classpath:/prompts/system.md") Resource systemPrompt)
       throws IOException {
-    String prompt = systemPrompt.getContentAsString(StandardCharsets.UTF_8).strip();
+    String prompt = systemPrompt(compatibilityPrompt, systemPrompt);
     var service =
         new ChatService(
             sessions,
@@ -87,6 +89,13 @@ public class ApplicationConfiguration {
             prompt,
             Clock.systemUTC());
     return new SafeChatUseCase(service, Clock.systemUTC());
+  }
+
+  String systemPrompt(String compatibilityPrompt, Resource fallback) throws IOException {
+    if (compatibilityPrompt == null || compatibilityPrompt.isEmpty()) {
+      return fallback.getContentAsString(StandardCharsets.UTF_8).strip();
+    }
+    return new String(Base64.getDecoder().decode(compatibilityPrompt), StandardCharsets.UTF_8);
   }
 
   @Bean
