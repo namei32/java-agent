@@ -1,7 +1,7 @@
 # 最小 Tool Loop 实施计划
 
 - 状态：实施中
-- 当前执行状态：Task T3 已完成，下一步为 Task T4
+- 当前执行状态：Task T4 已完成，下一步为 Task T5
 - 日期：2026-07-13
 - Spec：[最小 Tool Loop 设计](../specs/2026-07-13-minimal-tool-loop-design.md)
 - Contract：[核心消息、生命周期与 Tool 契约](../contracts/core-message-lifecycle-tool.md)
@@ -48,13 +48,22 @@
 - 增加安全 Lifecycle Event 与 Observer Port，事件类型不承载消息、参数、结果或异常正文。
 - T3 有效 RED 为协议类型缺失；聚焦 GREEN 实际执行 4 Tests，全部通过。
 
-## Task T4：Application 最小 Tool Loop
+## Task T4：Application 最小 Tool Loop（已完成）
 
 - 实现只读 Tool Registry 和有界 Tool Loop。
 - 实现顺序执行、未知工具、异常恢复和生命周期序列。
 - 接入 ChatService，保持最终轮次原子提交。
 
 聚焦验收：Application Tool Loop 测试一次 RED、一次 GREEN。
+
+实施结果：
+
+- 增加有界 Tool Loop 和只读 Tool Registry，每轮把工具定义交给模型，并严格按模型返回顺序执行同批 Tool Call。
+- 未注册工具、工具运行时异常和空结果均转换为不泄露内部信息的 `ERROR` Tool Result，交回模型继续决策。
+- Tool Transcript 只存在于本轮内存消息中；SQLite 仍只原子提交最终 User/Assistant Turn。
+- 生命周期覆盖模型请求、模型完成、工具开始/完成、提交和失败；Observer 自身异常被隔离，不改变聊天结果。
+- 达到模型调用预算时抛出稳定的 `ToolLoopLimitExceededException`，不追加一次隐式总结调用，也不提交不完整轮次。
+- T4 有效 RED 为循环异常和支持 Tool 的服务入口缺失；聚焦 GREEN 实际执行 4 Tests，全部通过。
 
 ## Task T5：Spring AI Adapter 与 Bootstrap
 
