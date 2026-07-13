@@ -14,15 +14,13 @@ class CurrentTimeToolTest {
   @Test
   void exposesReadOnlySchemaAndReturnsClockTime() {
     var tool =
-        new CurrentTimeTool(
-            Clock.fixed(Instant.parse("2026-07-13T00:00:00Z"), ZoneOffset.UTC));
+        new CurrentTimeTool(Clock.fixed(Instant.parse("2026-07-13T00:00:00Z"), ZoneOffset.UTC));
 
     assertThat(tool.definition().name()).isEqualTo("current_time");
     assertThat(tool.definition().risk()).isEqualTo(ToolRisk.READ_ONLY);
     assertThat(tool.definition().inputSchema().get("type")).isEqualTo("object");
     assertThat(tool.execute(Map.of()).status()).isEqualTo(ToolResultStatus.SUCCESS);
     assertThat(tool.execute(Map.of()).content()).isEqualTo("2026-07-13T00:00Z");
-    assertThat(tool.execute(Map.of("unexpected", true)).status())
-        .isEqualTo(ToolResultStatus.ERROR);
+    assertThat(tool.execute(Map.of("unexpected", true)).status()).isEqualTo(ToolResultStatus.ERROR);
   }
 }

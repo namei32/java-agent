@@ -14,10 +14,7 @@ public final class CurrentTimeTool implements Tool {
       new ToolDefinition(
           "current_time",
           "返回当前 UTC 时间",
-          Map.of(
-              "type", "object",
-              "properties", Map.of(),
-              "additionalProperties", false),
+          Map.of("type", "object", "properties", Map.of(), "additionalProperties", false),
           ToolRisk.READ_ONLY);
 
   private final Clock clock;

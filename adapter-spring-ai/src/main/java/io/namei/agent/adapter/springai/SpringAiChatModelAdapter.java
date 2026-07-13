@@ -3,10 +3,10 @@ package io.namei.agent.adapter.springai;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
 import io.namei.agent.kernel.error.ModelInvocationException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
+import io.namei.agent.kernel.model.AssistantToolCallMessage;
 import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.ChatModelRequest;
 import io.namei.agent.kernel.model.ChatModelResponse;
-import io.namei.agent.kernel.model.AssistantToolCallMessage;
 import io.namei.agent.kernel.model.ModelMessage;
 import io.namei.agent.kernel.model.ToolResultMessage;
 import io.namei.agent.kernel.port.ChatModelPort;
@@ -15,8 +15,8 @@ import io.namei.agent.kernel.tool.ToolDefinition;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.net.http.HttpTimeoutException;
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -93,7 +93,10 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
               .map(
                   call ->
                       new AssistantMessage.ToolCall(
-                          call.id(), "function", call.name(), JSON.writeValueAsString(call.arguments())))
+                          call.id(),
+                          "function",
+                          call.name(),
+                          JSON.writeValueAsString(call.arguments())))
               .toList();
       return AssistantMessage.builder().content(assistant.content()).toolCalls(calls).build();
     }

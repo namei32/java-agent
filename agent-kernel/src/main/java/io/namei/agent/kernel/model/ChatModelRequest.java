@@ -12,8 +12,7 @@ public final class ChatModelRequest {
     this(messages, List.of());
   }
 
-  public ChatModelRequest(
-      List<? extends ModelMessage> messages, List<ToolDefinition> tools) {
+  public ChatModelRequest(List<? extends ModelMessage> messages, List<ToolDefinition> tools) {
     this.messages = List.copyOf(Objects.requireNonNull(messages, "messages"));
     this.tools = List.copyOf(Objects.requireNonNull(tools, "tools"));
     if (this.messages.isEmpty()) {

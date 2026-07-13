@@ -24,23 +24,17 @@ public record TurnLifecycleEvent(
   }
 
   public static TurnLifecycleEvent modelCompleted(int iteration, String status) {
-    return new TurnLifecycleEvent(
-        TurnEventType.MODEL_COMPLETED, iteration, "", "", status);
+    return new TurnLifecycleEvent(TurnEventType.MODEL_COMPLETED, iteration, "", "", status);
   }
 
   public static TurnLifecycleEvent toolStarted(int iteration, String callId, String toolName) {
-    return new TurnLifecycleEvent(
-        TurnEventType.TOOL_CALL_STARTED, iteration, callId, toolName, "");
+    return new TurnLifecycleEvent(TurnEventType.TOOL_CALL_STARTED, iteration, callId, toolName, "");
   }
 
   public static TurnLifecycleEvent toolCompleted(
       int iteration, String callId, String toolName, ToolResultStatus status) {
     return new TurnLifecycleEvent(
-        TurnEventType.TOOL_CALL_COMPLETED,
-        iteration,
-        callId,
-        toolName,
-        status.name());
+        TurnEventType.TOOL_CALL_COMPLETED, iteration, callId, toolName, status.name());
   }
 
   public static TurnLifecycleEvent turnCommitting() {

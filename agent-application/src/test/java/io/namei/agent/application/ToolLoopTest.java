@@ -53,9 +53,7 @@ class ToolLoopTest {
         service(
             repository,
             model,
-            List.of(
-                tool("first", "第一结果", executionOrder),
-                tool("second", "第二结果", executionOrder)),
+            List.of(tool("first", "第一结果", executionOrder), tool("second", "第二结果", executionOrder)),
             3,
             events::add);
 
@@ -129,13 +127,12 @@ class ToolLoopTest {
     var repository = new RecordingRepository();
     var model =
         new ScriptedModel(
-            new ChatModelResponse(
-                "", List.of(new ToolCall("call-1", "lookup", Map.of()))),
-            new ChatModelResponse(
-                "", List.of(new ToolCall("call-2", "lookup", Map.of()))));
+            new ChatModelResponse("", List.of(new ToolCall("call-1", "lookup", Map.of()))),
+            new ChatModelResponse("", List.of(new ToolCall("call-2", "lookup", Map.of()))));
     var events = new ArrayList<TurnLifecycleEvent>();
     var service =
-        service(repository, model, List.of(tool("lookup", "结果", new ArrayList<>())), 2, events::add);
+        service(
+            repository, model, List.of(tool("lookup", "结果", new ArrayList<>())), 2, events::add);
 
     assertThatThrownBy(() -> service.chat(new ChatCommand("demo", "问题")))
         .isInstanceOf(ToolLoopLimitExceededException.class)
@@ -201,10 +198,7 @@ class ToolLoopTest {
 
   private static ToolDefinition definition(String name) {
     return new ToolDefinition(
-        name,
-        "测试工具 " + name,
-        Map.of("type", "object", "properties", Map.of()),
-        ToolRisk.READ_ONLY);
+        name, "测试工具 " + name, Map.of("type", "object", "properties", Map.of()), ToolRisk.READ_ONLY);
   }
 
   private static SessionExecutionGate directGate() {

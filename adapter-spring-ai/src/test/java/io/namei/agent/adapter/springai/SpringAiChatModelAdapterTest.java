@@ -6,9 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
 import io.namei.agent.kernel.error.ModelInvocationException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
+import io.namei.agent.kernel.model.AssistantToolCallMessage;
 import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.ChatModelRequest;
-import io.namei.agent.kernel.model.AssistantToolCallMessage;
 import io.namei.agent.kernel.model.MessageRole;
 import io.namei.agent.kernel.model.ToolResultMessage;
 import io.namei.agent.kernel.tool.ToolCall;
@@ -22,11 +22,11 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.MessageType;
+import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
 
 class SpringAiChatModelAdapterTest {
@@ -65,9 +65,7 @@ class SpringAiChatModelAdapterTest {
         new ToolDefinition(
             "lookup",
             "查询",
-            Map.of(
-                "type", "object",
-                "properties", Map.of("city", Map.of("type", "string"))),
+            Map.of("type", "object", "properties", Map.of("city", Map.of("type", "string"))),
             ToolRisk.READ_ONLY);
 
     new SpringAiChatModelAdapter(chatModel)
@@ -76,8 +74,7 @@ class SpringAiChatModelAdapterTest {
                 List.of(
                     new ChatMessage(MessageRole.USER, "问题"),
                     new AssistantToolCallMessage("查询中", List.of(call)),
-                    new ToolResultMessage(
-                        call.id(), call.name(), ToolResultStatus.SUCCESS, "晴")),
+                    new ToolResultMessage(call.id(), call.name(), ToolResultStatus.SUCCESS, "晴")),
                 List.of(definition)));
 
     assertThat(chatModel.lastPrompt().getInstructions().get(1))
@@ -119,14 +116,13 @@ class SpringAiChatModelAdapterTest {
                     new AssistantMessage.ToolCall(
                         "call-1", "function", "lookup", "{\"city\":\"上海\"}")))
             .build();
-    var chatModel =
-        new StubChatModel(prompt -> new ChatResponse(List.of(new Generation(output))));
+    var chatModel = new StubChatModel(prompt -> new ChatResponse(List.of(new Generation(output))));
 
     var response = new SpringAiChatModelAdapter(chatModel).generate(request());
 
     assertThat(response.content()).isEmpty();
-    assertThat(response.toolCalls()).containsExactly(
-        new ToolCall("call-1", "lookup", Map.of("city", "上海")));
+    assertThat(response.toolCalls())
+        .containsExactly(new ToolCall("call-1", "lookup", Map.of("city", "上海")));
   }
 
   @Test

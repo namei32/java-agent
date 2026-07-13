@@ -19,10 +19,7 @@ final class ToolLoop {
   private final int maxIterations;
 
   ToolLoop(
-      ChatModelPort model,
-      ToolRegistry tools,
-      LifecyclePublisher lifecycle,
-      int maxIterations) {
+      ChatModelPort model, ToolRegistry tools, LifecyclePublisher lifecycle, int maxIterations) {
     this.model = Objects.requireNonNull(model, "model");
     this.tools = Objects.requireNonNull(tools, "tools");
     this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle");

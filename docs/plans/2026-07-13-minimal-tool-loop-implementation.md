@@ -1,7 +1,7 @@
 # 最小 Tool Loop 实施计划
 
-- 状态：实施中
-- 当前执行状态：Task T5 已完成，下一步为 Task T6
+- 状态：已实现并验证
+- 当前执行状态：Task T1–T6 全部完成
 - 日期：2026-07-13
 - Spec：[最小 Tool Loop 设计](../specs/2026-07-13-minimal-tool-loop-design.md)
 - Contract：[核心消息、生命周期与 Tool 契约](../contracts/core-message-lifecycle-tool.md)
@@ -83,7 +83,7 @@
 - Tool Loop 耗尽统一映射为 HTTP 502，响应不包含内部 Call ID 或异常详情。
 - T5 有效 RED 为工具消息未映射和纯文本响应限制；完成两个局部编译兼容修正后，聚焦验收实际执行 Adapter 7 Tests、Bootstrap 14 Tests，全部通过。
 
-## Task T6：文档与阶段门禁
+## Task T6：文档与阶段门禁（已完成）
 
 - 更新 README、运行手册、Roadmap、能力矩阵和 Golden 规范。
 - 执行格式、默认、失败和兼容门禁。
@@ -99,3 +99,14 @@
 ```
 
 真实模型 Smoke 不属于自动门禁，不得在无授权情况下运行。
+
+实施结果：
+
+- Tool Golden 兼容测试已从结构检查升级为逐一执行 7 个 Migration Contract Case，直接覆盖生产 `ChatService`、`ToolLoop` 和 `ToolRegistry`。
+- README、文档导航、Roadmap、能力差距矩阵、Golden 规范、运行手册和环境变量示例已同步为当前事实。
+- 集中门禁发现并修正两个既有兼容问题：不再构造 Kernel 禁止的空响应测试对象；`AgentProperties` 保持唯一 record 构造器以兼容 Spring Boot 配置绑定。
+- `./mvnw spotless:check`：通过。
+- `./mvnw clean verify`：通过。
+- `./mvnw -Pfailure verify`：通过。
+- `./mvnw -Pcompat verify`：通过；Tool Golden、Manifest、配置、历史、Prompt、SQLite 和错误映射兼容测试全部通过。
+- 未运行真实模型 Smoke，未访问真实 Workspace，未改动 SQLite Schema 或公开 HTTP Request/Response。

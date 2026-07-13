@@ -2,7 +2,6 @@ package io.namei.agent.bootstrap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.ChatModelRequest;
 import io.namei.agent.kernel.model.ChatModelResponse;
 import io.namei.agent.kernel.port.ChatModelPort;

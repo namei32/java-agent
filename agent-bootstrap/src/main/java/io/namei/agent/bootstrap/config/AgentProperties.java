@@ -7,10 +7,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("agent")
 public record AgentProperties(Path workspace, History history, Model model, ToolLoop toolLoop) {
-  public AgentProperties(Path workspace, History history, Model model) {
-    this(workspace, history, model, null);
-  }
-
   public AgentProperties {
     if (workspace == null) {
       throw new IllegalArgumentException("agent.workspace 必填");

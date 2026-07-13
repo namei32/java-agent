@@ -26,20 +26,16 @@ class ToolContractTest {
     schema.put("type", "object");
     schema.put("properties", properties);
 
-    var definition =
-        new ToolDefinition("golden_lookup", "查询固定数据", schema, ToolRisk.READ_ONLY);
+    var definition = new ToolDefinition("golden_lookup", "查询固定数据", schema, ToolRisk.READ_ONLY);
     properties.put("later", Map.of("type", "boolean"));
 
     assertThat(definition.inputSchema().toString()).doesNotContain("later");
     assertThatThrownBy(() -> definition.inputSchema().put("x", "y"))
         .isInstanceOf(UnsupportedOperationException.class);
-    assertThatThrownBy(
-            () -> new ToolDefinition("bad name", "说明", schema, ToolRisk.READ_ONLY))
+    assertThatThrownBy(() -> new ToolDefinition("bad name", "说明", schema, ToolRisk.READ_ONLY))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(
-            () ->
-                new ToolDefinition(
-                    "write", "写入", Map.of("type", "object"), ToolRisk.WRITE))
+            () -> new ToolDefinition("write", "写入", Map.of("type", "object"), ToolRisk.WRITE))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("READ_ONLY");
   }
@@ -68,12 +64,10 @@ class ToolContractTest {
   @Test
   void carriesToolDefinitionsAndCallsWithoutBreakingTextConvenienceConstructors() {
     var definition =
-        new ToolDefinition(
-            "lookup", "查询", Map.of("type", "object"), ToolRisk.READ_ONLY);
+        new ToolDefinition("lookup", "查询", Map.of("type", "object"), ToolRisk.READ_ONLY);
     var call = new ToolCall("call-1", "lookup", Map.of());
     var request =
-        new ChatModelRequest(
-            List.of(new ChatMessage(MessageRole.USER, "问题")), List.of(definition));
+        new ChatModelRequest(List.of(new ChatMessage(MessageRole.USER, "问题")), List.of(definition));
     var toolResponse = new ChatModelResponse("", List.of(call));
     var textResponse = new ChatModelResponse("最终回答");
 
@@ -84,11 +78,7 @@ class ToolContractTest {
     assertThat(textResponse.content()).isEqualTo("最终回答");
     assertThatThrownBy(
             () ->
-                new ChatModelResponse(
-                    "",
-                    List.of(
-                        call,
-                        new ToolCall("call-1", "other", Map.of()))))
+                new ChatModelResponse("", List.of(call, new ToolCall("call-1", "other", Map.of()))))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("重复");
     assertThatThrownBy(() -> new ChatModelResponse("", List.of()))
@@ -98,8 +88,7 @@ class ToolContractTest {
   @Test
   void lifecycleEventsExposeOnlyStableSafeFields() {
     var started = TurnLifecycleEvent.toolStarted(2, "call-9", "lookup");
-    var completed =
-        TurnLifecycleEvent.toolCompleted(2, "call-9", "lookup", ToolResultStatus.ERROR);
+    var completed = TurnLifecycleEvent.toolCompleted(2, "call-9", "lookup", ToolResultStatus.ERROR);
 
     assertThat(started.type()).isEqualTo(TurnEventType.TOOL_CALL_STARTED);
     assertThat(started.iteration()).isEqualTo(2);

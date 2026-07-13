@@ -19,7 +19,10 @@ final class JsonValues {
   }
 
   private static Object immutable(Object value) {
-    if (value == null || value instanceof String || value instanceof Boolean || value instanceof Number) {
+    if (value == null
+        || value instanceof String
+        || value instanceof Boolean
+        || value instanceof Number) {
       return value;
     }
     if (value instanceof Map<?, ?> map) {

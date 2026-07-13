@@ -24,8 +24,7 @@ final class ToolRegistry {
       }
     }
     this.tools = Map.copyOf(registered);
-    this.definitions =
-        registered.values().stream().map(Tool::definition).toList();
+    this.definitions = registered.values().stream().map(Tool::definition).toList();
   }
 
   List<ToolDefinition> definitions() {

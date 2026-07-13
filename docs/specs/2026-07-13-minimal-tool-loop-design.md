@@ -1,6 +1,6 @@
 # 最小 Tool Loop 设计
 
-- 状态：已批准
+- 状态：已实现并验证
 - 日期：2026-07-13
 - Contract：[核心消息、生命周期与 Tool 契约](../contracts/core-message-lifecycle-tool.md)
 - Roadmap：R3 Tool Loop

@@ -60,13 +60,13 @@ class ApplicationConfigurationTest {
 
   @Test
   void appliesSafeDefaultsAndRejectsInvalidAgentSettings() {
-    var defaults = new AgentProperties(tempDir.resolve("workspace"), null, null);
+    var defaults = new AgentProperties(tempDir.resolve("workspace"), null, null, null);
 
     assertThat(defaults.history().maxMessages()).isEqualTo(40);
     assertThat(defaults.history().maxCharacters()).isEqualTo(100_000);
     assertThat(defaults.model().timeout()).isEqualTo(Duration.ofSeconds(60));
     assertThat(defaults.toolLoop().maxIterations()).isEqualTo(6);
-    assertThatThrownBy(() -> new AgentProperties(null, null, null))
+    assertThatThrownBy(() -> new AgentProperties(null, null, null, null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("agent.workspace 必填");
     assertThatThrownBy(
@@ -74,7 +74,8 @@ class ApplicationConfigurationTest {
                 new AgentProperties(
                     tempDir,
                     new AgentProperties.History(-1, 10),
-                    new AgentProperties.Model(Duration.ZERO)))
+                    new AgentProperties.Model(Duration.ZERO),
+                    null))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -85,7 +86,8 @@ class ApplicationConfigurationTest {
         new AgentProperties(
             workspace,
             new AgentProperties.History(40, 100_000),
-            new AgentProperties.Model(Duration.ofSeconds(5)));
+            new AgentProperties.Model(Duration.ofSeconds(5)),
+            new AgentProperties.ToolLoop(6));
     var configuration = new ApplicationConfiguration();
     var schema = configuration.sqliteSchema(properties);
     var jdbcRepository = configuration.jdbcSessionRepository(schema);
