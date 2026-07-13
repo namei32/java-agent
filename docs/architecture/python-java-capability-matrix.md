@@ -45,8 +45,8 @@
 
 | 能力 | Python 基准位置 | Java 位置 | 状态 | 主要差距/下一步 | 数据风险 |
 | --- | --- | --- | --- | --- | --- |
-| Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry` | 部分 | 只读 Tool/Result/Lifecycle Contract 已完成；Approval Contract 待设计 | 中 |
-| Tool Loop | `agent/looping/`、`agent/tool_runtime.py` | `ToolLoop`、`ChatService` | 部分 | 有界顺序执行、错误恢复、最终提交和 Golden 已完成；缺工具超时、取消、重试和持久化轨迹 | 高 |
+| Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry` | 部分 | 只读 Tool/Result/Lifecycle 与 Runtime 安全 Contract 已批准；安全加固和 Approval Contract 待实施/设计 | 中 |
+| Tool Loop | `agent/looping/`、`agent/tool_runtime.py` | `ToolLoop`、`ChatService` | 部分 | 有界顺序执行、错误恢复、最终提交和 Golden 已完成；安全预算、Schema 校验、超时和取消已有 Contract，等待实施 | 高 |
 | 文件/Shell/Web 工具 | `agent/tools/` | `CurrentTimeTool`（仅时间） | 部分 | 仅完成无副作用时间工具；文件/Shell/Web 必须先设计审批和沙箱 | 极高 |
 | Tool Hook | `agent/tool_hooks/` | 无 | 未开始 | 定义顺序、异常和可变性边界 | 高 |
 | Tool Bundle/Search | `agent/tool_bundles.py`、`tool_search.py` | 无 | 未开始 | 在基础 Tool Loop 稳定后迁移 | 中 |
@@ -80,7 +80,7 @@
 
 ## 当前优先级
 
-1. 设计并批准工具审批、超时、取消、副作用和幂等 Contract。
-2. 决定先扩展安全只读工具，还是回到 R2 完成消息总线/被动能力对齐。
+1. 为已批准的 Tool Runtime 安全 Contract 编写 Spec/Plan 并完成模式、预算、Schema 校验、超时和取消。
+2. 单独设计工具审批、副作用和幂等 Contract。
 3. 在审批与沙箱语义落地前，不迁移文件写入、Shell、Web 写入或消息发送工具。
 4. 记忆、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。
