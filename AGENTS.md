@@ -25,26 +25,25 @@
 - 未经批准的 ADR，不得引入 JPA、R2DBC、WebFlux、Kafka、Redis、GraalVM 或分布式基础设施。
 - 初始重写阶段保持现有 React/Vite 前端不变，除非规格明确要求修改。
 
-## 强制开发流程
+## 轻量 Vibe Coding 流程
 
 实现新行为前必须：
 
-1. 使用 `using-superpowers` 选择适用的工作流。
-2. 使用 `brainstorming` 澄清行为和约束。
-3. 编写并批准规格（Spec）。
-4. 使用 `writing-plans` 生成可执行的实施计划。
-5. 创建隔离的功能分支或 Git Worktree。
-6. 使用 TDD 实现。
-7. 请求独立代码审查。
-8. 在声称阶段完成前执行该阶段规定的全新验证。
-9. 集成前使用 `finishing-a-development-branch`。
+1. 澄清目标、范围、约束和完成标准。
+2. 对影响 API、数据兼容性、架构、安全或并发语义的功能编写并批准规格（Spec）。
+3. 把规格拆成可独立提交、可聚焦验证的实施任务，并在实施计划中记录当前状态。
+4. 创建隔离的功能分支或 Git Worktree。
+5. 默认由单个智能体按计划连续实现；只有任务真正相互独立且并行收益明确时才使用并行代理。
+6. 使用 TDD 实现，并在每个小任务后进行一次 Git diff、规格和质量自审。
+7. 在阶段门禁进行集中构建、测试和整体审查。
+8. 合并前执行最终验证并确认工作树、提交历史和文档状态一致。
 
 规格和实施计划存在之前，不得编写生产代码。
 
 修复缺陷时必须：
 
 1. 使用失败测试复现问题。
-2. 使用 `systematic-debugging` 定位根因。
+2. 先定位根因并记录支持该判断的证据，禁止无依据地批量试改。
 3. 实施有依据的最小修复。
 4. 执行聚焦回归测试；完整验证由当前阶段门禁统一执行。
 
@@ -79,7 +78,7 @@
 
 - 运行与变更相关的目标测试。
 - 保存一次有效 RED 和一次聚焦 GREEN 证据。
-- 完成只读 Spec/质量审查，并修复所有 Critical 或 Important 问题。
+- 对 Git diff、Spec、模块边界和异常路径完成一次自审，并修复所有 Critical 或 Important 问题。
 - 报告执行过的准确命令和结果。
 - 禁止根据旧的或不完整的测试输出声称成功。
 
@@ -139,7 +138,7 @@
 
 - 当前阶段规定的完整验证命令全部通过。
 - 当前阶段涉及的兼容性和故障注入差异已有解释。
-- 阶段验证报告与 `.superpowers/sdd/progress.md` 台账已更新。
+- 实施计划中的任务状态、阶段验证结果和未解决事项已经更新。
 
 ## 文档语言
 
@@ -155,8 +154,9 @@
 - `docs/architecture/java-rewrite-guide.md`
 - `docs/adr/`
 - `docs/contracts/`
-- `docs/superpowers/specs/`
-- `docs/superpowers/plans/`
+- `docs/specs/`
+- `docs/plans/`
+- `docs/vibe-coding-workflow.md`
 - `docs/runbooks/`
 
 详细设计决策应写入上述文档，不应堆积在本文件中。

@@ -131,9 +131,9 @@ java-agent/
 |   |-- adr/
 |   |-- contracts/
 |   |-- runbooks/
-|   `-- superpowers/
-|       |-- specs/
-|       `-- plans/
+|   |-- specs/
+|   |-- plans/
+|   `-- vibe-coding-workflow.md
 |-- agent-kernel/
 |-- agent-application/
 |-- adapter-spring-ai/
