@@ -57,8 +57,7 @@ class SpringAiChatModelAdapterTest {
     ChatModel nullResponseModel = mock(ChatModel.class);
     when(nullResponseModel.call(any(Prompt.class))).thenReturn(null);
     ChatModel missingGenerationModel = mock(ChatModel.class);
-    when(missingGenerationModel.call(any(Prompt.class)))
-        .thenReturn(new ChatResponse(List.of()));
+    when(missingGenerationModel.call(any(Prompt.class))).thenReturn(new ChatResponse(List.of()));
     ChatModel missingOutputModel = mock(ChatModel.class);
     ChatResponse response = mock(ChatResponse.class);
     Generation generation = mock(Generation.class);

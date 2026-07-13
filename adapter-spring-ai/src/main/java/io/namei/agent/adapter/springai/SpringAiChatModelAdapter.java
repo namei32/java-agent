@@ -7,6 +7,7 @@ import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.ChatModelRequest;
 import io.namei.agent.kernel.model.ChatModelResponse;
 import io.namei.agent.kernel.port.ChatModelPort;
+import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.net.http.HttpTimeoutException;
 import java.util.List;
@@ -63,8 +64,13 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
 
   private static boolean hasTimeoutCause(Throwable throwable) {
     for (Throwable current = throwable; current != null; current = current.getCause()) {
+      boolean interruptedTimeout =
+          current instanceof InterruptedIOException
+              && current.getMessage() != null
+              && current.getMessage().toLowerCase(Locale.ROOT).contains("timeout");
       if (current instanceof SocketTimeoutException
           || current instanceof HttpTimeoutException
+          || interruptedTimeout
           || current.getClass().getSimpleName().toLowerCase(Locale.ROOT).contains("timeout")) {
         return true;
       }
