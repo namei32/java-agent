@@ -7,6 +7,10 @@ import io.namei.agent.application.ChatService;
 import io.namei.agent.application.ChatUseCase;
 import io.namei.agent.application.KeyedSessionExecutionGate;
 import io.namei.agent.application.SessionExecutionGate;
+import io.namei.agent.bootstrap.health.SqliteHealthIndicator;
+import io.namei.agent.bootstrap.observability.ObservedChatModelPort;
+import io.namei.agent.bootstrap.observability.ObservedSessionRepository;
+import io.namei.agent.bootstrap.observability.SafeChatUseCase;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
 import io.namei.agent.kernel.port.ChatModelPort;
@@ -21,6 +25,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
 
@@ -51,8 +56,9 @@ public class ApplicationConfiguration {
   }
 
   @Bean
+  @Primary
   SessionRepository sessionRepository(JdbcSessionRepository repository) {
-    return repository;
+    return new ObservedSessionRepository(repository);
   }
 
   @Bean
@@ -66,16 +72,25 @@ public class ApplicationConfiguration {
       ChatModelPort model,
       SessionExecutionGate gate,
       AgentProperties properties,
+      @Value("${spring.ai.openai.chat.model}") String modelName,
       @Value("classpath:/prompts/system.md") Resource systemPrompt)
       throws IOException {
     String prompt = systemPrompt.getContentAsString(StandardCharsets.UTF_8).strip();
-    return new ChatService(
-        sessions,
-        model,
-        new ConversationHistorySelector(),
-        new HistoryLimits(properties.history().maxMessages(), properties.history().maxCharacters()),
-        gate,
-        prompt,
-        Clock.systemUTC());
+    var service =
+        new ChatService(
+            sessions,
+            new ObservedChatModelPort(model, modelName),
+            new ConversationHistorySelector(),
+            new HistoryLimits(
+                properties.history().maxMessages(), properties.history().maxCharacters()),
+            gate,
+            prompt,
+            Clock.systemUTC());
+    return new SafeChatUseCase(service, Clock.systemUTC());
+  }
+
+  @Bean
+  SqliteHealthIndicator sqliteHealthIndicator(JdbcSessionRepository repository) {
+    return new SqliteHealthIndicator(repository);
   }
 }

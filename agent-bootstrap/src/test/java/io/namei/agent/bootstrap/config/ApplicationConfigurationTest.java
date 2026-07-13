@@ -102,6 +102,7 @@ class ApplicationConfigurationTest {
             model,
             configuration.sessionExecutionGate(properties),
             properties,
+            "test-model",
             new ByteArrayResource("  系统提示  ".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
     var result = useCase.chat(new io.namei.agent.application.ChatCommand("demo", "问题"));
 

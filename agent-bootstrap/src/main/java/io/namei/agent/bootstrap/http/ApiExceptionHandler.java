@@ -13,6 +13,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -39,6 +40,11 @@ public class ApiExceptionHandler {
   @ExceptionHandler(SqliteRepositoryException.class)
   ProblemDetail persistence(HttpServletRequest request) {
     return problem(HttpStatus.INTERNAL_SERVER_ERROR, "会话持久化失败", request);
+  }
+
+  @ExceptionHandler(NoResourceFoundException.class)
+  ProblemDetail notFound(HttpServletRequest request) {
+    return problem(HttpStatus.NOT_FOUND, "资源不存在", request);
   }
 
   @ExceptionHandler(Exception.class)
