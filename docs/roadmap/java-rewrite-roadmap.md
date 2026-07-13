@@ -21,7 +21,7 @@
 
 | 阶段 | 名称 | 状态 | 主要结果 |
 | --- | --- | --- | --- |
-| R0 | 治理与基线 | 部分完成 | 文档、模块约束已建立；跨语言 Golden 基线待补 |
+| R0 | 治理与基线 | 部分完成 | 被动聊天 Golden 基线已建立；配置、工具与事件 Contract 待补 |
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、五模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 未开始 | 工具协议、循环、审批与失败隔离 |
@@ -41,11 +41,13 @@
 - 根目录 `AGENTS.md`、Vibe Coding 流程、Spec/Plan/Contract/Runbook 结构。
 - 模块边界、SQLite 兼容和 Spring AI 边界 ADR。
 - 被动聊天 HTTP 契约与 MVP 设计。
+- Golden Test 格式、非确定字段规则、人工更新审批和 Manifest Hash 校验。
+- Python 历史、Prompt、SQLite 基准与错误迁移契约夹具。
+- Java 历史、Prompt、SQLite、错误映射兼容测试及独立 CI Job。
 
 待交付：
 
-- 从 Python 固化代表性输入输出夹具：历史裁剪、系统 Prompt、工具调用、错误映射和会话数据。
-- 定义跨语言 Golden Test 版本、更新审批和差异报告格式。
+- 随能力迁移继续固化工具调用、Memory 和流式事件夹具。
 - 明确 Python 配置到 Java 配置的字段映射与未知字段保留规则。
 - 为消息、工具、记忆、流式事件建立版本化 Contract。
 
@@ -86,7 +88,7 @@
 - 流式 Delta、生命周期事件、`config.toml` 兼容和完整 Prompt 组装尚未迁移。
 - 当前 HTTP 契约是 Java MVP 契约，不等同于 Python 全部被动聊天能力。
 
-退出门禁：Minor 清单、默认、`failure`、`compat` 已完成；真实模型 Smoke 由人工提供凭证后执行；R0 的被动聊天 Golden 基线仍待完成。
+退出门禁：Minor 清单、默认、`failure`、`compat` 与被动聊天 Golden 基线已完成；真实模型 Smoke 由人工提供凭证后执行；完整 Python 被动能力仍按后续 Contract 分批对齐。
 
 ## R3：Tool Loop
 

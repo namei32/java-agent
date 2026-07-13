@@ -1,0 +1,75 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "messages": [
+          {
+            "content": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。",
+            "role": "system"
+          },
+          {
+            "content": "你好",
+            "role": "user"
+          }
+        ]
+      },
+      "id": "without-history",
+      "input": {
+        "currentMessage": "你好",
+        "history": [],
+        "systemPrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。"
+      }
+    },
+    {
+      "expected": {
+        "messages": [
+          {
+            "content": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。",
+            "role": "system"
+          },
+          {
+            "content": "第一问",
+            "role": "user"
+          },
+          {
+            "content": "第一答",
+            "role": "assistant"
+          },
+          {
+            "content": "第二问",
+            "role": "user"
+          }
+        ]
+      },
+      "id": "with-one-complete-turn",
+      "input": {
+        "currentMessage": "第二问",
+        "history": [
+          {
+            "content": "第一问",
+            "role": "user"
+          },
+          {
+            "content": "第一答",
+            "role": "assistant"
+          }
+        ],
+        "systemPrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。"
+      }
+    }
+  ],
+  "formatVersion": 1,
+  "normalization": [
+    {
+      "field": "expected.messages[last].content",
+      "rule": "remove-python-current-message-time-envelope"
+    }
+  ],
+  "pythonEvidence": {
+    "callable": "agent.context.MessageEnvelopeBuilder.build",
+    "path": "agent/context.py",
+    "projection": "system -> history -> current user；不含 Context Frame、渠道与媒体"
+  },
+  "source": "python-reference",
+  "suite": "prompt"
+}

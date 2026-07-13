@@ -122,12 +122,26 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pfailure verify
 ```
 
-Python Schema 固定样本兼容性：
+Python/Java Golden 与 Schema 固定样本兼容性：
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pcompat verify
 ```
+
+`compat` 直接读取仓库内的 `testdata/golden/`，不会启动 Python、访问模型或读取 `.env`。只有在 Python 基准或已批准 Contract 发生变化时才重新生成夹具：
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+[[ -x ../akashic-agent/.venv/bin/python ]] || \
+  { echo "未找到相邻 Python 仓库的 .venv/bin/python"; exit 1; }
+../akashic-agent/.venv/bin/python tools/golden/generate.py \
+  --python-repo ../akashic-agent \
+  --output testdata/golden
+./mvnw -Pcompat verify
+```
+
+不要把测试失败当成重新录制 Golden 的理由。提交夹具变化前，必须按 [Golden Test 夹具规范](../contracts/golden-test-fixtures.md)记录语义差异和审批证据。
 
 真实模型 Smoke Test 不属于常规验证。只有获得真实网络调用授权并确认可能产生费用后，才运行：
 

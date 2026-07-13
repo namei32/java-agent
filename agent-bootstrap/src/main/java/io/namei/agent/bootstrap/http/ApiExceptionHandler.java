@@ -55,6 +55,7 @@ public class ApiExceptionHandler {
   private static ProblemDetail problem(
       HttpStatus status, String title, HttpServletRequest request) {
     ProblemDetail detail = ProblemDetail.forStatusAndDetail(status, title);
+    detail.setType(URI.create("about:blank"));
     detail.setTitle(title);
     detail.setInstance(URI.create(request.getRequestURI()));
     return detail;

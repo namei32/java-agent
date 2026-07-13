@@ -42,7 +42,7 @@ class OpenAiCompatibleAdapterIT {
     registry.add("spring.ai.openai.base-url", SERVER::baseUrl);
     registry.add("spring.ai.openai.api-key", () -> "test-key");
     registry.add("spring.ai.openai.chat.model", () -> "test-model");
-    registry.add("spring.ai.openai.chat.timeout", () -> "50ms");
+    registry.add("spring.ai.openai.chat.timeout", () -> "500ms");
     registry.add("spring.ai.openai.chat.max-retries", () -> "0");
     registry.add("spring.ai.model.embedding", () -> "none");
   }
@@ -77,7 +77,7 @@ class OpenAiCompatibleAdapterIT {
 
   @Test
   void mapsTimeout() {
-    SERVER.respondAfter(Duration.ofMillis(250), OpenAiStubServer.successBody("迟到"));
+    SERVER.respondAfter(Duration.ofSeconds(2), OpenAiStubServer.successBody("迟到"));
 
     assertThatThrownBy(() -> model.generate(request())).isInstanceOf(ModelTimeoutException.class);
   }

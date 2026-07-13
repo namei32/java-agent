@@ -1,0 +1,40 @@
+{
+  "fixtures": [
+    {
+      "id": "history/session-history",
+      "path": "history/session-history.json",
+      "sha256": "61adfc17354bb0e84bf41ae75fd018a2d0a1d7296b9f5271fc24c2b745158bdb",
+      "source": "python-reference"
+    },
+    {
+      "id": "prompt/message-envelope",
+      "path": "prompt/message-envelope.json",
+      "sha256": "4b713c0667302ff90a6bb31e025545e4789231f58d9687958ef003d4000f825b",
+      "source": "python-reference"
+    },
+    {
+      "id": "sqlite/session-store",
+      "path": "sqlite/session-store.json",
+      "sha256": "84e43ab7d89269c53a63d6909d562588208fd515c8f26f7db289bb58c63f7f10",
+      "source": "python-reference"
+    },
+    {
+      "id": "errors/http-error-mapping",
+      "path": "errors/http-error-mapping.json",
+      "sha256": "93ef9a9f1ccbd8aead0a8e6cf68e7b35aad8ee7e9d9e6b79bce9c43889effbbf",
+      "source": "migration-contract"
+    }
+  ],
+  "formatVersion": 1,
+  "pythonBaseline": {
+    "commit": "b65a5430e332c8733b981dfc2dfbc3eb1967e9ef",
+    "repository": "namei32/akashic-agent",
+    "sourceFiles": {
+      "agent/context.py": "9e57923a315cc37fe669c43d0862deeab10005bdd548ae7b051ee84696241fc6",
+      "agent/core/passive_turn.py": "6c3af88ddd875b4f41ba4221d1974f4142a03dc65a7c3bd7a57a872f4a6fdf5b",
+      "agent/provider.py": "06f5fffcdf9f81db83ab8cf801c119e6980779611541a390cde65b9205d84c36",
+      "session/manager.py": "d2f232ecfb437bd78ebb0cf4d5050f75f135e12fb60933efceacf473fc26f973",
+      "session/store.py": "7be4bcd5f6f4ea8fd3fd85c2d9ec86d5ef38e218fc47d9c775bb2a28ab8e2c18"
+    }
+  }
+}

@@ -22,8 +22,8 @@
 | 入站 HTTP | Dashboard/Bootstrap API | `ChatController` | 完成 | 当前只支持同步 JSON API | 低 |
 | 消息总线 | `bus/` | 无 | 未开始 | 需定义版本化入站、出站和生命周期事件 | 中 |
 | 被动轮次编排 | `agent/core/passive_turn.py`、`agent/turns/orchestrator.py` | `ChatService`、`SafeChatUseCase` | 部分 | 核心请求—模型—提交闭环完成；生命周期阶段未对齐 | 中 |
-| 历史选择 | `agent/policies/history_route.py`、被动支持代码 | `ConversationHistorySelector` | 部分 | Java 当前按完整 user/assistant 对与字符数裁剪；需 Golden 对齐 | 中 |
-| Prompt 组装 | `agent/prompting/`、`agent/persona.py` | `PromptAssembler` | 部分 | 当前仅固定系统 Prompt 和历史；缺 Block、Persona、预算 | 中 |
+| 历史选择 | `agent/policies/history_route.py`、被动支持代码 | `ConversationHistorySelector` | 部分 | 普通 user/assistant 文本投影已有 Golden；缺 Tool、Proactive 与 Context Frame | 中 |
+| Prompt 组装 | `agent/prompting/`、`agent/persona.py` | `PromptAssembler` | 部分 | 系统—历史—当前用户投影已有 Golden；缺 Block、Persona、预算 | 中 |
 | 模型调用 | `agent/provider.py` | `adapter-spring-ai` | 部分 | OpenAI-compatible 非流式完成；缺流式、工具调用映射、多 Provider 策略 | 低 |
 | 失败语义 | `agent/core/runtime_support.py`、错误上下文 | `SafeChatUseCase`、HTTP 异常映射 | 部分 | MVP 失败已隔离；需跨渠道、Tool Loop 错误契约 | 低 |
 | 会话内并发 | Python Chat Lane/队列 | `KeyedSessionExecutionGate` | 部分 | 单 JVM 同会话串行；缺跨进程租约与取消 | 中 |
@@ -73,13 +73,13 @@
 | 测试资产 | 当前 Java 状态 | 缺口 |
 | --- | --- | --- |
 | Java 单元/集成测试 | 已建立默认、`failure`、`compat` Profile | 继续随能力扩展 |
-| Python SQLite 兼容夹具 | 已覆盖 MVP 核心 Schema/轮次 | 增加真实版本样本、未知字段和升级路径 |
-| 跨语言 Golden | 未建立系统化资产 | R0 首要任务：历史、Prompt、Tool、Memory、错误与流式事件 |
+| Python SQLite 兼容夹具 | 已覆盖核心 Schema、Python 行与 Java 追加游标 | 增加真实版本样本、未知字段和升级路径 |
+| 跨语言 Golden | 已建立格式、Manifest、生成器、历史、Prompt、SQLite、错误映射与 CI | 随 R3+ 增加 Tool、Memory 与流式事件 |
 | 真实模型 Smoke | Profile 已有，默认不执行 | 需要人工凭证、费用授权和稳定断言 |
 | 真实工作区演练 | 未执行 | 只能在备份副本上先做只读差异，再做受控写入 |
 
 ## 当前优先级
 
-1. 建立跨语言 Contract/Golden 测试基线，关闭 R0 关键缺口。
-2. 完成 R2 的被动聊天能力对齐设计，再进入 R3 Tool Loop。
+1. 补齐 Python 配置到 Java 配置的映射和版本化消息 Contract。
+2. 完成 R2 的剩余被动聊天能力对齐设计，再进入 R3 Tool Loop。
 3. 记忆、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。
