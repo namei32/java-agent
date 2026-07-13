@@ -1,2 +1,13 @@
 .worktrees/
 .superpowers/
+.idea/
+.vscode/
+.DS_Store
+target/
+**/target/
+.env
+workspace/
+*.db
+*.db-shm
+*.db-wal
+*.log
