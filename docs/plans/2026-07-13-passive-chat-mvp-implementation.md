@@ -14,9 +14,10 @@
 |---|---|---|
 | Task 1–4 / 阶段 A | 已完成 | 截至 `745e7f5`，默认构建、failure Profile 和并发稳定性验证通过 |
 | Task 5–6 / 阶段 B | 已完成 | 截至 `56cef3c`；SQLite 聚合验证 19/19、完整 Reactor 33/33、failure Profile 17/17 |
-| Task 7 | 已完成 | 聚焦 RED 有效；`SpringAiChatModelAdapterTest` 5/5 GREEN |
-| Task 8 | 当前任务 | 装配 Spring Boot、配置和 System Prompt |
-| Task 9–13 / 阶段 C–D | 待执行 | 按后续任务和阶段门禁推进 |
+| Task 7 | 已完成 | 提交 `c286b16`；`SpringAiChatModelAdapterTest` 5/5 GREEN |
+| Task 8 | 已完成 | 聚焦 RED 有效；`ApplicationConfigurationTest` 5/5 GREEN，未访问外部模型 |
+| Task 9 | 当前任务 | 实现 HTTP 契约、请求 ID 与错误映射 |
+| Task 10–13 / 阶段 C–D | 待执行 | 按后续任务和阶段门禁推进 |
 
 恢复执行时以本节和 Git 提交为准。每完成一个任务或阶段，立即更新本表；不维护额外的任务 brief、review package、执行报告或外部进度台账。
 
