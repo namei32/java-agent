@@ -1,0 +1,559 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "assistant": "直接回答",
+        "committed": true,
+        "executionOrder": [],
+        "outcome": "COMPLETED",
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "FINAL",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTING"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTED"
+          }
+        ]
+      },
+      "id": "direct-answer",
+      "input": {
+        "maxIterations": 3,
+        "modelResponses": [
+          {
+            "content": "直接回答",
+            "toolCalls": []
+          }
+        ],
+        "tools": []
+      }
+    },
+    {
+      "expected": {
+        "assistant": "查询完成",
+        "committed": true,
+        "executionOrder": [
+          "lookup"
+        ],
+        "outcome": "COMPLETED",
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "TOOL_CALLS",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "callId": "call-001",
+            "iteration": 1,
+            "toolName": "lookup",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "call-001",
+            "iteration": 1,
+            "status": "SUCCESS",
+            "toolName": "lookup",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "iteration": 2,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 2,
+            "status": "FINAL",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTING"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTED"
+          }
+        ]
+      },
+      "id": "single-tool-success",
+      "input": {
+        "maxIterations": 3,
+        "modelResponses": [
+          {
+            "content": null,
+            "toolCalls": [
+              {
+                "arguments": {
+                  "query": "配置"
+                },
+                "id": "call-001",
+                "name": "lookup"
+              }
+            ]
+          },
+          {
+            "content": "查询完成",
+            "toolCalls": []
+          }
+        ],
+        "tools": [
+          {
+            "behavior": "SUCCESS",
+            "name": "lookup",
+            "result": "固定结果"
+          }
+        ]
+      }
+    },
+    {
+      "expected": {
+        "assistant": "两个工具都已完成",
+        "committed": true,
+        "executionOrder": [
+          "first",
+          "second"
+        ],
+        "outcome": "COMPLETED",
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "TOOL_CALLS",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "callId": "call-101",
+            "iteration": 1,
+            "toolName": "first",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "call-101",
+            "iteration": 1,
+            "status": "SUCCESS",
+            "toolName": "first",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "callId": "call-102",
+            "iteration": 1,
+            "toolName": "second",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "call-102",
+            "iteration": 1,
+            "status": "SUCCESS",
+            "toolName": "second",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "iteration": 2,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 2,
+            "status": "FINAL",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTING"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTED"
+          }
+        ]
+      },
+      "id": "multiple-tools-preserve-order",
+      "input": {
+        "maxIterations": 3,
+        "modelResponses": [
+          {
+            "content": null,
+            "toolCalls": [
+              {
+                "arguments": {},
+                "id": "call-101",
+                "name": "first"
+              },
+              {
+                "arguments": {},
+                "id": "call-102",
+                "name": "second"
+              }
+            ]
+          },
+          {
+            "content": "两个工具都已完成",
+            "toolCalls": []
+          }
+        ],
+        "tools": [
+          {
+            "behavior": "SUCCESS",
+            "name": "first",
+            "result": "第一结果"
+          },
+          {
+            "behavior": "SUCCESS",
+            "name": "second",
+            "result": "第二结果"
+          }
+        ]
+      }
+    },
+    {
+      "expected": {
+        "assistant": "工具不可用，改为直接回答",
+        "committed": true,
+        "executionOrder": [
+          "missing"
+        ],
+        "outcome": "COMPLETED",
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "TOOL_CALLS",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "callId": "call-201",
+            "iteration": 1,
+            "toolName": "missing",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "call-201",
+            "iteration": 1,
+            "status": "ERROR",
+            "toolName": "missing",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "iteration": 2,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 2,
+            "status": "FINAL",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTING"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTED"
+          }
+        ]
+      },
+      "id": "unknown-tool-recovers",
+      "input": {
+        "maxIterations": 3,
+        "modelResponses": [
+          {
+            "content": null,
+            "toolCalls": [
+              {
+                "arguments": {},
+                "id": "call-201",
+                "name": "missing"
+              }
+            ]
+          },
+          {
+            "content": "工具不可用，改为直接回答",
+            "toolCalls": []
+          }
+        ],
+        "tools": []
+      }
+    },
+    {
+      "expected": {
+        "assistant": "工具失败，给出替代回答",
+        "committed": true,
+        "executionOrder": [
+          "failing"
+        ],
+        "outcome": "COMPLETED",
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "TOOL_CALLS",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "callId": "call-301",
+            "iteration": 1,
+            "toolName": "failing",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "call-301",
+            "iteration": 1,
+            "status": "ERROR",
+            "toolName": "failing",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "iteration": 2,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 2,
+            "status": "FINAL",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTING"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTED"
+          }
+        ]
+      },
+      "id": "tool-error-recovers",
+      "input": {
+        "maxIterations": 3,
+        "modelResponses": [
+          {
+            "content": null,
+            "toolCalls": [
+              {
+                "arguments": {},
+                "id": "call-301",
+                "name": "failing"
+              }
+            ]
+          },
+          {
+            "content": "工具失败，给出替代回答",
+            "toolCalls": []
+          }
+        ],
+        "tools": [
+          {
+            "behavior": "ERROR",
+            "name": "failing",
+            "result": "不应泄露的内部异常"
+          }
+        ]
+      }
+    },
+    {
+      "expected": {
+        "assistant": null,
+        "committed": false,
+        "executionOrder": [],
+        "outcome": "INVALID_MODEL_RESPONSE",
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "INVALID",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "status": "INVALID_MODEL_RESPONSE",
+            "type": "TURN_FAILED"
+          }
+        ]
+      },
+      "id": "invalid-model-response",
+      "input": {
+        "maxIterations": 2,
+        "modelResponses": [
+          {
+            "content": "",
+            "toolCalls": []
+          }
+        ],
+        "tools": []
+      }
+    },
+    {
+      "expected": {
+        "assistant": null,
+        "committed": false,
+        "executionOrder": [
+          "lookup",
+          "lookup"
+        ],
+        "outcome": "TOOL_LOOP_LIMIT_EXCEEDED",
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "TOOL_CALLS",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "callId": "call-401",
+            "iteration": 1,
+            "toolName": "lookup",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "call-401",
+            "iteration": 1,
+            "status": "SUCCESS",
+            "toolName": "lookup",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "iteration": 2,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 2,
+            "status": "TOOL_CALLS",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "callId": "call-402",
+            "iteration": 2,
+            "toolName": "lookup",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "call-402",
+            "iteration": 2,
+            "status": "SUCCESS",
+            "toolName": "lookup",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "status": "TOOL_LOOP_LIMIT_EXCEEDED",
+            "type": "TURN_FAILED"
+          }
+        ]
+      },
+      "id": "iteration-limit-does-not-commit",
+      "input": {
+        "maxIterations": 2,
+        "modelResponses": [
+          {
+            "content": null,
+            "toolCalls": [
+              {
+                "arguments": {
+                  "step": 1
+                },
+                "id": "call-401",
+                "name": "lookup"
+              }
+            ]
+          },
+          {
+            "content": null,
+            "toolCalls": [
+              {
+                "arguments": {
+                  "step": 2
+                },
+                "id": "call-402",
+                "name": "lookup"
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "behavior": "SUCCESS",
+            "name": "lookup",
+            "result": "固定结果"
+          }
+        ]
+      }
+    }
+  ],
+  "formatVersion": 1,
+  "normalization": [
+    {
+      "field": "expected.trace",
+      "rule": "exclude-message-arguments-results-time-and-exception-details"
+    },
+    {
+      "field": "input.tools[].result",
+      "rule": "synthetic-values-only-never-copied-to-expected-trace"
+    }
+  ],
+  "pythonEvidence": {
+    "callables": [
+      "agent.core.passive_turn.AgentReasoner.run",
+      "agent.tools.registry.ToolRegistry.execute",
+      "bus.events_lifecycle.ToolCallStarted",
+      "bus.events_lifecycle.ToolCallCompleted"
+    ],
+    "path": "agent/core/passive_turn.py",
+    "projection": "Python 提供循环来源；迭代上限、提交决策和安全事件字段按已批准迁移契约固定"
+  },
+  "source": "migration-contract",
+  "suite": "tools"
+}

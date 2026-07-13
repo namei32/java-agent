@@ -32,9 +32,12 @@ AKASHIC_WORKSPACE=./workspace
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_API_KEY=replace-me
 OPENAI_MODEL=gpt-4o-mini
+AGENT_TOOL_MAX_ITERATIONS=6
 ```
 
 `OPENAI_BASE_URL` 是 OpenAI-compatible API 根路径。OpenAI 官方地址需要包含 `/v1`。`.env` 已被 Git 忽略，禁止提交真实密钥。
+
+`AGENT_TOOL_MAX_ITERATIONS` 表示一次聊天最多允许多少次模型调用，必须大于零，默认 `6`。它不是工具数量上限；同一模型响应中的多个只读 Tool Call 会按顺序执行。
 
 未显式指定配置文件，且启动目录不存在 `config.toml` 时使用此模式。
 
@@ -155,6 +158,8 @@ curl --fail-with-body \
   http://127.0.0.1:8080/api/v1/chat
 ```
 
+当前生产注册表只有只读 `current_time`。模型可在需要当前 UTC 时间时调用它；工具中间消息不会写入 SQLite，最终仍只保存一组 `user/assistant`。
+
 除 `/actuator/health` 外的 Actuator 端点应返回 `404`。
 
 ## 5. 测试 Profile
@@ -237,7 +242,7 @@ TOML 模式先运行 `--agent.config-check`。如果诊断为 `CONFIG_ENV_UNRESO
 
 ### 返回 502
 
-表示提供方拒绝请求、返回服务错误、非法 JSON、缺失响应项或空回答。使用 `X-Request-Id` 关联安全日志；响应不会返回上游正文。
+表示提供方拒绝请求、返回服务错误、非法 JSON、缺失响应项、空回答，或 Tool Loop 在得到最终回答前耗尽迭代次数。使用 `X-Request-Id` 关联安全日志；响应不会返回上游正文、Tool Arguments、Tool Result 或 Call ID。
 
 ### 返回 504
 

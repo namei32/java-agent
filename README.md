@@ -1,8 +1,8 @@
 # Namei Agent Java
 
-Namei Agent Java 是 Akashic Agent 的渐进式 Java 重写项目。当前已实现第一个垂直切片：通过同步 HTTP API 完成被动聊天、恢复会话历史，并把完整的 `user/assistant` 对话轮次原子写入 SQLite。启动配置支持原有环境变量模式，以及只读解析 Python `config.toml` 的兼容模式。
+Namei Agent Java 是 Akashic Agent 的渐进式 Java 重写项目。当前已实现同步 HTTP 被动聊天、会话历史恢复、只读最小 Tool Loop，并把最终 `user/assistant` 对话轮次原子写入 SQLite。启动配置支持原有环境变量模式，以及只读解析 Python `config.toml` 的兼容模式。
 
-项目使用 JDK 21、Maven Wrapper、Spring Boot 4.1、Spring AI 2.0 和 SQLite。默认仅监听 `127.0.0.1`，不提供远程访问认证，也不包含 Tool Loop、MCP、主动消息或流式响应。
+项目使用 JDK 21、Maven Wrapper、Spring Boot 4.1、Spring AI 2.0 和 SQLite。默认仅监听 `127.0.0.1`，不提供远程访问认证。当前 Tool Loop 只注册无副作用的 `current_time`；尚不包含副作用工具、审批、MCP、主动消息或流式响应。
 
 ## 模块
 
@@ -40,6 +40,7 @@ java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar
 - `OPENAI_API_KEY`：模型服务密钥。
 - `OPENAI_MODEL`：模型名。
 - `AKASHIC_WORKSPACE`：Java 专用工作区，默认 `./workspace`。
+- `AGENT_TOOL_MAX_ITERATIONS`：单次聊天允许的最大模型调用次数，默认 `6`。
 
 如需沿用 Python 风格配置，可从安全示例创建本地文件：
 

@@ -76,16 +76,6 @@ class ChatServiceTest {
   }
 
   @Test
-  void rejectsBlankModelResponseWithoutPersisting() {
-    var repository = new RecordingRepository(List.of());
-    var model = new RecordingModel(new ChatModelResponse(" \n\t"));
-
-    assertThatThrownBy(() -> service(repository, model).chat(new ChatCommand("demo", "问题")))
-        .isInstanceOf(InvalidModelResponseException.class);
-    assertThat(repository.turns).isEmpty();
-  }
-
-  @Test
   void executesLoadModelAndAppendInsideSessionGate() {
     var invocations = new InvocationRecorder();
     var repository = new RecordingRepository(List.of(), invocations);

@@ -5,16 +5,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
-public record ChatModelResponse(String content, List<ToolCall> toolCalls) {
-  public ChatModelResponse(String content) {
-    this(content, List.of());
-  }
-
-  public ChatModelResponse {
+public record AssistantToolCallMessage(String content, List<ToolCall> toolCalls)
+    implements ModelMessage {
+  public AssistantToolCallMessage {
     content = content == null ? "" : content.strip();
     toolCalls = List.copyOf(Objects.requireNonNull(toolCalls, "toolCalls"));
-    if (content.isBlank() && toolCalls.isEmpty()) {
-      throw new IllegalArgumentException("模型响应必须包含文本或 Tool Call");
+    if (toolCalls.isEmpty()) {
+      throw new IllegalArgumentException("Assistant Tool Call 不能为空");
     }
     var identifiers = new HashSet<String>();
     for (ToolCall call : toolCalls) {
@@ -24,7 +21,8 @@ public record ChatModelResponse(String content, List<ToolCall> toolCalls) {
     }
   }
 
-  public boolean hasToolCalls() {
-    return !toolCalls.isEmpty();
+  @Override
+  public MessageRole role() {
+    return MessageRole.ASSISTANT;
   }
 }

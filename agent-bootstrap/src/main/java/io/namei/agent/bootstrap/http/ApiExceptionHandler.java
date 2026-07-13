@@ -5,6 +5,7 @@ import io.namei.agent.application.SessionLockTimeoutException;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
 import io.namei.agent.kernel.error.ModelInvocationException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
+import io.namei.agent.kernel.error.ToolLoopLimitExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import org.springframework.http.HttpStatus;
@@ -27,7 +28,11 @@ public class ApiExceptionHandler {
     return problem(HttpStatus.BAD_REQUEST, "JSON 格式无效", request);
   }
 
-  @ExceptionHandler({ModelInvocationException.class, InvalidModelResponseException.class})
+  @ExceptionHandler({
+    ModelInvocationException.class,
+    InvalidModelResponseException.class,
+    ToolLoopLimitExceededException.class
+  })
   ProblemDetail modelFailure(HttpServletRequest request) {
     return problem(HttpStatus.BAD_GATEWAY, "模型调用失败", request);
   }

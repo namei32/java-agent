@@ -21,10 +21,10 @@
 
 | 阶段 | 名称 | 状态 | 主要结果 |
 | --- | --- | --- | --- |
-| R0 | 治理与基线 | 部分完成 | 被动聊天/配置 Golden 与配置兼容实现已建立；工具与事件 Contract 待补 |
+| R0 | 治理与基线 | 部分完成 | 被动聊天、配置和 Tool Golden 已建立；核心 Tool/Lifecycle Contract 已批准 |
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、五模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
-| R3 | Tool Loop | 未开始 | 工具协议、循环、审批与失败隔离 |
+| R3 | Tool Loop | 部分完成 | 只读最小循环和时间工具已完成；审批、超时、取消与副作用工具待设计 |
 | R4 | 上下文与记忆 | 未开始 | Prompt 预算、Markdown 记忆、检索与提交语义 |
 | R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
@@ -47,6 +47,7 @@
 - Python/Java 配置文件定位、字段优先级、旧别名、未知字段和安全差异 Contract。
 - Python 配置解析、安全校验 Golden，以及 TomlJ Parser 选型 ADR。
 - Java 只读 TOML Resolver、环境变量双模式、Spring Boot 启动装配和无副作用配置检查。
+- 核心消息、生命周期与只读 Tool Contract，以及 Python Tool Message/迁移循环 Golden。
 
 待交付：
 
@@ -94,12 +95,20 @@
 
 ## R3：Tool Loop
 
-前置：R0 的消息、工具和错误 Contract 完成，R2 退出门禁通过。
+状态：第一阶段只读最小闭环已完成，扩展阶段待批准。
+
+已交付：
+
+- Kernel Tool/消息/Lifecycle 协议，以及 Application 自主管理的有界顺序 Tool Loop。
+- Tool Golden 的 7 个场景由 Java 生产循环执行，覆盖提交与失败轨迹。
+- Spring AI 只映射 Schema 和消息，不执行真实工具。
+- 内置只读 `current_time`，循环上限可通过 `AGENT_TOOL_MAX_ITERATIONS` 配置。
+
+后续范围：
 
 范围：
 
-- 在 `agent-kernel` 定义 `Tool`、`ToolCall`、`ToolResult` 和审批决策，不引入 Spring AI 类型。
-- 在 `agent-application` 实现最大轮数、超时、取消、重试和工具失败隔离。
+- 设计审批决策、工具超时、取消、重试和幂等语义，不引入 Spring AI 类型。
 - 先迁移无副作用工具，再迁移文件系统、Shell、Web 等高风险工具。
 - 工具调用和最终回答遵循明确的会话提交语义；半完成轮次不得污染历史。
 

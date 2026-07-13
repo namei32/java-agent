@@ -1,0 +1,12 @@
+package io.namei.agent.kernel.lifecycle;
+
+public enum TurnEventType {
+  TURN_STARTED,
+  MODEL_REQUESTED,
+  MODEL_COMPLETED,
+  TOOL_CALL_STARTED,
+  TOOL_CALL_COMPLETED,
+  TURN_COMMITTING,
+  TURN_COMMITTED,
+  TURN_FAILED
+}
