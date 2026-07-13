@@ -293,7 +293,6 @@ java-agent/
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
     <dependency><groupId>com.tngtech.archunit</groupId><artifactId>archunit-junit5</artifactId><scope>test</scope></dependency>
   </dependencies>
-  <build><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin></plugins></build>
 </project>
 ```
 
@@ -347,6 +346,32 @@ class ChatMessageTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("消息内容不能为空");
   }
+
+  @Test
+  void stripsUnicodeWhitespace() {
+    assertThat(new ChatMessage(MessageRole.USER, "\u2003你好\u2003").content()).isEqualTo("你好");
+  }
+
+  @Test
+  void rejectsUnicodeBlankContent() {
+    assertThatThrownBy(() -> new ChatMessage(MessageRole.USER, "\u2003"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("消息内容不能为空");
+  }
+
+  @Test
+  void rejectsNullRole() {
+    assertThatThrownBy(() -> new ChatMessage(null, "你好"))
+        .isInstanceOf(NullPointerException.class)
+        .hasMessage("role");
+  }
+
+  @Test
+  void rejectsNullContent() {
+    assertThatThrownBy(() -> new ChatMessage(MessageRole.USER, null))
+        .isInstanceOf(NullPointerException.class)
+        .hasMessage("content");
+  }
 }
 ```
 
@@ -377,8 +402,8 @@ public record ChatMessage(MessageRole role, String content) {
   public ChatMessage {
     Objects.requireNonNull(role, "role");
     Objects.requireNonNull(content, "content");
-    content = content.trim();
-    if (content.isEmpty()) {
+    content = content.strip();
+    if (content.isBlank()) {
       throw new IllegalArgumentException("消息内容不能为空");
     }
   }
@@ -393,9 +418,10 @@ public record ChatMessage(MessageRole role, String content) {
 ./mvnw -pl agent-kernel test -Dtest=ChatMessageTest
 ./mvnw spotless:apply
 ./mvnw -pl agent-kernel test
+./mvnw clean verify
 ```
 
-预期：全部成功，测试数为 2，失败数为 0。
+预期：全部成功，`ChatMessageTest` 测试数为 6，失败数为 0，完整 Reactor 构建成功。
 
 - [ ] **步骤 7：提交**
 
@@ -1660,6 +1686,7 @@ git commit -m "feat: 增加 Spring AI 模型适配器"
 
 **文件：**
 
+- 修改：`agent-bootstrap/pom.xml`
 - 创建：`agent-bootstrap/src/main/java/io/namei/agent/bootstrap/NameiAgentApplication.java`
 - 创建：`agent-bootstrap/src/main/java/io/namei/agent/bootstrap/config/AgentProperties.java`
 - 创建：`agent-bootstrap/src/main/java/io/namei/agent/bootstrap/config/ProviderConfigurationGuard.java`
@@ -1831,6 +1858,19 @@ public class NameiAgentApplication {
 }
 ```
 
+创建 `NameiAgentApplication` 后，在 `agent-bootstrap/pom.xml` 中启用 Spring Boot repackage 插件：
+
+```xml
+<build>
+  <plugins>
+    <plugin>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-maven-plugin</artifactId>
+    </plugin>
+  </plugins>
+</build>
+```
+
 - [ ] **步骤 4：写入运行配置和默认 Prompt**
 
 ```yaml
@@ -1899,7 +1939,7 @@ OPENAI_MODEL=gpt-4o-mini
 - [ ] **步骤 6：提交**
 
 ```bash
-git add .env.example agent-bootstrap/src
+git add .env.example agent-bootstrap/pom.xml agent-bootstrap/src
 git commit -m "feat: 装配被动聊天 Spring Boot 应用"
 ```
 
