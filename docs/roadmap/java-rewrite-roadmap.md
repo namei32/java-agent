@@ -21,7 +21,7 @@
 
 | 阶段 | 名称 | 状态 | 主要结果 |
 | --- | --- | --- | --- |
-| R0 | 治理与基线 | 部分完成 | 被动聊天 Golden 与配置 Contract 已建立；配置实现、工具与事件 Contract 待补 |
+| R0 | 治理与基线 | 部分完成 | 被动聊天/配置 Golden、配置 Contract 与 Parser 选型已建立；配置实现、工具与事件 Contract 待补 |
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、五模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 未开始 | 工具协议、循环、审批与失败隔离 |
@@ -45,11 +45,12 @@
 - Python 历史、Prompt、SQLite 基准与错误迁移契约夹具。
 - Java 历史、Prompt、SQLite、错误映射兼容测试及独立 CI Job。
 - Python/Java 配置文件定位、字段优先级、旧别名、未知字段和安全差异 Contract。
+- Python 配置解析、安全校验 Golden，以及 TomlJ Parser 选型 ADR。
 
 待交付：
 
 - 随能力迁移继续固化工具调用、Memory 和流式事件夹具。
-- 实现已批准的只读 TOML 兼容加载，并固化配置 Golden。
+- 实现已批准的只读 TOML 兼容加载、启动装配和无副作用检查。
 - 为消息、工具、记忆、流式事件建立版本化 Contract。
 
 退出门禁：下一阶段所依赖的协议都有契约；相同夹具能在 Python 生成基准、在 Java 验证；Golden 变化必须人工批准。

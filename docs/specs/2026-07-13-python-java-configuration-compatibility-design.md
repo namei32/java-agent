@@ -105,7 +105,7 @@ System Prompt 装配调整为：
 
 ## 9. 依赖约束
 
-实施前必须选择支持 TOML 1.0、JDK 21、只读解析和稳定维护的 Java Parser，并记录版本与许可证。Parser 依赖只能进入 `agent-bootstrap`。
+已通过 [ADR-0004](../adr/0004-use-tomlj-for-read-only-toml-parsing.md) 选择 `org.tomlj:tomlj:1.1.1`。该版本声明支持 TOML 1.0，采用 Apache-2.0 许可证，并已通过项目 JDK 21 配置夹具测试。其维护节奏较低是已记录风险；Parser 依赖只能进入 `agent-bootstrap`。
 
 不得为了配置兼容引入 Spring Cloud Config、数据库配置表、消息中间件或新的部署单元。
 

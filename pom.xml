@@ -28,6 +28,7 @@
     <maven.version>3.9.16</maven.version>
     <spring-ai.version>2.0.0</spring-ai.version>
     <sqlite-jdbc.version>3.53.2.0</sqlite-jdbc.version>
+    <tomlj.version>1.1.1</tomlj.version>
     <archunit.version>1.4.2</archunit.version>
     <spotless.version>3.8.0</spotless.version>
     <jacoco.version>0.8.15</jacoco.version>
@@ -51,6 +52,11 @@
         <groupId>org.xerial</groupId>
         <artifactId>sqlite-jdbc</artifactId>
         <version>${sqlite-jdbc.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.tomlj</groupId>
+        <artifactId>tomlj</artifactId>
+        <version>${tomlj.version}</version>
       </dependency>
       <dependency>
         <groupId>com.tngtech.archunit</groupId>
