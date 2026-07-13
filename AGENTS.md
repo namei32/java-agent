@@ -1,74 +1,68 @@
 # AGENTS.md
 
-## Mission
+## 项目使命
 
-Rewrite Akashic Agent in Java while preserving observable behavior,
-workspace compatibility, and existing user data.
+使用 Java 重写 Akashic Agent，同时保持可观察行为、工作区兼容性和现有用户数据不变。
 
-The Python implementation is the current behavioral oracle.
-This is an incremental rewrite, not a big-bang replacement.
+当前以 Python 实现作为行为基准。本项目采用渐进式重写，不进行一次性整体替换。
 
-## Fixed Technology Baseline
+## 固定技术基线
 
-- Use JDK 21.
-- Do not use preview APIs or `--enable-preview`.
-- Build with Maven Wrapper: `./mvnw`.
-- Use Spring Boot 4.1.x.
-- Use Spring AI 2.0.x only as an integration adapter.
-- The project owns its agent loop, tool execution, approval flow,
-  context management, and session lifecycle.
+- 使用 JDK 21。
+- 禁止使用预览 API 或 `--enable-preview`。
+- 使用 Maven Wrapper 构建：`./mvnw`。
+- 使用 Spring Boot 4.1.x。
+- Spring AI 2.0.x 只作为集成适配器使用。
+- 智能体循环、工具执行、审批流程、上下文管理和会话生命周期由本项目自行控制。
 
-## Architecture Boundaries
+## 架构边界
 
-- `agent-kernel` must not depend on Spring, JDBC, Reactor,
-  Spring AI, or provider SDK classes.
-- Domain interfaces belong in the kernel.
-- External frameworks and SDKs belong in adapter modules.
-- Spring AI must not become the owner of the agent runtime.
-- SQLite access uses explicit SQL and transactions.
-- Do not introduce JPA, R2DBC, WebFlux, Kafka, Redis, GraalVM,
-  or distributed infrastructure without an approved ADR.
-- Keep the existing React/Vite frontend unchanged during the
-  initial rewrite unless the specification explicitly says otherwise.
+- `agent-kernel` 不得依赖 Spring、JDBC、Reactor、Spring AI 或模型供应商 SDK 类型。
+- 领域接口属于核心模块。
+- 外部框架和 SDK 属于适配器模块。
+- Spring AI 不得成为智能体运行时的控制者。
+- SQLite 访问使用显式 SQL 和事务。
+- 未经批准的 ADR，不得引入 JPA、R2DBC、WebFlux、Kafka、Redis、GraalVM 或分布式基础设施。
+- 初始重写阶段保持现有 React/Vite 前端不变，除非规格明确要求修改。
 
-## Mandatory Development Workflow
+## 强制开发流程
 
-Before implementing new behavior:
+实现新行为前必须：
 
-1. Use `using-superpowers` to select the applicable workflow.
-2. Use `brainstorming` to clarify behavior and constraints.
-3. Write and approve a specification.
-4. Use `writing-plans` to produce an executable implementation plan.
-5. Create an isolated feature branch or Git worktree.
-6. Implement with test-driven development.
-7. Request independent code review.
-8. Run fresh verification before claiming completion.
-9. Use `finishing-a-development-branch` before integration.
+1. 使用 `using-superpowers` 选择适用的工作流。
+2. 使用 `brainstorming` 澄清行为和约束。
+3. 编写并批准规格（Spec）。
+4. 使用 `writing-plans` 生成可执行的实施计划。
+5. 创建隔离的功能分支或 Git Worktree。
+6. 使用 TDD 实现。
+7. 请求独立代码审查。
+8. 在声称完成前执行全新的验证。
+9. 集成前使用 `finishing-a-development-branch`。
 
-Do not write production code before the specification and plan exist.
+规格和实施计划存在之前，不得编写生产代码。
 
-For bugs:
+修复缺陷时必须：
 
-1. Reproduce the problem with a failing test.
-2. Use `systematic-debugging` to identify the root cause.
-3. Make the smallest justified fix.
-4. Run regression and full verification.
+1. 使用失败测试复现问题。
+2. 使用 `systematic-debugging` 定位根因。
+3. 实施有依据的最小修复。
+4. 执行回归测试和完整验证。
 
-## Test-Driven Development
+## 测试驱动开发
 
-Follow red-green-refactor:
+遵循 Red-Green-Refactor：
 
-1. Add a test for one observable behavior.
-2. Run it and confirm that it fails for the expected reason.
-3. Implement the minimum code required.
-4. Run the test and confirm that it passes.
-5. Refactor only while tests remain green.
+1. 为一个可观察行为添加测试。
+2. 运行测试，并确认测试因预期原因失败。
+3. 编写使其通过所需的最少代码。
+4. 重新运行并确认测试通过。
+5. 仅在测试保持绿色时重构。
 
-A test written after the implementation is not considered TDD evidence.
+实现完成后才补写的测试不能作为 TDD 证据。
 
-## Build and Verification
+## 构建与验证
 
-Primary commands:
+主要命令：
 
 ```bash
 ./mvnw clean verify
@@ -77,64 +71,69 @@ Primary commands:
 ./mvnw -Pfailure verify
 ```
 
-Before claiming completion:
+声称完成前必须：
 
-- Run the relevant targeted tests.
-- Run `./mvnw clean verify`.
-- Run compatibility tests when observable behavior changes.
-- Run failure-injection tests when persistence, tools, approval,
-  cancellation, or concurrency behavior changes.
-- Report the exact commands and results.
-- Never claim success from old or partial test output.
+- 运行与变更相关的目标测试。
+- 运行 `./mvnw clean verify`。
+- 可观察行为发生变化时运行兼容性测试。
+- 持久化、工具、审批、取消或并发行为发生变化时运行故障注入测试。
+- 报告执行过的准确命令和结果。
+- 禁止根据旧的或不完整的测试输出声称成功。
 
-## Compatibility and Data Safety
+## 兼容性与数据安全
 
-- Treat the Python implementation as the behavioral oracle until
-  the corresponding Java behavior has been accepted.
-- Never let Python and Java write the same workspace concurrently.
-- Access real user workspaces read-only during the initial phases.
-- Back up data before the first Java write or schema migration.
-- Preserve unknown JSON and TOML fields where possible.
-- Do not silently rewrite Markdown memory files.
-- Any intentional golden-file or contract change requires review.
+- 在相应 Java 行为通过验收前，以 Python 实现作为行为基准。
+- 禁止 Python 和 Java 同时写入同一个工作区。
+- 初始阶段只能以只读方式访问真实用户工作区。
+- 第一次由 Java 写入或迁移 Schema 前必须备份数据。
+- 尽可能保留未知的 JSON 和 TOML 字段。
+- 禁止静默重写 Markdown 记忆文件。
+- 任何有意修改 Golden File 或契约的行为都必须经过审查。
 
-Never commit:
+禁止提交：
 
-- Real `config.toml` files
-- API keys or tokens
-- Production SQLite databases
-- User workspaces
-- User memories
-- Runtime logs containing private data
+- 真实的 `config.toml` 文件
+- API Key 或访问令牌
+- 生产 SQLite 数据库
+- 用户工作区
+- 用户记忆
+- 含有隐私数据的运行日志
 
-## Git Rules
+## Git 规则
 
-- Do not implement directly on `main`.
-- Use short-lived feature branches or worktrees.
-- Preserve existing user changes.
-- Do not use destructive Git commands without explicit approval.
-- Keep commits small and independently verifiable.
-- Prefer one observable behavior per commit.
-- Do not mix unrelated refactoring with behavior migration.
+- 禁止直接在 `main` 上实现功能。
+- 使用短生命周期的功能分支或 Worktree。
+- 保留用户已有变更。
+- 未经明确授权，禁止执行破坏性 Git 命令。
+- 提交应保持小型且可独立验证。
+- 每个提交优先只包含一个可观察行为。
+- 禁止把无关重构混入行为迁移。
 
-## Definition of Done
+## 完成定义
 
-A task is complete only when:
+任务仅在满足以下全部条件时才算完成：
 
-- The specification is approved.
-- The implementation plan has been followed or updated.
-- Red-green test evidence exists.
-- Targeted tests pass.
-- `./mvnw clean verify` passes.
-- Compatibility differences are explained.
-- Review has no unresolved Critical or Important findings.
-- Relevant documentation and ADRs are updated.
-- No secrets or user data were added.
-- Git status contains no unintended changes.
+- 规格已批准。
+- 实施计划已经执行，或其变更已经更新到文档。
+- 存在 Red-Green 测试证据。
+- 目标测试通过。
+- `./mvnw clean verify` 通过。
+- 兼容性差异已有解释。
+- 审查不存在未解决的 Critical 或 Important 问题。
+- 相关文档和 ADR 已更新。
+- 未加入密钥或用户数据。
+- Git 状态中不存在非预期变更。
 
-## Documentation Routing
+## 文档语言
 
-Read the relevant documents before implementation:
+- 项目文档默认使用中文。
+- 专业术语、类名、接口名、模块名、配置键、命令、协议名和代码等确有必要的内容保留英文。
+- 文档标题、正文、约束和验收标准均应使用中文；Git 提交信息的语言按具体任务约定执行。
+- 新增或修改文档时，应保持同一术语的中英文写法一致。
+
+## 文档导航
+
+实现前阅读与任务相关的文档：
 
 - `docs/architecture/java-rewrite-guide.md`
 - `docs/adr/`
@@ -143,4 +142,4 @@ Read the relevant documents before implementation:
 - `docs/superpowers/plans/`
 - `docs/runbooks/`
 
-Detailed design decisions belong in these documents, not in this file.
+详细设计决策应写入上述文档，不应堆积在本文件中。
