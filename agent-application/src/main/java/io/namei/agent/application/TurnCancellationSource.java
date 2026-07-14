@@ -6,8 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class TurnCancellationSource {
   private final AtomicBoolean cancelled = new AtomicBoolean();
-  private final CopyOnWriteArrayList<CallbackRegistration> callbacks =
-      new CopyOnWriteArrayList<>();
+  private final CopyOnWriteArrayList<CallbackRegistration> callbacks = new CopyOnWriteArrayList<>();
   private final TurnCancellation token = new SourceToken();
 
   public TurnCancellation token() {

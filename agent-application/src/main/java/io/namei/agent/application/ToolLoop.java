@@ -48,8 +48,7 @@ final class ToolLoop {
     return complete(initialMessages, TurnCancellation.none());
   }
 
-  String complete(
-      List<? extends ModelMessage> initialMessages, TurnCancellation cancellation) {
+  String complete(List<? extends ModelMessage> initialMessages, TurnCancellation cancellation) {
     Objects.requireNonNull(cancellation, "cancellation");
     var messages = new ArrayList<ModelMessage>(initialMessages);
     int totalCalls = 0;
@@ -85,8 +84,7 @@ final class ToolLoop {
         checkCancellation(cancellation);
         var call = response.toolCalls().get(callIndex);
         lifecycle.emit(TurnLifecycleEvent.toolStarted(iteration, call.id(), call.name()));
-        var result =
-            preflight.get(callIndex).orElseGet(() -> tools.execute(call, cancellation));
+        var result = preflight.get(callIndex).orElseGet(() -> tools.execute(call, cancellation));
         if (cancellation.isCancellationRequested()) {
           result = ToolResult.cancelled();
         }

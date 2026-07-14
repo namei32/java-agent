@@ -1,7 +1,7 @@
 # Java 重写 Roadmap
 
 - 状态：实施中
-- 最近更新：2026-07-13
+- 最近更新：2026-07-14
 - 基准：`/Users/namei/idea/agent/akashic-agent`
 - 目标项目：`/Users/namei/idea/agent/java-agent`
 
@@ -24,7 +24,7 @@
 | R0 | 治理与基线 | 部分完成 | 被动聊天、配置和 Tool Golden 已建立；核心 Tool/Lifecycle Contract 已批准 |
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、五模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
-| R3 | Tool Loop | 部分完成 | 只读最小循环和时间工具已完成；Runtime 安全 Contract 已批准，等待实施 |
+| R3 | Tool Loop | 部分完成 | 只读 Tool Runtime 安全加固已完成；副作用审批和工具生态待设计 |
 | R4 | 上下文与记忆 | 未开始 | Prompt 预算、Markdown 记忆、检索与提交语义 |
 | R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
@@ -95,7 +95,7 @@
 
 ## R3：Tool Loop
 
-状态：第一阶段只读最小闭环已完成，R3.1 Runtime 安全 Contract 已批准、等待实施。
+状态：R3.1 只读 Tool Runtime 安全加固已完成；R3 的副作用与外部工具范围尚未开始。
 
 已交付：
 
@@ -103,10 +103,12 @@
 - Tool Golden 的 7 个场景由 Java 生产循环执行，覆盖提交与失败轨迹。
 - Spring AI 只映射 Schema 和消息，不执行真实工具。
 - 内置只读 `current_time`，循环上限可通过 `AGENT_TOOL_MAX_ITERATIONS` 配置。
+- `DISABLED`/`READ_ONLY` 模式、调用预算、纯 JDK Schema 校验、Arguments/Result 边界。
+- 公平并发许可、Virtual Thread 执行、共享 Deadline、超时恢复和 Application 取消协议。
+- Tool Runtime 安全 Golden 覆盖预算、参数、结果、超时、许可等待、取消、模式和 Adapter 字节边界。
 
 后续范围：
 
-- 按已批准的 Tool Runtime 安全 Contract 实施模式、预算、Schema 校验、超时、取消和 Provider 门禁。
 - 另行设计审批决策、副作用、重试和幂等语义，不引入 Spring AI 类型。
 - 先迁移无副作用工具，再迁移文件系统、Shell、Web 等高风险工具。
 - 工具调用和最终回答遵循明确的会话提交语义；半完成轮次不得污染历史。

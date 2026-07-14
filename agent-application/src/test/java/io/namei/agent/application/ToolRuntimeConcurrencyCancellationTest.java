@@ -40,9 +40,7 @@ class ToolRuntimeConcurrencyCancellationTest {
   void timesOutActiveToolInterruptsItAndContinuesModelLoop() throws Exception {
     var started = new CountDownLatch(1);
     var interrupted = new CountDownLatch(1);
-    var model =
-        new ScriptedModel(
-            toolResponse("call-1"), new ChatModelResponse("已从超时中恢复"));
+    var model = new ScriptedModel(toolResponse("call-1"), new ChatModelResponse("已从超时中恢复"));
     var repository = new RecordingRepository();
     var events = new ArrayList<TurnLifecycleEvent>();
 
@@ -82,13 +80,10 @@ class ToolRuntimeConcurrencyCancellationTest {
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
       var first =
           executor.submit(
-              () ->
-                  registry.execute(
-                      new ToolCall("call-1", "limited", Map.of("order", "first"))));
+              () -> registry.execute(new ToolCall("call-1", "limited", Map.of("order", "first"))));
       assertThat(firstStarted.await(1, SECONDS)).isTrue();
 
-      var second =
-          registry.execute(new ToolCall("call-2", "limited", Map.of("order", "second")));
+      var second = registry.execute(new ToolCall("call-2", "limited", Map.of("order", "second")));
 
       assertThat(second.status()).isEqualTo(ToolResultStatus.TIMEOUT);
       assertThat(second.content()).isEqualTo("工具执行超时。");
@@ -114,9 +109,7 @@ class ToolRuntimeConcurrencyCancellationTest {
             events);
 
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-      var turn =
-          executor.submit(
-              () -> chat.chat(new ChatCommand("demo", "问题"), source.token()));
+      var turn = executor.submit(() -> chat.chat(new ChatCommand("demo", "问题"), source.token()));
       assertThat(started.await(1, SECONDS)).isTrue();
 
       source.cancel();
@@ -166,7 +159,12 @@ class ToolRuntimeConcurrencyCancellationTest {
   void isolatesCancellationCallbackFailuresAndNotifiesEveryListener() {
     var source = new TurnCancellationSource();
     var notifications = new AtomicInteger();
-    source.token().onCancellation(() -> { throw new IllegalStateException("private"); });
+    source
+        .token()
+        .onCancellation(
+            () -> {
+              throw new IllegalStateException("private");
+            });
     source.token().onCancellation(notifications::incrementAndGet);
 
     source.cancel();
@@ -247,15 +245,13 @@ class ToolRuntimeConcurrencyCancellationTest {
         });
   }
 
-  private static Tool tool(String name, java.util.function.Function<Map<String, Object>, ToolResult> action) {
+  private static Tool tool(
+      String name, java.util.function.Function<Map<String, Object>, ToolResult> action) {
     return new Tool() {
       @Override
       public ToolDefinition definition() {
         return new ToolDefinition(
-            name,
-            "测试工具",
-            Map.of("type", "object", "properties", Map.of()),
-            ToolRisk.READ_ONLY);
+            name, "测试工具", Map.of("type", "object", "properties", Map.of()), ToolRisk.READ_ONLY);
       }
 
       @Override
@@ -266,8 +262,7 @@ class ToolRuntimeConcurrencyCancellationTest {
   }
 
   private static ChatModelResponse toolResponse(String callId) {
-    return new ChatModelResponse(
-        "", List.of(new ToolCall(callId, "blocking", Map.of())));
+    return new ChatModelResponse("", List.of(new ToolCall(callId, "blocking", Map.of())));
   }
 
   private static SessionExecutionGate directGate() {

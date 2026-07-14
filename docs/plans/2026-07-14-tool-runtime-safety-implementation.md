@@ -1,7 +1,7 @@
 # Tool Runtime 安全加固实施计划
 
 - 状态：实施中
-- 当前执行状态：Task S1 至 S4 已完成，Task S5 进行中
+- 当前执行状态：Task S1 至 S5 已完成，Task S6 进行中
 - 日期：2026-07-14
 - Spec：[Tool Runtime 安全加固设计](../specs/2026-07-14-tool-runtime-safety-design.md)
 - Contract：[Tool Runtime 安全契约](../contracts/tool-runtime-safety.md)
@@ -46,13 +46,15 @@
 
 实施结果：增加项目自有 `TurnCancellation`/Source 和稳定取消异常；Runtime 使用公平 Semaphore、Virtual Thread 与 FutureTask，使许可等待和执行共享 Deadline，并确保许可只在实际任务退出时释放。模型前后、每个工具前和提交前均检查取消，活动工具产生 `CANCELLED` 后终止且不提交。有效 RED 为取消协议缺失；首轮 GREEN 发现测试夹具会及时响应中断，经改为模拟不响应中断的缺陷工具后，验证了许可不会提前归还；最终 Application 5 Tests 全部通过。
 
-## Task S5：Tool Golden 与装配
+## Task S5：Tool Golden 与装配（已完成）
 
 - 扩展 Migration Contract Fixture 和 Manifest。
 - 让 Compat 测试逐案执行新增场景。
 - 完成 Bootstrap 装配、环境变量示例和运行手册。
 
 聚焦验收：Golden 生成确定且 Compat 目标测试通过。
+
+实施结果：新增 `tools/runtime-safety.json` 和 Manifest Hash，9 个场景覆盖单响应/单轮预算、Arguments 字节、Schema、Result、执行超时、许可等待、活动取消和 `DISABLED` 模式；Application 与 Spring AI Adapter 均回放生产代码。使用相邻 Python 仓库 `.venv` 连续生成两次，夹具与 Manifest Hash 均保持一致；有效 RED 为夹具缺失，GREEN 实际执行 Application 1 Test、Adapter 10 Tests，全部通过。环境变量模板、README、运行手册、Roadmap 和能力矩阵已同步。
 
 ## Task S6：阶段门禁与提交
 

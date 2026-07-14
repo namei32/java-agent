@@ -75,9 +75,7 @@ final class ToolSchemaValidator {
       }
       var names = new HashSet<String>();
       for (Object value : required) {
-        if (!(value instanceof String name)
-            || !properties.containsKey(name)
-            || !names.add(name)) {
+        if (!(value instanceof String name) || !properties.containsKey(name) || !names.add(name)) {
           throw invalidSchema("required 包含无效属性");
         }
       }
@@ -94,7 +92,8 @@ final class ToolSchemaValidator {
       return false;
     }
     Object enumValue = schema.get("enum");
-    if (enumValue instanceof List<?> values && values.stream().noneMatch(item -> item.equals(value))) {
+    if (enumValue instanceof List<?> values
+        && values.stream().noneMatch(item -> item.equals(value))) {
       return false;
     }
     if (!"object".equals(schema.get("type"))) {

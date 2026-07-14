@@ -1,9 +1,9 @@
 package io.namei.agent.bootstrap.config;
 
+import io.namei.agent.application.ToolRuntimeMode;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
-import io.namei.agent.application.ToolRuntimeMode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("agent")
@@ -73,8 +73,7 @@ public record AgentProperties(
     }
 
     static Tools defaults() {
-      return new Tools(
-          ToolRuntimeMode.READ_ONLY, 8, 16, Duration.ofSeconds(5), 32, 16_384, 20_000);
+      return new Tools(ToolRuntimeMode.READ_ONLY, 8, 16, Duration.ofSeconds(5), 32, 16_384, 20_000);
     }
   }
 }

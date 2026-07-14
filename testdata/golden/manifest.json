@@ -43,6 +43,12 @@
       "source": "migration-contract"
     },
     {
+      "id": "tools/runtime-safety",
+      "path": "tools/runtime-safety.json",
+      "sha256": "6902bb336e208fe88dccc06f1484d85d6990df2a03cd1ba36ee0b2817281bf87",
+      "source": "migration-contract"
+    },
+    {
       "id": "errors/http-error-mapping",
       "path": "errors/http-error-mapping.json",
       "sha256": "93ef9a9f1ccbd8aead0a8e6cf68e7b35aad8ee7e9d9e6b79bce9c43889effbbf",

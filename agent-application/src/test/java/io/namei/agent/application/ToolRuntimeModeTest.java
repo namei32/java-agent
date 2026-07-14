@@ -50,8 +50,7 @@ class ToolRuntimeModeTest {
     var executions = new ArrayList<String>();
     ChatModelPort model =
         request ->
-            new ChatModelResponse(
-                "", List.of(new ToolCall("call-1", "current_time", Map.of())));
+            new ChatModelResponse("", List.of(new ToolCall("call-1", "current_time", Map.of())));
     var repository = new RecordingRepository();
 
     assertThatThrownBy(

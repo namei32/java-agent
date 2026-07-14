@@ -88,9 +88,7 @@ final class ToolRegistry {
     long startedAt = System.nanoTime();
     long timeoutNanos = timeoutNanos();
     if (!acquirePermit(cancellation, startedAt, timeoutNanos)) {
-      return cancellation.isCancellationRequested()
-          ? ToolResult.cancelled()
-          : ToolResult.timeout();
+      return cancellation.isCancellationRequested() ? ToolResult.cancelled() : ToolResult.timeout();
     }
     if (cancellation.isCancellationRequested()) {
       Thread.interrupted();
@@ -135,8 +133,7 @@ final class ToolRegistry {
     }
   }
 
-  private boolean acquirePermit(
-      TurnCancellation cancellation, long startedAt, long timeoutNanos) {
+  private boolean acquirePermit(TurnCancellation cancellation, long startedAt, long timeoutNanos) {
     long remaining = remainingNanos(startedAt, timeoutNanos);
     if (remaining <= 0) {
       return false;

@@ -66,7 +66,8 @@ class ApplicationConfigurationTest {
     assertThat(defaults.history().maxCharacters()).isEqualTo(100_000);
     assertThat(defaults.model().timeout()).isEqualTo(Duration.ofSeconds(60));
     assertThat(defaults.toolLoop().maxIterations()).isEqualTo(6);
-    assertThat(defaults.tools().mode()).isEqualTo(io.namei.agent.application.ToolRuntimeMode.READ_ONLY);
+    assertThat(defaults.tools().mode())
+        .isEqualTo(io.namei.agent.application.ToolRuntimeMode.READ_ONLY);
     assertThat(defaults.tools().maxCallsPerResponse()).isEqualTo(8);
     assertThat(defaults.tools().maxCallsPerTurn()).isEqualTo(16);
     assertThat(defaults.tools().timeout()).isEqualTo(Duration.ofSeconds(5));

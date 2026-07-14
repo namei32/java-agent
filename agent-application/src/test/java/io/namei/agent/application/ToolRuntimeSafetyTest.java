@@ -35,16 +35,19 @@ class ToolRuntimeSafetyTest {
     var executions = new ArrayList<String>();
     var model =
         new ScriptedModel(
-            response(
-                call("call-1", "lookup", Map.of()),
-                call("call-2", "lookup", Map.of())));
+            response(call("call-1", "lookup", Map.of()), call("call-2", "lookup", Map.of())));
     var repository = new RecordingRepository();
     var events = new ArrayList<TurnLifecycleEvent>();
     var settings = settings(1, 2, 20_000);
 
     assertThatThrownBy(
             () ->
-                service(repository, model, List.of(tool("lookup", objectSchema(), "结果", executions)), settings, events)
+                service(
+                        repository,
+                        model,
+                        List.of(tool("lookup", objectSchema(), "结果", executions)),
+                        settings,
+                        events)
                     .chat(new ChatCommand("demo", "问题")))
         .isInstanceOf(ToolCallLimitExceededException.class);
 
@@ -58,9 +61,7 @@ class ToolRuntimeSafetyTest {
     var executions = new ArrayList<String>();
     var model =
         new ScriptedModel(
-            response(
-                call("call-1", "lookup", Map.of()),
-                call("call-2", "lookup", Map.of())),
+            response(call("call-1", "lookup", Map.of()), call("call-2", "lookup", Map.of())),
             response(call("call-3", "lookup", Map.of())));
     var repository = new RecordingRepository();
 
@@ -84,13 +85,16 @@ class ToolRuntimeSafetyTest {
     var executions = new ArrayList<String>();
     var schema =
         Map.<String, Object>of(
-            "type", "object",
+            "type",
+            "object",
             "properties",
-                Map.of(
-                    "query", Map.of("type", "string", "enum", List.of("allowed")),
-                    "count", Map.of("type", "integer")),
-            "required", List.of("query"),
-            "additionalProperties", false);
+            Map.of(
+                "query", Map.of("type", "string", "enum", List.of("allowed")),
+                "count", Map.of("type", "integer")),
+            "required",
+            List.of("query"),
+            "additionalProperties",
+            false);
     var model =
         new ScriptedModel(
             response(
@@ -122,8 +126,7 @@ class ToolRuntimeSafetyTest {
   @Test
   void rejectsUnsupportedSchemaAtRegistration() {
     var schema =
-        Map.<String, Object>of(
-            "type", "object", "properties", Map.of(), "unsupported", true);
+        Map.<String, Object>of("type", "object", "properties", Map.of(), "unsupported", true);
 
     assertThatThrownBy(
             () ->
@@ -141,8 +144,7 @@ class ToolRuntimeSafetyTest {
   void replacesOversizedUnicodeResultWithoutReturningPartialContent() {
     var model =
         new ScriptedModel(
-            response(call("call-1", "lookup", Map.of())),
-            new ChatModelResponse("替代回答"));
+            response(call("call-1", "lookup", Map.of())), new ChatModelResponse("替代回答"));
 
     service(
             new RecordingRepository(),
@@ -212,8 +214,7 @@ class ToolRuntimeSafetyTest {
   }
 
   private static Map<String, Object> objectSchema() {
-    return Map.of(
-        "type", "object", "properties", Map.of(), "additionalProperties", false);
+    return Map.of("type", "object", "properties", Map.of(), "additionalProperties", false);
   }
 
   private static ChatModelResponse response(ToolCall... calls) {
