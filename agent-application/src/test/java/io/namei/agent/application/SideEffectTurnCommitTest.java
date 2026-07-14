@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class SideEffectTurnCommitTest {
@@ -99,6 +100,7 @@ class SideEffectTurnCommitTest {
   }
 
   @Test
+  @Tag("failure")
   void unknownStateFailsTurnWithoutCallingModelAgainOrCommitting() {
     var ledger = new InMemorySideEffectLedger();
     ApprovalPort seedUnknown =

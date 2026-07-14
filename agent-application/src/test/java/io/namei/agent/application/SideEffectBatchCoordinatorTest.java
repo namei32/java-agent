@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class SideEffectBatchCoordinatorTest {
@@ -117,6 +118,7 @@ class SideEffectBatchCoordinatorTest {
   }
 
   @Test
+  @Tag("failure")
   void failsClosedForUnavailableNullMismatchedOrLateDecisions() {
     var executions = new ArrayList<String>();
     var tool = tool("write_note", "v1", ToolRisk.WRITE, executions);
@@ -151,6 +153,7 @@ class SideEffectBatchCoordinatorTest {
   }
 
   @Test
+  @Tag("failure")
   void rejectsAnApprovalReusedAfterArgumentsTurnVersionOrRiskChanges() {
     var original = new AtomicReference<ApprovalRequest>();
     var executions = new ArrayList<String>();

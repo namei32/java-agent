@@ -1,8 +1,8 @@
 # Tool Approval Framework 设计
 
-- 状态：已批准
+- 状态：实施中
 - 批准日期：2026-07-14
-- 实施状态：未开始
+- 实施状态：Task A1 至 A8 已完成；Task A9 阶段门禁待完成
 - 日期：2026-07-14
 - 阶段：R3.2
 - Contract：[Tool 审批、副作用、幂等与沙箱安全契约](../contracts/tool-approval-side-effect-safety.md)

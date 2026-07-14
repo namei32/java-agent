@@ -45,8 +45,8 @@
 
 | 能力 | Python 基准位置 | Java 位置 | 状态 | 主要差距/下一步 | 数据风险 |
 | --- | --- | --- | --- | --- | --- |
-| Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry` | 部分 | 只读协议与安全 Runtime 已实现；Approval/副作用/幂等/沙箱 Contract、Spec、Plan 已批准，Framework 待实施 | 中 |
-| Tool Loop | `agent/looping/`、`agent/tool_runtime.py` | `ToolLoop`、`ChatService` | 部分 | 有界顺序执行、安全预算、并发许可、超时恢复、取消、最终提交和 Golden 已完成；副作用与渠道取消未覆盖 | 高 |
+| Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry` | 部分 | Approval/副作用/幂等协议、整批门禁和生产 Deny All Framework 已实现；缺真实 Approval Channel、Durable Ledger 和具体 Side Effect Tool Contract | 中 |
+| Tool Loop | `agent/looping/`、`agent/tool_runtime.py` | `ToolLoop`、`ChatService`、`SideEffectBatchCoordinator` | 部分 | 有界顺序执行、安全预算、审批生命周期、一次性消费、幂等/UNKNOWN 和提交边界已完成；生产仍无可执行副作用，渠道取消未覆盖 | 高 |
 | 文件/Shell/Web 工具 | `agent/tools/` | `CurrentTimeTool`（仅时间） | 部分 | 仅完成无副作用时间工具；R3.2 批准不授权真实副作用，仍需逐工具 Capability Contract | 极高 |
 | Tool Hook | `agent/tool_hooks/` | 无 | 未开始 | 定义顺序、异常和可变性边界 | 高 |
 | Tool Bundle/Search | `agent/tool_bundles.py`、`tool_search.py` | 无 | 未开始 | 在基础 Tool Loop 稳定后迁移 | 中 |
@@ -74,14 +74,15 @@
 | --- | --- | --- |
 | Java 单元/集成测试 | 已建立默认、`failure`、`compat` Profile | 继续随能力扩展 |
 | Python SQLite 兼容夹具 | 已覆盖核心 Schema、Python 行与 Java 追加游标 | 增加真实版本样本、未知字段和升级路径 |
-| 跨语言 Golden | 已建立格式、Manifest、生成器、历史、Prompt、SQLite、错误映射、Tool Loop 与 Runtime 安全场景及 CI | 随后增加 Memory 与流式事件 |
+| 跨语言 Golden | 已建立格式、Manifest、生成器、历史、Prompt、SQLite、错误映射、Tool Loop、Runtime 安全与 Approval/Side Effect 场景及 CI | 随后增加 Memory 与流式事件 |
 | 真实模型 Smoke | Profile 已有，默认不执行；DeepSeek `deepseek-v4-flash` Tool Smoke 已于 2026-07-14 通过 | 其他 Provider/模型仍需逐组合授权验证；通过不自动启用部署 |
 | 真实工作区演练 | 未执行 | 只能在备份副本上先做只读差异，再做受控写入 |
 
 ## 当前优先级
 
-1. 按已批准计划实现生产 Deny All 的 Tool Approval Framework 和测试 Fake。
-2. 不开放真实副作用工具，不增加 Approval Channel 或生产 Durable Ledger。
-3. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
-4. 在 Approval Channel、Durable Ledger 和具体 Tool Contract 落地前，不迁移文件写入、Shell、Web 写入或消息发送工具。
-5. 记忆、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。
+1. 完成 R3.2 默认、`failure`、`compat` 与依赖边界阶段门禁。
+2. 分别设计并批准真实 Approval Channel 和生产 Durable Ledger；当前 Framework 只会在生产 Fail Closed。
+3. 为首个具体 Side Effect Tool 制定独立 Capability/Sandbox Contract；批准前不开放任何真实副作用工具。
+4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
+5. 在 Approval Channel、Durable Ledger 和具体 Tool Contract 落地前，不迁移文件写入、Shell、Web 写入或消息发送工具。
+6. 记忆、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。

@@ -23,6 +23,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class SideEffectIdempotencyTest {
@@ -33,6 +34,7 @@ class SideEffectIdempotencyTest {
   private static final ToolCall CALL = new ToolCall("call-1", "write_note", Map.of());
 
   @Test
+  @Tag("failure")
   void concurrentlyConsumesOneApprovalOnlyOnce() throws Exception {
     var ledger = new InMemorySideEffectLedger();
     var entered = new CountDownLatch(1);
@@ -116,6 +118,7 @@ class SideEffectIdempotencyTest {
   }
 
   @Test
+  @Tag("failure")
   void stopsImmediatelyForReservedRunningOrUnknownLedgerState() {
     for (SideEffectExecutionState state :
         List.of(
@@ -147,6 +150,7 @@ class SideEffectIdempotencyTest {
   }
 
   @Test
+  @Tag("failure")
   void failsBeforeInvokerWhenLedgerCannotPersistRunningState() {
     var ledger = new InMemorySideEffectLedger();
     ledger.failNextMarkRunning();
@@ -170,6 +174,7 @@ class SideEffectIdempotencyTest {
   }
 
   @Test
+  @Tag("failure")
   void recordsUnknownWhenInvokerMayHaveSucceededButSuccessPersistenceFails() {
     var ledger = new InMemorySideEffectLedger();
     ledger.failNextMarkSucceeded();

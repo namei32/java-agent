@@ -1,8 +1,8 @@
 # Tool Approval Framework 实施计划
 
-- 状态：已批准
+- 状态：实施中
 - 批准日期：2026-07-14
-- 当前执行状态：Task A0 至 A6 已完成；Task A7 至 A9 待实施
+- 当前执行状态：Task A0 至 A8 已完成；Task A9 待实施
 - 日期：2026-07-14
 - 阶段：R3.2
 - Contract：[Tool 审批、副作用、幂等与沙箱安全契约](../contracts/tool-approval-side-effect-safety.md)
@@ -266,6 +266,10 @@ RED Case：
 
 ## Task A7：Approval Golden 与 Compat
 
+状态：已完成。
+
+验证证据（2026-07-14）：使用批准的 Python Commit `b65a5430e332c8733b981dfc2dfbc3eb1967e9ef` 生产 Registry/Hook helper 生成风险标签与前置拒绝投影；Fixture 和 Manifest 连续生成两次 Hash 一致。`ToolApprovalGoldenTest` 首次因 Jackson 泛型推断编译失败，收窄为 `JsonNode` 后同一命令执行 1 个测试通过，逐项覆盖 9 个 Python Reference/Java migration-contract Case。全过程只使用内存测试工具，未访问真实文件、Shell、网络、消息或 Workspace。
+
 目标：固定 Python 风险/拒绝共同投影和 Java 安全差异。
 
 计划资产：
@@ -295,6 +299,10 @@ RED Case：
 
 ## Task A8：Failure Profile 与文档同步
 
+状态：已完成。
+
+验证证据（2026-07-14）：为审批错配/过期、取消、Ledger 故障、并发消费与 `UNKNOWN` 路径增加 `failure` 标签；定向启用 Profile 后 Surefire 报告只选中 4 个测试类的 8 个新增故障测试并全部通过。Contract、Spec、Plan、Roadmap、能力矩阵、Golden 规范、README 与本地运行手册已同步为“Framework 已实现、生产 Deny All、无真实 Side Effect Tool/Approval Channel/Durable Ledger”。完整 `-Pfailure` 仍按约束留到 Task A9。
+
 目标：确保关键失败路径被独立 Profile 选择，并同步当前事实。
 
 要求：
@@ -307,6 +315,8 @@ RED Case：
 聚焦 Profile 选择检查：先用 Surefire/Failsafe 报告确认新增失败测试实际被选中；完整 `-Pfailure` 留到 Task A9 阶段门禁。
 
 ## Task A9：阶段门禁、自审与提交
+
+状态：待实施。
 
 按顺序执行一次：
 

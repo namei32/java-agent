@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class ToolApprovalLifecycleTest {
@@ -111,6 +112,7 @@ class ToolApprovalLifecycleTest {
   }
 
   @Test
+  @Tag("failure")
   void cancellationAfterApprovalStopsExecutionModelContinuationAndCommit() {
     var cancellation = new TurnCancellationSource();
     var model = new ScriptedModel(toolResponse(Map.of()), new ChatModelResponse("不应请求"));
