@@ -1,0 +1,814 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "assistant": null,
+        "committed": false,
+        "definitionCounts": [
+          1
+        ],
+        "executions": [],
+        "outcome": "TOOL_CALL_LIMIT_EXCEEDED",
+        "toolResults": [],
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "TOOL_CALLS",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "status": "TOOL_CALL_LIMIT_EXCEEDED",
+            "type": "TURN_FAILED"
+          }
+        ]
+      },
+      "id": "response-call-limit",
+      "input": {
+        "modelResponses": [
+          {
+            "content": null,
+            "toolCalls": [
+              {
+                "arguments": {},
+                "id": "limit-1",
+                "name": "lookup"
+              },
+              {
+                "arguments": {},
+                "id": "limit-2",
+                "name": "lookup"
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "maxCallsPerResponse": 1,
+          "maxCallsPerTurn": 16,
+          "maxConcurrentCalls": 32,
+          "maxResultCharacters": 20000,
+          "mode": "READ_ONLY",
+          "timeoutMillis": 5000
+        },
+        "tools": [
+          {
+            "behavior": "SUCCESS",
+            "name": "lookup",
+            "result": "结果",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {},
+              "type": "object"
+            }
+          }
+        ]
+      },
+      "target": "APPLICATION"
+    },
+    {
+      "expected": {
+        "assistant": null,
+        "committed": false,
+        "definitionCounts": [
+          1,
+          1
+        ],
+        "executions": [
+          "lookup",
+          "lookup"
+        ],
+        "outcome": "TOOL_CALL_LIMIT_EXCEEDED",
+        "toolResults": [
+          {
+            "content": "结果",
+            "status": "SUCCESS"
+          },
+          {
+            "content": "结果",
+            "status": "SUCCESS"
+          }
+        ],
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "TOOL_CALLS",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "callId": "turn-1",
+            "iteration": 1,
+            "toolName": "lookup",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "turn-1",
+            "iteration": 1,
+            "status": "SUCCESS",
+            "toolName": "lookup",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "callId": "turn-2",
+            "iteration": 1,
+            "toolName": "lookup",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "turn-2",
+            "iteration": 1,
+            "status": "SUCCESS",
+            "toolName": "lookup",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "iteration": 2,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 2,
+            "status": "TOOL_CALLS",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "status": "TOOL_CALL_LIMIT_EXCEEDED",
+            "type": "TURN_FAILED"
+          }
+        ]
+      },
+      "id": "turn-call-limit",
+      "input": {
+        "modelResponses": [
+          {
+            "content": null,
+            "toolCalls": [
+              {
+                "arguments": {},
+                "id": "turn-1",
+                "name": "lookup"
+              },
+              {
+                "arguments": {},
+                "id": "turn-2",
+                "name": "lookup"
+              }
+            ]
+          },
+          {
+            "content": null,
+            "toolCalls": [
+              {
+                "arguments": {},
+                "id": "turn-3",
+                "name": "lookup"
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "maxCallsPerResponse": 2,
+          "maxCallsPerTurn": 2,
+          "maxConcurrentCalls": 32,
+          "maxResultCharacters": 20000,
+          "mode": "READ_ONLY",
+          "timeoutMillis": 5000
+        },
+        "tools": [
+          {
+            "behavior": "SUCCESS",
+            "name": "lookup",
+            "result": "结果",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {},
+              "type": "object"
+            }
+          }
+        ]
+      },
+      "target": "APPLICATION"
+    },
+    {
+      "expected": {
+        "assistant": "参数已安全处理",
+        "committed": true,
+        "definitionCounts": [
+          1,
+          1
+        ],
+        "executions": [],
+        "outcome": "COMPLETED",
+        "toolResults": [
+          {
+            "content": "工具参数无效。",
+            "status": "ERROR"
+          },
+          {
+            "content": "工具参数无效。",
+            "status": "ERROR"
+          },
+          {
+            "content": "工具参数无效。",
+            "status": "ERROR"
+          },
+          {
+            "content": "工具参数无效。",
+            "status": "ERROR"
+          }
+        ],
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "TOOL_CALLS",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "callId": "missing",
+            "iteration": 1,
+            "toolName": "lookup",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "missing",
+            "iteration": 1,
+            "status": "ERROR",
+            "toolName": "lookup",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "callId": "type",
+            "iteration": 1,
+            "toolName": "lookup",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "type",
+            "iteration": 1,
+            "status": "ERROR",
+            "toolName": "lookup",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "callId": "enum",
+            "iteration": 1,
+            "toolName": "lookup",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "enum",
+            "iteration": 1,
+            "status": "ERROR",
+            "toolName": "lookup",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "callId": "unknown",
+            "iteration": 1,
+            "toolName": "lookup",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "unknown",
+            "iteration": 1,
+            "status": "ERROR",
+            "toolName": "lookup",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "iteration": 2,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 2,
+            "status": "FINAL",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTING"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTED"
+          }
+        ]
+      },
+      "id": "schema-argument-errors",
+      "input": {
+        "modelResponses": [
+          {
+            "content": null,
+            "toolCalls": [
+              {
+                "arguments": {},
+                "id": "missing",
+                "name": "lookup"
+              },
+              {
+                "arguments": {
+                  "query": 1
+                },
+                "id": "type",
+                "name": "lookup"
+              },
+              {
+                "arguments": {
+                  "query": "denied"
+                },
+                "id": "enum",
+                "name": "lookup"
+              },
+              {
+                "arguments": {
+                  "extra": true,
+                  "query": "allowed"
+                },
+                "id": "unknown",
+                "name": "lookup"
+              }
+            ]
+          },
+          {
+            "content": "参数已安全处理",
+            "toolCalls": []
+          }
+        ],
+        "settings": {
+          "maxCallsPerResponse": 8,
+          "maxCallsPerTurn": 16,
+          "maxConcurrentCalls": 32,
+          "maxResultCharacters": 20000,
+          "mode": "READ_ONLY",
+          "timeoutMillis": 5000
+        },
+        "tools": [
+          {
+            "behavior": "SUCCESS",
+            "name": "lookup",
+            "result": "结果",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "query": {
+                  "enum": [
+                    "allowed"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "query"
+              ],
+              "type": "object"
+            }
+          }
+        ]
+      },
+      "target": "APPLICATION"
+    },
+    {
+      "expected": {
+        "assistant": "结果已安全处理",
+        "committed": true,
+        "definitionCounts": [
+          1,
+          1
+        ],
+        "executions": [
+          "lookup"
+        ],
+        "outcome": "COMPLETED",
+        "toolResults": [
+          {
+            "content": "工具结果超过大小限制。",
+            "status": "ERROR"
+          }
+        ],
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "TOOL_CALLS",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "callId": "result-1",
+            "iteration": 1,
+            "toolName": "lookup",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "result-1",
+            "iteration": 1,
+            "status": "ERROR",
+            "toolName": "lookup",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "iteration": 2,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 2,
+            "status": "FINAL",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTING"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTED"
+          }
+        ]
+      },
+      "id": "result-character-limit",
+      "input": {
+        "modelResponses": [
+          {
+            "content": null,
+            "toolCalls": [
+              {
+                "arguments": {},
+                "id": "result-1",
+                "name": "lookup"
+              }
+            ]
+          },
+          {
+            "content": "结果已安全处理",
+            "toolCalls": []
+          }
+        ],
+        "settings": {
+          "maxCallsPerResponse": 8,
+          "maxCallsPerTurn": 16,
+          "maxConcurrentCalls": 32,
+          "maxResultCharacters": 2,
+          "mode": "READ_ONLY",
+          "timeoutMillis": 5000
+        },
+        "tools": [
+          {
+            "behavior": "SUCCESS",
+            "name": "lookup",
+            "result": "😀😀😀",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {},
+              "type": "object"
+            }
+          }
+        ]
+      },
+      "target": "APPLICATION"
+    },
+    {
+      "expected": {
+        "assistant": "超时后恢复",
+        "committed": true,
+        "definitionCounts": [
+          1,
+          1
+        ],
+        "executions": [
+          "timeout"
+        ],
+        "outcome": "COMPLETED",
+        "toolResults": [
+          {
+            "content": "工具执行超时。",
+            "status": "TIMEOUT"
+          }
+        ],
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "TOOL_CALLS",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "callId": "timeout-1",
+            "iteration": 1,
+            "toolName": "timeout",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "timeout-1",
+            "iteration": 1,
+            "status": "TIMEOUT",
+            "toolName": "timeout",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "iteration": 2,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 2,
+            "status": "FINAL",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTING"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTED"
+          }
+        ]
+      },
+      "id": "tool-timeout-recovers",
+      "input": {
+        "modelResponses": [
+          {
+            "content": null,
+            "toolCalls": [
+              {
+                "arguments": {},
+                "id": "timeout-1",
+                "name": "timeout"
+              }
+            ]
+          },
+          {
+            "content": "超时后恢复",
+            "toolCalls": []
+          }
+        ],
+        "settings": {
+          "maxCallsPerResponse": 8,
+          "maxCallsPerTurn": 16,
+          "maxConcurrentCalls": 32,
+          "maxResultCharacters": 20000,
+          "mode": "READ_ONLY",
+          "timeoutMillis": 100
+        },
+        "tools": [
+          {
+            "behavior": "TIMEOUT",
+            "name": "timeout",
+            "result": "不应暴露",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {},
+              "type": "object"
+            }
+          }
+        ]
+      },
+      "target": "APPLICATION"
+    },
+    {
+      "expected": {
+        "assistant": null,
+        "committed": false,
+        "definitionCounts": [],
+        "executions": [
+          "limited"
+        ],
+        "outcome": "PERMIT_TIMEOUT",
+        "toolResults": [
+          {
+            "content": "工具执行超时。",
+            "status": "TIMEOUT"
+          }
+        ],
+        "trace": []
+      },
+      "id": "permit-wait-timeout",
+      "input": {
+        "settings": {
+          "maxCallsPerResponse": 8,
+          "maxCallsPerTurn": 16,
+          "maxConcurrentCalls": 1,
+          "maxResultCharacters": 20000,
+          "mode": "READ_ONLY",
+          "timeoutMillis": 100
+        }
+      },
+      "target": "REGISTRY_CONCURRENCY"
+    },
+    {
+      "expected": {
+        "assistant": null,
+        "committed": false,
+        "definitionCounts": [
+          1
+        ],
+        "executions": [
+          "cancel"
+        ],
+        "outcome": "TURN_CANCELLED",
+        "toolResults": [],
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "TOOL_CALLS",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "callId": "cancel-1",
+            "iteration": 1,
+            "toolName": "cancel",
+            "type": "TOOL_CALL_STARTED"
+          },
+          {
+            "callId": "cancel-1",
+            "iteration": 1,
+            "status": "CANCELLED",
+            "toolName": "cancel",
+            "type": "TOOL_CALL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "status": "TURN_CANCELLED",
+            "type": "TURN_FAILED"
+          }
+        ]
+      },
+      "id": "cancel-active-tool",
+      "input": {
+        "cancelActiveTool": true,
+        "modelResponses": [
+          {
+            "content": null,
+            "toolCalls": [
+              {
+                "arguments": {},
+                "id": "cancel-1",
+                "name": "cancel"
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "maxCallsPerResponse": 8,
+          "maxCallsPerTurn": 16,
+          "maxConcurrentCalls": 32,
+          "maxResultCharacters": 20000,
+          "mode": "READ_ONLY",
+          "timeoutMillis": 1000
+        },
+        "tools": [
+          {
+            "behavior": "CANCEL",
+            "name": "cancel",
+            "result": "不应暴露",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {},
+              "type": "object"
+            }
+          }
+        ]
+      },
+      "target": "APPLICATION"
+    },
+    {
+      "expected": {
+        "assistant": "普通回答",
+        "committed": true,
+        "definitionCounts": [
+          0
+        ],
+        "executions": [],
+        "outcome": "COMPLETED",
+        "toolResults": [],
+        "trace": [
+          {
+            "iteration": 0,
+            "type": "TURN_STARTED"
+          },
+          {
+            "iteration": 1,
+            "type": "MODEL_REQUESTED"
+          },
+          {
+            "iteration": 1,
+            "status": "FINAL",
+            "type": "MODEL_COMPLETED"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTING"
+          },
+          {
+            "iteration": 0,
+            "type": "TURN_COMMITTED"
+          }
+        ]
+      },
+      "id": "disabled-sends-no-definitions",
+      "input": {
+        "modelResponses": [
+          {
+            "content": "普通回答",
+            "toolCalls": []
+          }
+        ],
+        "settings": {
+          "maxCallsPerResponse": 8,
+          "maxCallsPerTurn": 16,
+          "maxConcurrentCalls": 32,
+          "maxResultCharacters": 20000,
+          "mode": "DISABLED",
+          "timeoutMillis": 5000
+        },
+        "tools": [
+          {
+            "behavior": "SUCCESS",
+            "name": "lookup",
+            "result": "结果",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {},
+              "type": "object"
+            }
+          }
+        ]
+      },
+      "target": "APPLICATION"
+    },
+    {
+      "expected": {
+        "outcome": "INVALID_MODEL_RESPONSE"
+      },
+      "id": "arguments-byte-limit",
+      "input": {
+        "maxArgumentBytes": 16,
+        "rawArguments": "{\"city\":\"上海\"}"
+      },
+      "target": "ADAPTER"
+    }
+  ],
+  "formatVersion": 1,
+  "normalization": [
+    {
+      "field": "expected.trace",
+      "rule": "exclude-message-arguments-results-time-and-exception-details"
+    }
+  ],
+  "pythonEvidence": {
+    "callables": [
+      "agent.core.passive_turn.AgentReasoner.run",
+      "agent.tools.registry.ToolRegistry.execute"
+    ],
+    "path": "agent/core/passive_turn.py",
+    "projection": "Python 提供只读工具循环来源；安全预算、校验、超时、并发与取消按已批准 Java 契约固定"
+  },
+  "source": "migration-contract",
+  "suite": "tool-runtime-safety"
+}

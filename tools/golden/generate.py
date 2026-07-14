@@ -47,6 +47,7 @@ def main() -> None:
     configuration_validation = build_configuration_validation_fixture()
     tool_messages = build_tool_message_fixture()
     tool_loop = build_tool_loop_fixture()
+    tool_runtime_safety = build_tool_runtime_safety_fixture()
 
     write_json(output / "history/session-history.json", history)
     write_json(output / "prompt/message-envelope.json", prompt)
@@ -57,6 +58,7 @@ def main() -> None:
     )
     write_json(output / "tools/message-envelope.json", tool_messages)
     write_json(output / "tools/minimal-loop.json", tool_loop)
+    write_json(output / "tools/runtime-safety.json", tool_runtime_safety)
 
     errors = output / "errors/http-error-mapping.json"
     if not errors.is_file():
@@ -79,6 +81,11 @@ def main() -> None:
         ),
         ("tools/message-envelope", "tools/message-envelope.json", "python-reference"),
         ("tools/minimal-loop", "tools/minimal-loop.json", "migration-contract"),
+        (
+            "tools/runtime-safety",
+            "tools/runtime-safety.json",
+            "migration-contract",
+        ),
         ("errors/http-error-mapping", "errors/http-error-mapping.json", "migration-contract"),
     ):
         fixtures.append(
@@ -954,6 +961,314 @@ def tool_success_trace(
         ]
     )
     return trace
+
+
+def build_tool_runtime_safety_fixture() -> dict[str, Any]:
+    empty_schema = {
+        "additionalProperties": False,
+        "properties": {},
+        "type": "object",
+    }
+    strict_schema = {
+        "additionalProperties": False,
+        "properties": {
+            "count": {"type": "integer"},
+            "query": {"enum": ["allowed"], "type": "string"},
+        },
+        "required": ["query"],
+        "type": "object",
+    }
+    return {
+        "cases": [
+            runtime_case(
+                "response-call-limit",
+                "APPLICATION",
+                {
+                    "modelResponses": [
+                        model_tool_calls(
+                            tool_call("limit-1", "lookup", {}),
+                            tool_call("limit-2", "lookup", {}),
+                        )
+                    ],
+                    "settings": runtime_settings(max_calls_per_response=1),
+                    "tools": [runtime_tool("lookup", "SUCCESS", "结果", empty_schema)],
+                },
+                "TOOL_CALL_LIMIT_EXCEEDED",
+                False,
+                [],
+                [],
+                [1],
+                [
+                    event("TURN_STARTED", 0),
+                    event("MODEL_REQUESTED", 1),
+                    event("MODEL_COMPLETED", 1, status="TOOL_CALLS"),
+                    event("TURN_FAILED", 0, status="TOOL_CALL_LIMIT_EXCEEDED"),
+                ],
+            ),
+            runtime_case(
+                "turn-call-limit",
+                "APPLICATION",
+                {
+                    "modelResponses": [
+                        model_tool_calls(
+                            tool_call("turn-1", "lookup", {}),
+                            tool_call("turn-2", "lookup", {}),
+                        ),
+                        model_tool_calls(tool_call("turn-3", "lookup", {})),
+                    ],
+                    "settings": runtime_settings(
+                        max_calls_per_response=2, max_calls_per_turn=2
+                    ),
+                    "tools": [runtime_tool("lookup", "SUCCESS", "结果", empty_schema)],
+                },
+                "TOOL_CALL_LIMIT_EXCEEDED",
+                False,
+                ["lookup", "lookup"],
+                [runtime_result("SUCCESS", "结果"), runtime_result("SUCCESS", "结果")],
+                [1, 1],
+                [
+                    event("TURN_STARTED", 0),
+                    event("MODEL_REQUESTED", 1),
+                    event("MODEL_COMPLETED", 1, status="TOOL_CALLS"),
+                    event("TOOL_CALL_STARTED", 1, "turn-1", "lookup"),
+                    event("TOOL_CALL_COMPLETED", 1, "turn-1", "lookup", "SUCCESS"),
+                    event("TOOL_CALL_STARTED", 1, "turn-2", "lookup"),
+                    event("TOOL_CALL_COMPLETED", 1, "turn-2", "lookup", "SUCCESS"),
+                    event("MODEL_REQUESTED", 2),
+                    event("MODEL_COMPLETED", 2, status="TOOL_CALLS"),
+                    event("TURN_FAILED", 0, status="TOOL_CALL_LIMIT_EXCEEDED"),
+                ],
+            ),
+            runtime_case(
+                "schema-argument-errors",
+                "APPLICATION",
+                {
+                    "modelResponses": [
+                        model_tool_calls(
+                            tool_call("missing", "lookup", {}),
+                            tool_call("type", "lookup", {"query": 1}),
+                            tool_call("enum", "lookup", {"query": "denied"}),
+                            tool_call(
+                                "unknown",
+                                "lookup",
+                                {"extra": True, "query": "allowed"},
+                            ),
+                        ),
+                        {"content": "参数已安全处理", "toolCalls": []},
+                    ],
+                    "settings": runtime_settings(),
+                    "tools": [runtime_tool("lookup", "SUCCESS", "结果", strict_schema)],
+                },
+                "COMPLETED",
+                True,
+                [],
+                [runtime_result("ERROR", "工具参数无效。")] * 4,
+                [1, 1],
+                tool_success_trace(
+                    [
+                        (1, "missing", "lookup", "ERROR"),
+                        (1, "type", "lookup", "ERROR"),
+                        (1, "enum", "lookup", "ERROR"),
+                        (1, "unknown", "lookup", "ERROR"),
+                    ],
+                    final_iteration=2,
+                ),
+                assistant="参数已安全处理",
+            ),
+            runtime_case(
+                "result-character-limit",
+                "APPLICATION",
+                {
+                    "modelResponses": [
+                        model_tool_calls(tool_call("result-1", "lookup", {})),
+                        {"content": "结果已安全处理", "toolCalls": []},
+                    ],
+                    "settings": runtime_settings(max_result_characters=2),
+                    "tools": [runtime_tool("lookup", "SUCCESS", "😀😀😀", empty_schema)],
+                },
+                "COMPLETED",
+                True,
+                ["lookup"],
+                [runtime_result("ERROR", "工具结果超过大小限制。")],
+                [1, 1],
+                tool_success_trace([(1, "result-1", "lookup", "ERROR")], final_iteration=2),
+                assistant="结果已安全处理",
+            ),
+            runtime_case(
+                "tool-timeout-recovers",
+                "APPLICATION",
+                {
+                    "modelResponses": [
+                        model_tool_calls(tool_call("timeout-1", "timeout", {})),
+                        {"content": "超时后恢复", "toolCalls": []},
+                    ],
+                    "settings": runtime_settings(timeout_millis=100),
+                    "tools": [runtime_tool("timeout", "TIMEOUT", "不应暴露", empty_schema)],
+                },
+                "COMPLETED",
+                True,
+                ["timeout"],
+                [runtime_result("TIMEOUT", "工具执行超时。")],
+                [1, 1],
+                tool_success_trace([(1, "timeout-1", "timeout", "TIMEOUT")], final_iteration=2),
+                assistant="超时后恢复",
+            ),
+            runtime_case(
+                "permit-wait-timeout",
+                "REGISTRY_CONCURRENCY",
+                {
+                    "settings": runtime_settings(
+                        max_concurrent_calls=1, timeout_millis=100
+                    )
+                },
+                "PERMIT_TIMEOUT",
+                False,
+                ["limited"],
+                [runtime_result("TIMEOUT", "工具执行超时。")],
+                [],
+                [],
+            ),
+            runtime_case(
+                "cancel-active-tool",
+                "APPLICATION",
+                {
+                    "cancelActiveTool": True,
+                    "modelResponses": [
+                        model_tool_calls(tool_call("cancel-1", "cancel", {}))
+                    ],
+                    "settings": runtime_settings(timeout_millis=1000),
+                    "tools": [runtime_tool("cancel", "CANCEL", "不应暴露", empty_schema)],
+                },
+                "TURN_CANCELLED",
+                False,
+                ["cancel"],
+                [],
+                [1],
+                [
+                    event("TURN_STARTED", 0),
+                    event("MODEL_REQUESTED", 1),
+                    event("MODEL_COMPLETED", 1, status="TOOL_CALLS"),
+                    event("TOOL_CALL_STARTED", 1, "cancel-1", "cancel"),
+                    event("TOOL_CALL_COMPLETED", 1, "cancel-1", "cancel", "CANCELLED"),
+                    event("TURN_FAILED", 0, status="TURN_CANCELLED"),
+                ],
+            ),
+            runtime_case(
+                "disabled-sends-no-definitions",
+                "APPLICATION",
+                {
+                    "modelResponses": [{"content": "普通回答", "toolCalls": []}],
+                    "settings": runtime_settings(mode="DISABLED"),
+                    "tools": [runtime_tool("lookup", "SUCCESS", "结果", empty_schema)],
+                },
+                "COMPLETED",
+                True,
+                [],
+                [],
+                [0],
+                [
+                    event("TURN_STARTED", 0),
+                    event("MODEL_REQUESTED", 1),
+                    event("MODEL_COMPLETED", 1, status="FINAL"),
+                    event("TURN_COMMITTING", 0),
+                    event("TURN_COMMITTED", 0),
+                ],
+                assistant="普通回答",
+            ),
+            {
+                "expected": {"outcome": "INVALID_MODEL_RESPONSE"},
+                "id": "arguments-byte-limit",
+                "input": {
+                    "maxArgumentBytes": len('{"city":"上海"}'.encode("utf-8")) - 1,
+                    "rawArguments": '{"city":"上海"}',
+                },
+                "target": "ADAPTER",
+            },
+        ],
+        "formatVersion": FORMAT_VERSION,
+        "normalization": [
+            {
+                "field": "expected.trace",
+                "rule": "exclude-message-arguments-results-time-and-exception-details",
+            }
+        ],
+        "pythonEvidence": {
+            "callables": [
+                "agent.core.passive_turn.AgentReasoner.run",
+                "agent.tools.registry.ToolRegistry.execute",
+            ],
+            "path": "agent/core/passive_turn.py",
+            "projection": "Python 提供只读工具循环来源；安全预算、校验、超时、并发与取消按已批准 Java 契约固定",
+        },
+        "source": "migration-contract",
+        "suite": "tool-runtime-safety",
+    }
+
+
+def runtime_case(
+    case_id: str,
+    target: str,
+    input_value: dict[str, Any],
+    outcome: str,
+    committed: bool,
+    executions: list[str],
+    tool_results: list[dict[str, str]],
+    definition_counts: list[int],
+    trace: list[dict[str, Any]],
+    *,
+    assistant: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "expected": {
+            "assistant": assistant,
+            "committed": committed,
+            "definitionCounts": definition_counts,
+            "executions": executions,
+            "outcome": outcome,
+            "toolResults": tool_results,
+            "trace": trace,
+        },
+        "id": case_id,
+        "input": input_value,
+        "target": target,
+    }
+
+
+def runtime_settings(
+    *,
+    mode: str = "READ_ONLY",
+    max_calls_per_response: int = 8,
+    max_calls_per_turn: int = 16,
+    timeout_millis: int = 5000,
+    max_concurrent_calls: int = 32,
+    max_result_characters: int = 20000,
+) -> dict[str, Any]:
+    return {
+        "maxCallsPerResponse": max_calls_per_response,
+        "maxCallsPerTurn": max_calls_per_turn,
+        "maxConcurrentCalls": max_concurrent_calls,
+        "maxResultCharacters": max_result_characters,
+        "mode": mode,
+        "timeoutMillis": timeout_millis,
+    }
+
+
+def runtime_tool(
+    name: str,
+    behavior: str,
+    result: str,
+    schema: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "behavior": behavior,
+        "name": name,
+        "result": result,
+        "schema": schema,
+    }
+
+
+def runtime_result(status: str, content: str) -> dict[str, str]:
+    return {"content": content, "status": status}
 
 
 def build_sqlite_fixture() -> dict[str, Any]:

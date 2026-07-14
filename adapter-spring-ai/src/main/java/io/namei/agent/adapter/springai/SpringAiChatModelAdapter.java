@@ -15,6 +15,7 @@ import io.namei.agent.kernel.tool.ToolDefinition;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.net.http.HttpTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -34,9 +35,18 @@ import tools.jackson.databind.ObjectMapper;
 public final class SpringAiChatModelAdapter implements ChatModelPort {
   private static final ObjectMapper JSON = new ObjectMapper();
   private final ChatModel chatModel;
+  private final int maxArgumentBytes;
 
   public SpringAiChatModelAdapter(ChatModel chatModel) {
+    this(chatModel, 16_384);
+  }
+
+  public SpringAiChatModelAdapter(ChatModel chatModel, int maxArgumentBytes) {
     this.chatModel = Objects.requireNonNull(chatModel, "chatModel");
+    if (maxArgumentBytes < 1) {
+      throw new IllegalArgumentException("Tool Arguments 字节上限必须大于零");
+    }
+    this.maxArgumentBytes = maxArgumentBytes;
   }
 
   @Override
@@ -74,7 +84,11 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     }
     List<ToolCallback> callbacks =
         definitions.stream().<ToolCallback>map(SchemaOnlyToolCallback::new).toList();
-    var options = ToolCallingChatOptions.builder().toolCallbacks(callbacks).build();
+    var configuredOptions = chatModel.getOptions();
+    var options =
+        configuredOptions instanceof ToolCallingChatOptions toolOptions
+            ? toolOptions.mutate().toolCallbacks(callbacks).build()
+            : ToolCallingChatOptions.builder().toolCallbacks(callbacks).build();
     return new Prompt(instructions, options);
   }
 
@@ -123,7 +137,11 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
   }
 
   private Map<String, Object> parseArguments(String arguments) {
-    Object decoded = JSON.readValue(arguments == null ? "{}" : arguments, Object.class);
+    String json = arguments == null ? "{}" : arguments;
+    if (json.getBytes(StandardCharsets.UTF_8).length > maxArgumentBytes) {
+      throw new IllegalArgumentException("Tool Call arguments 超过字节上限");
+    }
+    Object decoded = JSON.readValue(json, Object.class);
     if (!(decoded instanceof Map<?, ?> raw)) {
       throw new IllegalArgumentException("Tool Call arguments 必须是 JSON Object");
     }

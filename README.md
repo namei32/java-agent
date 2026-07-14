@@ -1,8 +1,8 @@
 # Namei Agent Java
 
-Namei Agent Java 是 Akashic Agent 的渐进式 Java 重写项目。当前已实现同步 HTTP 被动聊天、会话历史恢复、只读最小 Tool Loop，并把最终 `user/assistant` 对话轮次原子写入 SQLite。启动配置支持原有环境变量模式，以及只读解析 Python `config.toml` 的兼容模式。
+Namei Agent Java 是 Akashic Agent 的渐进式 Java 重写项目。当前已实现同步 HTTP 被动聊天、会话历史恢复、具备安全预算的只读 Tool Runtime，并把最终 `user/assistant` 对话轮次原子写入 SQLite。启动配置支持原有环境变量模式，以及只读解析 Python `config.toml` 的兼容模式。
 
-项目使用 JDK 21、Maven Wrapper、Spring Boot 4.1、Spring AI 2.0 和 SQLite。默认仅监听 `127.0.0.1`，不提供远程访问认证。当前 Tool Loop 只注册无副作用的 `current_time`；尚不包含副作用工具、审批、MCP、主动消息或流式响应。
+项目使用 JDK 21、Maven Wrapper、Spring Boot 4.1、Spring AI 2.0 和 SQLite。默认仅监听 `127.0.0.1`，不提供远程访问认证。当前 Tool Runtime 只注册无副作用的 `current_time`，具有模式、调用预算、Schema 校验、Arguments/Result 上限、超时、并发许可和取消协议；尚不包含副作用工具、审批、MCP、主动消息或流式响应。
 
 ## 模块
 
@@ -41,6 +41,11 @@ java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar
 - `OPENAI_MODEL`：模型名。
 - `AKASHIC_WORKSPACE`：Java 专用工作区，默认 `./workspace`。
 - `AGENT_TOOL_MAX_ITERATIONS`：单次聊天允许的最大模型调用次数，默认 `6`。
+- `AGENT_TOOL_MODE`：`READ_ONLY` 或 `DISABLED`；模板和部署保持 `DISABLED`，只有完成同一 Provider/模型组合的真实 Tool Smoke 并取得部署批准后才可显式改为 `READ_ONLY`。
+- `AGENT_TOOL_MAX_CALLS_PER_RESPONSE`/`AGENT_TOOL_MAX_CALLS_PER_TURN`：单响应与单轮 Tool Call 上限，默认 `8`/`16`。
+- `AGENT_TOOL_TIMEOUT`：许可等待与单次执行共享的时限，默认 `5s`。
+- `AGENT_TOOL_MAX_CONCURRENT_CALLS`：JVM 内跨会话工具执行许可，默认 `32`。
+- `AGENT_TOOL_MAX_ARGUMENT_BYTES`/`AGENT_TOOL_MAX_RESULT_CHARACTERS`：参数 UTF-8 字节与结果 Unicode 字符上限，默认 `16384`/`20000`。
 
 如需沿用 Python 风格配置，可从安全示例创建本地文件：
 
@@ -96,6 +101,8 @@ curl --fail-with-body http://127.0.0.1:8080/actuator/health
 ```bash
 ./mvnw -Preal-model-smoke verify
 ```
+
+2026-07-14 已对 DeepSeek `deepseek-v4-flash` 完成一次真实 Tool Smoke，覆盖 `current_time` Tool Call、Java 执行、Tool Result 回送、最终文本和 SQLite 最终轮次提交。该证据不自动授权启用部署，也不适用于其他 Provider 或模型；当前模板继续使用 `DISABLED`。
 
 ## 数据安全
 

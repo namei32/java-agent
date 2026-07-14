@@ -6,12 +6,15 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 final class OpenAiStubServer implements AutoCloseable {
   private final HttpServer server;
   private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+  private final CopyOnWriteArrayList<String> requestBodies = new CopyOnWriteArrayList<>();
   private volatile Response response = new Response(200, successBody("回答"), Duration.ZERO);
 
   OpenAiStubServer() throws IOException {
@@ -33,6 +36,15 @@ final class OpenAiStubServer implements AutoCloseable {
     response = new Response(200, body, delay);
   }
 
+  void reset() {
+    requestBodies.clear();
+    response = new Response(200, successBody("回答"), Duration.ZERO);
+  }
+
+  List<String> requestBodies() {
+    return List.copyOf(requestBodies);
+  }
+
   static String successBody(String content) {
     return """
         {"id":"chatcmpl-test","object":"chat.completion","created":1,"model":"test-model",
@@ -42,9 +54,22 @@ final class OpenAiStubServer implements AutoCloseable {
         .formatted(content);
   }
 
+  static String toolCallBody(String callId, String toolName, String arguments) {
+    return """
+        {"id":"chatcmpl-tool","object":"chat.completion","created":1,"model":"test-model",
+         "choices":[{"index":0,"message":{"role":"assistant","content":null,
+         "tool_calls":[{"id":"%s","type":"function","function":{"name":"%s","arguments":"%s"}}]},
+         "finish_reason":"tool_calls"}],
+         "usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}
+        """
+        .formatted(callId, toolName, arguments.replace("\"", "\\\""));
+  }
+
   private void handle(HttpExchange exchange) throws IOException {
     Response selected = response;
     try {
+      requestBodies.add(
+          new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
       Thread.sleep(selected.delay());
       byte[] body = selected.body().getBytes(StandardCharsets.UTF_8);
       exchange.getResponseHeaders().set("Content-Type", "application/json");

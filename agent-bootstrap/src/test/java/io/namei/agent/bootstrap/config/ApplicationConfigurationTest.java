@@ -60,13 +60,21 @@ class ApplicationConfigurationTest {
 
   @Test
   void appliesSafeDefaultsAndRejectsInvalidAgentSettings() {
-    var defaults = new AgentProperties(tempDir.resolve("workspace"), null, null, null);
+    var defaults = new AgentProperties(tempDir.resolve("workspace"), null, null, null, null);
 
     assertThat(defaults.history().maxMessages()).isEqualTo(40);
     assertThat(defaults.history().maxCharacters()).isEqualTo(100_000);
     assertThat(defaults.model().timeout()).isEqualTo(Duration.ofSeconds(60));
     assertThat(defaults.toolLoop().maxIterations()).isEqualTo(6);
-    assertThatThrownBy(() -> new AgentProperties(null, null, null, null))
+    assertThat(defaults.tools().mode())
+        .isEqualTo(io.namei.agent.application.ToolRuntimeMode.READ_ONLY);
+    assertThat(defaults.tools().maxCallsPerResponse()).isEqualTo(8);
+    assertThat(defaults.tools().maxCallsPerTurn()).isEqualTo(16);
+    assertThat(defaults.tools().timeout()).isEqualTo(Duration.ofSeconds(5));
+    assertThat(defaults.tools().maxConcurrentCalls()).isEqualTo(32);
+    assertThat(defaults.tools().maxArgumentBytes()).isEqualTo(16_384);
+    assertThat(defaults.tools().maxResultCharacters()).isEqualTo(20_000);
+    assertThatThrownBy(() -> new AgentProperties(null, null, null, null, null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("agent.workspace 必填");
     assertThatThrownBy(
@@ -75,6 +83,7 @@ class ApplicationConfigurationTest {
                     tempDir,
                     new AgentProperties.History(-1, 10),
                     new AgentProperties.Model(Duration.ZERO),
+                    null,
                     null))
         .isInstanceOf(IllegalArgumentException.class);
   }
@@ -87,7 +96,15 @@ class ApplicationConfigurationTest {
             workspace,
             new AgentProperties.History(40, 100_000),
             new AgentProperties.Model(Duration.ofSeconds(5)),
-            new AgentProperties.ToolLoop(6));
+            new AgentProperties.ToolLoop(6),
+            new AgentProperties.Tools(
+                io.namei.agent.application.ToolRuntimeMode.READ_ONLY,
+                8,
+                16,
+                Duration.ofSeconds(1),
+                32,
+                16_384,
+                20_000));
     var configuration = new ApplicationConfiguration();
     var schema = configuration.sqliteSchema(properties);
     var jdbcRepository = configuration.jdbcSessionRepository(schema);
@@ -104,6 +121,7 @@ class ApplicationConfigurationTest {
             configuration.sessionRepository(jdbcRepository),
             model,
             configuration.sessionExecutionGate(properties),
+            configuration.turnLifecycleObserver(),
             properties,
             "test-model",
             "",

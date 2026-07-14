@@ -6,15 +6,24 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
 import io.namei.agent.kernel.error.ModelInvocationException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
+import io.namei.agent.kernel.model.AssistantToolCallMessage;
 import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.ChatModelRequest;
 import io.namei.agent.kernel.model.MessageRole;
+import io.namei.agent.kernel.model.ToolResultMessage;
 import io.namei.agent.kernel.port.ChatModelPort;
+import io.namei.agent.kernel.tool.ToolCall;
+import io.namei.agent.kernel.tool.ToolDefinition;
+import io.namei.agent.kernel.tool.ToolResult;
+import io.namei.agent.kernel.tool.ToolRisk;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -25,12 +34,19 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest(classes = OpenAiCompatibleAdapterIT.TestApplication.class)
 class OpenAiCompatibleAdapterIT {
   private static final OpenAiStubServer SERVER = createServer();
+  private static final ObjectMapper JSON = new ObjectMapper();
 
   @Autowired ChatModelPort model;
+
+  @BeforeEach
+  void resetServer() {
+    SERVER.reset();
+  }
 
   @AfterAll
   static void stopServer() {
@@ -52,6 +68,60 @@ class OpenAiCompatibleAdapterIT {
     SERVER.respond(200, OpenAiStubServer.successBody("回答"));
 
     assertThat(model.generate(request()).content()).isEqualTo("回答");
+  }
+
+  @Test
+  @Tag("failure")
+  void exchangesToolSchemaCallAndResultThroughRealOpenAiChatModel() throws Exception {
+    var definition =
+        new ToolDefinition(
+            "current_time",
+            "返回当前 UTC 时间",
+            Map.of("type", "object", "properties", Map.of(), "additionalProperties", false),
+            ToolRisk.READ_ONLY);
+    SERVER.respond(200, OpenAiStubServer.toolCallBody("call-1", "current_time", "{}"));
+
+    var first =
+        model.generate(
+            new ChatModelRequest(
+                List.of(new ChatMessage(MessageRole.USER, "现在几点？")), List.of(definition)));
+
+    assertThat(first.toolCalls()).containsExactly(new ToolCall("call-1", "current_time", Map.of()));
+    var call = first.toolCalls().getFirst();
+    SERVER.respond(200, OpenAiStubServer.successBody("现在是固定时间"));
+
+    var second =
+        model.generate(
+            new ChatModelRequest(
+                List.of(
+                    new ChatMessage(MessageRole.USER, "现在几点？"),
+                    new AssistantToolCallMessage("", List.of(call)),
+                    new ToolResultMessage(call, ToolResult.success("2026-07-14T04:00:00Z"))),
+                List.of(definition)));
+
+    assertThat(second.content()).isEqualTo("现在是固定时间");
+    assertThat(SERVER.requestBodies()).hasSize(2);
+    var firstRequest = JSON.readTree(SERVER.requestBodies().getFirst());
+    assertThat(firstRequest.path("model").asString()).isEqualTo("test-model");
+    assertThat(firstRequest.path("tools").get(0).path("function").path("name").asString())
+        .isEqualTo("current_time");
+    assertThat(
+            firstRequest
+                .path("tools")
+                .get(0)
+                .path("function")
+                .path("parameters")
+                .path("type")
+                .asString())
+        .isEqualTo("object");
+
+    var secondRequest = JSON.readTree(SERVER.requestBodies().get(1));
+    assertThat(
+            secondRequest.path("messages").get(1).path("tool_calls").get(0).path("id").asString())
+        .isEqualTo("call-1");
+    assertThat(secondRequest.path("messages").get(2).path("role").asString()).isEqualTo("tool");
+    assertThat(secondRequest.path("messages").get(2).path("tool_call_id").asString())
+        .isEqualTo("call-1");
   }
 
   @ParameterizedTest

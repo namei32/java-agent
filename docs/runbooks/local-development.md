@@ -33,11 +33,18 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_API_KEY=replace-me
 OPENAI_MODEL=gpt-4o-mini
 AGENT_TOOL_MAX_ITERATIONS=6
+AGENT_TOOL_MODE=DISABLED
+AGENT_TOOL_MAX_CALLS_PER_RESPONSE=8
+AGENT_TOOL_MAX_CALLS_PER_TURN=16
+AGENT_TOOL_TIMEOUT=5s
+AGENT_TOOL_MAX_CONCURRENT_CALLS=32
+AGENT_TOOL_MAX_ARGUMENT_BYTES=16384
+AGENT_TOOL_MAX_RESULT_CHARACTERS=20000
 ```
 
 `OPENAI_BASE_URL` 是 OpenAI-compatible API 根路径。OpenAI 官方地址需要包含 `/v1`。`.env` 已被 Git 忽略，禁止提交真实密钥。
 
-`AGENT_TOOL_MAX_ITERATIONS` 表示一次聊天最多允许多少次模型调用，必须大于零，默认 `6`。它不是工具数量上限；同一模型响应中的多个只读 Tool Call 会按顺序执行。
+`AGENT_TOOL_MAX_ITERATIONS` 表示一次聊天最多允许多少次模型调用，必须大于零，默认 `6`。其余 `AGENT_TOOL_*` 配置分别限制运行模式、单响应/单轮调用数、等待加执行的共享超时、JVM 并发许可、参数 UTF-8 字节数和结果 Unicode 字符数。整数必须大于零，单轮上限不得小于单响应上限，工具超时必须小于模型超时；非法值会使应用启动失败。
 
 未显式指定配置文件，且启动目录不存在 `config.toml` 时使用此模式。
 
@@ -55,7 +62,10 @@ cp config.example.toml config.toml
 ```dotenv
 AKASHIC_WORKSPACE=./workspace-java
 DEEPSEEK_API_KEY=replace-me
+AGENT_TOOL_MODE=DISABLED
 ```
+
+2026-07-14 修复 Spring AI Provider Options 后，DeepSeek `deepseek-v4-flash` 已通过真实 Tool Call—Java 执行—Tool Result 回送—最终文本—SQLite 提交的完整 Smoke。该结果只覆盖这一 Provider/模型组合，不自动授权部署切换；模板和现有部署继续保留 `AGENT_TOOL_MODE=DISABLED`。只有同一组合取得明确部署批准后，才能改为 `READ_ONLY`，其他模型仍须先分别完成 Smoke。
 
 删除或注释 `.env` 中的 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL`；它们是 TOML 活动字段的最高优先级覆盖值，保留模板值会覆盖 DeepSeek 配置。
 
@@ -158,7 +168,7 @@ curl --fail-with-body \
   http://127.0.0.1:8080/api/v1/chat
 ```
 
-当前生产注册表只有只读 `current_time`。模型可在需要当前 UTC 时间时调用它；工具中间消息不会写入 SQLite，最终仍只保存一组 `user/assistant`。
+`READ_ONLY` 模式下生产注册表只有只读 `current_time`。模型可在需要当前 UTC 时间时调用它；工具中间消息不会写入 SQLite，最终仍只保存一组 `user/assistant`。`DISABLED` 模式不注册工具，也不向模型发送 Tool Definition。
 
 除 `/actuator/health` 外的 Actuator 端点应返回 `404`。
 
@@ -206,6 +216,8 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Preal-model-smoke verify
 ```
 
+测试使用临时 Workspace，并断言普通回答、`current_time` Tool Call、Java 执行、两次模型请求、最终文本以及 SQLite 仅提交最终 `user/assistant`。测试通过只形成 Provider/模型能力证据，不会修改部署的 `AGENT_TOOL_MODE`。
+
 ## 6. 故障排查
 
 ### 启动提示缺少模型配置
@@ -242,11 +254,13 @@ TOML 模式先运行 `--agent.config-check`。如果诊断为 `CONFIG_ENV_UNRESO
 
 ### 返回 502
 
-表示提供方拒绝请求、返回服务错误、非法 JSON、缺失响应项、空回答，或 Tool Loop 在得到最终回答前耗尽迭代次数。使用 `X-Request-Id` 关联安全日志；响应不会返回上游正文、Tool Arguments、Tool Result 或 Call ID。
+表示提供方拒绝请求、返回服务错误、非法 JSON、缺失响应项、空回答、Tool Call 超过调用预算，或 Tool Loop 在得到最终回答前耗尽迭代次数。使用 `X-Request-Id` 关联安全日志；响应不会返回上游正文、Tool Arguments、Tool Result、具体数量或 Call ID。
 
 ### 返回 504
 
 表示模型 HTTP 调用超时，或同一 `sessionId` 的前一个请求占用会话锁过久。不要通过并发重试同一会话放大拥塞。
+
+单个只读工具超时不会直接产生 HTTP `504`：Runtime 会向模型回送固定 `TIMEOUT` 结果并允许其生成替代回答；如果模型随后仍失败，则按对应模型错误处理。
 
 ### 返回 500
 

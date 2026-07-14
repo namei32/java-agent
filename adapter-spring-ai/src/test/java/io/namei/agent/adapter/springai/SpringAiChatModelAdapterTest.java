@@ -16,9 +16,12 @@ import io.namei.agent.kernel.tool.ToolDefinition;
 import io.namei.agent.kernel.tool.ToolResultStatus;
 import io.namei.agent.kernel.tool.ToolRisk;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.MessageType;
@@ -28,8 +31,12 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 class SpringAiChatModelAdapterTest {
+  private static final ObjectMapper JSON = new ObjectMapper();
+
   @Test
   void mapsAllProjectRolesAndReturnsTrimmedAssistantText() {
     var chatModel =
@@ -123,6 +130,83 @@ class SpringAiChatModelAdapterTest {
     assertThat(response.content()).isEmpty();
     assertThat(response.toolCalls())
         .containsExactly(new ToolCall("call-1", "lookup", Map.of("city", "上海")));
+  }
+
+  @Test
+  void rejectsProviderArgumentsThatExceedUtf8ByteLimitBeforeParsing() {
+    String arguments = "{\"city\":\"上海\"}";
+    var output =
+        AssistantMessage.builder()
+            .content("")
+            .toolCalls(
+                List.of(new AssistantMessage.ToolCall("call-1", "function", "lookup", arguments)))
+            .build();
+    var chatModel = new StubChatModel(prompt -> new ChatResponse(List.of(new Generation(output))));
+
+    assertThatThrownBy(
+            () ->
+                new SpringAiChatModelAdapter(
+                        chatModel, arguments.getBytes(StandardCharsets.UTF_8).length - 1)
+                    .generate(request()))
+        .isInstanceOf(InvalidModelResponseException.class)
+        .hasMessage("模型 Tool Call 格式无效")
+        .hasMessageNotContaining(arguments);
+  }
+
+  @Test
+  void acceptsProviderArgumentsAtExactUtf8ByteLimit() {
+    String arguments = "{\"city\":\"上海\"}";
+    var output =
+        AssistantMessage.builder()
+            .content("")
+            .toolCalls(
+                List.of(new AssistantMessage.ToolCall("call-1", "function", "lookup", arguments)))
+            .build();
+    var chatModel = new StubChatModel(prompt -> new ChatResponse(List.of(new Generation(output))));
+
+    var response =
+        new SpringAiChatModelAdapter(chatModel, arguments.getBytes(StandardCharsets.UTF_8).length)
+            .generate(request());
+
+    assertThat(response.toolCalls())
+        .containsExactly(new ToolCall("call-1", "lookup", Map.of("city", "上海")));
+  }
+
+  @Test
+  @Tag("compat")
+  void executesArgumentsByteLimitGoldenAgainstProductionAdapter() throws Exception {
+    JsonNode fixture =
+        JSON.readTree(
+            Path.of(System.getProperty("golden.root")).resolve("tools/runtime-safety.json"));
+    JsonNode goldenCase = null;
+    for (JsonNode candidate : fixture.path("cases")) {
+      if (candidate.path("id").asString().equals("arguments-byte-limit")) {
+        goldenCase = candidate;
+        break;
+      }
+    }
+    assertThat(goldenCase).isNotNull();
+    JsonNode input = goldenCase.path("input");
+    String arguments = input.path("rawArguments").asString();
+    var output =
+        AssistantMessage.builder()
+            .content("")
+            .toolCalls(
+                List.of(
+                    new AssistantMessage.ToolCall("golden-call", "function", "lookup", arguments)))
+            .build();
+    var chatModel = new StubChatModel(prompt -> new ChatResponse(List.of(new Generation(output))));
+
+    String outcome;
+    try {
+      new SpringAiChatModelAdapter(chatModel, input.path("maxArgumentBytes").asInt())
+          .generate(request());
+      outcome = "COMPLETED";
+    } catch (InvalidModelResponseException exception) {
+      outcome = "INVALID_MODEL_RESPONSE";
+    }
+
+    assertThat(outcome).isEqualTo(goldenCase.path("expected").path("outcome").asString());
   }
 
   @Test

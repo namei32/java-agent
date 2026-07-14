@@ -1,7 +1,7 @@
 # Python/Java 能力差距矩阵
 
 - 状态：当前事实
-- 最近更新：2026-07-13
+- 最近更新：2026-07-14
 - Python 基准：`/Users/namei/idea/agent/akashic-agent`
 
 ## 状态说明
@@ -24,9 +24,9 @@
 | 被动轮次编排 | `agent/core/passive_turn.py`、`agent/turns/orchestrator.py` | `ChatService`、`ToolLoop`、`SafeChatUseCase` | 部分 | 请求—模型—只读工具—提交闭环与安全生命周期完成；完整 Python 事件总线未迁移 | 中 |
 | 历史选择 | `agent/policies/history_route.py`、被动支持代码 | `ConversationHistorySelector` | 部分 | 普通 user/assistant 文本投影已有 Golden；缺 Tool、Proactive 与 Context Frame | 中 |
 | Prompt 组装 | `agent/prompting/`、`agent/persona.py` | `PromptAssembler` | 部分 | 系统—历史—当前用户投影已有 Golden；缺 Block、Persona、预算 | 中 |
-| 模型调用 | `agent/provider.py` | `adapter-spring-ai` | 部分 | OpenAI-compatible 非流式文本与 Tool Call 映射完成；缺流式和多 Provider 策略 | 低 |
+| 模型调用 | `agent/provider.py` | `adapter-spring-ai` | 部分 | OpenAI-compatible 非流式文本与 Tool Call 映射完成；Provider Options 运行时类型和模型配置可保留；缺流式和多 Provider 策略 | 低 |
 | 失败语义 | `agent/core/runtime_support.py`、错误上下文 | `ToolLoop`、`SafeChatUseCase`、HTTP 异常映射 | 部分 | 模型、只读工具、迭代上限和提交失败已隔离；需跨渠道与副作用工具错误契约 | 低 |
-| 会话内并发 | Python Chat Lane/队列 | `KeyedSessionExecutionGate` | 部分 | 单 JVM 同会话串行；缺跨进程租约与取消 | 中 |
+| 会话内并发 | Python Chat Lane/队列 | `KeyedSessionExecutionGate`、`TurnCancellation` | 部分 | 单 JVM 同会话串行和 Application 取消协议已完成；缺 HTTP 断连传播与跨进程租约 | 中 |
 | 请求可观察性 | Python diagnostic/strategy trace | `SafeStructuredLogger`、Observed Ports | 部分 | 结构化安全日志完成；缺统一 Trace 与指标后端 | 低 |
 | 健康检查 | Bootstrap 状态 | Actuator + `SqliteHealthIndicator` | 部分 | 当前只覆盖应用与 SQLite | 低 |
 
@@ -45,8 +45,8 @@
 
 | 能力 | Python 基准位置 | Java 位置 | 状态 | 主要差距/下一步 | 数据风险 |
 | --- | --- | --- | --- | --- | --- |
-| Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry` | 部分 | 只读 Tool/Result/Lifecycle 与 Runtime 安全 Contract 已批准；安全加固和 Approval Contract 待实施/设计 | 中 |
-| Tool Loop | `agent/looping/`、`agent/tool_runtime.py` | `ToolLoop`、`ChatService` | 部分 | 有界顺序执行、错误恢复、最终提交和 Golden 已完成；安全预算、Schema 校验、超时和取消已有 Contract，等待实施 | 高 |
+| Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry` | 部分 | 只读协议、模式、Schema、预算、Result 边界、超时和取消已实现；Approval Contract 待设计 | 中 |
+| Tool Loop | `agent/looping/`、`agent/tool_runtime.py` | `ToolLoop`、`ChatService` | 部分 | 有界顺序执行、安全预算、并发许可、超时恢复、取消、最终提交和 Golden 已完成；副作用与渠道取消未覆盖 | 高 |
 | 文件/Shell/Web 工具 | `agent/tools/` | `CurrentTimeTool`（仅时间） | 部分 | 仅完成无副作用时间工具；文件/Shell/Web 必须先设计审批和沙箱 | 极高 |
 | Tool Hook | `agent/tool_hooks/` | 无 | 未开始 | 定义顺序、异常和可变性边界 | 高 |
 | Tool Bundle/Search | `agent/tool_bundles.py`、`tool_search.py` | 无 | 未开始 | 在基础 Tool Loop 稳定后迁移 | 中 |
@@ -74,13 +74,13 @@
 | --- | --- | --- |
 | Java 单元/集成测试 | 已建立默认、`failure`、`compat` Profile | 继续随能力扩展 |
 | Python SQLite 兼容夹具 | 已覆盖核心 Schema、Python 行与 Java 追加游标 | 增加真实版本样本、未知字段和升级路径 |
-| 跨语言 Golden | 已建立格式、Manifest、生成器、历史、Prompt、SQLite、错误映射、Tool 与 CI | 随后增加 Memory 与流式事件 |
-| 真实模型 Smoke | Profile 已有，默认不执行 | 需要人工凭证、费用授权和稳定断言 |
+| 跨语言 Golden | 已建立格式、Manifest、生成器、历史、Prompt、SQLite、错误映射、Tool Loop 与 Runtime 安全场景及 CI | 随后增加 Memory 与流式事件 |
+| 真实模型 Smoke | Profile 已有，默认不执行；DeepSeek `deepseek-v4-flash` Tool Smoke 已于 2026-07-14 通过 | 其他 Provider/模型仍需逐组合授权验证；通过不自动启用部署 |
 | 真实工作区演练 | 未执行 | 只能在备份副本上先做只读差异，再做受控写入 |
 
 ## 当前优先级
 
-1. 为已批准的 Tool Runtime 安全 Contract 编写 Spec/Plan 并完成模式、预算、Schema 校验、超时和取消。
-2. 单独设计工具审批、副作用和幂等 Contract。
+1. 单独设计工具审批、副作用、幂等和沙箱 Contract。
+2. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
 3. 在审批与沙箱语义落地前，不迁移文件写入、Shell、Web 写入或消息发送工具。
 4. 记忆、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。
