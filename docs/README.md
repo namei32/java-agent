@@ -11,7 +11,8 @@
 - 已完成：核心消息、生命周期和 Tool Contract，Tool Message/最小循环 Golden，以及带 `current_time` 的只读最小 Tool Loop。
 - 已完成：Tool Runtime 安全契约实现，包括模式、预算、Schema、Arguments/Result 边界、超时、并发许可、取消和安全 Golden。
 - 已完成：审批参数指纹、整批门禁、一次性消费、幂等/`UNKNOWN`、安全生命周期、Approval Golden、生产 Deny All 装配，以及 R3.2 默认、`failure`、`compat` 与依赖/安全阶段门禁。
-- 下一里程碑：真实 Approval Channel、生产 Durable Ledger 与首个具体 Tool Capability/Sandbox Contract 必须分别设计和批准，不能直接跳到真实工具或完整工具生态扩展。
+- 设计中：R4.1 只读 Markdown Profile、Context Frame 与 Retrieval Port 纵向切片；当前 Contract/Spec/Plan 待批准，尚未读取真实 Workspace 或编写生产实现。
+- 下一里程碑：沿 Python 重写主线完成 R4 只读上下文与记忆，再进入 MCP、渠道、插件和主动运行时；Approval Channel、生产 Durable Ledger 与真实副作用工具暂时冻结。
 - 尚未覆盖：可用的人类审批渠道、生产 Durable Ledger、真实副作用工具、流式输出、MCP、长期记忆、渠道、插件、主动任务、Drift 和 Subagent。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。
@@ -30,6 +31,7 @@
 工具迁移边界从 [核心消息、生命周期与 Tool 契约](contracts/core-message-lifecycle-tool.md)进入。
 Tool Runtime 的模式、预算、校验、超时、取消和 Provider 发布门禁以 [Tool Runtime 安全契约](contracts/tool-runtime-safety.md)为准。
 R3.2 的批准边界从 [Tool 审批、副作用、幂等与沙箱安全契约](contracts/tool-approval-side-effect-safety.md)进入，实现与验证历史见 [Tool Approval Framework 设计](specs/2026-07-14-tool-approval-framework-design.md)和[实施计划](plans/2026-07-14-tool-approval-framework-implementation.md)。当前生产只装配 Deny All；Framework 不等于人类审批可用，也不授权任何真实副作用工具。
+R4.1 的待批准边界见 [只读上下文与记忆兼容契约](contracts/read-only-context-memory.md)、[设计](specs/2026-07-14-read-only-context-memory-design.md)和[实施计划](plans/2026-07-14-read-only-context-memory-implementation.md)。
 
 ## 目录职责
 

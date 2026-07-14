@@ -36,8 +36,8 @@
 | --- | --- | --- | --- | --- | --- |
 | SQLite 会话 Schema | Python Session 存储实现、现有 `sessions.db` | `SqliteSchemaInitializer` | 完成 | 核心表兼容；未来字段必须继续增量校验 | 高 |
 | 会话读取/轮次提交 | Python 会话仓储 | `JdbcSessionRepository` | 完成 | MVP 原子提交与恢复完成；需持续维护 Python 夹具 | 高 |
-| Markdown 记忆 | `agent/memory.py`、`_handbook/memory-markdown.md` | 无 | 未开始 | 先只读解析与 Golden，再开放写入 | 极高 |
-| 检索管线 | `agent/retrieval/` | 无 | 未开始 | 定义 Query/Result Port、排序与预算契约 | 中 |
+| Markdown 记忆 | `agent/memory.py`、`_handbook/memory-markdown.md` | R4.1 Contract/Spec 待批准 | 设计中 | 先迁移 `SELF.md`、`MEMORY.md`、`RECENT_CONTEXT.md` 的只读共同投影；写入延后 | 极高 |
+| 检索管线 | `agent/retrieval/` | R4.1 先建立 Port/注入闭环 | 设计中 | R4.2 再迁移 `memory2` Query、排序、Scope、Embedding 与预算 | 中 |
 | 上下文预算 | `agent/prompting/budget.py` | 字符/消息上限 | 部分 | 缺 Token 估算、Block 优先级和压缩策略 | 中 |
 | Persona/身份 | `agent/persona.py` | 固定 System Prompt | 部分 | 缺工作区 Persona 加载与兼容规则 | 中 |
 
@@ -80,8 +80,8 @@
 
 ## 当前优先级
 
-1. 分别设计并批准真实 Approval Channel、Durable Pending Turn 和生产 Durable Ledger；当前 Framework 只会在生产 Fail Closed。
-2. 为首个隔离 Workspace 文件写入 Tool 制定独立 Capability/Sandbox Contract；批准前不开放任何真实副作用工具。
-3. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
-4. 在 Approval Channel、Durable Ledger 和具体 Tool Contract 落地前，不迁移文件写入、Shell、Web 写入或消息发送工具。
-5. 记忆、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。
+1. 评审并实施 R4.1 只读 Markdown Profile、Context Frame 与 Retrieval Port 纵向切片。
+2. R4.2 单独迁移 `memory2` 只读查询、排序、Scope、Embedding 与 Context Budget，不提前开放写入。
+3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
+4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
+5. MCP、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。

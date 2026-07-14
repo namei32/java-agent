@@ -25,7 +25,7 @@
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、五模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
-| R4 | 上下文与记忆 | 未开始 | Prompt 预算、Markdown 记忆、检索与提交语义 |
+| R4 | 上下文与记忆 | 设计中 | R4.1 只读 Markdown Profile、Context Frame 与 Retrieval Port Contract 待批准 |
 | R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
@@ -133,6 +133,8 @@ R3.2 实现依据：
 
 前置：Tool Loop 稳定，Prompt 与 Memory Contract 已冻结。
 
+当前状态：已完成 Python Prompt、Context、Markdown Memory 与 Retrieval 能力分析，R4.1 只读共同投影 Contract/Spec/Plan 待批准；尚未编写生产代码。
+
 范围：
 
 - 迁移 Prompt Block、Token/字符预算和历史路由策略。
@@ -141,6 +143,12 @@ R3.2 实现依据：
 - 对齐 Python `agent/memory.py`、`agent/retrieval/`、`agent/prompting/` 的可观察行为。
 
 退出门禁：真实工作区副本上的只读差异可解释；写入前后文件可审计并可回退；检索 Golden 达标。
+
+R4.1 设计依据：
+
+- [只读上下文与记忆兼容契约](../contracts/read-only-context-memory.md)
+- [只读 Context/Memory 纵向切片设计](../specs/2026-07-14-read-only-context-memory-design.md)
+- [只读 Context/Memory 实施计划](../plans/2026-07-14-read-only-context-memory-implementation.md)
 
 ## R5：MCP 与外部工具
 
