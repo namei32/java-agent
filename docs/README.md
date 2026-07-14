@@ -26,6 +26,7 @@
 当前 Golden 资产从 [Python/Java Golden Test 夹具规范](contracts/golden-test-fixtures.md)进入，包含配置、历史、Prompt、SQLite、错误映射和 Tool 基准。
 配置迁移边界从 [Python/Java 配置兼容契约](contracts/python-java-configuration.md)进入，实际启动与检查命令见[本地开发运行手册](runbooks/local-development.md)。
 工具迁移边界从 [核心消息、生命周期与 Tool 契约](contracts/core-message-lifecycle-tool.md)进入。
+Tool Runtime 的模式、预算、校验、超时、取消和 Provider 发布门禁以 [Tool Runtime 安全契约](contracts/tool-runtime-safety.md)为准。
 
 ## 目录职责
 

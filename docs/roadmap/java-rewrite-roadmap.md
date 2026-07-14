@@ -24,7 +24,7 @@
 | R0 | 治理与基线 | 部分完成 | 被动聊天、配置和 Tool Golden 已建立；核心 Tool/Lifecycle Contract 已批准 |
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、五模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
-| R3 | Tool Loop | 部分完成 | 只读最小循环和时间工具已完成；审批、超时、取消与副作用工具待设计 |
+| R3 | Tool Loop | 部分完成 | 只读最小循环和时间工具已完成；Runtime 安全 Contract 已批准，等待实施 |
 | R4 | 上下文与记忆 | 未开始 | Prompt 预算、Markdown 记忆、检索与提交语义 |
 | R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
@@ -95,7 +95,7 @@
 
 ## R3：Tool Loop
 
-状态：第一阶段只读最小闭环已完成，扩展阶段待批准。
+状态：第一阶段只读最小闭环已完成，R3.1 Runtime 安全 Contract 已批准、等待实施。
 
 已交付：
 
@@ -106,9 +106,8 @@
 
 后续范围：
 
-范围：
-
-- 设计审批决策、工具超时、取消、重试和幂等语义，不引入 Spring AI 类型。
+- 按已批准的 Tool Runtime 安全 Contract 实施模式、预算、Schema 校验、超时、取消和 Provider 门禁。
+- 另行设计审批决策、副作用、重试和幂等语义，不引入 Spring AI 类型。
 - 先迁移无副作用工具，再迁移文件系统、Shell、Web 等高风险工具。
 - 工具调用和最终回答遵循明确的会话提交语义；半完成轮次不得污染历史。
 
