@@ -236,7 +236,8 @@ class SideEffectBatchCoordinatorTest {
             ToolExecutionPolicy.registeredRisk(),
             CLOCK,
             Duration.ofMinutes(5),
-            new FixedIds());
+            new FixedIds(),
+            new InMemorySideEffectLedger());
 
     coordinator.execute(
         CONTEXT,
@@ -264,7 +265,8 @@ class SideEffectBatchCoordinatorTest {
         policy,
         CLOCK,
         Duration.ofMinutes(5),
-        new FixedIds());
+        new FixedIds(),
+        new InMemorySideEffectLedger());
   }
 
   private static ToolCall call(String id, String name, Map<String, Object> arguments) {

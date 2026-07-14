@@ -22,6 +22,7 @@ final class SideEffectBatchCoordinator {
   private final Clock clock;
   private final Duration approvalTimeout;
   private final IdGenerator ids;
+  private final SideEffectLedger ledger;
   private final ToolApprovalGate gate = new ToolApprovalGate();
 
   SideEffectBatchCoordinator(
@@ -31,12 +32,31 @@ final class SideEffectBatchCoordinator {
       Clock clock,
       Duration approvalTimeout,
       IdGenerator ids) {
+    this(
+        tools,
+        approvals,
+        policy,
+        clock,
+        approvalTimeout,
+        ids,
+        SideEffectLedger.unavailable());
+  }
+
+  SideEffectBatchCoordinator(
+      ToolRegistry tools,
+      ApprovalPort approvals,
+      ToolExecutionPolicy policy,
+      Clock clock,
+      Duration approvalTimeout,
+      IdGenerator ids,
+      SideEffectLedger ledger) {
     this.tools = Objects.requireNonNull(tools, "tools");
     this.approvals = Objects.requireNonNull(approvals, "approvals");
     this.policy = Objects.requireNonNull(policy, "policy");
     this.clock = Objects.requireNonNull(clock, "clock");
     this.approvalTimeout = Objects.requireNonNull(approvalTimeout, "approvalTimeout");
     this.ids = Objects.requireNonNull(ids, "ids");
+    this.ledger = Objects.requireNonNull(ledger, "ledger");
     if (approvalTimeout.isZero() || approvalTimeout.isNegative()) {
       throw new IllegalArgumentException("审批有效期必须大于零");
     }
@@ -133,13 +153,71 @@ final class SideEffectBatchCoordinator {
             currentRisk,
             clock.instant());
       }
-      ToolResult result = tools.execute(item.call(), cancellation);
+      ToolResult result =
+          currentRisk == ToolRisk.READ_ONLY
+              ? tools.execute(item.call(), cancellation)
+              : executeSideEffect(requests.get(index), item.call(), cancellation);
       results.add(result);
       if (currentRisk != ToolRisk.READ_ONLY && result.status() != ToolResultStatus.SUCCESS) {
         stop = true;
       }
     }
     return List.copyOf(results);
+  }
+
+  private ToolResult executeSideEffect(
+      ApprovalRequest request, ToolCall call, TurnCancellation cancellation) {
+    SideEffectIdentity identity = SideEffectIdentity.from(request);
+    SideEffectLedger.Reservation reservation;
+    try {
+      reservation = ledger.reserve(identity, request);
+    } catch (SideEffectStateUnknownException exception) {
+      throw exception;
+    } catch (RuntimeException exception) {
+      throw new ApprovalUnavailableException();
+    }
+    if (!reservation.acquired()) {
+      return replay(reservation.entry());
+    }
+    try {
+      ledger.markRunning(identity);
+    } catch (RuntimeException exception) {
+      throw new ApprovalUnavailableException();
+    }
+
+    ToolResult result;
+    try {
+      result = tools.execute(call, cancellation);
+    } catch (RuntimeException exception) {
+      recordUnknown(identity, "SIDE_EFFECT_INVOCATION_UNCERTAIN");
+      throw new SideEffectStateUnknownException();
+    }
+    if (result.status() != ToolResultStatus.SUCCESS) {
+      recordUnknown(identity, "SIDE_EFFECT_RESULT_UNCERTAIN");
+      throw new SideEffectStateUnknownException();
+    }
+    try {
+      ledger.markSucceeded(identity, result);
+      return result;
+    } catch (RuntimeException exception) {
+      recordUnknown(identity, "SIDE_EFFECT_SUCCESS_PERSISTENCE_FAILED");
+      throw new SideEffectStateUnknownException();
+    }
+  }
+
+  private static ToolResult replay(SideEffectLedger.Entry entry) {
+    return switch (entry.state()) {
+      case SUCCEEDED, FAILED -> entry.safeResult();
+      case RESERVED, RUNNING, UNKNOWN -> throw new SideEffectStateUnknownException();
+    };
+  }
+
+  private void recordUnknown(SideEffectIdentity identity, String errorCode) {
+    try {
+      ledger.markUnknown(identity, errorCode);
+    } catch (RuntimeException ignored) {
+      // The public outcome remains UNKNOWN even when its durable update also fails.
+    }
   }
 
   private List<ToolResult> executeReadOnly(

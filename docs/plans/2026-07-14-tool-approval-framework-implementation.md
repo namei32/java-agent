@@ -2,7 +2,7 @@
 
 - 状态：已批准
 - 批准日期：2026-07-14
-- 当前执行状态：Task A0 至 A3 已完成；Task A4 至 A9 待实施
+- 当前执行状态：Task A0 至 A4 已完成；Task A5 至 A9 待实施
 - 日期：2026-07-14
 - 阶段：R3.2
 - Contract：[Tool 审批、副作用、幂等与沙箱安全契约](../contracts/tool-approval-side-effect-safety.md)
@@ -162,6 +162,10 @@ RED Case：
 重构要求：把现有 ToolRegistry 预检与执行边界最小化拆开，不复制 Schema Validator 或预算逻辑。
 
 ## Task A4：一次性消费与幂等 Ledger
+
+状态：已完成。
+
+验证证据（2026-07-14）：计划命令先因 `SideEffectLedger`、Identity 与 UNKNOWN 错误缺失编译失败，随后 6 个测试通过；自审补充 Ledger 终态与安全结果配对 RED，最终同一命令仍为 6 个测试全部通过。受控 Latch 证明并发消费只有一个 Invoker；`RESERVED/RUNNING/UNKNOWN` 不重试，成功记录失败转为 `UNKNOWN`，测试内存 Ledger 未进入生产源码。
 
 目标：证明同一批准和同一逻辑操作最多执行一次，并安全处理未知状态。
 
