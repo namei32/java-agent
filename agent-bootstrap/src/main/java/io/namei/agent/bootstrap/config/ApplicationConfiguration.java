@@ -74,10 +74,16 @@ public class ApplicationConfiguration {
   }
 
   @Bean
+  TurnLifecycleObserver turnLifecycleObserver() {
+    return TurnLifecycleObserver.noop();
+  }
+
+  @Bean
   ChatUseCase chatUseCase(
       SessionRepository sessions,
       ChatModelPort model,
       SessionExecutionGate gate,
+      TurnLifecycleObserver lifecycleObserver,
       AgentProperties properties,
       @Value("${spring.ai.openai.chat.model}") String modelName,
       @Value("${agent.compatibility.system-prompt-base64:}") String compatibilityPrompt,
@@ -108,7 +114,7 @@ public class ApplicationConfiguration {
             Clock.systemUTC(),
             tools,
             properties.toolLoop().maxIterations(),
-            TurnLifecycleObserver.noop(),
+            lifecycleObserver,
             toolSettings);
     return new SafeChatUseCase(service, Clock.systemUTC());
   }

@@ -84,7 +84,11 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     }
     List<ToolCallback> callbacks =
         definitions.stream().<ToolCallback>map(SchemaOnlyToolCallback::new).toList();
-    var options = ToolCallingChatOptions.builder().toolCallbacks(callbacks).build();
+    var configuredOptions = chatModel.getOptions();
+    var options =
+        configuredOptions instanceof ToolCallingChatOptions toolOptions
+            ? toolOptions.mutate().toolCallbacks(callbacks).build()
+            : ToolCallingChatOptions.builder().toolCallbacks(callbacks).build();
     return new Prompt(instructions, options);
   }
 

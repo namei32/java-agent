@@ -106,6 +106,9 @@
 - `DISABLED`/`READ_ONLY` 模式、调用预算、纯 JDK Schema 校验、Arguments/Result 边界。
 - 公平并发许可、Virtual Thread 执行、共享 Deadline、超时恢复和 Application 取消协议。
 - Tool Runtime 安全 Golden 覆盖预算、参数、结果、超时、许可等待、取消、模式和 Adapter 字节边界。
+- Spring AI 通过 Provider Options 原运行时类型注入 Tool Callback，真实 HTTP 桩覆盖 Tool Schema、Assistant Tool Call 和 Tool Result 回送。
+- 取消发生在工具任务正文启动前以及 Virtual Thread 启动失败时均能释放并发许可。
+- DeepSeek `deepseek-v4-flash` 真实 Tool Smoke 已覆盖 Tool Call、Java 执行、结果回送、最终文本和 SQLite 提交；部署模式仍保持 `DISABLED`，等待单独启用批准。
 
 后续范围：
 

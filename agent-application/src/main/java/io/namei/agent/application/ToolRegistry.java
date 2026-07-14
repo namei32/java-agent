@@ -22,14 +22,23 @@ final class ToolRegistry {
   private final List<ToolDefinition> definitions;
   private final ToolRuntimeSettings settings;
   private final Semaphore executionPermits;
+  private final ToolTaskStarter taskStarter;
 
   ToolRegistry(List<Tool> tools) {
     this(tools, ToolRuntimeSettings.readOnlyDefaults());
   }
 
   ToolRegistry(List<Tool> tools, ToolRuntimeSettings settings) {
+    this(
+        tools,
+        settings,
+        (toolName, task) -> Thread.ofVirtual().name("namei-tool-" + toolName).start(task));
+  }
+
+  ToolRegistry(List<Tool> tools, ToolRuntimeSettings settings, ToolTaskStarter taskStarter) {
     Objects.requireNonNull(tools, "tools");
     this.settings = Objects.requireNonNull(settings, "settings");
+    this.taskStarter = Objects.requireNonNull(taskStarter, "taskStarter");
     this.executionPermits = new Semaphore(settings.maxConcurrentCalls(), true);
     if (settings.mode() == ToolRuntimeMode.DISABLED) {
       this.tools = Map.of();
@@ -100,16 +109,24 @@ final class ToolRegistry {
       return ToolResult.timeout();
     }
 
-    var task =
-        new FutureTask<ToolResult>(
-            () -> {
-              try {
-                return invoke(tool, call);
-              } finally {
-                executionPermits.release();
-              }
-            });
-    Thread.ofVirtual().name("namei-tool-" + call.name()).start(task);
+    var task = new FutureTask<ToolResult>(() -> invoke(tool, call));
+    Runnable worker =
+        () -> {
+          try {
+            task.run();
+          } finally {
+            executionPermits.release();
+          }
+        };
+    try {
+      taskStarter.start(call.name(), worker);
+    } catch (RuntimeException exception) {
+      executionPermits.release();
+      return ToolResult.error("工具执行失败。");
+    } catch (Error error) {
+      executionPermits.release();
+      throw error;
+    }
     try (var registration = cancellation.onCancellation(() -> task.cancel(true))) {
       long remaining = remainingNanos(startedAt, timeoutNanos);
       if (remaining <= 0) {
@@ -182,5 +199,10 @@ final class ToolRegistry {
 
   private static long remainingNanos(long startedAt, long timeoutNanos) {
     return timeoutNanos - (System.nanoTime() - startedAt);
+  }
+
+  @FunctionalInterface
+  interface ToolTaskStarter {
+    void start(String toolName, Runnable task);
   }
 }

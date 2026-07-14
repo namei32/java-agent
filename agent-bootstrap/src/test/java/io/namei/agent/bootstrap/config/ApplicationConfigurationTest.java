@@ -121,6 +121,7 @@ class ApplicationConfigurationTest {
             configuration.sessionRepository(jdbcRepository),
             model,
             configuration.sessionExecutionGate(properties),
+            configuration.turnLifecycleObserver(),
             properties,
             "test-model",
             "",

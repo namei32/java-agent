@@ -48,7 +48,8 @@ Application 实现纯 JDK Validator。工具注册时递归编译并校验 Schem
 
 - 获取许可和执行共用一个基于 `System.nanoTime()` 的 Deadline。
 - 获得许可后使用 `Thread.ofVirtual()` 启动一个 `FutureTask`。
-- 许可由 Virtual Thread 在 `finally` 中释放。
+- 许可由 Virtual Thread 的外层 Worker 在 `finally` 中释放；即使 Future 在任务正文启动前已取消也不会泄漏。
+- Virtual Thread 启动失败时同步释放许可并返回固定安全错误。
 - 超时取消 Future 并中断执行线程，返回 `TIMEOUT`。
 - 取消 Token 注册当前等待线程或执行线程的中断回调。
 - 不使用 Preview API、`Thread.stop`、自动重试或工具并行。
@@ -90,7 +91,7 @@ Application 实现纯 JDK Validator。工具注册时递归编译并校验 Schem
 
 扩展 Migration Contract Tool Golden，覆盖模式、预算、Schema、Result、超时、并发许可和取消。Compat 测试必须执行生产代码。
 
-阶段门禁：Spotless、默认 Reactor、Failure、Compat、架构、Secret 和 Workspace 检查。真实 DeepSeek Tool Smoke 留作实现合并后的人工发布门禁。
+阶段门禁：Spotless、默认 Reactor、Failure、Compat、架构、Secret 和 Workspace 检查。真实 Provider Tool Smoke 仍是人工发布门禁；2026-07-14 经授权对 DeepSeek `deepseek-v4-flash` 执行的补充 Smoke 已覆盖 Tool Call、Java 执行、结果回送、最终文本和 SQLite 提交并通过，但不自动启用部署。
 
 ## 10. 回退
 

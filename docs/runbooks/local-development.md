@@ -33,7 +33,7 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_API_KEY=replace-me
 OPENAI_MODEL=gpt-4o-mini
 AGENT_TOOL_MAX_ITERATIONS=6
-AGENT_TOOL_MODE=READ_ONLY
+AGENT_TOOL_MODE=DISABLED
 AGENT_TOOL_MAX_CALLS_PER_RESPONSE=8
 AGENT_TOOL_MAX_CALLS_PER_TURN=16
 AGENT_TOOL_TIMEOUT=5s
@@ -65,7 +65,7 @@ DEEPSEEK_API_KEY=replace-me
 AGENT_TOOL_MODE=DISABLED
 ```
 
-当前 DeepSeek 基础文本 Smoke 已通过，但 Function Calling Smoke 尚未通过，因此使用该 Provider 时必须保留 `AGENT_TOOL_MODE=DISABLED`。只有某个 Provider/模型组合完成真实 Tool Call—Java 执行—Tool Result 回送—最终文本的完整 Smoke 后，才能改为 `READ_ONLY`。
+2026-07-14 修复 Spring AI Provider Options 后，DeepSeek `deepseek-v4-flash` 已通过真实 Tool Call—Java 执行—Tool Result 回送—最终文本—SQLite 提交的完整 Smoke。该结果只覆盖这一 Provider/模型组合，不自动授权部署切换；模板和现有部署继续保留 `AGENT_TOOL_MODE=DISABLED`。只有同一组合取得明确部署批准后，才能改为 `READ_ONLY`，其他模型仍须先分别完成 Smoke。
 
 删除或注释 `.env` 中的 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL`；它们是 TOML 活动字段的最高优先级覆盖值，保留模板值会覆盖 DeepSeek 配置。
 
@@ -215,6 +215,8 @@ cd "$(git rev-parse --show-toplevel)"
 cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Preal-model-smoke verify
 ```
+
+测试使用临时 Workspace，并断言普通回答、`current_time` Tool Call、Java 执行、两次模型请求、最终文本以及 SQLite 仅提交最终 `user/assistant`。测试通过只形成 Provider/模型能力证据，不会修改部署的 `AGENT_TOOL_MODE`。
 
 ## 6. 故障排查
 

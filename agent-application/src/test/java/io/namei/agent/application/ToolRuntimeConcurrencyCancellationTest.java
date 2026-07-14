@@ -32,9 +32,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+@Tag("failure")
 class ToolRuntimeConcurrencyCancellationTest {
   @Test
   void timesOutActiveToolInterruptsItAndContinuesModelLoop() throws Exception {
@@ -173,6 +176,56 @@ class ToolRuntimeConcurrencyCancellationTest {
     assertThat(notifications).hasValue(1);
   }
 
+  @Test
+  void releasesPermitWhenCancelledBeforeToolTaskBodyStarts() throws Exception {
+    var source = new TurnCancellationSource();
+    var executions = new AtomicInteger();
+    var starter = new FirstTaskPausedStarter();
+    var registry =
+        new ToolRegistry(
+            List.of(countingTool(executions)), settings(Duration.ofMillis(200), 1), starter);
+
+    try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+      var first =
+          executor.submit(
+              () -> registry.execute(new ToolCall("call-1", "blocking", Map.of()), source.token()));
+      assertThat(starter.firstSubmitted.await(1, SECONDS)).isTrue();
+
+      source.cancel();
+
+      assertThat(first.get(1, SECONDS).status()).isEqualTo(ToolResultStatus.CANCELLED);
+      assertThat(executions).hasValue(0);
+      starter.runFirstTask();
+      assertThat(registry.execute(new ToolCall("call-2", "blocking", Map.of())).status())
+          .isEqualTo(ToolResultStatus.SUCCESS);
+      assertThat(executions).hasValue(1);
+    }
+  }
+
+  @Test
+  void releasesPermitAndReturnsSafeErrorWhenTaskStarterFails() {
+    var starts = new AtomicInteger();
+    ToolRegistry.ToolTaskStarter starter =
+        (toolName, task) -> {
+          if (starts.incrementAndGet() == 1) {
+            throw new IllegalStateException("private thread start failure");
+          }
+          Thread.ofVirtual().name("test-tool-" + toolName).start(task);
+        };
+    var registry =
+        new ToolRegistry(
+            List.of(countingTool(new AtomicInteger())),
+            settings(Duration.ofMillis(200), 1),
+            starter);
+
+    var failed = registry.execute(new ToolCall("call-1", "blocking", Map.of()));
+    var recovered = registry.execute(new ToolCall("call-2", "blocking", Map.of()));
+
+    assertThat(failed.status()).isEqualTo(ToolResultStatus.ERROR);
+    assertThat(failed.content()).isEqualTo("工具执行失败。");
+    assertThat(recovered.status()).isEqualTo(ToolResultStatus.SUCCESS);
+  }
+
   private static ChatService service(
       SessionRepository repository,
       ChatModelPort model,
@@ -300,6 +353,26 @@ class ToolRuntimeConcurrencyCancellationTest {
     @Override
     public void appendTurn(String sessionId, PersistedTurn turn) {
       appended.add(turn);
+    }
+  }
+
+  private static final class FirstTaskPausedStarter implements ToolRegistry.ToolTaskStarter {
+    private final CountDownLatch firstSubmitted = new CountDownLatch(1);
+    private final AtomicReference<Runnable> firstTask = new AtomicReference<>();
+    private final AtomicInteger starts = new AtomicInteger();
+
+    @Override
+    public void start(String toolName, Runnable task) {
+      if (starts.incrementAndGet() == 1) {
+        firstTask.set(task);
+        firstSubmitted.countDown();
+        return;
+      }
+      Thread.ofVirtual().name("test-tool-" + toolName).start(task);
+    }
+
+    private void runFirstTask() {
+      firstTask.get().run();
     }
   }
 }

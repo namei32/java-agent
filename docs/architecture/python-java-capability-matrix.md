@@ -24,7 +24,7 @@
 | 被动轮次编排 | `agent/core/passive_turn.py`、`agent/turns/orchestrator.py` | `ChatService`、`ToolLoop`、`SafeChatUseCase` | 部分 | 请求—模型—只读工具—提交闭环与安全生命周期完成；完整 Python 事件总线未迁移 | 中 |
 | 历史选择 | `agent/policies/history_route.py`、被动支持代码 | `ConversationHistorySelector` | 部分 | 普通 user/assistant 文本投影已有 Golden；缺 Tool、Proactive 与 Context Frame | 中 |
 | Prompt 组装 | `agent/prompting/`、`agent/persona.py` | `PromptAssembler` | 部分 | 系统—历史—当前用户投影已有 Golden；缺 Block、Persona、预算 | 中 |
-| 模型调用 | `agent/provider.py` | `adapter-spring-ai` | 部分 | OpenAI-compatible 非流式文本与 Tool Call 映射完成；缺流式和多 Provider 策略 | 低 |
+| 模型调用 | `agent/provider.py` | `adapter-spring-ai` | 部分 | OpenAI-compatible 非流式文本与 Tool Call 映射完成；Provider Options 运行时类型和模型配置可保留；缺流式和多 Provider 策略 | 低 |
 | 失败语义 | `agent/core/runtime_support.py`、错误上下文 | `ToolLoop`、`SafeChatUseCase`、HTTP 异常映射 | 部分 | 模型、只读工具、迭代上限和提交失败已隔离；需跨渠道与副作用工具错误契约 | 低 |
 | 会话内并发 | Python Chat Lane/队列 | `KeyedSessionExecutionGate`、`TurnCancellation` | 部分 | 单 JVM 同会话串行和 Application 取消协议已完成；缺 HTTP 断连传播与跨进程租约 | 中 |
 | 请求可观察性 | Python diagnostic/strategy trace | `SafeStructuredLogger`、Observed Ports | 部分 | 结构化安全日志完成；缺统一 Trace 与指标后端 | 低 |
@@ -75,7 +75,7 @@
 | Java 单元/集成测试 | 已建立默认、`failure`、`compat` Profile | 继续随能力扩展 |
 | Python SQLite 兼容夹具 | 已覆盖核心 Schema、Python 行与 Java 追加游标 | 增加真实版本样本、未知字段和升级路径 |
 | 跨语言 Golden | 已建立格式、Manifest、生成器、历史、Prompt、SQLite、错误映射、Tool Loop 与 Runtime 安全场景及 CI | 随后增加 Memory 与流式事件 |
-| 真实模型 Smoke | Profile 已有，默认不执行 | 需要人工凭证、费用授权和稳定断言 |
+| 真实模型 Smoke | Profile 已有，默认不执行；DeepSeek `deepseek-v4-flash` Tool Smoke 已于 2026-07-14 通过 | 其他 Provider/模型仍需逐组合授权验证；通过不自动启用部署 |
 | 真实工作区演练 | 未执行 | 只能在备份副本上先做只读差异，再做受控写入 |
 
 ## 当前优先级
