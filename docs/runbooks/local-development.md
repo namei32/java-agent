@@ -40,11 +40,12 @@ AGENT_TOOL_TIMEOUT=5s
 AGENT_TOOL_MAX_CONCURRENT_CALLS=32
 AGENT_TOOL_MAX_ARGUMENT_BYTES=16384
 AGENT_TOOL_MAX_RESULT_CHARACTERS=20000
+AGENT_TOOL_APPROVAL_TIMEOUT=5m
 ```
 
 `OPENAI_BASE_URL` 是 OpenAI-compatible API 根路径。OpenAI 官方地址需要包含 `/v1`。`.env` 已被 Git 忽略，禁止提交真实密钥。
 
-`AGENT_TOOL_MAX_ITERATIONS` 表示一次聊天最多允许多少次模型调用，必须大于零，默认 `6`。其余 `AGENT_TOOL_*` 配置分别限制运行模式、单响应/单轮调用数、等待加执行的共享超时、JVM 并发许可、参数 UTF-8 字节数和结果 Unicode 字符数。整数必须大于零，单轮上限不得小于单响应上限，工具超时必须小于模型超时；非法值会使应用启动失败。
+`AGENT_TOOL_MAX_ITERATIONS` 表示一次聊天最多允许多少次模型调用，必须大于零，默认 `6`。其余 `AGENT_TOOL_*` 配置分别限制运行模式、单响应/单轮调用数、等待加执行的共享超时、JVM 并发许可、参数 UTF-8 字节数、结果 Unicode 字符数和审批请求有效期。整数必须大于零，单轮上限不得小于单响应上限，工具超时必须小于模型超时；审批有效期默认 `5m`，必须大于零且不超过 `15m`。非法值会使应用启动失败。
 
 未显式指定配置文件，且启动目录不存在 `config.toml` 时使用此模式。
 
@@ -170,6 +171,8 @@ curl --fail-with-body \
 
 `READ_ONLY` 模式下生产注册表只有只读 `current_time`。模型可在需要当前 UTC 时间时调用它；工具中间消息不会写入 SQLite，最终仍只保存一组 `user/assistant`。`DISABLED` 模式不注册工具，也不向模型发送 Tool Definition。
 
+`APPROVAL_REQUIRED` 是已经实现的安全框架模式，不是可用的人类审批功能。当前生产装配只有 `DenyAllApprovalPort`，没有 Approval API/UI/Channel、生产 Durable Ledger 或任何 `WRITE`/`EXTERNAL_SIDE_EFFECT` Tool；因此切换该值不会出现审批入口，也不会获得真实副作用能力。模板与现有部署继续保持 `DISABLED`。未来只有在 Approval Channel、Durable Ledger、具体 Tool Capability/Sandbox Contract 和部署批准全部具备后，才会编写相应启用手册。
+
 除 `/actuator/health` 外的 Actuator 端点应返回 `404`。
 
 ## 5. 测试 Profile
@@ -188,6 +191,8 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pfailure verify
 ```
 
+`failure` 独立覆盖审批错配与过期、批准后取消、Ledger 持久化故障、并发一次性消费和 `UNKNOWN` 停机；这些测试使用内存 Fake，不会执行真实外部变更。
+
 Python/Java Golden 与 Schema 固定样本兼容性：
 
 ```bash
@@ -195,7 +200,7 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pcompat verify
 ```
 
-`compat` 直接读取仓库内的 `testdata/golden/`，不会启动 Python、访问模型或读取 `.env`。只有在 Python 基准或已批准 Contract 发生变化时才重新生成夹具：
+`compat` 直接读取仓库内的 `testdata/golden/`，包括 Approval/Side Effect Golden；不会启动 Python、访问模型、执行真实副作用或读取 `.env`。只有在 Python 基准或已批准 Contract 发生变化时才重新生成夹具：
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -254,7 +259,7 @@ TOML 模式先运行 `--agent.config-check`。如果诊断为 `CONFIG_ENV_UNRESO
 
 ### 返回 502
 
-表示提供方拒绝请求、返回服务错误、非法 JSON、缺失响应项、空回答、Tool Call 超过调用预算，或 Tool Loop 在得到最终回答前耗尽迭代次数。使用 `X-Request-Id` 关联安全日志；响应不会返回上游正文、Tool Arguments、Tool Result、具体数量或 Call ID。
+表示提供方拒绝请求、返回服务错误、非法 JSON、缺失响应项、空回答、Tool Call 超过调用预算、Tool Loop 在得到最终回答前耗尽迭代次数、Approval/Ledger 不可用，或副作用执行状态未知。使用 `X-Request-Id` 关联安全日志；响应不会返回上游正文、Tool Arguments、Tool Result、Approval ID、Fingerprint、Actor、幂等键、Ledger 状态、具体数量或 Call ID。当前生产没有真实审批入口；若在 `APPROVAL_REQUIRED` 下遇到该错误，应保持 `DISABLED` 并检查装配，不能通过重试绕过 Fail Closed。
 
 ### 返回 504
 

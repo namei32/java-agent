@@ -3,10 +3,13 @@ package io.namei.agent.bootstrap.config;
 import io.namei.agent.adapter.springai.SpringAiAdapterConfiguration;
 import io.namei.agent.adapter.sqlite.JdbcSessionRepository;
 import io.namei.agent.adapter.sqlite.SqliteSchemaInitializer;
+import io.namei.agent.application.ApprovalPort;
 import io.namei.agent.application.ChatService;
 import io.namei.agent.application.ChatUseCase;
 import io.namei.agent.application.KeyedSessionExecutionGate;
+import io.namei.agent.application.SecureIdGenerator;
 import io.namei.agent.application.SessionExecutionGate;
+import io.namei.agent.application.SideEffectLedger;
 import io.namei.agent.application.ToolRuntimeMode;
 import io.namei.agent.application.ToolRuntimeSettings;
 import io.namei.agent.bootstrap.health.SqliteHealthIndicator;
@@ -79,11 +82,17 @@ public class ApplicationConfiguration {
   }
 
   @Bean
+  ApprovalPort approvalPort() {
+    return new DenyAllApprovalPort(Clock.systemUTC());
+  }
+
+  @Bean
   ChatUseCase chatUseCase(
       SessionRepository sessions,
       ChatModelPort model,
       SessionExecutionGate gate,
       TurnLifecycleObserver lifecycleObserver,
+      ApprovalPort approvalPort,
       AgentProperties properties,
       @Value("${spring.ai.openai.chat.model}") String modelName,
       @Value("${agent.compatibility.system-prompt-base64:}") String compatibilityPrompt,
@@ -91,7 +100,7 @@ public class ApplicationConfiguration {
       throws IOException {
     String prompt = systemPrompt(compatibilityPrompt, systemPrompt);
     List<Tool> tools =
-        properties.tools().mode() == ToolRuntimeMode.READ_ONLY
+        properties.tools().mode() != ToolRuntimeMode.DISABLED
             ? List.of(new CurrentTimeTool(Clock.systemUTC()))
             : List.of();
     var toolSettings =
@@ -115,7 +124,11 @@ public class ApplicationConfiguration {
             tools,
             properties.toolLoop().maxIterations(),
             lifecycleObserver,
-            toolSettings);
+            toolSettings,
+            approvalPort,
+            SideEffectLedger.unavailable(),
+            new SecureIdGenerator(),
+            properties.tools().approvalTimeout());
     return new SafeChatUseCase(service, Clock.systemUTC());
   }
 

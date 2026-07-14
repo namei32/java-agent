@@ -24,7 +24,7 @@
 | R0 | 治理与基线 | 部分完成 | 被动聊天、配置和 Tool Golden 已建立；核心 Tool/Lifecycle Contract 已批准 |
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、五模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
-| R3 | Tool Loop | 部分完成 | 只读 Tool Runtime 安全加固已完成；副作用审批和工具生态待设计 |
+| R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
 | R4 | 上下文与记忆 | 未开始 | Prompt 预算、Markdown 记忆、检索与提交语义 |
 | R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
@@ -95,7 +95,7 @@
 
 ## R3：Tool Loop
 
-状态：R3.1 只读 Tool Runtime 安全加固已完成；R3 的副作用与外部工具范围尚未开始。
+状态：R3.1 只读 Tool Runtime 安全加固与 R3.2 默认拒绝 Framework 均已完成并通过阶段门禁；真实 Approval Channel、Durable Ledger 与具体 Side Effect Tool 尚未实施。
 
 已交付：
 
@@ -109,11 +109,22 @@
 - Spring AI 通过 Provider Options 原运行时类型注入 Tool Callback，真实 HTTP 桩覆盖 Tool Schema、Assistant Tool Call 和 Tool Result 回送。
 - 取消发生在工具任务正文启动前以及 Virtual Thread 启动失败时均能释放并发许可。
 - DeepSeek `deepseek-v4-flash` 真实 Tool Smoke 已覆盖 Tool Call、Java 执行、结果回送、最终文本和 SQLite 提交；部署模式仍保持 `DISABLED`，等待单独启用批准。
+- Approval Request/Decision、不可变参数指纹、整批零执行和风险不可降级协议已实现。
+- Side Effect Ledger Port、一次性审批消费、幂等重放、崩溃 `UNKNOWN` 语义和安全生命周期已接入 Tool Loop。
+- `APPROVAL_REQUIRED` 模式与生产 `DenyAllApprovalPort` 已装配；生产没有副作用 Tool、Approval API、Durable Ledger 或 Fake Bean。
+- Approval Golden 固定 Python 风险/Hook 拒绝投影与 Java 安全差异；关键失败路径已进入 `failure` Profile。
+- R3.2 最终门禁通过：默认 Reactor 151 个测试、`failure` 46 个测试、`compat` 178 个测试，均零失败；Kernel 依赖、Secret、Workspace、生产 Bean、配置与 Schema 审计通过。
+
+R3.2 实现依据：
+
+- [Tool 审批、副作用、幂等与沙箱安全契约](../contracts/tool-approval-side-effect-safety.md)：一次性审批、整批零执行、幂等 Ledger、未知状态和逐工具沙箱门禁。
+- [Tool Approval Framework 设计](../specs/2026-07-14-tool-approval-framework-design.md)：生产 Deny All 的 Application Framework 和测试 Fake。
+- [Tool Approval Framework 实施计划](../plans/2026-07-14-tool-approval-framework-implementation.md)：Task A1 至 A9 已完成；不包含真实 Side Effect Tool。
 
 后续范围：
 
-- 另行设计审批决策、副作用、重试和幂等语义，不引入 Spring AI 类型。
-- 先迁移无副作用工具，再迁移文件系统、Shell、Web 等高风险工具。
+- 分别批准并实现真实 Approval Channel 与生产 Durable Ledger；Framework 本身不等于人类审批产品可用。
+- 为首个具体 Side Effect Tool 单独批准 Capability/Sandbox Contract 后，再考虑受控迁移。
 - 工具调用和最终回答遵循明确的会话提交语义；半完成轮次不得污染历史。
 
 退出门禁：Python Golden 工具轨迹通过；未批准的副作用不会执行；循环上限、超时和工具异常均有故障注入测试。

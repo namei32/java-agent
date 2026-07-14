@@ -9,10 +9,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
 import io.namei.agent.adapter.sqlite.SqliteRepositoryException;
+import io.namei.agent.application.ApprovalUnavailableException;
 import io.namei.agent.application.ChatCommand;
 import io.namei.agent.application.ChatResult;
 import io.namei.agent.application.ChatUseCase;
 import io.namei.agent.application.SessionLockTimeoutException;
+import io.namei.agent.application.SideEffectStateUnknownException;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
 import io.namei.agent.kernel.error.ModelInvocationException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
@@ -24,6 +26,7 @@ import jakarta.servlet.http.HttpServletRequestWrapper;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -176,6 +179,28 @@ class ChatControllerTest {
                 .string(
                     org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("private count"))));
+  }
+
+  @Test
+  @Tag("failure")
+  void mapsApprovalAndUnknownSideEffectFailuresToSafeBadGateway() throws Exception {
+    useCase.failure = new ApprovalUnavailableException();
+    performValidChat()
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.title").value("模型调用失败"))
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("工具审批当前不可用"))));
+
+    useCase.failure = new SideEffectStateUnknownException();
+    performValidChat()
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.title").value("模型调用失败"))
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("副作用执行状态未知"))));
   }
 
   @Test

@@ -1,0 +1,155 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "tools": [
+          {
+            "name": "read_probe",
+            "risk": "read-only"
+          },
+          {
+            "name": "write_probe",
+            "risk": "write"
+          },
+          {
+            "name": "external_probe",
+            "risk": "external-side-effect"
+          }
+        ]
+      },
+      "id": "python-risk-labels",
+      "input": {
+        "risks": [
+          "read-only",
+          "write",
+          "external-side-effect"
+        ]
+      },
+      "source": "python-reference"
+    },
+    {
+      "expected": {
+        "invocations": 0,
+        "status": "denied"
+      },
+      "id": "python-pre-hook-denial",
+      "input": {
+        "decision": "deny",
+        "tool": "write_probe"
+      },
+      "source": "python-reference"
+    },
+    {
+      "expected": {
+        "executions": 1,
+        "outcome": "SUCCESS"
+      },
+      "id": "read-only-without-approval",
+      "input": {
+        "scenario": "READ_ONLY_EXECUTION"
+      },
+      "source": "migration-contract"
+    },
+    {
+      "expected": {
+        "executions": 0,
+        "statuses": [
+          "SKIPPED",
+          "DENIED"
+        ]
+      },
+      "id": "mixed-batch-denied",
+      "input": {
+        "scenario": "MIXED_BATCH_DENIAL"
+      },
+      "source": "migration-contract"
+    },
+    {
+      "expected": {
+        "executions": 1,
+        "ledgerState": "SUCCEEDED",
+        "outcome": "SUCCESS",
+        "trace": [
+          "TOOL_CALL_STARTED",
+          "APPROVAL_REQUESTED",
+          "APPROVAL_RESOLVED:APPROVED",
+          "SIDE_EFFECT_STARTED",
+          "SIDE_EFFECT_COMPLETED:SUCCESS",
+          "TOOL_CALL_COMPLETED:SUCCESS"
+        ]
+      },
+      "id": "approved-once-with-lifecycle",
+      "input": {
+        "scenario": "APPROVED_EXECUTION"
+      },
+      "source": "migration-contract"
+    },
+    {
+      "expected": {
+        "executions": 0,
+        "outcome": "APPROVAL_UNAVAILABLE"
+      },
+      "id": "approval-binding-change-rejected",
+      "input": {
+        "scenario": "STALE_APPROVAL"
+      },
+      "source": "migration-contract"
+    },
+    {
+      "expected": {
+        "executions": 1,
+        "ledgerState": "SUCCEEDED",
+        "outcome": "SUCCESS"
+      },
+      "id": "idempotent-replay",
+      "input": {
+        "scenario": "IDEMPOTENT_REPLAY"
+      },
+      "source": "migration-contract"
+    },
+    {
+      "expected": {
+        "executions": 0,
+        "outcome": "SIDE_EFFECT_STATE_UNKNOWN"
+      },
+      "id": "unknown-state-stops",
+      "input": {
+        "scenario": "UNKNOWN_REPLAY"
+      },
+      "source": "migration-contract"
+    },
+    {
+      "expected": {
+        "approvalRequired": 2,
+        "disabled": 0,
+        "readOnly": 1
+      },
+      "id": "mode-definition-visibility",
+      "input": {
+        "scenario": "MODE_VISIBILITY"
+      },
+      "source": "migration-contract"
+    }
+  ],
+  "formatVersion": 1,
+  "normalization": [
+    {
+      "field": "cases[].expected",
+      "rule": "synthetic-identifiers-and-stable-statuses-only"
+    }
+  ],
+  "pythonEvidence": {
+    "callables": [
+      "agent.tools.registry.ToolRegistry.register",
+      "agent.tools.registry.ToolRegistry.get_documents",
+      "agent.tool_hooks.executor.ToolExecutor.execute"
+    ],
+    "paths": [
+      "agent/tools/registry.py",
+      "agent/tool_hooks/executor.py"
+    ],
+    "projection": "Python 真实生成风险标签与 pre_tool_use 拒绝投影；审批指纹、一次性消费、Ledger 和安全生命周期为批准的 Java migration-contract"
+  },
+  "source": "migration-contract",
+  "suite": "tool-approval-side-effects"
+}

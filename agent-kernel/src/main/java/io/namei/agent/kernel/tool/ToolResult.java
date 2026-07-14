@@ -25,6 +25,18 @@ public record ToolResult(ToolResultStatus status, String content) {
   }
 
   public static ToolResult cancelled() {
-    return new ToolResult(ToolResultStatus.CANCELLED, "工具执行已取消。");
+    return new ToolResult(ToolResultStatus.CANCELLED, "工具调用已取消。");
+  }
+
+  public static ToolResult denied() {
+    return new ToolResult(ToolResultStatus.DENIED, "工具调用未获批准。");
+  }
+
+  public static ToolResult approvalExpired() {
+    return new ToolResult(ToolResultStatus.DENIED, "工具审批已过期。");
+  }
+
+  public static ToolResult skipped() {
+    return new ToolResult(ToolResultStatus.SKIPPED, "工具调用已跳过。");
   }
 }
