@@ -15,6 +15,8 @@ import io.namei.agent.kernel.tool.ToolResultStatus;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.time.Clock;
+import java.time.Duration;
 
 final class ToolLoop {
   private final ChatModelPort model;
@@ -22,6 +24,7 @@ final class ToolLoop {
   private final LifecyclePublisher lifecycle;
   private final int maxIterations;
   private final ToolRuntimeSettings settings;
+  private final SideEffectBatchCoordinator coordinator;
 
   ToolLoop(
       ChatModelPort model, ToolRegistry tools, LifecyclePublisher lifecycle, int maxIterations) {
@@ -34,6 +37,30 @@ final class ToolLoop {
       LifecyclePublisher lifecycle,
       int maxIterations,
       ToolRuntimeSettings settings) {
+    this(
+        model,
+        tools,
+        lifecycle,
+        maxIterations,
+        settings,
+        new SideEffectBatchCoordinator(
+            tools,
+            request -> null,
+            ToolExecutionPolicy.registeredRisk(),
+            Clock.systemUTC(),
+            Duration.ofMinutes(5),
+            new SecureIdGenerator(),
+            SideEffectLedger.unavailable(),
+            lifecycle));
+  }
+
+  ToolLoop(
+      ChatModelPort model,
+      ToolRegistry tools,
+      LifecyclePublisher lifecycle,
+      int maxIterations,
+      ToolRuntimeSettings settings,
+      SideEffectBatchCoordinator coordinator) {
     this.model = Objects.requireNonNull(model, "model");
     this.tools = Objects.requireNonNull(tools, "tools");
     this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle");
@@ -42,6 +69,7 @@ final class ToolLoop {
     }
     this.maxIterations = maxIterations;
     this.settings = Objects.requireNonNull(settings, "settings");
+    this.coordinator = Objects.requireNonNull(coordinator, "coordinator");
   }
 
   String complete(List<? extends ModelMessage> initialMessages) {
@@ -49,7 +77,19 @@ final class ToolLoop {
   }
 
   String complete(List<? extends ModelMessage> initialMessages, TurnCancellation cancellation) {
+    return complete(
+        initialMessages,
+        cancellation,
+        new SideEffectBatchCoordinator.Context(
+            "local-session-binding", new SecureIdGenerator().newTurnId()));
+  }
+
+  String complete(
+      List<? extends ModelMessage> initialMessages,
+      TurnCancellation cancellation,
+      SideEffectBatchCoordinator.Context context) {
     Objects.requireNonNull(cancellation, "cancellation");
+    Objects.requireNonNull(context, "context");
     var messages = new ArrayList<ModelMessage>(initialMessages);
     int totalCalls = 0;
     for (int iteration = 1; iteration <= maxIterations; iteration++) {
@@ -77,19 +117,15 @@ final class ToolLoop {
           || (long) totalCalls + callsInResponse > settings.maxCallsPerTurn()) {
         throw new ToolCallLimitExceededException("Tool Call 超过安全上限");
       }
-      var preflight = tools.preflight(response.toolCalls());
       totalCalls += callsInResponse;
       messages.add(new AssistantToolCallMessage(response.content(), response.toolCalls()));
+      var results = coordinator.execute(context, iteration, response.toolCalls(), cancellation);
       for (int callIndex = 0; callIndex < response.toolCalls().size(); callIndex++) {
-        checkCancellation(cancellation);
         var call = response.toolCalls().get(callIndex);
-        lifecycle.emit(TurnLifecycleEvent.toolStarted(iteration, call.id(), call.name()));
-        var result = preflight.get(callIndex).orElseGet(() -> tools.execute(call, cancellation));
+        var result = results.get(callIndex);
         if (cancellation.isCancellationRequested()) {
           result = ToolResult.cancelled();
         }
-        lifecycle.emit(
-            TurnLifecycleEvent.toolCompleted(iteration, call.id(), call.name(), result.status()));
         if (result.status() == ToolResultStatus.CANCELLED) {
           throw new TurnCancelledException("当前 Turn 已取消");
         }

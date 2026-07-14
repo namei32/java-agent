@@ -1,6 +1,8 @@
 package io.namei.agent.application;
 
-interface IdGenerator {
+public interface IdGenerator {
+  String newTurnId();
+
   String newApprovalId();
 
   String newIdempotencyKey();

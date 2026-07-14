@@ -2,7 +2,7 @@
 
 - 状态：已批准
 - 批准日期：2026-07-14
-- 当前执行状态：Task A0 至 A4 已完成；Task A5 至 A9 待实施
+- 当前执行状态：Task A0 至 A5 已完成；Task A6 至 A9 待实施
 - 日期：2026-07-14
 - 阶段：R3.2
 - Contract：[Tool 审批、副作用、幂等与沙箱安全契约](../contracts/tool-approval-side-effect-safety.md)
@@ -197,6 +197,10 @@ RED Case：
 并发测试使用可控 Barrier/Latch，不使用任意 `sleep`。内存 Ledger 不得成为生产 Bean。
 
 ## Task A5：生命周期、取消与提交语义
+
+状态：已完成。
+
+验证证据（2026-07-14）：计划命令先因 ChatService 审批运行时构造边界与 Turn ID 缺失编译失败，随后 `ToolApprovalLifecycleTest`、`SideEffectTurnCommitTest` 共 6 个测试全部通过。批准路径事件顺序固定；拒绝可继续模型并提交；取消、`UNKNOWN`、后续模型失败与 Conversation 提交失败均不提交当前轮次，已成功 Ledger 记录保留。
 
 目标：把 Approval、Side Effect 和 Conversation 提交边界接入现有 Tool Loop。
 

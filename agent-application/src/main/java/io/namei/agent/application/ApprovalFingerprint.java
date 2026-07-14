@@ -24,6 +24,11 @@ final class ApprovalFingerprint {
     return sha256(CanonicalArguments.encodeJson(argumentsJson));
   }
 
+  static String sessionBinding(String sessionId) {
+    Objects.requireNonNull(sessionId, "sessionId");
+    return sha256(sessionId.getBytes(StandardCharsets.UTF_8));
+  }
+
   static String calculate(
       String sessionBinding,
       String turnId,

@@ -4,6 +4,7 @@ import io.namei.agent.kernel.error.InvalidModelResponseException;
 import io.namei.agent.kernel.error.ToolCallLimitExceededException;
 import io.namei.agent.kernel.error.ToolLoopLimitExceededException;
 import io.namei.agent.kernel.error.TurnCancelledException;
+import io.namei.agent.kernel.approval.ApprovalDecision;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
 import io.namei.agent.kernel.lifecycle.TurnLifecycleEvent;
@@ -16,6 +17,7 @@ import io.namei.agent.kernel.port.SessionRepository;
 import io.namei.agent.kernel.port.Tool;
 import io.namei.agent.kernel.port.TurnLifecycleObserver;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +32,7 @@ public final class ChatService implements ChatUseCase {
   private final Clock clock;
   private final ToolLoop toolLoop;
   private final LifecyclePublisher lifecycle;
+  private final IdGenerator ids;
 
   public ChatService(
       SessionRepository sessions,
@@ -89,6 +92,40 @@ public final class ChatService implements ChatUseCase {
       int maxIterations,
       TurnLifecycleObserver observer,
       ToolRuntimeSettings toolSettings) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
+        tools,
+        maxIterations,
+        observer,
+        toolSettings,
+        request -> ApprovalDecision.deniedFor(request, clock.instant(), "deny-all"),
+        SideEffectLedger.unavailable(),
+        new SecureIdGenerator(),
+        Duration.ofMinutes(5));
+  }
+
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
+      List<Tool> tools,
+      int maxIterations,
+      TurnLifecycleObserver observer,
+      ToolRuntimeSettings toolSettings,
+      ApprovalPort approvals,
+      SideEffectLedger ledger,
+      IdGenerator ids,
+      Duration approvalTimeout) {
     this.sessions = Objects.requireNonNull(sessions, "sessions");
     this.historySelector = Objects.requireNonNull(historySelector, "historySelector");
     this.limits = Objects.requireNonNull(limits, "limits");
@@ -96,13 +133,26 @@ public final class ChatService implements ChatUseCase {
     this.systemPrompt = Objects.requireNonNull(systemPrompt, "systemPrompt");
     this.clock = Objects.requireNonNull(clock, "clock");
     this.lifecycle = new LifecyclePublisher(observer);
+    this.ids = Objects.requireNonNull(ids, "ids");
+    var registry = new ToolRegistry(List.copyOf(tools), toolSettings);
+    var coordinator =
+        new SideEffectBatchCoordinator(
+            registry,
+            approvals,
+            ToolExecutionPolicy.registeredRisk(),
+            clock,
+            approvalTimeout,
+            ids,
+            ledger,
+            lifecycle);
     this.toolLoop =
         new ToolLoop(
             model,
-            new ToolRegistry(List.copyOf(tools), toolSettings),
+            registry,
             lifecycle,
             maxIterations,
-            toolSettings);
+            toolSettings,
+            coordinator);
   }
 
   @Override
@@ -126,7 +176,10 @@ public final class ChatService implements ChatUseCase {
       messages.addAll(historySelector.select(snapshot.messages(), limits));
       messages.add(user);
       OffsetDateTime userAt = OffsetDateTime.now(clock);
-      var finalContent = toolLoop.complete(messages, cancellation);
+      var context =
+          new SideEffectBatchCoordinator.Context(
+              ApprovalFingerprint.sessionBinding(command.sessionId()), ids.newTurnId());
+      var finalContent = toolLoop.complete(messages, cancellation, context);
       if (finalContent.isBlank()) {
         throw new InvalidModelResponseException("模型返回了空响应");
       }
@@ -155,6 +208,12 @@ public final class ChatService implements ChatUseCase {
     }
     if (failure instanceof InvalidModelResponseException) {
       return "INVALID_MODEL_RESPONSE";
+    }
+    if (failure instanceof ApprovalUnavailableException) {
+      return "APPROVAL_UNAVAILABLE";
+    }
+    if (failure instanceof SideEffectStateUnknownException) {
+      return "SIDE_EFFECT_STATE_UNKNOWN";
     }
     return "TURN_EXECUTION_FAILED";
   }

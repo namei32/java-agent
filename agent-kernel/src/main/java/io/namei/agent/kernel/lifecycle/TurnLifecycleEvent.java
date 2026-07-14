@@ -1,6 +1,7 @@
 package io.namei.agent.kernel.lifecycle;
 
 import io.namei.agent.kernel.approval.ApprovalDecisionStatus;
+import io.namei.agent.kernel.tool.SideEffectExecutionState;
 import io.namei.agent.kernel.tool.ToolResultStatus;
 import java.util.Objects;
 
@@ -94,6 +95,21 @@ public record TurnLifecycleEvent(
     Objects.requireNonNull(status, "status");
     return new TurnLifecycleEvent(
         TurnEventType.SIDE_EFFECT_COMPLETED, iteration, callId, toolName, status.name());
+  }
+
+  public static TurnLifecycleEvent sideEffectCompleted(
+      int iteration, String callId, String toolName, SideEffectExecutionState state) {
+    Objects.requireNonNull(state, "state");
+    String status =
+        switch (state) {
+          case SUCCEEDED -> "SUCCESS";
+          case FAILED -> "ERROR";
+          case UNKNOWN -> "UNKNOWN";
+          case RESERVED, RUNNING ->
+              throw new IllegalArgumentException("未完成状态不能用于 Side Effect 完成事件");
+        };
+    return new TurnLifecycleEvent(
+        TurnEventType.SIDE_EFFECT_COMPLETED, iteration, callId, toolName, status);
   }
 
   public static TurnLifecycleEvent toolCompleted(

@@ -3,6 +3,9 @@ package io.namei.agent.application;
 import io.namei.agent.kernel.approval.ApprovalDecision;
 import io.namei.agent.kernel.approval.ApprovalDecisionStatus;
 import io.namei.agent.kernel.approval.ApprovalRequest;
+import io.namei.agent.kernel.lifecycle.TurnLifecycleEvent;
+import io.namei.agent.kernel.port.TurnLifecycleObserver;
+import io.namei.agent.kernel.tool.SideEffectExecutionState;
 import io.namei.agent.kernel.tool.ToolCall;
 import io.namei.agent.kernel.tool.ToolDefinition;
 import io.namei.agent.kernel.tool.ToolResult;
@@ -23,6 +26,7 @@ final class SideEffectBatchCoordinator {
   private final Duration approvalTimeout;
   private final IdGenerator ids;
   private final SideEffectLedger ledger;
+  private final LifecyclePublisher lifecycle;
   private final ToolApprovalGate gate = new ToolApprovalGate();
 
   SideEffectBatchCoordinator(
@@ -39,7 +43,8 @@ final class SideEffectBatchCoordinator {
         clock,
         approvalTimeout,
         ids,
-        SideEffectLedger.unavailable());
+        SideEffectLedger.unavailable(),
+        new LifecyclePublisher(TurnLifecycleObserver.noop()));
   }
 
   SideEffectBatchCoordinator(
@@ -50,6 +55,26 @@ final class SideEffectBatchCoordinator {
       Duration approvalTimeout,
       IdGenerator ids,
       SideEffectLedger ledger) {
+    this(
+        tools,
+        approvals,
+        policy,
+        clock,
+        approvalTimeout,
+        ids,
+        ledger,
+        new LifecyclePublisher(TurnLifecycleObserver.noop()));
+  }
+
+  SideEffectBatchCoordinator(
+      ToolRegistry tools,
+      ApprovalPort approvals,
+      ToolExecutionPolicy policy,
+      Clock clock,
+      Duration approvalTimeout,
+      IdGenerator ids,
+      SideEffectLedger ledger,
+      LifecyclePublisher lifecycle) {
     this.tools = Objects.requireNonNull(tools, "tools");
     this.approvals = Objects.requireNonNull(approvals, "approvals");
     this.policy = Objects.requireNonNull(policy, "policy");
@@ -57,6 +82,7 @@ final class SideEffectBatchCoordinator {
     this.approvalTimeout = Objects.requireNonNull(approvalTimeout, "approvalTimeout");
     this.ids = Objects.requireNonNull(ids, "ids");
     this.ledger = Objects.requireNonNull(ledger, "ledger");
+    this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle");
     if (approvalTimeout.isZero() || approvalTimeout.isNegative()) {
       throw new IllegalArgumentException("审批有效期必须大于零");
     }
@@ -64,6 +90,11 @@ final class SideEffectBatchCoordinator {
 
   List<ToolResult> execute(
       Context context, List<ToolCall> calls, TurnCancellation cancellation) {
+    return execute(context, 1, calls, cancellation);
+  }
+
+  List<ToolResult> execute(
+      Context context, int iteration, List<ToolCall> calls, TurnCancellation cancellation) {
     Objects.requireNonNull(context, "context");
     Objects.requireNonNull(calls, "calls");
     Objects.requireNonNull(cancellation, "cancellation");
@@ -79,10 +110,17 @@ final class SideEffectBatchCoordinator {
             .toList();
     boolean hasSideEffect = risks.stream().anyMatch(risk -> risk != ToolRisk.READ_ONLY);
     if (!hasSideEffect) {
-      return executeReadOnly(prepared, cancellation);
+      return executeReadOnly(prepared, iteration, cancellation);
     }
+    prepared.forEach(
+        item ->
+            lifecycle.emit(
+                TurnLifecycleEvent.toolStarted(
+                    iteration, item.call().id(), item.call().name())));
     if (prepared.stream().anyMatch(item -> item.preflightFailure() != null)) {
-      return preflightFailures(prepared);
+      var results = preflightFailures(prepared);
+      completeAll(iteration, prepared, results);
+      return results;
     }
 
     Instant issuedAt = clock.instant();
@@ -112,31 +150,44 @@ final class SideEffectBatchCoordinator {
               issuedAt,
               expiresAt);
       requests.add(request);
+      lifecycle.emit(
+          TurnLifecycleEvent.approvalRequested(
+              iteration, item.call().id(), item.call().name()));
       ApprovalDecision decision;
       try {
         decision = approvals.decide(request);
       } catch (RuntimeException exception) {
         throw new ApprovalUnavailableException();
       }
-      decisions.add(gate.resolve(request, decision, clock.instant()));
+      ApprovalDecisionStatus status = gate.resolve(request, decision, clock.instant());
+      decisions.add(status);
+      lifecycle.emit(
+          TurnLifecycleEvent.approvalResolved(
+              iteration, item.call().id(), item.call().name(), status));
     }
 
     if (decisions.stream()
         .filter(Objects::nonNull)
         .anyMatch(status -> status != ApprovalDecisionStatus.APPROVED)) {
-      return deniedBatch(decisions);
+      var results = deniedBatch(decisions);
+      completeAll(iteration, prepared, results);
+      return results;
     }
 
     var results = new ArrayList<ToolResult>(prepared.size());
     boolean stop = false;
     for (int index = 0; index < prepared.size(); index++) {
+      var item = prepared.get(index);
       if (stop || cancellation.isCancellationRequested()) {
-        results.add(
-            cancellation.isCancellationRequested() ? ToolResult.cancelled() : ToolResult.skipped());
+        ToolResult result =
+            cancellation.isCancellationRequested() ? ToolResult.cancelled() : ToolResult.skipped();
+        results.add(result);
+        lifecycle.emit(
+            TurnLifecycleEvent.toolCompleted(
+                iteration, item.call().id(), item.call().name(), result.status()));
         stop = true;
         continue;
       }
-      var item = prepared.get(index);
       ToolRisk currentRisk =
           item.definition() == null
               ? ToolRisk.READ_ONLY
@@ -156,8 +207,11 @@ final class SideEffectBatchCoordinator {
       ToolResult result =
           currentRisk == ToolRisk.READ_ONLY
               ? tools.execute(item.call(), cancellation)
-              : executeSideEffect(requests.get(index), item.call(), cancellation);
+              : executeSideEffect(requests.get(index), item.call(), iteration, cancellation);
       results.add(result);
+      lifecycle.emit(
+          TurnLifecycleEvent.toolCompleted(
+              iteration, item.call().id(), item.call().name(), result.status()));
       if (currentRisk != ToolRisk.READ_ONLY && result.status() != ToolResultStatus.SUCCESS) {
         stop = true;
       }
@@ -166,7 +220,7 @@ final class SideEffectBatchCoordinator {
   }
 
   private ToolResult executeSideEffect(
-      ApprovalRequest request, ToolCall call, TurnCancellation cancellation) {
+      ApprovalRequest request, ToolCall call, int iteration, TurnCancellation cancellation) {
     SideEffectIdentity identity = SideEffectIdentity.from(request);
     SideEffectLedger.Reservation reservation;
     try {
@@ -179,28 +233,50 @@ final class SideEffectBatchCoordinator {
     if (!reservation.acquired()) {
       return replay(reservation.entry());
     }
+    if (cancellation.isCancellationRequested()) {
+      ToolResult cancelled = ToolResult.cancelled();
+      try {
+        ledger.markFailedBeforeStart(identity, cancelled);
+        return cancelled;
+      } catch (RuntimeException exception) {
+        throw new ApprovalUnavailableException();
+      }
+    }
     try {
       ledger.markRunning(identity);
     } catch (RuntimeException exception) {
       throw new ApprovalUnavailableException();
     }
+    lifecycle.emit(TurnLifecycleEvent.sideEffectStarted(iteration, call.id(), call.name()));
 
     ToolResult result;
     try {
       result = tools.execute(call, cancellation);
     } catch (RuntimeException exception) {
       recordUnknown(identity, "SIDE_EFFECT_INVOCATION_UNCERTAIN");
+      lifecycle.emit(
+          TurnLifecycleEvent.sideEffectCompleted(
+              iteration, call.id(), call.name(), SideEffectExecutionState.UNKNOWN));
       throw new SideEffectStateUnknownException();
     }
     if (result.status() != ToolResultStatus.SUCCESS) {
       recordUnknown(identity, "SIDE_EFFECT_RESULT_UNCERTAIN");
+      lifecycle.emit(
+          TurnLifecycleEvent.sideEffectCompleted(
+              iteration, call.id(), call.name(), SideEffectExecutionState.UNKNOWN));
       throw new SideEffectStateUnknownException();
     }
     try {
       ledger.markSucceeded(identity, result);
+      lifecycle.emit(
+          TurnLifecycleEvent.sideEffectCompleted(
+              iteration, call.id(), call.name(), ToolResultStatus.SUCCESS));
       return result;
     } catch (RuntimeException exception) {
       recordUnknown(identity, "SIDE_EFFECT_SUCCESS_PERSISTENCE_FAILED");
+      lifecycle.emit(
+          TurnLifecycleEvent.sideEffectCompleted(
+              iteration, call.id(), call.name(), SideEffectExecutionState.UNKNOWN));
       throw new SideEffectStateUnknownException();
     }
   }
@@ -221,14 +297,23 @@ final class SideEffectBatchCoordinator {
   }
 
   private List<ToolResult> executeReadOnly(
-      List<ToolRegistry.PreparedCall> prepared, TurnCancellation cancellation) {
-    return prepared.stream()
-        .map(
-            item ->
-                item.preflightFailure() == null
-                    ? tools.execute(item.call(), cancellation)
-                    : item.preflightFailure())
-        .toList();
+      List<ToolRegistry.PreparedCall> prepared,
+      int iteration,
+      TurnCancellation cancellation) {
+    var results = new ArrayList<ToolResult>(prepared.size());
+    for (var item : prepared) {
+      lifecycle.emit(
+          TurnLifecycleEvent.toolStarted(iteration, item.call().id(), item.call().name()));
+      ToolResult result =
+          item.preflightFailure() == null
+              ? tools.execute(item.call(), cancellation)
+              : item.preflightFailure();
+      results.add(result);
+      lifecycle.emit(
+          TurnLifecycleEvent.toolCompleted(
+              iteration, item.call().id(), item.call().name(), result.status()));
+    }
+    return List.copyOf(results);
   }
 
   private static List<ToolResult> preflightFailures(List<ToolRegistry.PreparedCall> prepared) {
@@ -254,6 +339,16 @@ final class SideEffectBatchCoordinator {
               };
             })
         .toList();
+  }
+
+  private void completeAll(
+      int iteration, List<ToolRegistry.PreparedCall> prepared, List<ToolResult> results) {
+    for (int index = 0; index < prepared.size(); index++) {
+      var item = prepared.get(index);
+      lifecycle.emit(
+          TurnLifecycleEvent.toolCompleted(
+              iteration, item.call().id(), item.call().name(), results.get(index).status()));
+    }
   }
 
   record Context(String sessionBinding, String turnId) {

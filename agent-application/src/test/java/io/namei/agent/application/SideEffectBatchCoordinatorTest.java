@@ -302,6 +302,11 @@ class SideEffectBatchCoordinatorTest {
 
   private static final class FixedIds implements IdGenerator {
     @Override
+    public String newTurnId() {
+      return "turn-fixed";
+    }
+
+    @Override
     public String newApprovalId() {
       return "approval-fixed";
     }
