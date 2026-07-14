@@ -2,7 +2,7 @@
 
 - 状态：已批准
 - 批准日期：2026-07-14
-- 当前执行状态：Task A0、A1 已完成；Task A2 至 A9 待实施
+- 当前执行状态：Task A0 至 A2 已完成；Task A3 至 A9 待实施
 - 日期：2026-07-14
 - 阶段：R3.2
 - Contract：[Tool 审批、副作用、幂等与沙箱安全契约](../contracts/tool-approval-side-effect-safety.md)
@@ -93,6 +93,10 @@ RED 必须证明：
 自审：Kernel 依赖树仍只有测试依赖；不出现 Spring/Jackson/JDBC/Provider 类型。
 
 ## Task A2：Arguments 规范化与审批指纹
+
+状态：已完成。
+
+验证证据（2026-07-14）：计划命令先因 `ApprovalFingerprint` 缺失编译失败，随后 3 个测试通过；自审发现 JSON `null` 路径不一致，补充一次确定性 RED 后修复，最终同一命令 4 个测试通过。实现使用 UTF-8、Unicode Code Point Key 排序、类型标记与长度前缀，不依赖框架序列化。
 
 目标：实现 `approval-fingerprint-v1`，把批准绑定到不可变操作。
 
