@@ -1,7 +1,7 @@
 # Tool Runtime 安全加固实施计划
 
 - 状态：实施中
-- 当前执行状态：Task S1、S2 已完成，Task S3 进行中
+- 当前执行状态：Task S1 至 S3 已完成，Task S4 进行中
 - 日期：2026-07-14
 - Spec：[Tool Runtime 安全加固设计](../specs/2026-07-14-tool-runtime-safety-design.md)
 - Contract：[Tool Runtime 安全契约](../contracts/tool-runtime-safety.md)
@@ -27,12 +27,14 @@
 
 实施结果：增加单响应和单轮累计预算的整批预检，注册期拒绝不支持的 Schema，运行期把非法参数转换为固定安全 `ERROR`，Result 按 Unicode 码点执行上限检查；预算失败稳定映射为 `TOOL_CALL_LIMIT_EXCEEDED` 和 HTTP `502`。有效 RED 为预算异常类型缺失，GREEN 实际执行 Application 5 Tests、Bootstrap 7 Tests，全部通过。
 
-## Task S3：Arguments Adapter 边界
+## Task S3：Arguments Adapter 边界（已完成）
 
 - 在 JSON 解析前执行 UTF-8 字节上限。
 - 保持 Provider 异常分类和 Schema Carrier 边界。
 
 聚焦验收：Spring AI Adapter 测试一次 RED、一次 GREEN。
+
+实施结果：Spring AI Adapter 在反序列化前按 UTF-8 检查 Provider 原始 Arguments，边界值允许、超限统一转换为不含原文的 `InvalidModelResponseException`；Bootstrap 配置通过 `agent.tools.max-argument-bytes` 注入。有效 RED 为新构造边界缺失，GREEN 实际执行 Adapter 9 Tests，全部通过。
 
 ## Task S4：超时、并发许可与取消
 

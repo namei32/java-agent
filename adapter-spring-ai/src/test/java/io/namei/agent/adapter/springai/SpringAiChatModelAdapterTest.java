@@ -16,6 +16,7 @@ import io.namei.agent.kernel.tool.ToolDefinition;
 import io.namei.agent.kernel.tool.ToolResultStatus;
 import io.namei.agent.kernel.tool.ToolRisk;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -121,6 +122,50 @@ class SpringAiChatModelAdapterTest {
     var response = new SpringAiChatModelAdapter(chatModel).generate(request());
 
     assertThat(response.content()).isEmpty();
+    assertThat(response.toolCalls())
+        .containsExactly(new ToolCall("call-1", "lookup", Map.of("city", "上海")));
+  }
+
+  @Test
+  void rejectsProviderArgumentsThatExceedUtf8ByteLimitBeforeParsing() {
+    String arguments = "{\"city\":\"上海\"}";
+    var output =
+        AssistantMessage.builder()
+            .content("")
+            .toolCalls(
+                List.of(
+                    new AssistantMessage.ToolCall(
+                        "call-1", "function", "lookup", arguments)))
+            .build();
+    var chatModel = new StubChatModel(prompt -> new ChatResponse(List.of(new Generation(output))));
+
+    assertThatThrownBy(
+            () ->
+                new SpringAiChatModelAdapter(
+                        chatModel, arguments.getBytes(StandardCharsets.UTF_8).length - 1)
+                    .generate(request()))
+        .isInstanceOf(InvalidModelResponseException.class)
+        .hasMessage("模型 Tool Call 格式无效")
+        .hasMessageNotContaining(arguments);
+  }
+
+  @Test
+  void acceptsProviderArgumentsAtExactUtf8ByteLimit() {
+    String arguments = "{\"city\":\"上海\"}";
+    var output =
+        AssistantMessage.builder()
+            .content("")
+            .toolCalls(
+                List.of(
+                    new AssistantMessage.ToolCall(
+                        "call-1", "function", "lookup", arguments)))
+            .build();
+    var chatModel = new StubChatModel(prompt -> new ChatResponse(List.of(new Generation(output))));
+
+    var response =
+        new SpringAiChatModelAdapter(chatModel, arguments.getBytes(StandardCharsets.UTF_8).length)
+            .generate(request());
+
     assertThat(response.toolCalls())
         .containsExactly(new ToolCall("call-1", "lookup", Map.of("city", "上海")));
   }
