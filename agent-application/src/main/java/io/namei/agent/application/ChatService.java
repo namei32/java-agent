@@ -3,6 +3,7 @@ package io.namei.agent.application;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
 import io.namei.agent.kernel.error.ToolCallLimitExceededException;
 import io.namei.agent.kernel.error.ToolLoopLimitExceededException;
+import io.namei.agent.kernel.error.TurnCancelledException;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
 import io.namei.agent.kernel.lifecycle.TurnLifecycleEvent;
@@ -106,10 +107,16 @@ public final class ChatService implements ChatUseCase {
 
   @Override
   public ChatResult chat(ChatCommand command) {
-    return gate.execute(command.sessionId(), () -> execute(command));
+    return chat(command, TurnCancellation.none());
   }
 
-  private ChatResult execute(ChatCommand command) {
+  public ChatResult chat(ChatCommand command, TurnCancellation cancellation) {
+    Objects.requireNonNull(command, "command");
+    Objects.requireNonNull(cancellation, "cancellation");
+    return gate.execute(command.sessionId(), () -> execute(command, cancellation));
+  }
+
+  private ChatResult execute(ChatCommand command, TurnCancellation cancellation) {
     lifecycle.emit(TurnLifecycleEvent.turnStarted());
     try {
       var snapshot = sessions.load(command.sessionId());
@@ -119,12 +126,13 @@ public final class ChatService implements ChatUseCase {
       messages.addAll(historySelector.select(snapshot.messages(), limits));
       messages.add(user);
       OffsetDateTime userAt = OffsetDateTime.now(clock);
-      var finalContent = toolLoop.complete(messages);
+      var finalContent = toolLoop.complete(messages, cancellation);
       if (finalContent.isBlank()) {
         throw new InvalidModelResponseException("模型返回了空响应");
       }
       var assistant = new ChatMessage(MessageRole.ASSISTANT, finalContent);
       var turn = new PersistedTurn(user, userAt, assistant, OffsetDateTime.now(clock));
+      checkCancellation(cancellation);
       lifecycle.emit(TurnLifecycleEvent.turnCommitting());
       sessions.appendTurn(command.sessionId(), turn);
       lifecycle.emit(TurnLifecycleEvent.turnCommitted());
@@ -136,6 +144,9 @@ public final class ChatService implements ChatUseCase {
   }
 
   private static String failureStatus(RuntimeException failure) {
+    if (failure instanceof TurnCancelledException) {
+      return "TURN_CANCELLED";
+    }
     if (failure instanceof ToolCallLimitExceededException) {
       return "TOOL_CALL_LIMIT_EXCEEDED";
     }
@@ -146,5 +157,11 @@ public final class ChatService implements ChatUseCase {
       return "INVALID_MODEL_RESPONSE";
     }
     return "TURN_EXECUTION_FAILED";
+  }
+
+  private static void checkCancellation(TurnCancellation cancellation) {
+    if (cancellation.isCancellationRequested()) {
+      throw new TurnCancelledException("当前 Turn 已取消");
+    }
   }
 }

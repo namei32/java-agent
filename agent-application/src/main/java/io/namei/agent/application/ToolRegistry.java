@@ -9,12 +9,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 final class ToolRegistry {
   private final Map<String, Tool> tools;
   private final Map<String, ToolSchemaValidator> validators;
   private final List<ToolDefinition> definitions;
   private final ToolRuntimeSettings settings;
+  private final Semaphore executionPermits;
 
   ToolRegistry(List<Tool> tools) {
     this(tools, ToolRuntimeSettings.readOnlyDefaults());
@@ -23,6 +30,7 @@ final class ToolRegistry {
   ToolRegistry(List<Tool> tools, ToolRuntimeSettings settings) {
     Objects.requireNonNull(tools, "tools");
     this.settings = Objects.requireNonNull(settings, "settings");
+    this.executionPermits = new Semaphore(settings.maxConcurrentCalls(), true);
     if (settings.mode() == ToolRuntimeMode.DISABLED) {
       this.tools = Map.of();
       this.validators = Map.of();
@@ -63,10 +71,91 @@ final class ToolRegistry {
   }
 
   ToolResult execute(ToolCall call) {
+    return execute(call, TurnCancellation.none());
+  }
+
+  ToolResult execute(ToolCall call, TurnCancellation cancellation) {
+    Objects.requireNonNull(call, "call");
+    Objects.requireNonNull(cancellation, "cancellation");
     var tool = tools.get(call.name());
     if (tool == null) {
       return ToolResult.error("工具不可用。");
     }
+    if (cancellation.isCancellationRequested()) {
+      return ToolResult.cancelled();
+    }
+
+    long startedAt = System.nanoTime();
+    long timeoutNanos = timeoutNanos();
+    if (!acquirePermit(cancellation, startedAt, timeoutNanos)) {
+      return cancellation.isCancellationRequested()
+          ? ToolResult.cancelled()
+          : ToolResult.timeout();
+    }
+    if (cancellation.isCancellationRequested()) {
+      Thread.interrupted();
+      executionPermits.release();
+      return ToolResult.cancelled();
+    }
+
+    var task =
+        new FutureTask<ToolResult>(
+            () -> {
+              try {
+                return invoke(tool, call);
+              } finally {
+                executionPermits.release();
+              }
+            });
+    Thread.ofVirtual().name("namei-tool-" + call.name()).start(task);
+    try (var registration = cancellation.onCancellation(() -> task.cancel(true))) {
+      long remaining = remainingNanos(startedAt, timeoutNanos);
+      if (remaining <= 0) {
+        task.cancel(true);
+        return ToolResult.timeout();
+      }
+      var result = task.get(remaining, TimeUnit.NANOSECONDS);
+      return cancellation.isCancellationRequested() ? ToolResult.cancelled() : result;
+    } catch (TimeoutException exception) {
+      task.cancel(true);
+      return ToolResult.timeout();
+    } catch (CancellationException exception) {
+      return cancellation.isCancellationRequested()
+          ? ToolResult.cancelled()
+          : ToolResult.error("工具执行失败。");
+    } catch (InterruptedException exception) {
+      task.cancel(true);
+      if (cancellation.isCancellationRequested()) {
+        return ToolResult.cancelled();
+      }
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("等待工具执行时被中断", exception);
+    } catch (ExecutionException exception) {
+      return ToolResult.error("工具执行失败。");
+    }
+  }
+
+  private boolean acquirePermit(
+      TurnCancellation cancellation, long startedAt, long timeoutNanos) {
+    long remaining = remainingNanos(startedAt, timeoutNanos);
+    if (remaining <= 0) {
+      return false;
+    }
+    Thread waiter = Thread.currentThread();
+    try (var registration = cancellation.onCancellation(waiter::interrupt)) {
+      try {
+        return executionPermits.tryAcquire(remaining, TimeUnit.NANOSECONDS);
+      } catch (InterruptedException exception) {
+        if (cancellation.isCancellationRequested()) {
+          return false;
+        }
+        Thread.currentThread().interrupt();
+        throw new IllegalStateException("等待工具执行许可时被中断", exception);
+      }
+    }
+  }
+
+  private ToolResult invoke(Tool tool, ToolCall call) {
     try {
       var result = tool.execute(call.arguments());
       if (result == null) {
@@ -80,5 +169,17 @@ final class ToolRegistry {
     } catch (RuntimeException ignored) {
       return ToolResult.error("工具执行失败。");
     }
+  }
+
+  private long timeoutNanos() {
+    try {
+      return settings.timeout().toNanos();
+    } catch (ArithmeticException exception) {
+      return Long.MAX_VALUE;
+    }
+  }
+
+  private static long remainingNanos(long startedAt, long timeoutNanos) {
+    return timeoutNanos - (System.nanoTime() - startedAt);
   }
 }

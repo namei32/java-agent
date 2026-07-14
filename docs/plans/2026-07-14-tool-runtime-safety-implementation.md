@@ -1,7 +1,7 @@
 # Tool Runtime 安全加固实施计划
 
 - 状态：实施中
-- 当前执行状态：Task S1 至 S3 已完成，Task S4 进行中
+- 当前执行状态：Task S1 至 S4 已完成，Task S5 进行中
 - 日期：2026-07-14
 - Spec：[Tool Runtime 安全加固设计](../specs/2026-07-14-tool-runtime-safety-design.md)
 - Contract：[Tool Runtime 安全契约](../contracts/tool-runtime-safety.md)
@@ -36,13 +36,15 @@
 
 实施结果：Spring AI Adapter 在反序列化前按 UTF-8 检查 Provider 原始 Arguments，边界值允许、超限统一转换为不含原文的 `InvalidModelResponseException`；Bootstrap 配置通过 `agent.tools.max-argument-bytes` 注入。有效 RED 为新构造边界缺失，GREEN 实际执行 Adapter 9 Tests，全部通过。
 
-## Task S4：超时、并发许可与取消
+## Task S4：超时、并发许可与取消（已完成）
 
 - 实现公平 Semaphore、Virtual Thread FutureTask 和共享 Deadline。
 - 实现 `TurnCancellation`/Source、活动工具中断和提交前检查。
 - 隔离取消回调异常，不使用不稳定 Sleep 测试。
 
 聚焦验收：超时/并发/取消测试一次 RED、一次 GREEN。
+
+实施结果：增加项目自有 `TurnCancellation`/Source 和稳定取消异常；Runtime 使用公平 Semaphore、Virtual Thread 与 FutureTask，使许可等待和执行共享 Deadline，并确保许可只在实际任务退出时释放。模型前后、每个工具前和提交前均检查取消，活动工具产生 `CANCELLED` 后终止且不提交。有效 RED 为取消协议缺失；首轮 GREEN 发现测试夹具会及时响应中断，经改为模拟不响应中断的缺陷工具后，验证了许可不会提前归还；最终 Application 5 Tests 全部通过。
 
 ## Task S5：Tool Golden 与装配
 
