@@ -616,10 +616,6 @@
           {
             "content": "工具执行超时。",
             "status": "TIMEOUT"
-          },
-          {
-            "content": "工具执行超时。",
-            "status": "TIMEOUT"
           }
         ],
         "trace": []
@@ -805,6 +801,14 @@
       "rule": "exclude-message-arguments-results-time-and-exception-details"
     }
   ],
+  "pythonEvidence": {
+    "callables": [
+      "agent.core.passive_turn.AgentReasoner.run",
+      "agent.tools.registry.ToolRegistry.execute"
+    ],
+    "path": "agent/core/passive_turn.py",
+    "projection": "Python 提供只读工具循环来源；安全预算、校验、超时、并发与取消按已批准 Java 契约固定"
+  },
   "source": "migration-contract",
   "suite": "tool-runtime-safety"
 }

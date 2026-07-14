@@ -1,7 +1,8 @@
 # Tool Runtime 安全加固设计
 
-- 状态：已批准
+- 状态：已实现并验证
 - 日期：2026-07-14
+- 验证日期：2026-07-14
 - Contract：[Tool Runtime 安全契约](../contracts/tool-runtime-safety.md)
 - Roadmap：R3.1 Tool Runtime 安全加固
 

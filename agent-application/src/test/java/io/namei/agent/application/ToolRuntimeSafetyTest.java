@@ -89,8 +89,10 @@ class ToolRuntimeSafetyTest {
             "object",
             "properties",
             Map.of(
-                "query", Map.of("type", "string", "enum", List.of("allowed")),
-                "count", Map.of("type", "integer")),
+                "query",
+                Map.of("type", "string", "enum", java.util.Arrays.asList(null, "allowed")),
+                "count",
+                Map.of("type", "integer")),
             "required",
             List.of("query"),
             "additionalProperties",

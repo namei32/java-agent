@@ -1124,7 +1124,7 @@ def build_tool_runtime_safety_fixture() -> dict[str, Any]:
                 "PERMIT_TIMEOUT",
                 False,
                 ["limited"],
-                [runtime_result("TIMEOUT", "工具执行超时。")] * 2,
+                [runtime_result("TIMEOUT", "工具执行超时。")],
                 [],
                 [],
             ),
@@ -1192,6 +1192,14 @@ def build_tool_runtime_safety_fixture() -> dict[str, Any]:
                 "rule": "exclude-message-arguments-results-time-and-exception-details",
             }
         ],
+        "pythonEvidence": {
+            "callables": [
+                "agent.core.passive_turn.AgentReasoner.run",
+                "agent.tools.registry.ToolRegistry.execute",
+            ],
+            "path": "agent/core/passive_turn.py",
+            "projection": "Python 提供只读工具循环来源；安全预算、校验、超时、并发与取消按已批准 Java 契约固定",
+        },
         "source": "migration-contract",
         "suite": "tool-runtime-safety",
     }

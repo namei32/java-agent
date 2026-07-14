@@ -1,7 +1,7 @@
 # Tool Runtime 安全加固实施计划
 
-- 状态：实施中
-- 当前执行状态：Task S1 至 S5 已完成，Task S6 进行中
+- 状态：已完成
+- 当前执行状态：Task S1 至 S6 已完成
 - 日期：2026-07-14
 - Spec：[Tool Runtime 安全加固设计](../specs/2026-07-14-tool-runtime-safety-design.md)
 - Contract：[Tool Runtime 安全契约](../contracts/tool-runtime-safety.md)
@@ -56,10 +56,20 @@
 
 实施结果：新增 `tools/runtime-safety.json` 和 Manifest Hash，9 个场景覆盖单响应/单轮预算、Arguments 字节、Schema、Result、执行超时、许可等待、活动取消和 `DISABLED` 模式；Application 与 Spring AI Adapter 均回放生产代码。使用相邻 Python 仓库 `.venv` 连续生成两次，夹具与 Manifest Hash 均保持一致；有效 RED 为夹具缺失，GREEN 实际执行 Application 1 Test、Adapter 10 Tests，全部通过。环境变量模板、README、运行手册、Roadmap 和能力矩阵已同步。
 
-## Task S6：阶段门禁与提交
+## Task S6：阶段门禁与提交（已完成）
 
 - 更新 Contract 实施状态、Roadmap、能力矩阵和 README。
 - 执行格式、默认、Failure、Compat、架构、Secret 和 Workspace 门禁。
 - 自审并提交短生命周期功能分支。
 
 真实 Provider Smoke 不属于自动门禁；实现完成后需单独授权执行。
+
+实施结果：最终自审修正了 Golden `pythonEvidence` 登记、并发许可夹具的竞态断言、含 `null` 的 Enum 安全比较、累计调用数整数溢出和许可后 Deadline 复检。最后一次完整门禁结果如下：
+
+- `./mvnw --batch-mode --no-transfer-progress spotless:check`：六模块通过。
+- `./mvnw --batch-mode --no-transfer-progress clean verify`：Kernel 18、Application 33、SQLite 19、Spring AI 15、Bootstrap 37 Tests，全部通过。
+- `./mvnw --batch-mode --no-transfer-progress -Pfailure verify`：Application 9、SQLite 13 Tests，全部通过。
+- `./mvnw --batch-mode --no-transfer-progress -Pcompat verify`：Kernel 24、Application 38、SQLite 15、Spring AI 16、Bootstrap 48 Tests，全部通过。
+- Kernel 依赖树仅含测试依赖，没有 Spring/JDBC/Provider SDK；禁止依赖扫描、Secret 扫描和 Workspace 产物扫描均为零命中。
+
+真实 Provider Smoke 未执行。依据安全契约，尚未通过 Function Calling Smoke 的 DeepSeek 部署必须保持 `AGENT_TOOL_MODE=DISABLED`。

@@ -74,7 +74,7 @@ final class ToolLoop {
       lifecycle.emit(TurnLifecycleEvent.modelCompleted(iteration, "TOOL_CALLS"));
       int callsInResponse = response.toolCalls().size();
       if (callsInResponse > settings.maxCallsPerResponse()
-          || totalCalls + callsInResponse > settings.maxCallsPerTurn()) {
+          || (long) totalCalls + callsInResponse > settings.maxCallsPerTurn()) {
         throw new ToolCallLimitExceededException("Tool Call 超过安全上限");
       }
       var preflight = tools.preflight(response.toolCalls());

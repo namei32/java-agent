@@ -95,6 +95,10 @@ final class ToolRegistry {
       executionPermits.release();
       return ToolResult.cancelled();
     }
+    if (remainingNanos(startedAt, timeoutNanos) <= 0) {
+      executionPermits.release();
+      return ToolResult.timeout();
+    }
 
     var task =
         new FutureTask<ToolResult>(

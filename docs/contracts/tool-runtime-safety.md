@@ -5,7 +5,7 @@
 - 批准日期：2026-07-14
 - 前置契约：[核心消息、生命周期与 Tool 契约](core-message-lifecycle-tool.md)
 - 适用阶段：R3.1 Tool Runtime 安全加固
-- 实施状态：代码与兼容夹具已实现，阶段门禁验证中
+- 实施状态：已实现并通过格式、默认、Failure、Compat、架构、Secret 与 Workspace 门禁
 
 ## 1. 目的
 

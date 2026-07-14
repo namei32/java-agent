@@ -93,7 +93,7 @@ final class ToolSchemaValidator {
     }
     Object enumValue = schema.get("enum");
     if (enumValue instanceof List<?> values
-        && values.stream().noneMatch(item -> item.equals(value))) {
+        && values.stream().noneMatch(item -> Objects.equals(item, value))) {
       return false;
     }
     if (!"object".equals(schema.get("type"))) {

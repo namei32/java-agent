@@ -45,7 +45,7 @@
     {
       "id": "tools/runtime-safety",
       "path": "tools/runtime-safety.json",
-      "sha256": "6902bb336e208fe88dccc06f1484d85d6990df2a03cd1ba36ee0b2817281bf87",
+      "sha256": "f0743ed8dcf4d7ef1657c37e1489c6dc4e1bafc381acfebb8a52944d7d2cfd98",
       "source": "migration-contract"
     },
     {

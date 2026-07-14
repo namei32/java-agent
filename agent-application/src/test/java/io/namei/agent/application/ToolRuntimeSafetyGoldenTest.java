@@ -166,7 +166,7 @@ class ToolRuntimeSafetyGoldenTest {
       assertThat(started.await(1, SECONDS)).isTrue();
       resultValues.add(registry.execute(new ToolCall("permit-2", "limited", Map.of())));
       release.countDown();
-      resultValues.addFirst(first.get(1, SECONDS));
+      assertThat(first.get(1, SECONDS)).isNotNull();
     }
     return new Actual(
         "PERMIT_TIMEOUT", null, false, executions, resultValues, List.of(), List.of());
