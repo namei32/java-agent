@@ -24,8 +24,5 @@ public record ToolDefinition(
     if (!"object".equals(inputSchema.get("type"))) {
       throw new IllegalArgumentException("工具 inputSchema 顶层类型必须是 object");
     }
-    if (risk != ToolRisk.READ_ONLY) {
-      throw new IllegalArgumentException("第一阶段只允许 READ_ONLY 工具");
-    }
   }
 }
