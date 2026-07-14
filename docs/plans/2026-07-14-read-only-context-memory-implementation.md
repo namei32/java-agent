@@ -4,7 +4,7 @@
 - 批准日期：2026-07-14
 - 日期：2026-07-14
 - 阶段：R4.1
-- 当前执行状态：Task C0 至 C3 已完成；从 Task C4 开始实施
+- 当前执行状态：Task C0 至 C4 已完成；从 Task C5 开始实施
 - Contract：[只读上下文与记忆兼容契约](../contracts/read-only-context-memory.md)
 - Spec：[只读 Context/Memory 纵向切片设计](../specs/2026-07-14-read-only-context-memory-design.md)
 
@@ -71,7 +71,9 @@ TDD 固定 Mode、Profile、Retrieval Request/Result 的不可变性、空值、
 
 ## Task C4：ContextAssembler 与 Context Frame
 
-状态：待实施。
+状态：已完成。
+
+验证证据（2026-07-14）：聚焦命令先因 `ContextAssembler` 缺失而编译失败，随后实际执行 4 个测试并全部通过。实现固定了 Python 共同投影的 Section 顺序、System 分隔符、Context Frame Marker/警示语、临时消息位置、空段落省略、禁用段落和不可变输出。
 
 RED 固定 System Section 顺序、分隔符、Frame Marker/警示语、历史/Frame/当前 User 顺序、空 Section 省略和输入不可变。实现不得依赖 Spring、NIO 或 Provider SDK。
 
