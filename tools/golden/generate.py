@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import hashlib
 import json
 import os
@@ -29,6 +30,9 @@ REFERENCE_FILES = (
     "agent/tool_runtime.py",
     "agent/tools/base.py",
     "agent/tools/registry.py",
+    "agent/tool_hooks/base.py",
+    "agent/tool_hooks/executor.py",
+    "agent/tool_hooks/types.py",
     "bus/events_lifecycle.py",
 )
 
@@ -48,6 +52,7 @@ def main() -> None:
     tool_messages = build_tool_message_fixture()
     tool_loop = build_tool_loop_fixture()
     tool_runtime_safety = build_tool_runtime_safety_fixture()
+    tool_approval = build_tool_approval_fixture()
 
     write_json(output / "history/session-history.json", history)
     write_json(output / "prompt/message-envelope.json", prompt)
@@ -59,6 +64,7 @@ def main() -> None:
     write_json(output / "tools/message-envelope.json", tool_messages)
     write_json(output / "tools/minimal-loop.json", tool_loop)
     write_json(output / "tools/runtime-safety.json", tool_runtime_safety)
+    write_json(output / "tools/approval-side-effects.json", tool_approval)
 
     errors = output / "errors/http-error-mapping.json"
     if not errors.is_file():
@@ -84,6 +90,11 @@ def main() -> None:
         (
             "tools/runtime-safety",
             "tools/runtime-safety.json",
+            "migration-contract",
+        ),
+        (
+            "tools/approval-side-effects",
+            "tools/approval-side-effects.json",
             "migration-contract",
         ),
         ("errors/http-error-mapping", "errors/http-error-mapping.json", "migration-contract"),
@@ -1269,6 +1280,181 @@ def runtime_tool(
 
 def runtime_result(status: str, content: str) -> dict[str, str]:
     return {"content": content, "status": status}
+
+
+def build_tool_approval_fixture() -> dict[str, Any]:
+    from agent.tool_hooks.base import ToolHook
+    from agent.tool_hooks.executor import ToolExecutor
+    from agent.tool_hooks.types import HookOutcome, ToolExecutionRequest
+    from agent.tools.base import Tool
+    from agent.tools.registry import ToolRegistry
+
+    class GoldenTool(Tool):
+        name = "golden_tool"
+        description = "Golden 审批协议测试工具"
+        parameters = {
+            "additionalProperties": False,
+            "properties": {},
+            "type": "object",
+        }
+
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        async def execute(self, **kwargs: Any) -> str:
+            return "固定结果"
+
+    registry = ToolRegistry()
+    for name, risk in (
+        ("read_probe", "read-only"),
+        ("write_probe", "write"),
+        ("external_probe", "external-side-effect"),
+    ):
+        registry.register(GoldenTool(name), risk=risk)
+    risk_projection = [
+        {"name": document.name, "risk": document.risk}
+        for document in registry.get_documents()
+    ]
+
+    class DenyHook(ToolHook):
+        name = "golden-deny"
+        event = "pre_tool_use"
+
+        def matches(self, ctx: Any) -> bool:
+            return True
+
+        async def run(self, ctx: Any) -> HookOutcome:
+            return HookOutcome(decision="deny", reason="固定拒绝")
+
+    invocations = 0
+
+    async def invoker(name: str, arguments: dict[str, Any]) -> str:
+        nonlocal invocations
+        invocations += 1
+        return "不应执行"
+
+    denied = asyncio.run(
+        ToolExecutor([DenyHook()]).execute(
+            ToolExecutionRequest(
+                call_id="python-call-1",
+                tool_name="write_probe",
+                arguments={},
+                source="passive",
+            ),
+            invoker,
+        )
+    )
+
+    migration_cases = [
+        approval_case(
+            "read-only-without-approval",
+            "READ_ONLY_EXECUTION",
+            {"executions": 1, "outcome": "SUCCESS"},
+        ),
+        approval_case(
+            "mixed-batch-denied",
+            "MIXED_BATCH_DENIAL",
+            {
+                "executions": 0,
+                "statuses": ["SKIPPED", "DENIED"],
+            },
+        ),
+        approval_case(
+            "approved-once-with-lifecycle",
+            "APPROVED_EXECUTION",
+            {
+                "executions": 1,
+                "ledgerState": "SUCCEEDED",
+                "outcome": "SUCCESS",
+                "trace": [
+                    "TOOL_CALL_STARTED",
+                    "APPROVAL_REQUESTED",
+                    "APPROVAL_RESOLVED:APPROVED",
+                    "SIDE_EFFECT_STARTED",
+                    "SIDE_EFFECT_COMPLETED:SUCCESS",
+                    "TOOL_CALL_COMPLETED:SUCCESS",
+                ],
+            },
+        ),
+        approval_case(
+            "approval-binding-change-rejected",
+            "STALE_APPROVAL",
+            {"executions": 0, "outcome": "APPROVAL_UNAVAILABLE"},
+        ),
+        approval_case(
+            "idempotent-replay",
+            "IDEMPOTENT_REPLAY",
+            {
+                "executions": 1,
+                "ledgerState": "SUCCEEDED",
+                "outcome": "SUCCESS",
+            },
+        ),
+        approval_case(
+            "unknown-state-stops",
+            "UNKNOWN_REPLAY",
+            {"executions": 0, "outcome": "SIDE_EFFECT_STATE_UNKNOWN"},
+        ),
+        approval_case(
+            "mode-definition-visibility",
+            "MODE_VISIBILITY",
+            {
+                "approvalRequired": 2,
+                "disabled": 0,
+                "readOnly": 1,
+            },
+        ),
+    ]
+
+    return {
+        "cases": [
+            {
+                "expected": {"tools": risk_projection},
+                "id": "python-risk-labels",
+                "input": {"risks": ["read-only", "write", "external-side-effect"]},
+                "source": "python-reference",
+            },
+            {
+                "expected": {"invocations": invocations, "status": denied.status},
+                "id": "python-pre-hook-denial",
+                "input": {"decision": "deny", "tool": "write_probe"},
+                "source": "python-reference",
+            },
+            *migration_cases,
+        ],
+        "formatVersion": FORMAT_VERSION,
+        "normalization": [
+            {
+                "field": "cases[].expected",
+                "rule": "synthetic-identifiers-and-stable-statuses-only",
+            }
+        ],
+        "pythonEvidence": {
+            "callables": [
+                "agent.tools.registry.ToolRegistry.register",
+                "agent.tools.registry.ToolRegistry.get_documents",
+                "agent.tool_hooks.executor.ToolExecutor.execute",
+            ],
+            "paths": [
+                "agent/tools/registry.py",
+                "agent/tool_hooks/executor.py",
+            ],
+            "projection": "Python 真实生成风险标签与 pre_tool_use 拒绝投影；审批指纹、一次性消费、Ledger 和安全生命周期为批准的 Java migration-contract",
+        },
+        "source": "migration-contract",
+        "suite": "tool-approval-side-effects",
+    }
+
+
+def approval_case(
+    case_id: str, scenario: str, expected: dict[str, Any]
+) -> dict[str, Any]:
+    return {
+        "expected": expected,
+        "id": case_id,
+        "input": {"scenario": scenario},
+        "source": "migration-contract",
+    }
 
 
 def build_sqlite_fixture() -> dict[str, Any]:
