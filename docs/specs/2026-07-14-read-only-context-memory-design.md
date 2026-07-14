@@ -1,6 +1,7 @@
 # 只读 Context/Memory 纵向切片设计
 
-- 状态：待批准
+- 状态：已批准，待实施
+- 批准日期：2026-07-14
 - 日期：2026-07-14
 - 阶段：R4.1
 - Contract：[只读上下文与记忆兼容契约](../contracts/read-only-context-memory.md)

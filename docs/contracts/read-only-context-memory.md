@@ -1,7 +1,8 @@
 # 只读上下文与记忆兼容契约
 
-- 状态：待批准
-- 契约版本：1（草案）
+- 状态：已批准
+- 契约版本：1
+- 批准日期：2026-07-14
 - 日期：2026-07-14
 - 适用阶段：R4.1 只读 Context/Memory 纵向切片
 - Python 参考 Commit：`b65a5430e332c8733b981dfc2dfbc3eb1967e9ef`
@@ -141,7 +142,9 @@ Python Reference Case 必须调用 Python 生产 `PromptBlock`/`PromptAssembler`
 - 默认、`failure`、`compat`、依赖、Secret 和 Workspace 门禁通过。
 - 生产模式和模板继续 `DISABLED`，没有 Memory 写入面。
 
-## 10. 需要批准的决定
+## 10. 批准决定
+
+2026-07-14 已明确批准：
 
 1. R4.1 只迁移 Markdown Profile 和 Retrieval 注入边界，不宣称完成 Python 语义检索。
 2. 接受 Java 基础 Prompt 暂不替换为完整 Python Persona。

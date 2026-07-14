@@ -1,9 +1,10 @@
 # 只读 Context/Memory 实施计划
 
-- 状态：待批准，未实施
+- 状态：实施中
+- 批准日期：2026-07-14
 - 日期：2026-07-14
 - 阶段：R4.1
-- 当前执行状态：Task C0 能力分析已完成；等待 Contract/Spec 批准
+- 当前执行状态：Task C0 已完成；从 Task C1 开始实施
 - Contract：[只读上下文与记忆兼容契约](../contracts/read-only-context-memory.md)
 - Spec：[只读 Context/Memory 纵向切片设计](../specs/2026-07-14-read-only-context-memory-design.md)
 
@@ -25,7 +26,7 @@
 
 ## Task C1：Contract 评审与 Golden 基线
 
-状态：待批准。
+状态：实施中。
 
 - 批准 Contract 的五项决定和默认上限。
 - 扩展 Python Golden 生成器，使用临时 Workspace 和生产 Prompt helper 生成 `context/read-only-context-memory.json`。

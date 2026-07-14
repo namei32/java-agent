@@ -36,7 +36,7 @@
 | --- | --- | --- | --- | --- | --- |
 | SQLite 会话 Schema | Python Session 存储实现、现有 `sessions.db` | `SqliteSchemaInitializer` | 完成 | 核心表兼容；未来字段必须继续增量校验 | 高 |
 | 会话读取/轮次提交 | Python 会话仓储 | `JdbcSessionRepository` | 完成 | MVP 原子提交与恢复完成；需持续维护 Python 夹具 | 高 |
-| Markdown 记忆 | `agent/memory.py`、`_handbook/memory-markdown.md` | R4.1 Contract/Spec 待批准 | 设计中 | 先迁移 `SELF.md`、`MEMORY.md`、`RECENT_CONTEXT.md` 的只读共同投影；写入延后 | 极高 |
+| Markdown 记忆 | `agent/memory.py`、`_handbook/memory-markdown.md` | R4.1 Contract/Spec 已批准 | 实施中 | 先迁移 `SELF.md`、`MEMORY.md`、`RECENT_CONTEXT.md` 的只读共同投影；写入延后 | 极高 |
 | 检索管线 | `agent/retrieval/` | R4.1 先建立 Port/注入闭环 | 设计中 | R4.2 再迁移 `memory2` Query、排序、Scope、Embedding 与预算 | 中 |
 | 上下文预算 | `agent/prompting/budget.py` | 字符/消息上限 | 部分 | 缺 Token 估算、Block 优先级和压缩策略 | 中 |
 | Persona/身份 | `agent/persona.py` | 固定 System Prompt | 部分 | 缺工作区 Persona 加载与兼容规则 | 中 |

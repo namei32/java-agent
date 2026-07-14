@@ -25,7 +25,7 @@
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、五模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
-| R4 | 上下文与记忆 | 设计中 | R4.1 只读 Markdown Profile、Context Frame 与 Retrieval Port Contract 待批准 |
+| R4 | 上下文与记忆 | 实施中 | R4.1 只读 Markdown Profile、Context Frame 与 Retrieval Port Contract 已批准 |
 | R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
@@ -133,7 +133,7 @@ R3.2 实现依据：
 
 前置：Tool Loop 稳定，Prompt 与 Memory Contract 已冻结。
 
-当前状态：已完成 Python Prompt、Context、Markdown Memory 与 Retrieval 能力分析，R4.1 只读共同投影 Contract/Spec/Plan 待批准；尚未编写生产代码。
+当前状态：已完成 Python Prompt、Context、Markdown Memory 与 Retrieval 能力分析，R4.1 只读共同投影 Contract/Spec/Plan 已批准，从 Task C1 开始实施。
 
 范围：
 
