@@ -172,6 +172,10 @@ class ApplicationConfigurationTest {
             configuration.sessionExecutionGate(properties),
             configuration.turnLifecycleObserver(),
             configuration.approvalPort(),
+            configuration.memoryContextService(
+                configuration.memoryProfilePort(properties),
+                configuration.memoryRetrievalPort(),
+                properties),
             properties,
             "test-model",
             "",

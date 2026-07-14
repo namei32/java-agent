@@ -3,10 +3,12 @@ package io.namei.agent.bootstrap.config;
 import io.namei.agent.adapter.springai.SpringAiAdapterConfiguration;
 import io.namei.agent.adapter.sqlite.JdbcSessionRepository;
 import io.namei.agent.adapter.sqlite.SqliteSchemaInitializer;
+import io.namei.agent.adapter.workspace.MarkdownMemoryProfileAdapter;
 import io.namei.agent.application.ApprovalPort;
 import io.namei.agent.application.ChatService;
 import io.namei.agent.application.ChatUseCase;
 import io.namei.agent.application.KeyedSessionExecutionGate;
+import io.namei.agent.application.MemoryContextService;
 import io.namei.agent.application.SecureIdGenerator;
 import io.namei.agent.application.SessionExecutionGate;
 import io.namei.agent.application.SideEffectLedger;
@@ -20,6 +22,8 @@ import io.namei.agent.bootstrap.tool.CurrentTimeTool;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
 import io.namei.agent.kernel.port.ChatModelPort;
+import io.namei.agent.kernel.port.MemoryProfilePort;
+import io.namei.agent.kernel.port.MemoryRetrievalPort;
 import io.namei.agent.kernel.port.SessionRepository;
 import io.namei.agent.kernel.port.Tool;
 import io.namei.agent.kernel.port.TurnLifecycleObserver;
@@ -87,12 +91,40 @@ public class ApplicationConfiguration {
   }
 
   @Bean
+  MemoryProfilePort memoryProfilePort(AgentProperties properties) {
+    return switch (properties.memory().mode()) {
+      case DISABLED -> MemoryProfilePort.empty();
+      case READ_ONLY ->
+          new MarkdownMemoryProfileAdapter(
+              properties.workspace(), properties.memory().maxFileBytes());
+    };
+  }
+
+  @Bean
+  MemoryRetrievalPort memoryRetrievalPort() {
+    return MemoryRetrievalPort.disabled();
+  }
+
+  @Bean
+  MemoryContextService memoryContextService(
+      MemoryProfilePort profiles,
+      MemoryRetrievalPort retrieval,
+      AgentProperties properties) {
+    return new MemoryContextService(
+        profiles,
+        retrieval,
+        properties.memory().maxContextCharacters(),
+        properties.memory().maxRetrievedCharacters());
+  }
+
+  @Bean
   ChatUseCase chatUseCase(
       SessionRepository sessions,
       ChatModelPort model,
       SessionExecutionGate gate,
       TurnLifecycleObserver lifecycleObserver,
       ApprovalPort approvalPort,
+      MemoryContextService memoryContext,
       AgentProperties properties,
       @Value("${spring.ai.openai.chat.model}") String modelName,
       @Value("${agent.compatibility.system-prompt-base64:}") String compatibilityPrompt,
@@ -128,7 +160,8 @@ public class ApplicationConfiguration {
             approvalPort,
             SideEffectLedger.unavailable(),
             new SecureIdGenerator(),
-            properties.tools().approvalTimeout());
+            properties.tools().approvalTimeout(),
+            memoryContext);
     return new SafeChatUseCase(service, Clock.systemUTC());
   }
 

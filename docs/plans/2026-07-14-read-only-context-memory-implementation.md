@@ -4,7 +4,7 @@
 - 批准日期：2026-07-14
 - 日期：2026-07-14
 - 阶段：R4.1
-- 当前执行状态：Task C0 至 C5 已完成；从 Task C6 开始实施
+- 当前执行状态：Task C0 至 C6 已完成；从 Task C7 开始实施
 - Contract：[只读上下文与记忆兼容契约](../contracts/read-only-context-memory.md)
 - Spec：[只读 Context/Memory 纵向切片设计](../specs/2026-07-14-read-only-context-memory-design.md)
 
@@ -105,7 +105,9 @@ RED 固定：完整历史进入 Query、NoOp 返回空、Fake Result 进入 Fram
 
 ## Task C6：Bootstrap 配置与默认关闭装配
 
-状态：待实施。
+状态：已完成。
+
+验证证据（2026-07-14）：聚焦命令先因 Memory 配置、Workspace Adapter 依赖和装配方法缺失而编译失败，随后实际执行 `MemoryConfigurationTest` 4 个测试与 `ApplicationConfigurationTest` 7 个测试，共 11 个并全部通过。默认值和模板保持 `DISABLED`；禁用模式不访问/创建 Memory Workspace；`READ_ONLY` 只装配 Markdown Profile，Retrieval 仍为 NoOp；四项上限均受校验。
 
 RED 固定配置默认值、上限校验、`DISABLED` 零文件访问、`READ_ONLY` 只读 Adapter 装配和 NoOp Retrieval。`.env.example` 继续显式 `DISABLED`。
 

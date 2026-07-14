@@ -1,6 +1,7 @@
 package io.namei.agent.bootstrap.config;
 
 import io.namei.agent.application.ToolRuntimeMode;
+import io.namei.agent.kernel.memory.MemoryRuntimeMode;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
@@ -8,7 +9,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("agent")
 public record AgentProperties(
-    Path workspace, History history, Model model, ToolLoop toolLoop, Tools tools) {
+    Path workspace, History history, Model model, ToolLoop toolLoop, Tools tools, Memory memory) {
+  public AgentProperties(
+      Path workspace, History history, Model model, ToolLoop toolLoop, Tools tools) {
+    this(workspace, history, model, toolLoop, tools, null);
+  }
+
   public AgentProperties {
     if (workspace == null) {
       throw new IllegalArgumentException("agent.workspace 必填");
@@ -17,8 +23,29 @@ public record AgentProperties(
     model = model == null ? new Model(Duration.ofSeconds(60)) : model;
     toolLoop = toolLoop == null ? new ToolLoop(6) : toolLoop;
     tools = tools == null ? Tools.defaults() : tools;
+    memory = memory == null ? Memory.defaults() : memory;
     if (tools.timeout().compareTo(model.timeout()) >= 0) {
       throw new IllegalArgumentException("agent.tools.timeout 必须小于 agent.model.timeout");
+    }
+  }
+
+  public record Memory(
+      MemoryRuntimeMode mode,
+      long maxFileBytes,
+      int maxContextCharacters,
+      int maxRetrievedCharacters) {
+    public Memory {
+      Objects.requireNonNull(mode, "agent.memory.mode");
+      if (maxFileBytes < 1
+          || maxFileBytes > Integer.MAX_VALUE - 8L
+          || maxContextCharacters < 1
+          || maxRetrievedCharacters < 1) {
+        throw new IllegalArgumentException("agent.memory 上限必须在有效范围内");
+      }
+    }
+
+    static Memory defaults() {
+      return new Memory(MemoryRuntimeMode.DISABLED, 65_536, 100_000, 20_000);
     }
   }
 

@@ -26,6 +26,11 @@ agent:
     max-characters: 100000
   model:
     timeout: ${AGENT_MODEL_TIMEOUT:60s}
+  memory:
+    mode: ${AGENT_MEMORY_MODE:DISABLED}
+    max-file-bytes: ${AGENT_MEMORY_MAX_FILE_BYTES:65536}
+    max-context-characters: ${AGENT_MEMORY_MAX_CONTEXT_CHARACTERS:100000}
+    max-retrieved-characters: ${AGENT_MEMORY_MAX_RETRIEVED_CHARACTERS:20000}
   tool-loop:
     max-iterations: ${AGENT_TOOL_MAX_ITERATIONS:6}
   tools:
