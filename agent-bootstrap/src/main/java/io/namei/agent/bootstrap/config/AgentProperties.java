@@ -3,10 +3,12 @@ package io.namei.agent.bootstrap.config;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
+import io.namei.agent.application.ToolRuntimeMode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("agent")
-public record AgentProperties(Path workspace, History history, Model model, ToolLoop toolLoop) {
+public record AgentProperties(
+    Path workspace, History history, Model model, ToolLoop toolLoop, Tools tools) {
   public AgentProperties {
     if (workspace == null) {
       throw new IllegalArgumentException("agent.workspace 必填");
@@ -14,6 +16,10 @@ public record AgentProperties(Path workspace, History history, Model model, Tool
     history = history == null ? new History(40, 100_000) : history;
     model = model == null ? new Model(Duration.ofSeconds(60)) : model;
     toolLoop = toolLoop == null ? new ToolLoop(6) : toolLoop;
+    tools = tools == null ? Tools.defaults() : tools;
+    if (tools.timeout().compareTo(model.timeout()) >= 0) {
+      throw new IllegalArgumentException("agent.tools.timeout 必须小于 agent.model.timeout");
+    }
   }
 
   public record History(int maxMessages, int maxCharacters) {
@@ -38,6 +44,37 @@ public record AgentProperties(Path workspace, History history, Model model, Tool
       if (maxIterations < 1) {
         throw new IllegalArgumentException("agent.tool-loop.max-iterations 必须大于零");
       }
+    }
+  }
+
+  public record Tools(
+      ToolRuntimeMode mode,
+      int maxCallsPerResponse,
+      int maxCallsPerTurn,
+      Duration timeout,
+      int maxConcurrentCalls,
+      int maxArgumentBytes,
+      int maxResultCharacters) {
+    public Tools {
+      Objects.requireNonNull(mode, "agent.tools.mode");
+      Objects.requireNonNull(timeout, "agent.tools.timeout");
+      if (maxCallsPerResponse < 1
+          || maxCallsPerTurn < 1
+          || maxConcurrentCalls < 1
+          || maxArgumentBytes < 1
+          || maxResultCharacters < 1
+          || timeout.isZero()
+          || timeout.isNegative()) {
+        throw new IllegalArgumentException("agent.tools 预算必须大于零");
+      }
+      if (maxCallsPerTurn < maxCallsPerResponse) {
+        throw new IllegalArgumentException("agent.tools.max-calls-per-turn 不能小于单响应上限");
+      }
+    }
+
+    static Tools defaults() {
+      return new Tools(
+          ToolRuntimeMode.READ_ONLY, 8, 16, Duration.ofSeconds(5), 32, 16_384, 20_000);
     }
   }
 }

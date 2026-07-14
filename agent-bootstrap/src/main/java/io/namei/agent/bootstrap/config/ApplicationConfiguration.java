@@ -7,6 +7,8 @@ import io.namei.agent.application.ChatService;
 import io.namei.agent.application.ChatUseCase;
 import io.namei.agent.application.KeyedSessionExecutionGate;
 import io.namei.agent.application.SessionExecutionGate;
+import io.namei.agent.application.ToolRuntimeMode;
+import io.namei.agent.application.ToolRuntimeSettings;
 import io.namei.agent.bootstrap.health.SqliteHealthIndicator;
 import io.namei.agent.bootstrap.observability.ObservedChatModelPort;
 import io.namei.agent.bootstrap.observability.ObservedSessionRepository;
@@ -16,6 +18,7 @@ import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
 import io.namei.agent.kernel.port.ChatModelPort;
 import io.namei.agent.kernel.port.SessionRepository;
+import io.namei.agent.kernel.port.Tool;
 import io.namei.agent.kernel.port.TurnLifecycleObserver;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -81,6 +84,18 @@ public class ApplicationConfiguration {
       @Value("classpath:/prompts/system.md") Resource systemPrompt)
       throws IOException {
     String prompt = systemPrompt(compatibilityPrompt, systemPrompt);
+    List<Tool> tools =
+        properties.tools().mode() == ToolRuntimeMode.READ_ONLY
+            ? List.of(new CurrentTimeTool(Clock.systemUTC()))
+            : List.of();
+    var toolSettings =
+        new ToolRuntimeSettings(
+            properties.tools().mode(),
+            properties.tools().maxCallsPerResponse(),
+            properties.tools().maxCallsPerTurn(),
+            properties.tools().timeout(),
+            properties.tools().maxConcurrentCalls(),
+            properties.tools().maxResultCharacters());
     var service =
         new ChatService(
             sessions,
@@ -91,9 +106,10 @@ public class ApplicationConfiguration {
             gate,
             prompt,
             Clock.systemUTC(),
-            List.of(new CurrentTimeTool(Clock.systemUTC())),
+            tools,
             properties.toolLoop().maxIterations(),
-            TurnLifecycleObserver.noop());
+            TurnLifecycleObserver.noop(),
+            toolSettings);
     return new SafeChatUseCase(service, Clock.systemUTC());
   }
 

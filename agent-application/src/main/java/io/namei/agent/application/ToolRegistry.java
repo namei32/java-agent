@@ -14,7 +14,17 @@ final class ToolRegistry {
   private final List<ToolDefinition> definitions;
 
   ToolRegistry(List<Tool> tools) {
+    this(tools, ToolRuntimeSettings.readOnlyDefaults());
+  }
+
+  ToolRegistry(List<Tool> tools, ToolRuntimeSettings settings) {
     Objects.requireNonNull(tools, "tools");
+    Objects.requireNonNull(settings, "settings");
+    if (settings.mode() == ToolRuntimeMode.DISABLED) {
+      this.tools = Map.of();
+      this.definitions = List.of();
+      return;
+    }
     var registered = new LinkedHashMap<String, Tool>();
     for (Tool tool : tools) {
       Objects.requireNonNull(tool, "tool");

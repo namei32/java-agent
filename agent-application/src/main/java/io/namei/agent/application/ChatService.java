@@ -61,6 +61,32 @@ public final class ChatService implements ChatUseCase {
       List<Tool> tools,
       int maxIterations,
       TurnLifecycleObserver observer) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
+        tools,
+        maxIterations,
+        observer,
+        ToolRuntimeSettings.readOnlyDefaults());
+  }
+
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
+      List<Tool> tools,
+      int maxIterations,
+      TurnLifecycleObserver observer,
+      ToolRuntimeSettings toolSettings) {
     this.sessions = Objects.requireNonNull(sessions, "sessions");
     this.historySelector = Objects.requireNonNull(historySelector, "historySelector");
     this.limits = Objects.requireNonNull(limits, "limits");
@@ -69,7 +95,12 @@ public final class ChatService implements ChatUseCase {
     this.clock = Objects.requireNonNull(clock, "clock");
     this.lifecycle = new LifecyclePublisher(observer);
     this.toolLoop =
-        new ToolLoop(model, new ToolRegistry(List.copyOf(tools)), lifecycle, maxIterations);
+        new ToolLoop(
+            model,
+            new ToolRegistry(List.copyOf(tools), toolSettings),
+            lifecycle,
+            maxIterations,
+            toolSettings);
   }
 
   @Override

@@ -17,9 +17,19 @@ final class ToolLoop {
   private final ToolRegistry tools;
   private final LifecyclePublisher lifecycle;
   private final int maxIterations;
+  private final ToolRuntimeSettings settings;
 
   ToolLoop(
       ChatModelPort model, ToolRegistry tools, LifecyclePublisher lifecycle, int maxIterations) {
+    this(model, tools, lifecycle, maxIterations, ToolRuntimeSettings.readOnlyDefaults());
+  }
+
+  ToolLoop(
+      ChatModelPort model,
+      ToolRegistry tools,
+      LifecyclePublisher lifecycle,
+      int maxIterations,
+      ToolRuntimeSettings settings) {
     this.model = Objects.requireNonNull(model, "model");
     this.tools = Objects.requireNonNull(tools, "tools");
     this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle");
@@ -27,6 +37,7 @@ final class ToolLoop {
       throw new IllegalArgumentException("Tool Loop 最大迭代次数必须大于零");
     }
     this.maxIterations = maxIterations;
+    this.settings = Objects.requireNonNull(settings, "settings");
   }
 
   String complete(List<? extends ModelMessage> initialMessages) {
@@ -41,6 +52,11 @@ final class ToolLoop {
       if (!response.hasToolCalls()) {
         lifecycle.emit(TurnLifecycleEvent.modelCompleted(iteration, "FINAL"));
         return response.content();
+      }
+
+      if (settings.mode() == ToolRuntimeMode.DISABLED) {
+        lifecycle.emit(TurnLifecycleEvent.modelCompleted(iteration, "INVALID"));
+        throw new InvalidModelResponseException("禁用工具时模型返回了 Tool Call");
       }
 
       lifecycle.emit(TurnLifecycleEvent.modelCompleted(iteration, "TOOL_CALLS"));

@@ -1,18 +1,20 @@
 # Tool Runtime 安全加固实施计划
 
 - 状态：实施中
-- 当前执行状态：Task S1 进行中
+- 当前执行状态：Task S1 已完成，Task S2 进行中
 - 日期：2026-07-14
 - Spec：[Tool Runtime 安全加固设计](../specs/2026-07-14-tool-runtime-safety-design.md)
 - Contract：[Tool Runtime 安全契约](../contracts/tool-runtime-safety.md)
 
-## Task S1：治理、模式与配置
+## Task S1：治理、模式与配置（已完成）
 
 - 建立 Spec、Plan 和功能分支。
 - 增加 `ToolRuntimeMode`、`ToolRuntimeSettings` 和 Bootstrap 配置绑定。
 - `DISABLED` 模式不注册工具、不发送 Tool Definition。
 
 聚焦验收：配置与 Application 模式测试一次 RED、一次 GREEN。
+
+实施结果：新增 `ToolRuntimeMode/Settings` 和完整 Bootstrap 默认预算；`DISABLED` 模式不注册或发送 Tool Definition，并拒绝 Provider 意外返回的 Tool Call。有效 RED 为协议类型缺失，GREEN 实际执行 Application 3 Tests、Bootstrap 6 Tests，全部通过。
 
 ## Task S2：批次预算、Schema 与 Result 边界
 

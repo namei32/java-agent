@@ -28,6 +28,14 @@ agent:
     timeout: ${AGENT_MODEL_TIMEOUT:60s}
   tool-loop:
     max-iterations: ${AGENT_TOOL_MAX_ITERATIONS:6}
+  tools:
+    mode: ${AGENT_TOOL_MODE:READ_ONLY}
+    max-calls-per-response: ${AGENT_TOOL_MAX_CALLS_PER_RESPONSE:8}
+    max-calls-per-turn: ${AGENT_TOOL_MAX_CALLS_PER_TURN:16}
+    timeout: ${AGENT_TOOL_TIMEOUT:5s}
+    max-concurrent-calls: ${AGENT_TOOL_MAX_CONCURRENT_CALLS:32}
+    max-argument-bytes: ${AGENT_TOOL_MAX_ARGUMENT_BYTES:16384}
+    max-result-characters: ${AGENT_TOOL_MAX_RESULT_CHARACTERS:20000}
 management:
   endpoints:
     web:
