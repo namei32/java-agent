@@ -13,6 +13,7 @@ import io.namei.agent.application.ApprovalUnavailableException;
 import io.namei.agent.application.ChatCommand;
 import io.namei.agent.application.ChatResult;
 import io.namei.agent.application.ChatUseCase;
+import io.namei.agent.application.MemoryContextUnavailableException;
 import io.namei.agent.application.SessionLockTimeoutException;
 import io.namei.agent.application.SideEffectStateUnknownException;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
@@ -201,6 +202,21 @@ class ChatControllerTest {
             content()
                 .string(
                     org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("副作用执行状态未知"))));
+  }
+
+  @Test
+  @Tag("failure")
+  void mapsMemoryContextFailureToSafeBadGateway() throws Exception {
+    useCase.failure = new MemoryContextUnavailableException();
+
+    performValidChat()
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.title").value("模型调用失败"))
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("记忆上下文当前不可用"))));
   }
 
   @Test

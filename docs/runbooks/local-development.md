@@ -32,6 +32,10 @@ AKASHIC_WORKSPACE=./workspace
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_API_KEY=replace-me
 OPENAI_MODEL=gpt-4o-mini
+AGENT_MEMORY_MODE=DISABLED
+AGENT_MEMORY_MAX_FILE_BYTES=65536
+AGENT_MEMORY_MAX_CONTEXT_CHARACTERS=100000
+AGENT_MEMORY_MAX_RETRIEVED_CHARACTERS=20000
 AGENT_TOOL_MAX_ITERATIONS=6
 AGENT_TOOL_MODE=DISABLED
 AGENT_TOOL_MAX_CALLS_PER_RESPONSE=8
@@ -44,6 +48,8 @@ AGENT_TOOL_APPROVAL_TIMEOUT=5m
 ```
 
 `OPENAI_BASE_URL` 是 OpenAI-compatible API 根路径。OpenAI 官方地址需要包含 `/v1`。`.env` 已被 Git 忽略，禁止提交真实密钥。
+
+`AGENT_MEMORY_MODE` 默认 `DISABLED`；`READ_ONLY` 只读取固定的三个 Markdown Profile 文件，生产 Retrieval 仍为空，不启用记忆写入、Embedding、Optimizer 或记忆 Tool。三个 `AGENT_MEMORY_MAX_*` 值分别限制单文件 UTF-8 字节、Profile Section 总字符和单检索块字符，必须大于零，超过上限稳定失败且不截断。
 
 `AGENT_TOOL_MAX_ITERATIONS` 表示一次聊天最多允许多少次模型调用，必须大于零，默认 `6`。其余 `AGENT_TOOL_*` 配置分别限制运行模式、单响应/单轮调用数、等待加执行的共享超时、JVM 并发许可、参数 UTF-8 字节数、结果 Unicode 字符数和审批请求有效期。整数必须大于零，单轮上限不得小于单响应上限，工具超时必须小于模型超时；审批有效期默认 `5m`，必须大于零且不超过 `15m`。非法值会使应用启动失败。
 
@@ -81,7 +87,9 @@ AGENT_TOOL_MODE=DISABLED
 
 ## 2. 工作区安全
 
-Python 和 Java 禁止同时写同一个 Workspace。真实 Python Workspace 在本里程碑中只允许读取，不允许由 Java 写入。
+Python 和 Java 禁止同时写同一个 Workspace。R4.1 不授权 Java 读取或写入真实 Python Workspace；只读 Profile 验证使用自动化测试临时目录或 Java 专用目录。
+
+注意：`AGENT_MEMORY_MODE=READ_ONLY` 只表示 Markdown Profile Adapter 不写文件，不表示整个应用只读。应用仍会在 `${AKASHIC_WORKSPACE}` 创建或更新 `sessions.db`。不得通过切换该模式规避工作区备份和隔离要求。
 
 第一次写入既有工作区前：
 
@@ -173,6 +181,8 @@ curl --fail-with-body \
 
 `APPROVAL_REQUIRED` 是已经实现的安全框架模式，不是可用的人类审批功能。当前生产装配只有 `DenyAllApprovalPort`，没有 Approval API/UI/Channel、生产 Durable Ledger 或任何 `WRITE`/`EXTERNAL_SIDE_EFFECT` Tool；因此切换该值不会出现审批入口，也不会获得真实副作用能力。模板与现有部署继续保持 `DISABLED`。未来只有在 Approval Channel、Durable Ledger、具体 Tool Capability/Sandbox Contract 和部署批准全部具备后，才会编写相应启用手册。
 
+Memory 默认同样保持 `DISABLED`。`READ_ONLY` 会把 `SELF.md` 和 `MEMORY.md` 加入 System Prompt，把去除 `Recent Turns` 的 `RECENT_CONTEXT.md` 放入历史之后、当前用户消息之前的临时 Context Frame。Frame 与检索结果不会提交到 SQLite。当前没有生产语义检索实现，`HISTORY.md`、`PENDING.md`、Journal 和 `memory2.db` 均不会读取。
+
 除 `/actuator/health` 外的 Actuator 端点应返回 `404`。
 
 ## 5. 测试 Profile
@@ -191,7 +201,7 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pfailure verify
 ```
 
-`failure` 独立覆盖审批错配与过期、批准后取消、Ledger 持久化故障、并发一次性消费和 `UNKNOWN` 停机；这些测试使用内存 Fake，不会执行真实外部变更。
+`failure` 独立覆盖审批错配与过期、批准后取消、Ledger 持久化故障、并发一次性消费、`UNKNOWN` 停机，以及 Profile/检索/预算和安全 HTTP 映射失败；这些测试使用临时目录或内存 Fake，不会执行真实外部变更。
 
 Python/Java Golden 与 Schema 固定样本兼容性：
 
@@ -200,7 +210,7 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pcompat verify
 ```
 
-`compat` 直接读取仓库内的 `testdata/golden/`，包括 Approval/Side Effect Golden；不会启动 Python、访问模型、执行真实副作用或读取 `.env`。只有在 Python 基准或已批准 Contract 发生变化时才重新生成夹具：
+`compat` 直接读取仓库内的 `testdata/golden/`，包括只读 Context/Memory 与 Approval/Side Effect Golden；不会启动 Python、访问模型、执行真实副作用、读取真实 Workspace 或读取 `.env`。只有在 Python 基准或已批准 Contract 发生变化时才重新生成夹具：
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -259,7 +269,7 @@ TOML 模式先运行 `--agent.config-check`。如果诊断为 `CONFIG_ENV_UNRESO
 
 ### 返回 502
 
-表示提供方拒绝请求、返回服务错误、非法 JSON、缺失响应项、空回答、Tool Call 超过调用预算、Tool Loop 在得到最终回答前耗尽迭代次数、Approval/Ledger 不可用，或副作用执行状态未知。使用 `X-Request-Id` 关联安全日志；响应不会返回上游正文、Tool Arguments、Tool Result、Approval ID、Fingerprint、Actor、幂等键、Ledger 状态、具体数量或 Call ID。当前生产没有真实审批入口；若在 `APPROVAL_REQUIRED` 下遇到该错误，应保持 `DISABLED` 并检查装配，不能通过重试绕过 Fail Closed。
+表示提供方拒绝请求、返回服务错误、非法 JSON、缺失响应项、空回答、Tool Call 超过调用预算、Tool Loop 在得到最终回答前耗尽迭代次数、Approval/Ledger 不可用、副作用执行状态未知，或只读 Profile/检索上下文不可用。使用 `X-Request-Id` 关联安全日志；响应不会返回上游正文、Memory 正文或路径、检索查询/结果、Tool Arguments、Tool Result、Approval ID、Fingerprint、Actor、幂等键、Ledger 状态、具体数量或 Call ID。当前生产没有真实审批入口；若在 `APPROVAL_REQUIRED` 下遇到该错误，应保持 `DISABLED` 并检查装配，不能通过重试绕过 Fail Closed。
 
 ### 返回 504
 

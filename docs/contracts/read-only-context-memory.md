@@ -1,6 +1,6 @@
 # 只读上下文与记忆兼容契约
 
-- 状态：已批准
+- 状态：已批准；功能已实现，待阶段门禁
 - 契约版本：1
 - 批准日期：2026-07-14
 - 日期：2026-07-14
@@ -151,3 +151,9 @@ Python Reference Case 必须调用 Python 生产 `PromptBlock`/`PromptAssembler`
 3. 接受符号链接逃逸与超限输入稳定失败这一安全差异。
 4. 接受 Production Retrieval 在 R4.1 为 NoOp，但端到端注入控制流由 Fake/Golden 固定。
 5. Memory 写入、真实工作区演练和 `memory2` 兼容继续延后并重新审批。
+
+## 11. 实现映射
+
+截至 2026-07-14，已实现：Kernel Profile/Retrieval 协议、严格 UTF-8 的固定 Markdown 只读 Adapter、Python 共同投影的 `ContextAssembler`、Retrieval Fake 注入闭环、Tool Loop Frame 保留、Conversation 提交隔离、默认 `DISABLED` 的 Bootstrap 装配和脱敏 `502` 映射。
+
+生产 Retrieval 明确为 NoOp；`memory2.db`、Embedding、语义排序、Memory 写入、Optimizer、记忆 Tool 和真实 Workspace 演练均未实现，也未获本契约授权。最终完成状态以实施计划 C8 门禁证据为准。

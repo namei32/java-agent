@@ -2,6 +2,7 @@ package io.namei.agent.bootstrap.http;
 
 import io.namei.agent.adapter.sqlite.SqliteRepositoryException;
 import io.namei.agent.application.ApprovalUnavailableException;
+import io.namei.agent.application.MemoryContextUnavailableException;
 import io.namei.agent.application.SessionLockTimeoutException;
 import io.namei.agent.application.SideEffectStateUnknownException;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
@@ -36,6 +37,7 @@ public class ApiExceptionHandler {
     InvalidModelResponseException.class,
     ToolCallLimitExceededException.class,
     ToolLoopLimitExceededException.class,
+    MemoryContextUnavailableException.class,
     ApprovalUnavailableException.class,
     SideEffectStateUnknownException.class
   })

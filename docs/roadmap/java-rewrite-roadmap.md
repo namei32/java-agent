@@ -22,10 +22,10 @@
 | 阶段 | 名称 | 状态 | 主要结果 |
 | --- | --- | --- | --- |
 | R0 | 治理与基线 | 部分完成 | 被动聊天、配置和 Tool Golden 已建立；核心 Tool/Lifecycle Contract 已批准 |
-| R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、五模块、CI/质量门禁 |
+| R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、六模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
-| R4 | 上下文与记忆 | 实施中 | R4.1 只读 Markdown Profile、Context Frame 与 Retrieval Port Contract 已批准 |
+| R4 | 上下文与记忆 | 实施中 | R4.1 只读 Profile、Context Frame、Retrieval Port/NoOp 与 Golden 已实现，待阶段门禁 |
 | R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
@@ -63,11 +63,11 @@
 交付物：
 
 - JDK 21、Maven Wrapper、Spring Boot 4.1、Spring AI 2.0。
-- `agent-kernel`、`agent-application`、`adapter-sqlite`、`adapter-spring-ai`、`agent-bootstrap`。
+- `agent-kernel`、`agent-application`、`adapter-workspace`、`adapter-sqlite`、`adapter-spring-ai`、`agent-bootstrap`。
 - Maven Enforcer、Spotless、JaCoCo、ArchUnit、默认/`failure`/`compat` Profile。
 - 独立 Git 仓库、Secret 与 Workspace 排除规则。
 
-退出证据：五模块 Reactor 可构建；核心模块不依赖 Spring、JDBC 或供应商 SDK。
+退出证据：六模块 Reactor 可构建；核心模块不依赖 Spring、JDBC 或供应商 SDK。
 
 ## R2：被动聊天纵向切片
 
@@ -133,14 +133,14 @@ R3.2 实现依据：
 
 前置：Tool Loop 稳定，Prompt 与 Memory Contract 已冻结。
 
-当前状态：已完成 Python Prompt、Context、Markdown Memory 与 Retrieval 能力分析，R4.1 只读共同投影 Contract/Spec/Plan 已批准，从 Task C1 开始实施。
+当前状态：R4.1 的 C1 至 C7 已完成：Python Golden、Kernel Port、只读 Markdown Adapter、ContextAssembler、Retrieval 注入/提交隔离、默认关闭装配和安全 HTTP 映射均已实现；待 C8 阶段门禁与自审。
 
 范围：
 
-- 迁移 Prompt Block、Token/字符预算和历史路由策略。
-- 以只读模式验证 Markdown 记忆解析和检索结果，再开放写入。
-- 迁移 memorize、recall、forget 及提交后记忆更新；保留未知 Markdown 内容。
-- 对齐 Python `agent/memory.py`、`agent/retrieval/`、`agent/prompting/` 的可观察行为。
+- R4.1 已迁移 `SELF.md`、`MEMORY.md`、`RECENT_CONTEXT.md` 的只读共同投影、字符上限和临时 Frame；生产默认关闭且 Retrieval 为 NoOp。
+- R4.2 再迁移 `memory2` 只读 Query、排序、Scope、Embedding、Token/字符预算和历史路由策略。
+- memorize、recall、forget、Consolidation、Optimizer 和提交后写回继续冻结，必须另立数据与副作用 Contract。
+- 真实 Workspace 只读演练不属于 R4.1；取得单独批准后只能先在脱敏备份副本执行。
 
 退出门禁：真实工作区副本上的只读差异可解释；写入前后文件可审计并可回退；检索 Golden 达标。
 

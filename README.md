@@ -1,6 +1,6 @@
 # Namei Agent Java
 
-Namei Agent Java 是 Akashic Agent 的渐进式 Java 重写项目。当前已实现同步 HTTP 被动聊天、会话历史恢复、具备安全预算的只读 Tool Runtime，并把最终 `user/assistant` 对话轮次原子写入 SQLite。启动配置支持原有环境变量模式，以及只读解析 Python `config.toml` 的兼容模式。
+Namei Agent Java 是 Akashic Agent 的渐进式 Java 重写项目。当前已实现同步 HTTP 被动聊天、会话历史恢复、具备安全预算的只读 Tool Runtime，以及默认关闭的只读 Markdown Profile/临时 Context Frame，并把最终 `user/assistant` 对话轮次原子写入 SQLite。启动配置支持原有环境变量模式，以及只读解析 Python `config.toml` 的兼容模式。
 
 项目使用 JDK 21、Maven Wrapper、Spring Boot 4.1、Spring AI 2.0 和 SQLite。默认仅监听 `127.0.0.1`，不提供远程访问认证。当前 Tool Runtime 只注册无副作用的 `current_time`，具有模式、调用预算、Schema 校验、Arguments/Result 上限、超时、并发许可和取消协议。审批指纹、整批门禁、幂等 Ledger Port 和 `UNKNOWN` 安全语义已经实现，但生产只装配 Deny All；尚无可用的人类审批渠道、生产 Durable Ledger、真实副作用工具、MCP、主动消息或流式响应。
 
@@ -8,6 +8,7 @@ Namei Agent Java 是 Akashic Agent 的渐进式 Java 重写项目。当前已实
 
 - `agent-kernel`：领域模型、历史选择和 Port，只依赖 JDK。
 - `agent-application`：聊天用例、失败语义和单进程会话串行控制。
+- `adapter-workspace`：固定 Markdown Profile 的严格 UTF-8 只读适配器。
 - `adapter-sqlite`：显式 SQL、Schema 兼容检查和原子轮次持久化。
 - `adapter-spring-ai`：项目模型类型与 Spring AI 的协议适配。
 - `agent-bootstrap`：Spring Boot 启动、HTTP、配置、健康检查和安全日志。
@@ -40,6 +41,9 @@ java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar
 - `OPENAI_API_KEY`：模型服务密钥。
 - `OPENAI_MODEL`：模型名。
 - `AKASHIC_WORKSPACE`：Java 专用工作区，默认 `./workspace`。
+- `AGENT_MEMORY_MODE`：支持 `DISABLED` 和 `READ_ONLY`，模板与部署默认 `DISABLED`。`READ_ONLY` 只读取 `memory/SELF.md`、`memory/MEMORY.md`、`memory/RECENT_CONTEXT.md`；生产 Retrieval 仍为 NoOp。
+- `AGENT_MEMORY_MAX_FILE_BYTES`：单个 Profile 文件 UTF-8 字节上限，默认 `65536`。
+- `AGENT_MEMORY_MAX_CONTEXT_CHARACTERS`/`AGENT_MEMORY_MAX_RETRIEVED_CHARACTERS`：全部 Profile Section 与单个检索块字符上限，默认 `100000`/`20000`。
 - `AGENT_TOOL_MAX_ITERATIONS`：单次聊天允许的最大模型调用次数，默认 `6`。
 - `AGENT_TOOL_MODE`：支持 `DISABLED`、`READ_ONLY` 和 `APPROVAL_REQUIRED`。模板和部署保持 `DISABLED`；`READ_ONLY` 仍需同一 Provider/模型组合的真实 Tool Smoke 与部署批准。`APPROVAL_REQUIRED` 当前只有生产 Deny All，不提供审批入口或副作用能力。
 - `AGENT_TOOL_MAX_CALLS_PER_RESPONSE`/`AGENT_TOOL_MAX_CALLS_PER_TURN`：单响应与单轮 Tool Call 上限，默认 `8`/`16`。
@@ -107,7 +111,7 @@ curl --fail-with-body http://127.0.0.1:8080/actuator/health
 
 ## 数据安全
 
-默认数据库位于 `${AKASHIC_WORKSPACE}/sessions.db`。首次让 Java 写入任何既有数据前，必须停止 Python 和 Java 进程，并一起备份 `sessions.db`、`sessions.db-wal`、`sessions.db-shm`。本里程碑不得写入真实 Python 工作区。
+默认数据库位于 `${AKASHIC_WORKSPACE}/sessions.db`。`AGENT_MEMORY_MODE=READ_ONLY` 只约束 Markdown Profile，不会把整个 Java 进程变成只读：聊天仍会写入该目录的 SQLite。因此 R4.1 只能使用 Java 专用或测试 Workspace，禁止把 Java 指向真实 Python Workspace。首次让 Java 写入任何既有数据前，必须停止 Python 和 Java 进程，并一起备份 `sessions.db`、`sessions.db-wal`、`sessions.db-shm`。
 
 文档入口：
 
@@ -120,5 +124,6 @@ curl --fail-with-body http://127.0.0.1:8080/actuator/health
 - [Python/Java Golden Test 夹具规范](docs/contracts/golden-test-fixtures.md)
 - [Python/Java 配置兼容契约](docs/contracts/python-java-configuration.md)
 - [Tool 审批、副作用、幂等与沙箱安全契约](docs/contracts/tool-approval-side-effect-safety.md)
+- [只读上下文与记忆兼容契约](docs/contracts/read-only-context-memory.md)
 - [MVP 设计](docs/specs/2026-07-12-passive-chat-mvp-design.md)
 - [轻量 Vibe Coding 工作流](docs/vibe-coding-workflow.md)

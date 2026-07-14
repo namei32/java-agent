@@ -4,7 +4,7 @@
 - 批准日期：2026-07-14
 - 日期：2026-07-14
 - 阶段：R4.1
-- 当前执行状态：Task C0 至 C6 已完成；从 Task C7 开始实施
+- 当前执行状态：Task C0 至 C7 已完成；从 Task C8 开始实施
 - Contract：[只读上下文与记忆兼容契约](../contracts/read-only-context-memory.md)
 - Spec：[只读 Context/Memory 纵向切片设计](../specs/2026-07-14-read-only-context-memory-design.md)
 
@@ -122,7 +122,9 @@ RED 固定配置默认值、上限校验、`DISABLED` 零文件访问、`READ_ON
 
 ## Task C7：Golden 兼容与故障分类
 
-状态：待实施。
+状态：已完成。
+
+验证证据（2026-07-14）：`ReadOnlyContextMemoryGoldenTest` 首先因 Application/Jackson 测试依赖缺失而编译失败，补齐测试依赖后使用生产 `ContextAssembler` 与临时 `MarkdownMemoryProfileAdapter` 实际执行 6 个 Python 参考 Case 并全部通过。Memory HTTP 映射测试先观察到 `500`，加入稳定分类后 `failure` 聚焦测试 2 个通过；错误映射 Golden 扩展到 12 个并全部通过。README、Runbook、Contract、Spec、Roadmap、能力矩阵和文档导航已同步实现边界。
 
 - Java 使用生产 `ContextAssembler` 和临时 Markdown Adapter 验证全部 Golden Case。
 - 路径逃逸、编码、超限、Retrieval 故障和提交隔离进入 `failure` Profile。
@@ -132,6 +134,7 @@ RED 固定配置默认值、上限校验、`DISABLED` 零文件访问、`READ_ON
 
 ```bash
 ./mvnw --batch-mode --no-transfer-progress \
+  -Pcompat \
   -pl agent-application,adapter-workspace -am \
   -Dtest=ReadOnlyContextMemoryGoldenTest \
   -Dsurefire.failIfNoSpecifiedTests=false test

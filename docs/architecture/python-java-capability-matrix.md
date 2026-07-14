@@ -22,8 +22,8 @@
 | 入站 HTTP | Dashboard/Bootstrap API | `ChatController` | 完成 | 当前只支持同步 JSON API | 低 |
 | 消息总线 | `bus/` | 无 | 未开始 | 需定义版本化入站、出站和生命周期事件 | 中 |
 | 被动轮次编排 | `agent/core/passive_turn.py`、`agent/turns/orchestrator.py` | `ChatService`、`ToolLoop`、`SafeChatUseCase` | 部分 | 请求—模型—只读工具—提交闭环与安全生命周期完成；完整 Python 事件总线未迁移 | 中 |
-| 历史选择 | `agent/policies/history_route.py`、被动支持代码 | `ConversationHistorySelector` | 部分 | 普通 user/assistant 文本投影已有 Golden；缺 Tool、Proactive 与 Context Frame | 中 |
-| Prompt 组装 | `agent/prompting/`、`agent/persona.py` | `PromptAssembler` | 部分 | 系统—历史—当前用户投影已有 Golden；缺 Block、Persona、预算 | 中 |
+| 历史选择 | `agent/policies/history_route.py`、被动支持代码 | `ConversationHistorySelector`、`ContextAssembler` | 部分 | 普通 user/assistant 与临时 Context Frame 顺序已有 Golden；缺 Proactive 与完整历史路由 | 中 |
+| Prompt 组装 | `agent/prompting/`、`agent/persona.py` | `ContextAssembler` | 部分 | 基础 Prompt、Self、长期记忆、近期语境和检索块共同投影已有 Golden；缺完整 Block、Persona、Token 预算 | 中 |
 | 模型调用 | `agent/provider.py` | `adapter-spring-ai` | 部分 | OpenAI-compatible 非流式文本与 Tool Call 映射完成；Provider Options 运行时类型和模型配置可保留；缺流式和多 Provider 策略 | 低 |
 | 失败语义 | `agent/core/runtime_support.py`、错误上下文 | `ToolLoop`、`SafeChatUseCase`、HTTP 异常映射 | 部分 | 模型、只读工具、迭代上限和提交失败已隔离；需跨渠道与副作用工具错误契约 | 低 |
 | 会话内并发 | Python Chat Lane/队列 | `KeyedSessionExecutionGate`、`TurnCancellation` | 部分 | 单 JVM 同会话串行和 Application 取消协议已完成；缺 HTTP 断连传播与跨进程租约 | 中 |
@@ -36,8 +36,8 @@
 | --- | --- | --- | --- | --- | --- |
 | SQLite 会话 Schema | Python Session 存储实现、现有 `sessions.db` | `SqliteSchemaInitializer` | 完成 | 核心表兼容；未来字段必须继续增量校验 | 高 |
 | 会话读取/轮次提交 | Python 会话仓储 | `JdbcSessionRepository` | 完成 | MVP 原子提交与恢复完成；需持续维护 Python 夹具 | 高 |
-| Markdown 记忆 | `agent/memory.py`、`_handbook/memory-markdown.md` | R4.1 Contract/Spec 已批准 | 实施中 | 先迁移 `SELF.md`、`MEMORY.md`、`RECENT_CONTEXT.md` 的只读共同投影；写入延后 | 极高 |
-| 检索管线 | `agent/retrieval/` | R4.1 先建立 Port/注入闭环 | 设计中 | R4.2 再迁移 `memory2` Query、排序、Scope、Embedding 与预算 | 中 |
+| Markdown 记忆 | `agent/memory.py`、`core/memory/markdown.py` | `adapter-workspace`、`MemoryContextService` | 部分 | 三个固定 Profile 的严格 UTF-8 只读投影、上限和零写入已实现；真实 Workspace 与任何写回仍冻结 | 极高 |
+| 检索管线 | `agent/retrieval/` | `MemoryRetrievalPort`、`MemoryContextService` | 部分 | 请求/结果/安全 Trace、Fake 注入闭环和生产 NoOp 已实现；R4.2 再迁移 `memory2` Query、排序、Scope、Embedding 与预算 | 中 |
 | 上下文预算 | `agent/prompting/budget.py` | 字符/消息上限 | 部分 | 缺 Token 估算、Block 优先级和压缩策略 | 中 |
 | Persona/身份 | `agent/persona.py` | 固定 System Prompt | 部分 | 缺工作区 Persona 加载与兼容规则 | 中 |
 
@@ -74,14 +74,14 @@
 | --- | --- | --- |
 | Java 单元/集成测试 | 已建立默认、`failure`、`compat` Profile | 继续随能力扩展 |
 | Python SQLite 兼容夹具 | 已覆盖核心 Schema、Python 行与 Java 追加游标 | 增加真实版本样本、未知字段和升级路径 |
-| 跨语言 Golden | 已建立格式、Manifest、生成器、历史、Prompt、SQLite、错误映射、Tool Loop、Runtime 安全与 Approval/Side Effect 场景及 CI | 随后增加 Memory 与流式事件 |
+| 跨语言 Golden | 已建立格式、Manifest、生成器、历史、Prompt、只读 Context/Memory、SQLite、错误映射、Tool Loop、Runtime 安全与 Approval/Side Effect 场景及 CI | 随后增加语义检索、Memory 写回与流式事件 |
 | 真实模型 Smoke | Profile 已有，默认不执行；DeepSeek `deepseek-v4-flash` Tool Smoke 已于 2026-07-14 通过 | 其他 Provider/模型仍需逐组合授权验证；通过不自动启用部署 |
 | 真实工作区演练 | 未执行 | 只能在备份副本上先做只读差异，再做受控写入 |
 
 ## 当前优先级
 
-1. 评审并实施 R4.1 只读 Markdown Profile、Context Frame 与 Retrieval Port 纵向切片。
-2. R4.2 单独迁移 `memory2` 只读查询、排序、Scope、Embedding 与 Context Budget，不提前开放写入。
+1. 完成 R4.1 阶段门禁；生产继续保持 `AGENT_MEMORY_MODE=DISABLED`，不执行真实 Workspace Smoke。
+2. 为 R4.2 单独冻结 `memory2` 只读查询、排序、Scope、Embedding 与 Context Budget Contract，不提前开放写入。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
 5. MCP、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。
