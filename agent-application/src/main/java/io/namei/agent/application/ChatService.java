@@ -33,6 +33,7 @@ public final class ChatService implements ChatUseCase {
   private final ToolLoop toolLoop;
   private final LifecyclePublisher lifecycle;
   private final IdGenerator ids;
+  private final MemoryContextService memoryContext;
 
   public ChatService(
       SessionRepository sessions,
@@ -107,7 +108,39 @@ public final class ChatService implements ChatUseCase {
         request -> ApprovalDecision.deniedFor(request, clock.instant(), "deny-all"),
         SideEffectLedger.unavailable(),
         new SecureIdGenerator(),
-        Duration.ofMinutes(5));
+        Duration.ofMinutes(5),
+        MemoryContextService.disabled());
+  }
+
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
+      List<Tool> tools,
+      int maxIterations,
+      TurnLifecycleObserver observer,
+      MemoryContextService memoryContext) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
+        tools,
+        maxIterations,
+        observer,
+        ToolRuntimeSettings.readOnlyDefaults(),
+        request -> ApprovalDecision.deniedFor(request, clock.instant(), "deny-all"),
+        SideEffectLedger.unavailable(),
+        new SecureIdGenerator(),
+        Duration.ofMinutes(5),
+        memoryContext);
   }
 
   public ChatService(
@@ -126,6 +159,42 @@ public final class ChatService implements ChatUseCase {
       SideEffectLedger ledger,
       IdGenerator ids,
       Duration approvalTimeout) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
+        tools,
+        maxIterations,
+        observer,
+        toolSettings,
+        approvals,
+        ledger,
+        ids,
+        approvalTimeout,
+        MemoryContextService.disabled());
+  }
+
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
+      List<Tool> tools,
+      int maxIterations,
+      TurnLifecycleObserver observer,
+      ToolRuntimeSettings toolSettings,
+      ApprovalPort approvals,
+      SideEffectLedger ledger,
+      IdGenerator ids,
+      Duration approvalTimeout,
+      MemoryContextService memoryContext) {
     this.sessions = Objects.requireNonNull(sessions, "sessions");
     this.historySelector = Objects.requireNonNull(historySelector, "historySelector");
     this.limits = Objects.requireNonNull(limits, "limits");
@@ -134,6 +203,7 @@ public final class ChatService implements ChatUseCase {
     this.clock = Objects.requireNonNull(clock, "clock");
     this.lifecycle = new LifecyclePublisher(observer);
     this.ids = Objects.requireNonNull(ids, "ids");
+    this.memoryContext = Objects.requireNonNull(memoryContext, "memoryContext");
     var registry = new ToolRegistry(List.copyOf(tools), toolSettings);
     var coordinator =
         new SideEffectBatchCoordinator(
@@ -165,14 +235,20 @@ public final class ChatService implements ChatUseCase {
     try {
       var snapshot = sessions.load(command.sessionId());
       var user = new ChatMessage(MessageRole.USER, command.message());
-      var messages = new ArrayList<ModelMessage>();
-      messages.add(new ChatMessage(MessageRole.SYSTEM, systemPrompt));
-      messages.addAll(historySelector.select(snapshot.messages(), limits));
-      messages.add(user);
+      String sessionBinding = ApprovalFingerprint.sessionBinding(command.sessionId());
+      var assembled =
+          memoryContext.assemble(
+              systemPrompt,
+              sessionBinding,
+              snapshot.messages(),
+              historySelector.select(snapshot.messages(), limits),
+              user,
+              clock.instant());
+      var messages = new ArrayList<ModelMessage>(assembled.messages());
       OffsetDateTime userAt = OffsetDateTime.now(clock);
       var context =
           new SideEffectBatchCoordinator.Context(
-              ApprovalFingerprint.sessionBinding(command.sessionId()), ids.newTurnId());
+              sessionBinding, ids.newTurnId());
       var finalContent = toolLoop.complete(messages, cancellation, context);
       if (finalContent.isBlank()) {
         throw new InvalidModelResponseException("模型返回了空响应");
@@ -208,6 +284,9 @@ public final class ChatService implements ChatUseCase {
     }
     if (failure instanceof SideEffectStateUnknownException) {
       return "SIDE_EFFECT_STATE_UNKNOWN";
+    }
+    if (failure instanceof MemoryContextUnavailableException) {
+      return "MEMORY_CONTEXT_UNAVAILABLE";
     }
     return "TURN_EXECUTION_FAILED";
   }

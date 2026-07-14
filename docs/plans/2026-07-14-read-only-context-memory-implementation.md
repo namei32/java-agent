@@ -4,7 +4,7 @@
 - 批准日期：2026-07-14
 - 日期：2026-07-14
 - 阶段：R4.1
-- 当前执行状态：Task C0 至 C4 已完成；从 Task C5 开始实施
+- 当前执行状态：Task C0 至 C5 已完成；从 Task C6 开始实施
 - Contract：[只读上下文与记忆兼容契约](../contracts/read-only-context-memory.md)
 - Spec：[只读 Context/Memory 纵向切片设计](../specs/2026-07-14-read-only-context-memory-design.md)
 
@@ -88,7 +88,9 @@ RED 固定 System Section 顺序、分隔符、Frame Marker/警示语、历史/F
 
 ## Task C5：Retrieval 注入与 ChatService 提交隔离
 
-状态：待实施。
+状态：已完成。
+
+验证证据（2026-07-14）：聚焦命令先因 `MemoryContextService` 与稳定异常缺失而编译失败；实现注入后修正一处测试断言 API 用法，随后实际执行 4 个测试并全部通过。测试证明完整历史进入 Retrieval Request、裁剪历史进入模型、NoOp 结果不创建 Frame、Profile/检索/预算失败时模型与提交均为零、同一 Frame 保留到 Tool Loop 后续请求，且最终只提交真实 User/Assistant。
 
 RED 固定：完整历史进入 Query、NoOp 返回空、Fake Result 进入 Frame、Retrieval 异常时模型零调用/Conversation 零提交、Frame 不持久化、Tool Loop 后续请求保留 Frame。
 
