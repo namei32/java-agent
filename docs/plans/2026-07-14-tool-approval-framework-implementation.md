@@ -2,7 +2,7 @@
 
 - 状态：已批准
 - 批准日期：2026-07-14
-- 当前执行状态：Task A0 至 A2 已完成；Task A3 至 A9 待实施
+- 当前执行状态：Task A0 至 A3 已完成；Task A4 至 A9 待实施
 - 日期：2026-07-14
 - 阶段：R3.2
 - Contract：[Tool 审批、副作用、幂等与沙箱安全契约](../contracts/tool-approval-side-effect-safety.md)
@@ -126,6 +126,10 @@ RED Case：
 实现限制：不使用 `Map.toString()`、默认 Locale 或平台相关编码；Hash 输入使用长度前缀。
 
 ## Task A3：整批审批预检与默认拒绝
+
+状态：已完成。
+
+验证证据（2026-07-14）：计划命令先因 Coordinator、Port、Policy 与版本化 Tool Definition 缺失编译失败，修复测试 Schema 后 5 个批次测试通过；自审发现 Definition 被重复读取，补充确定性 RED 并冻结注册快照，最终同一命令 6 个测试通过。未批准、错配、迟到与 Approval Port 故障均保持 Invoker 零次。
 
 目标：在 Invoker 前完成风险计算、全部决定收集和整批零执行。
 

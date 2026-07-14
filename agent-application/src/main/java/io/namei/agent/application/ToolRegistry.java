@@ -18,6 +18,7 @@ import java.util.concurrent.TimeoutException;
 
 final class ToolRegistry {
   private final Map<String, Tool> tools;
+  private final Map<String, ToolDefinition> definitionsByName;
   private final Map<String, ToolSchemaValidator> validators;
   private final List<ToolDefinition> definitions;
   private final ToolRuntimeSettings settings;
@@ -42,11 +43,13 @@ final class ToolRegistry {
     this.executionPermits = new Semaphore(settings.maxConcurrentCalls(), true);
     if (settings.mode() == ToolRuntimeMode.DISABLED) {
       this.tools = Map.of();
+      this.definitionsByName = Map.of();
       this.validators = Map.of();
       this.definitions = List.of();
       return;
     }
     var registered = new LinkedHashMap<String, Tool>();
+    var registeredDefinitions = new LinkedHashMap<String, ToolDefinition>();
     var registeredValidators = new LinkedHashMap<String, ToolSchemaValidator>();
     for (Tool tool : tools) {
       Objects.requireNonNull(tool, "tool");
@@ -56,21 +59,32 @@ final class ToolRegistry {
       }
       registeredValidators.put(
           definition.name(), new ToolSchemaValidator(definition.inputSchema()));
+      registeredDefinitions.put(definition.name(), definition);
     }
     this.tools = Map.copyOf(registered);
+    this.definitionsByName = Map.copyOf(registeredDefinitions);
     this.validators = Map.copyOf(registeredValidators);
-    this.definitions = registered.values().stream().map(Tool::definition).toList();
+    this.definitions = List.copyOf(registeredDefinitions.values());
   }
 
   List<Optional<ToolResult>> preflight(List<ToolCall> calls) {
+    return prepare(calls).stream()
+        .map(item -> Optional.ofNullable(item.preflightFailure()))
+        .toList();
+  }
+
+  List<PreparedCall> prepare(List<ToolCall> calls) {
+    Objects.requireNonNull(calls, "calls");
     return calls.stream()
         .map(
             call -> {
+              Objects.requireNonNull(call, "call");
               var validator = validators.get(call.name());
-              if (validator != null && !validator.accepts(call.arguments())) {
-                return Optional.of(ToolResult.error("工具参数无效。"));
-              }
-              return Optional.<ToolResult>empty();
+              ToolResult failure =
+                  validator != null && !validator.accepts(call.arguments())
+                      ? ToolResult.error("工具参数无效。")
+                      : null;
+              return new PreparedCall(call, definitionsByName.get(call.name()), failure);
             })
         .toList();
   }
@@ -205,4 +219,7 @@ final class ToolRegistry {
   interface ToolTaskStarter {
     void start(String toolName, Runnable task);
   }
+
+  record PreparedCall(
+      ToolCall call, ToolDefinition definition, ToolResult preflightFailure) {}
 }
