@@ -46,8 +46,7 @@ class ApprovalContractTest {
             SideEffectExecutionState.FAILED,
             SideEffectExecutionState.UNKNOWN);
     assertThat(
-            new ToolDefinition(
-                    "write_note", "写入测试替身", Map.of("type", "object"), ToolRisk.WRITE)
+            new ToolDefinition("write_note", "写入测试替身", Map.of("type", "object"), ToolRisk.WRITE)
                 .risk())
         .isEqualTo(ToolRisk.WRITE);
   }
@@ -90,8 +89,7 @@ class ApprovalContractTest {
             2, "call-9", "write_note", ApprovalDecisionStatus.APPROVED);
     var started = TurnLifecycleEvent.sideEffectStarted(2, "call-9", "write_note");
     var completed =
-        TurnLifecycleEvent.sideEffectCompleted(
-            2, "call-9", "write_note", ToolResultStatus.SUCCESS);
+        TurnLifecycleEvent.sideEffectCompleted(2, "call-9", "write_note", ToolResultStatus.SUCCESS);
 
     assertThat(requested.type()).isEqualTo(TurnEventType.APPROVAL_REQUESTED);
     assertThat(resolved.status()).isEqualTo("APPROVED");
@@ -101,8 +99,7 @@ class ApprovalContractTest {
             Arrays.stream(TurnLifecycleEvent.class.getRecordComponents())
                 .map(RecordComponent::getName))
         .containsExactly("type", "iteration", "callId", "toolName", "status")
-        .doesNotContain(
-            "arguments", "result", "summary", "actor", "idempotencyKey", "fingerprint");
+        .doesNotContain("arguments", "result", "summary", "actor", "idempotencyKey", "fingerprint");
     assertThatThrownBy(
             () ->
                 new TurnLifecycleEvent(

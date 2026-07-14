@@ -57,7 +57,7 @@
     {
       "id": "errors/http-error-mapping",
       "path": "errors/http-error-mapping.json",
-      "sha256": "93ef9a9f1ccbd8aead0a8e6cf68e7b35aad8ee7e9d9e6b79bce9c43889effbbf",
+      "sha256": "917fd52de98589f6b865713855748f0a9ecf61df9b12036f62458b4b511990b7",
       "source": "migration-contract"
     }
   ],

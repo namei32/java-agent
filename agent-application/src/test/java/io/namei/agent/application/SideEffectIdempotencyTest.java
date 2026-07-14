@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -48,8 +49,7 @@ class SideEffectIdempotencyTest {
               await(release);
               return ToolResult.success("固定成功");
             });
-    ApprovalPort approve =
-        request -> ApprovalDecision.approvedFor(request, NOW, "actor-reference");
+    ApprovalPort approve = request -> ApprovalDecision.approvedFor(request, NOW, "actor-reference");
     var coordinator = coordinator(tool, approve, ledger);
 
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
@@ -58,8 +58,7 @@ class SideEffectIdempotencyTest {
               () -> coordinator.execute(CONTEXT, List.of(CALL), TurnCancellation.none()));
       assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
 
-      assertThatThrownBy(
-              () -> coordinator.execute(CONTEXT, List.of(CALL), TurnCancellation.none()))
+      assertThatThrownBy(() -> coordinator.execute(CONTEXT, List.of(CALL), TurnCancellation.none()))
           .isInstanceOf(SideEffectStateUnknownException.class);
 
       release.countDown();
@@ -74,8 +73,7 @@ class SideEffectIdempotencyTest {
   void replaysStoredSucceededAndFailedResultsWithoutInvokingAgain() {
     var successLedger = new InMemorySideEffectLedger();
     var successInvocations = new AtomicInteger();
-    ApprovalPort approve =
-        request -> ApprovalDecision.approvedFor(request, NOW, "actor-reference");
+    ApprovalPort approve = request -> ApprovalDecision.approvedFor(request, NOW, "actor-reference");
     var successCoordinator =
         coordinator(
             sideEffectTool(
@@ -155,8 +153,7 @@ class SideEffectIdempotencyTest {
     var ledger = new InMemorySideEffectLedger();
     ledger.failNextMarkRunning();
     var invocations = new AtomicInteger();
-    ApprovalPort approve =
-        request -> ApprovalDecision.approvedFor(request, NOW, "actor-reference");
+    ApprovalPort approve = request -> ApprovalDecision.approvedFor(request, NOW, "actor-reference");
 
     assertThatThrownBy(
             () ->
@@ -207,6 +204,63 @@ class SideEffectIdempotencyTest {
   }
 
   @Test
+  @Tag("failure")
+  void failsClosedWhenLedgerReturnsAnotherOperation() {
+    var wrongIdentity = SideEffectIdentity.from(request("approval-other", "idempotency-other"));
+    var wrongEntry =
+        new SideEffectLedger.Entry(
+            wrongIdentity, SideEffectExecutionState.SUCCEEDED, ToolResult.success("其他操作结果"), "");
+    SideEffectLedger faultyLedger =
+        new SideEffectLedger() {
+          @Override
+          public Reservation reserve(SideEffectIdentity identity, ApprovalRequest approval) {
+            return new Reservation(false, wrongEntry);
+          }
+
+          @Override
+          public void markRunning(SideEffectIdentity identity) {
+            throw new AssertionError("不应更新错误 Ledger");
+          }
+
+          @Override
+          public void markSucceeded(SideEffectIdentity identity, ToolResult safeResult) {
+            throw new AssertionError("不应更新错误 Ledger");
+          }
+
+          @Override
+          public void markFailedBeforeStart(SideEffectIdentity identity, ToolResult safeResult) {
+            throw new AssertionError("不应更新错误 Ledger");
+          }
+
+          @Override
+          public void markUnknown(SideEffectIdentity identity, String errorCode) {
+            throw new AssertionError("不应更新错误 Ledger");
+          }
+
+          @Override
+          public Optional<Entry> find(SideEffectIdentity identity) {
+            return Optional.of(wrongEntry);
+          }
+        };
+    var invocations = new AtomicInteger();
+    ApprovalPort approve = request -> ApprovalDecision.approvedFor(request, NOW, "actor-reference");
+
+    assertThatThrownBy(
+            () ->
+                coordinator(
+                        sideEffectTool(
+                            () -> {
+                              invocations.incrementAndGet();
+                              return ToolResult.success("不应执行");
+                            }),
+                        approve,
+                        faultyLedger)
+                    .execute(CONTEXT, List.of(CALL), TurnCancellation.none()))
+        .isInstanceOf(ApprovalUnavailableException.class);
+    assertThat(invocations).hasValue(0);
+  }
+
+  @Test
   void onlyAllowsKnownNoEffectFailureBeforeRunningBoundary() {
     var ledger = new InMemorySideEffectLedger();
     var request = request();
@@ -214,7 +268,9 @@ class SideEffectIdempotencyTest {
     assertThat(ledger.reserve(identity, request).acquired()).isTrue();
 
     ledger.markFailedBeforeStart(identity, ToolResult.error("固定安全失败"));
-    assertThat(ledger.find(identity)).get().extracting(SideEffectLedger.Entry::state)
+    assertThat(ledger.find(identity))
+        .get()
+        .extracting(SideEffectLedger.Entry::state)
         .isEqualTo(SideEffectExecutionState.FAILED);
 
     var otherRequest = request("approval-2", "idempotency-2");
@@ -222,25 +278,17 @@ class SideEffectIdempotencyTest {
     ledger.reserve(otherIdentity, otherRequest);
     ledger.markRunning(otherIdentity);
     assertThatThrownBy(
-            () ->
-                ledger.markFailedBeforeStart(
-                    otherIdentity, ToolResult.error("不能证明未发生副作用")))
+            () -> ledger.markFailedBeforeStart(otherIdentity, ToolResult.error("不能证明未发生副作用")))
         .isInstanceOf(IllegalStateException.class);
     assertThatThrownBy(
             () ->
                 new SideEffectLedger.Entry(
-                    identity,
-                    SideEffectExecutionState.FAILED,
-                    ToolResult.success("状态不匹配"),
-                    ""))
+                    identity, SideEffectExecutionState.FAILED, ToolResult.success("状态不匹配"), ""))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(
             () ->
                 new SideEffectLedger.Entry(
-                    identity,
-                    SideEffectExecutionState.SUCCEEDED,
-                    ToolResult.error("状态不匹配"),
-                    ""))
+                    identity, SideEffectExecutionState.SUCCEEDED, ToolResult.error("状态不匹配"), ""))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -250,12 +298,7 @@ class SideEffectIdempotencyTest {
         new ToolRegistry(
             List.of(tool),
             new ToolRuntimeSettings(
-                ToolRuntimeMode.APPROVAL_REQUIRED,
-                8,
-                16,
-                Duration.ofSeconds(5),
-                32,
-                20_000)),
+                ToolRuntimeMode.APPROVAL_REQUIRED, 8, 16, Duration.ofSeconds(5), 32, 20_000)),
         approvals,
         ToolExecutionPolicy.registeredRisk(),
         CLOCK,

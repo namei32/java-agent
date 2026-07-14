@@ -55,8 +55,7 @@ final class ToolRegistry {
     for (Tool tool : tools) {
       Objects.requireNonNull(tool, "tool");
       var definition = Objects.requireNonNull(tool.definition(), "tool.definition");
-      if (settings.mode() == ToolRuntimeMode.READ_ONLY
-          && definition.risk() != ToolRisk.READ_ONLY) {
+      if (settings.mode() == ToolRuntimeMode.READ_ONLY && definition.risk() != ToolRisk.READ_ONLY) {
         throw new IllegalArgumentException("READ_ONLY 模式不能注册副作用工具");
       }
       if (registered.putIfAbsent(definition.name(), tool) != null) {
@@ -84,12 +83,13 @@ final class ToolRegistry {
         .map(
             call -> {
               Objects.requireNonNull(call, "call");
+              var definition = definitionsByName.get(call.name());
               var validator = validators.get(call.name());
               ToolResult failure =
-                  validator != null && !validator.accepts(call.arguments())
-                      ? ToolResult.error("工具参数无效。")
-                      : null;
-              return new PreparedCall(call, definitionsByName.get(call.name()), failure);
+                  definition == null
+                      ? ToolResult.error("工具不可用。")
+                      : !validator.accepts(call.arguments()) ? ToolResult.error("工具参数无效。") : null;
+              return new PreparedCall(call, definition, failure);
             })
         .toList();
   }
@@ -225,6 +225,5 @@ final class ToolRegistry {
     void start(String toolName, Runnable task);
   }
 
-  record PreparedCall(
-      ToolCall call, ToolDefinition definition, ToolResult preflightFailure) {}
+  record PreparedCall(ToolCall call, ToolDefinition definition, ToolResult preflightFailure) {}
 }

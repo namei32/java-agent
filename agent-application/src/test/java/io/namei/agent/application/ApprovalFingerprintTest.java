@@ -31,8 +31,7 @@ class ApprovalFingerprintTest {
     assertThat(ApprovalFingerprint.argumentsHash(Map.of("value", "1")))
         .isNotEqualTo(ApprovalFingerprint.argumentsHash(Map.of("value", 1)));
     assertThat(ApprovalFingerprint.argumentsHash(Map.of("value", 1)))
-        .isNotEqualTo(
-            ApprovalFingerprint.argumentsHash(Map.of("value", new BigDecimal("1.0"))));
+        .isNotEqualTo(ApprovalFingerprint.argumentsHash(Map.of("value", new BigDecimal("1.0"))));
   }
 
   @Test
@@ -48,20 +47,14 @@ class ApprovalFingerprintTest {
   void bindsEveryOperationFieldWithLengthPrefixes() {
     var base = fingerprint("ab", "c", "call-1", "tool", "v1", ToolRisk.WRITE);
 
-    assertThat(base)
-        .isNotEqualTo(fingerprint("a", "bc", "call-1", "tool", "v1", ToolRisk.WRITE));
-    assertThat(base)
-        .isNotEqualTo(fingerprint("ab", "c2", "call-1", "tool", "v1", ToolRisk.WRITE));
-    assertThat(base)
-        .isNotEqualTo(fingerprint("ab", "c", "call-2", "tool", "v1", ToolRisk.WRITE));
-    assertThat(base)
-        .isNotEqualTo(fingerprint("ab", "c", "call-1", "other", "v1", ToolRisk.WRITE));
-    assertThat(base)
-        .isNotEqualTo(fingerprint("ab", "c", "call-1", "tool", "v2", ToolRisk.WRITE));
+    assertThat(base).isNotEqualTo(fingerprint("a", "bc", "call-1", "tool", "v1", ToolRisk.WRITE));
+    assertThat(base).isNotEqualTo(fingerprint("ab", "c2", "call-1", "tool", "v1", ToolRisk.WRITE));
+    assertThat(base).isNotEqualTo(fingerprint("ab", "c", "call-2", "tool", "v1", ToolRisk.WRITE));
+    assertThat(base).isNotEqualTo(fingerprint("ab", "c", "call-1", "other", "v1", ToolRisk.WRITE));
+    assertThat(base).isNotEqualTo(fingerprint("ab", "c", "call-1", "tool", "v2", ToolRisk.WRITE));
     assertThat(base)
         .isNotEqualTo(
-            fingerprint(
-                "ab", "c", "call-1", "tool", "v1", ToolRisk.EXTERNAL_SIDE_EFFECT));
+            fingerprint("ab", "c", "call-1", "tool", "v1", ToolRisk.EXTERNAL_SIDE_EFFECT));
   }
 
   @Test
@@ -75,7 +68,9 @@ class ApprovalFingerprintTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageNotContaining(privateValue);
     assertThatThrownBy(
-            () -> ApprovalFingerprint.argumentsHash(Map.of("secret", privateValue, "value", 0.0d / 0.0d)))
+            () ->
+                ApprovalFingerprint.argumentsHash(
+                    Map.of("secret", privateValue, "value", 0.0d / 0.0d)))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageNotContaining(privateValue);
     assertThatThrownBy(
@@ -87,12 +82,7 @@ class ApprovalFingerprintTest {
   }
 
   private static String fingerprint(
-      String session,
-      String turn,
-      String call,
-      String tool,
-      String version,
-      ToolRisk risk) {
+      String session, String turn, String call, String tool, String version, ToolRisk risk) {
     return ApprovalFingerprint.calculate(
         session,
         turn,

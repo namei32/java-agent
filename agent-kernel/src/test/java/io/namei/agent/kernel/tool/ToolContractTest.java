@@ -34,8 +34,7 @@ class ToolContractTest {
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> new ToolDefinition("bad name", "说明", schema, ToolRisk.READ_ONLY))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThat(
-            new ToolDefinition("write", "写入", Map.of("type", "object"), ToolRisk.WRITE).risk())
+    assertThat(new ToolDefinition("write", "写入", Map.of("type", "object"), ToolRisk.WRITE).risk())
         .isEqualTo(ToolRisk.WRITE);
   }
 

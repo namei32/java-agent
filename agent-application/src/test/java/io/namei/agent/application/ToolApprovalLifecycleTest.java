@@ -50,15 +50,15 @@ class ToolApprovalLifecycleTest {
     var events = new ArrayList<TurnLifecycleEvent>();
     var invocations = new AtomicInteger();
     var ledger = new InMemorySideEffectLedger();
-    ApprovalPort approve =
-        request -> ApprovalDecision.approvedFor(request, NOW, privateActor);
+    ApprovalPort approve = request -> ApprovalDecision.approvedFor(request, NOW, privateActor);
 
     service(repository, model, invocations, events, approve, ledger)
         .chat(new ChatCommand("private-session", "问题"));
 
     assertThat(invocations).hasValue(1);
     assertThat(repository.appended).hasSize(1);
-    assertThat(events).extracting(TurnLifecycleEvent::type)
+    assertThat(events)
+        .extracting(TurnLifecycleEvent::type)
         .containsExactly(
             TurnEventType.TURN_STARTED,
             TurnEventType.MODEL_REQUESTED,
@@ -83,26 +83,19 @@ class ToolApprovalLifecycleTest {
 
   @Test
   void denialDoesNotCrossSideEffectBoundaryAndCanCommitAFinalExplanation() {
-    var model =
-        new ScriptedModel(toolResponse(Map.of()), new ChatModelResponse("未执行，已说明原因"));
+    var model = new ScriptedModel(toolResponse(Map.of()), new ChatModelResponse("未执行，已说明原因"));
     var repository = new RecordingRepository();
     var events = new ArrayList<TurnLifecycleEvent>();
     var invocations = new AtomicInteger();
-    ApprovalPort deny =
-        request -> ApprovalDecision.deniedFor(request, NOW, "actor-reference");
+    ApprovalPort deny = request -> ApprovalDecision.deniedFor(request, NOW, "actor-reference");
 
-    service(
-            repository,
-            model,
-            invocations,
-            events,
-            deny,
-            new InMemorySideEffectLedger())
+    service(repository, model, invocations, events, deny, new InMemorySideEffectLedger())
         .chat(new ChatCommand("demo", "问题"));
 
     assertThat(invocations).hasValue(0);
     assertThat(repository.appended).hasSize(1);
-    assertThat(events).extracting(TurnLifecycleEvent::type)
+    assertThat(events)
+        .extracting(TurnLifecycleEvent::type)
         .contains(TurnEventType.APPROVAL_REQUESTED, TurnEventType.APPROVAL_RESOLVED)
         .doesNotContain(TurnEventType.SIDE_EFFECT_STARTED, TurnEventType.SIDE_EFFECT_COMPLETED);
     assertThat(model.requests.get(1).messages())
@@ -140,7 +133,8 @@ class ToolApprovalLifecycleTest {
     assertThat(invocations).hasValue(0);
     assertThat(model.requests).hasSize(1);
     assertThat(repository.appended).isEmpty();
-    assertThat(events).extracting(TurnLifecycleEvent::type)
+    assertThat(events)
+        .extracting(TurnLifecycleEvent::type)
         .doesNotContain(TurnEventType.SIDE_EFFECT_STARTED, TurnEventType.SIDE_EFFECT_COMPLETED);
     assertThat(events.getLast().status()).isEqualTo("TURN_CANCELLED");
   }
@@ -196,8 +190,7 @@ class ToolApprovalLifecycleTest {
   }
 
   private static ChatModelResponse toolResponse(Map<String, Object> arguments) {
-    return new ChatModelResponse(
-        "", List.of(new ToolCall("call-1", "write_note", arguments)));
+    return new ChatModelResponse("", List.of(new ToolCall("call-1", "write_note", arguments)));
   }
 
   private static ToolRuntimeSettings settings() {

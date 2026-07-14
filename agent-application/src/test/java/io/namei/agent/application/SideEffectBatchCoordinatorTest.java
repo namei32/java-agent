@@ -18,8 +18,8 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -77,11 +77,43 @@ class SideEffectBatchCoordinatorTest {
             TurnCancellation.none());
 
     assertThat(executions).isEmpty();
-    assertThat(requested).singleElement().satisfies(request -> assertThat(request.risk()).isEqualTo(ToolRisk.WRITE));
-    assertThat(results).extracting(ToolResult::status)
+    assertThat(requested)
+        .singleElement()
+        .satisfies(request -> assertThat(request.risk()).isEqualTo(ToolRisk.WRITE));
+    assertThat(results)
+        .extracting(ToolResult::status)
         .containsExactly(ToolResultStatus.SKIPPED, ToolResultStatus.DENIED);
-    assertThat(results).extracting(ToolResult::content)
-        .containsExactly("工具调用已跳过。", "工具调用未获批准。");
+    assertThat(results).extracting(ToolResult::content).containsExactly("工具调用已跳过。", "工具调用未获批准。");
+  }
+
+  @Test
+  @Tag("failure")
+  void rejectsWholeSideEffectBatchWhenAnyToolIsUnknown() {
+    var executions = new ArrayList<String>();
+    var approvals = new AtomicInteger();
+    ApprovalPort approve =
+        request -> {
+          approvals.incrementAndGet();
+          return ApprovalDecision.approvedFor(request, NOW, "actor-reference");
+        };
+    var coordinator =
+        coordinator(
+            List.of(tool("write_note", "v1", ToolRisk.WRITE, executions)),
+            approve,
+            ToolExecutionPolicy.registeredRisk());
+
+    var results =
+        coordinator.execute(
+            CONTEXT,
+            List.of(
+                call("call-1", "write_note", Map.of()), call("call-2", "unknown_tool", Map.of())),
+            TurnCancellation.none());
+
+    assertThat(approvals).hasValue(0);
+    assertThat(executions).isEmpty();
+    assertThat(results)
+        .extracting(ToolResult::status)
+        .containsExactly(ToolResultStatus.SKIPPED, ToolResultStatus.ERROR);
   }
 
   @Test
@@ -135,7 +167,8 @@ class SideEffectBatchCoordinatorTest {
                     io.namei.agent.kernel.approval.ApprovalDecisionStatus.APPROVED,
                     NOW,
                     "actor-reference"),
-            request -> ApprovalDecision.approvedFor(request, request.expiresAt(), "actor-reference"));
+            request ->
+                ApprovalDecision.approvedFor(request, request.expiresAt(), "actor-reference"));
 
     unsafePorts.forEach(
         port ->
@@ -243,9 +276,7 @@ class SideEffectBatchCoordinatorTest {
             new InMemorySideEffectLedger());
 
     coordinator.execute(
-        CONTEXT,
-        List.of(call("call-1", "write_note", Map.of())),
-        TurnCancellation.none());
+        CONTEXT, List.of(call("call-1", "write_note", Map.of())), TurnCancellation.none());
 
     assertThat(requestVersion.get()).isEqualTo(registry.definitions().getFirst().version());
     assertThat(definitionReads).hasValue(1);
@@ -255,8 +286,7 @@ class SideEffectBatchCoordinatorTest {
       SideEffectBatchCoordinator coordinator,
       SideEffectBatchCoordinator.Context context,
       ToolCall call) {
-    assertThatThrownBy(
-            () -> coordinator.execute(context, List.of(call), TurnCancellation.none()))
+    assertThatThrownBy(() -> coordinator.execute(context, List.of(call), TurnCancellation.none()))
         .isInstanceOf(ApprovalUnavailableException.class);
   }
 
@@ -278,16 +308,10 @@ class SideEffectBatchCoordinatorTest {
 
   private static ToolRuntimeSettings approvalSettings() {
     return new ToolRuntimeSettings(
-        ToolRuntimeMode.APPROVAL_REQUIRED,
-        8,
-        16,
-        Duration.ofSeconds(5),
-        32,
-        20_000);
+        ToolRuntimeMode.APPROVAL_REQUIRED, 8, 16, Duration.ofSeconds(5), 32, 20_000);
   }
 
-  private static Tool tool(
-      String name, String version, ToolRisk risk, List<String> executions) {
+  private static Tool tool(String name, String version, ToolRisk risk, List<String> executions) {
     return new Tool() {
       @Override
       public ToolDefinition definition() {
@@ -314,6 +338,9 @@ class SideEffectBatchCoordinatorTest {
   }
 
   private static final class FixedIds implements IdGenerator {
+    private final AtomicInteger approvalSequence = new AtomicInteger();
+    private final AtomicInteger idempotencySequence = new AtomicInteger();
+
     @Override
     public String newTurnId() {
       return "turn-fixed";
@@ -321,12 +348,12 @@ class SideEffectBatchCoordinatorTest {
 
     @Override
     public String newApprovalId() {
-      return "approval-fixed";
+      return "approval-" + approvalSequence.incrementAndGet();
     }
 
     @Override
     public String newIdempotencyKey() {
-      return "idempotency-fixed";
+      return "idempotency-" + idempotencySequence.incrementAndGet();
     }
   }
 }

@@ -1,8 +1,8 @@
 # Tool Approval Framework 实施计划
 
-- 状态：实施中
+- 状态：已实现并验证
 - 批准日期：2026-07-14
-- 当前执行状态：Task A0 至 A8 已完成；Task A9 待实施
+- 当前执行状态：Task A0 至 A9 已完成
 - 日期：2026-07-14
 - 阶段：R3.2
 - Contract：[Tool 审批、副作用、幂等与沙箱安全契约](../contracts/tool-approval-side-effect-safety.md)
@@ -316,7 +316,11 @@ RED Case：
 
 ## Task A9：阶段门禁、自审与提交
 
-状态：待实施。
+状态：已完成。
+
+验证证据（2026-07-14）：首次 `spotless:check` 发现本阶段新增 Java 文件尚未统一格式，执行格式化后复验通过；首次默认 Reactor 暴露测试固定 ID 重复、与生产随机 ID 唯一性不一致，修正测试生成器后聚焦测试通过。阶段自审进一步用三次确定性 RED/GREEN 修复：Approval/Ledger 不可用与副作用状态未知未安全映射到既有 `502`、混合副作用批次中的未知工具未在审批前整批拒绝、Ledger 返回其他操作记录时可能错误重放。修复后按计划顺序重新执行完整门禁：默认 Reactor 151 个测试、`failure` 46 个测试、`compat` 178 个测试，均为零失败、零错误、零跳过；Kernel 依赖树只有测试依赖。
+
+静态审计确认：生产注册表只有只读 `current_time`，Approval Port 为 `DenyAllApprovalPort`，没有 Side Effect Tool、Approval HTTP/UI/Channel、生产 Durable Ledger、Fake Bean、新 SQLite Schema 或 POM 变化；生产源码没有越过核心模块的框架依赖，Secret 扫描零命中，只有模板 `.env.example` 被跟踪，`workspace/` 与 `workspace-java/` 均被忽略，本地和模板 `AGENT_TOOL_MODE` 均保持 `DISABLED`。`git diff --check` 通过，审查无未解决 Critical/Important 问题。
 
 按顺序执行一次：
 

@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.namei.agent.kernel.model.ChatModelResponse;
 import io.namei.agent.kernel.approval.ApprovalDecisionStatus;
+import io.namei.agent.kernel.model.ChatModelResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -127,7 +127,10 @@ class ApplicationConfigurationTest {
     assertThat(approvalPort.decide(request).status()).isEqualTo(ApprovalDecisionStatus.DENIED);
     assertThat(
             java.util.Arrays.stream(ApplicationConfiguration.class.getDeclaredMethods())
-                .filter(method -> method.isAnnotationPresent(org.springframework.context.annotation.Bean.class))
+                .filter(
+                    method ->
+                        method.isAnnotationPresent(
+                            org.springframework.context.annotation.Bean.class))
                 .map(java.lang.reflect.Method::getReturnType))
         .doesNotContain(
             io.namei.agent.application.SideEffectLedger.class,

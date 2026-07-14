@@ -80,9 +80,8 @@
 
 ## 当前优先级
 
-1. 完成 R3.2 默认、`failure`、`compat` 与依赖边界阶段门禁。
-2. 分别设计并批准真实 Approval Channel 和生产 Durable Ledger；当前 Framework 只会在生产 Fail Closed。
-3. 为首个具体 Side Effect Tool 制定独立 Capability/Sandbox Contract；批准前不开放任何真实副作用工具。
-4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
-5. 在 Approval Channel、Durable Ledger 和具体 Tool Contract 落地前，不迁移文件写入、Shell、Web 写入或消息发送工具。
-6. 记忆、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。
+1. 分别设计并批准真实 Approval Channel、Durable Pending Turn 和生产 Durable Ledger；当前 Framework 只会在生产 Fail Closed。
+2. 为首个隔离 Workspace 文件写入 Tool 制定独立 Capability/Sandbox Contract；批准前不开放任何真实副作用工具。
+3. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
+4. 在 Approval Channel、Durable Ledger 和具体 Tool Contract 落地前，不迁移文件写入、Shell、Web 写入或消息发送工具。
+5. 记忆、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。

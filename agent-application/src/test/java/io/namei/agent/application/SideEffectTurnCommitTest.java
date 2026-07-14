@@ -76,19 +76,12 @@ class SideEffectTurnCommitTest {
     var repository = new RecordingRepository(true);
     var model =
         new SequenceModel(
-            new ChatModelResponse(
-                "", List.of(new ToolCall("call-1", "write_note", Map.of()))),
+            new ChatModelResponse("", List.of(new ToolCall("call-1", "write_note", Map.of()))),
             new ChatModelResponse("最终回答"));
 
     assertThatThrownBy(
             () ->
-                service(
-                        repository,
-                        model,
-                        new AtomicInteger(),
-                        new ArrayList<>(),
-                        approve,
-                        ledger)
+                service(repository, model, new AtomicInteger(), new ArrayList<>(), approve, ledger)
                     .chat(new ChatCommand("demo", "问题")))
         .isInstanceOf(IllegalStateException.class);
 
@@ -111,8 +104,7 @@ class SideEffectTurnCommitTest {
     var repository = new RecordingRepository(false);
     var model =
         new SequenceModel(
-            new ChatModelResponse(
-                "", List.of(new ToolCall("call-1", "write_note", Map.of()))),
+            new ChatModelResponse("", List.of(new ToolCall("call-1", "write_note", Map.of()))),
             new ChatModelResponse("不应请求"));
     var events = new ArrayList<TurnLifecycleEvent>();
     var invocations = new AtomicInteger();
@@ -148,12 +140,7 @@ class SideEffectTurnCommitTest {
         3,
         events::add,
         new ToolRuntimeSettings(
-            ToolRuntimeMode.APPROVAL_REQUIRED,
-            8,
-            16,
-            Duration.ofSeconds(5),
-            32,
-            20_000),
+            ToolRuntimeMode.APPROVAL_REQUIRED, 8, 16, Duration.ofSeconds(5), 32, 20_000),
         approvals,
         ledger,
         new FixedIds(),
@@ -194,8 +181,7 @@ class SideEffectTurnCommitTest {
     @Override
     public ChatModelResponse generate(ChatModelRequest request) {
       if (calls++ == 0) {
-        return new ChatModelResponse(
-            "", List.of(new ToolCall("call-1", "write_note", Map.of())));
+        return new ChatModelResponse("", List.of(new ToolCall("call-1", "write_note", Map.of())));
       }
       throw new IllegalStateException("private model failure");
     }

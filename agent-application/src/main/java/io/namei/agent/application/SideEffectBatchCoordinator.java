@@ -7,7 +7,6 @@ import io.namei.agent.kernel.lifecycle.TurnLifecycleEvent;
 import io.namei.agent.kernel.port.TurnLifecycleObserver;
 import io.namei.agent.kernel.tool.SideEffectExecutionState;
 import io.namei.agent.kernel.tool.ToolCall;
-import io.namei.agent.kernel.tool.ToolDefinition;
 import io.namei.agent.kernel.tool.ToolResult;
 import io.namei.agent.kernel.tool.ToolResultStatus;
 import io.namei.agent.kernel.tool.ToolRisk;
@@ -88,8 +87,7 @@ final class SideEffectBatchCoordinator {
     }
   }
 
-  List<ToolResult> execute(
-      Context context, List<ToolCall> calls, TurnCancellation cancellation) {
+  List<ToolResult> execute(Context context, List<ToolCall> calls, TurnCancellation cancellation) {
     return execute(context, 1, calls, cancellation);
   }
 
@@ -105,8 +103,7 @@ final class SideEffectBatchCoordinator {
                 item ->
                     item.definition() == null
                         ? ToolRisk.READ_ONLY
-                        : ToolExecutionPolicy.effectiveRisk(
-                            item.definition(), item.call(), policy))
+                        : ToolExecutionPolicy.effectiveRisk(item.definition(), item.call(), policy))
             .toList();
     boolean hasSideEffect = risks.stream().anyMatch(risk -> risk != ToolRisk.READ_ONLY);
     if (!hasSideEffect) {
@@ -115,8 +112,7 @@ final class SideEffectBatchCoordinator {
     prepared.forEach(
         item ->
             lifecycle.emit(
-                TurnLifecycleEvent.toolStarted(
-                    iteration, item.call().id(), item.call().name())));
+                TurnLifecycleEvent.toolStarted(iteration, item.call().id(), item.call().name())));
     if (prepared.stream().anyMatch(item -> item.preflightFailure() != null)) {
       var results = preflightFailures(prepared);
       completeAll(iteration, prepared, results);
@@ -151,8 +147,7 @@ final class SideEffectBatchCoordinator {
               expiresAt);
       requests.add(request);
       lifecycle.emit(
-          TurnLifecycleEvent.approvalRequested(
-              iteration, item.call().id(), item.call().name()));
+          TurnLifecycleEvent.approvalRequested(iteration, item.call().id(), item.call().name()));
       ApprovalDecision decision;
       try {
         decision = approvals.decide(request);
@@ -230,6 +225,9 @@ final class SideEffectBatchCoordinator {
     } catch (RuntimeException exception) {
       throw new ApprovalUnavailableException();
     }
+    if (!reservation.entry().identity().equals(identity)) {
+      throw new ApprovalUnavailableException();
+    }
     if (!reservation.acquired()) {
       return replay(reservation.entry());
     }
@@ -297,9 +295,7 @@ final class SideEffectBatchCoordinator {
   }
 
   private List<ToolResult> executeReadOnly(
-      List<ToolRegistry.PreparedCall> prepared,
-      int iteration,
-      TurnCancellation cancellation) {
+      List<ToolRegistry.PreparedCall> prepared, int iteration, TurnCancellation cancellation) {
     var results = new ArrayList<ToolResult>(prepared.size());
     for (var item : prepared) {
       lifecycle.emit(

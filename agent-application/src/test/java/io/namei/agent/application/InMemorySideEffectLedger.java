@@ -14,8 +14,7 @@ final class InMemorySideEffectLedger implements SideEffectLedger {
   private boolean failMarkSucceeded;
 
   @Override
-  public synchronized Reservation reserve(
-      SideEffectIdentity identity, ApprovalRequest approval) {
+  public synchronized Reservation reserve(SideEffectIdentity identity, ApprovalRequest approval) {
     Entry existing = entries.get(identity.idempotencyKey());
     if (existing != null) {
       if (!existing.identity().equals(identity)) {
@@ -39,7 +38,8 @@ final class InMemorySideEffectLedger implements SideEffectLedger {
       failMarkRunning = false;
       throw new IllegalStateException("测试 Ledger RUNNING 故障");
     }
-    transition(identity, SideEffectExecutionState.RESERVED, SideEffectExecutionState.RUNNING, null, "");
+    transition(
+        identity, SideEffectExecutionState.RESERVED, SideEffectExecutionState.RUNNING, null, "");
   }
 
   @Override
@@ -88,8 +88,7 @@ final class InMemorySideEffectLedger implements SideEffectLedger {
 
   synchronized void seed(
       SideEffectIdentity identity, SideEffectExecutionState state, ToolResult safeResult) {
-    String errorCode =
-        state == SideEffectExecutionState.UNKNOWN ? "SIDE_EFFECT_STATE_UNKNOWN" : "";
+    String errorCode = state == SideEffectExecutionState.UNKNOWN ? "SIDE_EFFECT_STATE_UNKNOWN" : "";
     entries.put(identity.idempotencyKey(), new Entry(identity, state, safeResult, errorCode));
     approvalOperations.put(identity.approvalId(), identity.idempotencyKey());
   }

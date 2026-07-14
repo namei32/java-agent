@@ -1,10 +1,10 @@
 package io.namei.agent.application;
 
+import io.namei.agent.kernel.approval.ApprovalDecision;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
 import io.namei.agent.kernel.error.ToolCallLimitExceededException;
 import io.namei.agent.kernel.error.ToolLoopLimitExceededException;
 import io.namei.agent.kernel.error.TurnCancelledException;
-import io.namei.agent.kernel.approval.ApprovalDecision;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
 import io.namei.agent.kernel.lifecycle.TurnLifecycleEvent;
@@ -146,13 +146,7 @@ public final class ChatService implements ChatUseCase {
             ledger,
             lifecycle);
     this.toolLoop =
-        new ToolLoop(
-            model,
-            registry,
-            lifecycle,
-            maxIterations,
-            toolSettings,
-            coordinator);
+        new ToolLoop(model, registry, lifecycle, maxIterations, toolSettings, coordinator);
   }
 
   @Override

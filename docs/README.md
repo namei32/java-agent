@@ -10,7 +10,7 @@
 - 已完成：Python/Java 配置兼容 Contract、配置 Golden、TomlJ Parser 选型、只读 Resolver、Spring Boot 启动装配和无副作用检查入口。
 - 已完成：核心消息、生命周期和 Tool Contract，Tool Message/最小循环 Golden，以及带 `current_time` 的只读最小 Tool Loop。
 - 已完成：Tool Runtime 安全契约实现，包括模式、预算、Schema、Arguments/Result 边界、超时、并发许可、取消和安全 Golden。
-- 已完成：审批参数指纹、整批门禁、一次性消费、幂等/`UNKNOWN`、安全生命周期、Approval Golden 和生产 Deny All 装配；R3.2 阶段门禁待完成。
+- 已完成：审批参数指纹、整批门禁、一次性消费、幂等/`UNKNOWN`、安全生命周期、Approval Golden、生产 Deny All 装配，以及 R3.2 默认、`failure`、`compat` 与依赖/安全阶段门禁。
 - 下一里程碑：真实 Approval Channel、生产 Durable Ledger 与首个具体 Tool Capability/Sandbox Contract 必须分别设计和批准，不能直接跳到真实工具或完整工具生态扩展。
 - 尚未覆盖：可用的人类审批渠道、生产 Durable Ledger、真实副作用工具、流式输出、MCP、长期记忆、渠道、插件、主动任务、Drift 和 Subagent。
 

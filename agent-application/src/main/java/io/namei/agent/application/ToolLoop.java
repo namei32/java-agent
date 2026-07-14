@@ -12,11 +12,11 @@ import io.namei.agent.kernel.model.ToolResultMessage;
 import io.namei.agent.kernel.port.ChatModelPort;
 import io.namei.agent.kernel.tool.ToolResult;
 import io.namei.agent.kernel.tool.ToolResultStatus;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.time.Clock;
-import java.time.Duration;
 
 final class ToolLoop {
   private final ChatModelPort model;

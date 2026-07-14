@@ -107,25 +107,17 @@ class ToolRuntimeModeTest {
     var executions = new ArrayList<String>();
     var settings =
         new ToolRuntimeSettings(
-            ToolRuntimeMode.APPROVAL_REQUIRED,
-            8,
-            16,
-            Duration.ofSeconds(5),
-            32,
-            20_000);
+            ToolRuntimeMode.APPROVAL_REQUIRED, 8, 16, Duration.ofSeconds(5), 32, 20_000);
 
     var result =
-        service(
-                new RecordingRepository(),
-                model,
-                settings,
-                executions,
-                ToolRisk.WRITE)
+        service(new RecordingRepository(), model, settings, executions, ToolRisk.WRITE)
             .chat(new ChatCommand("demo", "问题"));
 
     assertThat(result.assistant().content()).isEqualTo("未执行");
     assertThat(executions).isEmpty();
-    assertThat(request.get().tools()).extracting(ToolDefinition::name).containsExactly("write_note");
+    assertThat(request.get().tools())
+        .extracting(ToolDefinition::name)
+        .containsExactly("write_note");
     assertThat(ToolRuntimeMode.valueOf("APPROVAL_REQUIRED"))
         .isEqualTo(ToolRuntimeMode.APPROVAL_REQUIRED);
   }
@@ -150,10 +142,7 @@ class ToolRuntimeModeTest {
           @Override
           public ToolDefinition definition() {
             return new ToolDefinition(
-                toolName,
-                "测试工具",
-                Map.of("type", "object", "properties", Map.of()),
-                risk);
+                toolName, "测试工具", Map.of("type", "object", "properties", Map.of()), risk);
           }
 
           @Override

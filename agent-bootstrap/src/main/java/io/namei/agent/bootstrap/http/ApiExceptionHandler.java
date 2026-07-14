@@ -1,7 +1,9 @@
 package io.namei.agent.bootstrap.http;
 
 import io.namei.agent.adapter.sqlite.SqliteRepositoryException;
+import io.namei.agent.application.ApprovalUnavailableException;
 import io.namei.agent.application.SessionLockTimeoutException;
+import io.namei.agent.application.SideEffectStateUnknownException;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
 import io.namei.agent.kernel.error.ModelInvocationException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
@@ -33,7 +35,9 @@ public class ApiExceptionHandler {
     ModelInvocationException.class,
     InvalidModelResponseException.class,
     ToolCallLimitExceededException.class,
-    ToolLoopLimitExceededException.class
+    ToolLoopLimitExceededException.class,
+    ApprovalUnavailableException.class,
+    SideEffectStateUnknownException.class
   })
   ProblemDetail modelFailure(HttpServletRequest request) {
     return problem(HttpStatus.BAD_GATEWAY, "模型调用失败", request);

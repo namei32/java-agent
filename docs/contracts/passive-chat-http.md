@@ -96,9 +96,9 @@ SQLite 读写错误：
 
 未分类错误的 `title` 和 `detail` 为 `内部服务错误`。
 
-### 502 模型调用失败
+### 502 模型或 Tool Runtime 调用失败
 
-提供方拒绝、上游错误、非法响应或空响应统一映射为：
+提供方拒绝、上游错误、非法响应、空响应、审批/Ledger 不可用或副作用状态未知统一映射为下列安全响应。当前沿用既有标题，不暴露 Approval ID、Fingerprint、Arguments、Actor、幂等键、Ledger 状态或内部异常：
 
 ```json
 {

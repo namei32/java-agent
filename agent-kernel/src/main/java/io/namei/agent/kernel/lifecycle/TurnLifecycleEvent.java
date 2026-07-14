@@ -71,17 +71,10 @@ public record TurnLifecycleEvent(
   }
 
   public static TurnLifecycleEvent approvalResolved(
-      int iteration,
-      String callId,
-      String toolName,
-      ApprovalDecisionStatus decisionStatus) {
+      int iteration, String callId, String toolName, ApprovalDecisionStatus decisionStatus) {
     Objects.requireNonNull(decisionStatus, "decisionStatus");
     return new TurnLifecycleEvent(
-        TurnEventType.APPROVAL_RESOLVED,
-        iteration,
-        callId,
-        toolName,
-        decisionStatus.name());
+        TurnEventType.APPROVAL_RESOLVED, iteration, callId, toolName, decisionStatus.name());
   }
 
   public static TurnLifecycleEvent sideEffectStarted(

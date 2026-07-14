@@ -49,7 +49,11 @@ class HttpErrorMappingGoldenTest {
     return switch (scenario) {
       case "VALIDATION" -> handler.validation(request);
       case "MALFORMED_JSON" -> handler.malformedJson(request);
-      case "MODEL_INVOCATION", "INVALID_MODEL_RESPONSE" -> handler.modelFailure(request);
+      case "MODEL_INVOCATION",
+          "INVALID_MODEL_RESPONSE",
+          "APPROVAL_UNAVAILABLE",
+          "SIDE_EFFECT_STATE_UNKNOWN" ->
+          handler.modelFailure(request);
       case "MODEL_TIMEOUT", "SESSION_LOCK_TIMEOUT" -> handler.timeout(request);
       case "SQLITE" -> handler.persistence(request);
       case "NOT_FOUND" -> handler.notFound(request);

@@ -43,7 +43,8 @@ class ToolApprovalGoldenTest {
       String identifier = testCase.path("id").asString();
       assertThat(identifiers.add(identifier)).isTrue();
 
-      Map<String, ?> actual = execute(identifier, testCase.path("input").path("scenario").asString());
+      Map<String, ?> actual =
+          execute(identifier, testCase.path("input").path("scenario").asString());
 
       JsonNode actualJson = JSON.valueToTree(actual);
       assertThat(actualJson).as(identifier).isEqualTo(testCase.path("expected"));
@@ -91,9 +92,10 @@ class ToolApprovalGoldenTest {
 
   private static Map<String, ?> readOnlyExecution() {
     var executions = new AtomicInteger();
-    ApprovalPort approvals = request -> {
-      throw new AssertionError("只读工具不应请求审批");
-    };
+    ApprovalPort approvals =
+        request -> {
+          throw new AssertionError("只读工具不应请求审批");
+        };
     var coordinator =
         coordinator(
             List.of(tool("read_probe", ToolRisk.READ_ONLY, executions)),
@@ -270,8 +272,7 @@ class ToolApprovalGoldenTest {
             new ToolRegistry(List.of(readOnly, write), settings(ToolRuntimeMode.DISABLED))
                 .definitions()
                 .size(),
-        "readOnly",
-            new ToolRegistry(List.of(readOnly), readOnlySettings()).definitions().size());
+        "readOnly", new ToolRegistry(List.of(readOnly), readOnlySettings()).definitions().size());
   }
 
   private static SideEffectBatchCoordinator coordinator(

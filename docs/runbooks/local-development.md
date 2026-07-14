@@ -259,7 +259,7 @@ TOML 模式先运行 `--agent.config-check`。如果诊断为 `CONFIG_ENV_UNRESO
 
 ### 返回 502
 
-表示提供方拒绝请求、返回服务错误、非法 JSON、缺失响应项、空回答、Tool Call 超过调用预算，或 Tool Loop 在得到最终回答前耗尽迭代次数。使用 `X-Request-Id` 关联安全日志；响应不会返回上游正文、Tool Arguments、Tool Result、具体数量或 Call ID。
+表示提供方拒绝请求、返回服务错误、非法 JSON、缺失响应项、空回答、Tool Call 超过调用预算、Tool Loop 在得到最终回答前耗尽迭代次数、Approval/Ledger 不可用，或副作用执行状态未知。使用 `X-Request-Id` 关联安全日志；响应不会返回上游正文、Tool Arguments、Tool Result、Approval ID、Fingerprint、Actor、幂等键、Ledger 状态、具体数量或 Call ID。当前生产没有真实审批入口；若在 `APPROVAL_REQUIRED` 下遇到该错误，应保持 `DISABLED` 并检查装配，不能通过重试绕过 Fail Closed。
 
 ### 返回 504
 

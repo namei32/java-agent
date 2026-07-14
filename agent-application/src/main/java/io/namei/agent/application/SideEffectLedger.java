@@ -43,8 +43,7 @@ public interface SideEffectLedger {
       Objects.requireNonNull(state, "state");
       errorCode = Objects.requireNonNullElse(errorCode, "").strip();
       boolean terminalResult =
-          state == SideEffectExecutionState.SUCCEEDED
-              || state == SideEffectExecutionState.FAILED;
+          state == SideEffectExecutionState.SUCCEEDED || state == SideEffectExecutionState.FAILED;
       if (terminalResult != (safeResult != null)) {
         throw new IllegalArgumentException("Ledger 终态安全结果不完整");
       }
@@ -84,8 +83,7 @@ public interface SideEffectLedger {
           }
 
           @Override
-          public void markFailedBeforeStart(
-              SideEffectIdentity identity, ToolResult safeResult) {
+          public void markFailedBeforeStart(SideEffectIdentity identity, ToolResult safeResult) {
             throw new ApprovalUnavailableException();
           }
 
