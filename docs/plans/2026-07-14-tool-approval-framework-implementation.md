@@ -1,13 +1,14 @@
 # Tool Approval Framework 实施计划
 
-- 状态：草案
-- 当前执行状态：仅完成 Contract、Spec 与 Plan 草案；生产实现未开始
+- 状态：已批准
+- 批准日期：2026-07-14
+- 当前执行状态：Task A0 已完成；Task A1 至 A9 待实施
 - 日期：2026-07-14
 - 阶段：R3.2
 - Contract：[Tool 审批、副作用、幂等与沙箱安全契约](../contracts/tool-approval-side-effect-safety.md)
 - Spec：[Tool Approval Framework 设计](../specs/2026-07-14-tool-approval-framework-design.md)
 
-> 本计划不得在 Contract 批准前进入 Task A1。当前文档分支只提交评审材料，不提交生产代码、Golden、Schema 或配置行为变化。
+> 本计划已获准从 Task A1 开始实施。批准范围不包含真实副作用工具、Approval Channel、生产 Durable Ledger、SQLite Schema 或部署启用。
 
 ## 1. 交付范围
 
@@ -36,22 +37,22 @@
 
 ## Task A0：契约评审与批准
 
-状态：待评审。
+状态：已完成。
 
-必须明确决定：
+2026-07-14 已明确批准：
 
 - R3.2 只实现默认拒绝框架，不实现真实 Side Effect。
-- 是否接受 `APPROVAL_REQUIRED` 新模式。
-- 是否接受四类新增 Lifecycle Event。
-- 是否接受混合批次任一未批准时整批零执行。
-- 是否接受副作用成功、后续 Turn 失败时只保留 Ledger/Audit、不提交 Conversation。
-- 是否接受真实 Approval Channel 与 Durable Ledger 延后。
+- 接受 `APPROVAL_REQUIRED` 新模式。
+- 接受四类新增 Lifecycle Event。
+- 接受混合批次任一未批准时整批零执行。
+- 接受副作用成功、后续 Turn 失败时只保留 Ledger/Audit、不提交 Conversation。
+- 接受真实 Approval Channel 与 Durable Ledger 延后。
 
-批准动作：
+已完成批准动作：
 
-- 把 Contract 状态改为 `已批准`，记录批准日期和版本。
-- 同步把[核心消息、生命周期与 Tool 契约](../contracts/core-message-lifecycle-tool.md)升级为版本 2，激活 `DENIED/SKIPPED` 与新增事件。
-- 把 Spec 和本 Plan 状态改为 `已批准/待实施`。
+- Contract 已标记 `已批准`，记录批准日期和版本。
+- [核心消息、生命周期与 Tool 契约](../contracts/core-message-lifecycle-tool.md)已升级为版本 2，激活 `DENIED/SKIPPED` 与新增事件。
+- Spec 和本 Plan 已标记为已批准、未实施。
 
 验收：文档链接有效、术语一致、没有代码或运行配置变化。
 
@@ -59,7 +60,7 @@
 
 目标：新增不可变协议类型和领域不变量，不引入框架依赖。
 
-候选文件：
+计划文件：
 
 - `agent-kernel/.../approval/ApprovalRequest.java`
 - `agent-kernel/.../approval/ApprovalDecision.java`
@@ -91,7 +92,7 @@ RED 必须证明：
 
 目标：实现 `approval-fingerprint-v1`，把批准绑定到不可变操作。
 
-候选文件：
+计划文件：
 
 - `agent-application/.../ApprovalFingerprint.java`
 - `agent-application/.../CanonicalArguments.java`
@@ -120,7 +121,7 @@ RED Case：
 
 目标：在 Invoker 前完成风险计算、全部决定收集和整批零执行。
 
-候选文件：
+计划文件：
 
 - `agent-application/.../ApprovalPort.java`
 - `agent-application/.../ToolExecutionPolicy.java`
@@ -152,7 +153,7 @@ RED Case：
 
 目标：证明同一批准和同一逻辑操作最多执行一次，并安全处理未知状态。
 
-候选文件：
+计划文件：
 
 - `agent-application/.../SideEffectLedger.java`
 - `agent-application/.../SideEffectIdentity.java`
@@ -183,7 +184,7 @@ RED Case：
 
 目标：把 Approval、Side Effect 和 Conversation 提交边界接入现有 Tool Loop。
 
-候选测试：
+计划测试：
 
 - `ToolApprovalLifecycleTest`
 - 扩展 `ChatServiceTest` 或新增 `SideEffectTurnCommitTest`
@@ -211,7 +212,7 @@ RED Case：
 
 目标：增加显式 `APPROVAL_REQUIRED` 解析，但生产仍无可执行 Side Effect。
 
-候选修改：
+计划修改：
 
 - `ToolRuntimeMode`
 - `AgentProperties`
@@ -243,7 +244,7 @@ RED Case：
 
 目标：固定 Python 风险/拒绝共同投影和 Java 安全差异。
 
-候选资产：
+计划资产：
 
 - `testdata/golden/tools/approval-side-effects.json`
 - `testdata/golden/manifest.json`

@@ -1,12 +1,14 @@
 # Tool Approval Framework 设计
 
-- 状态：草案
+- 状态：已批准
+- 批准日期：2026-07-14
+- 实施状态：未开始
 - 日期：2026-07-14
 - 阶段：R3.2
 - Contract：[Tool 审批、副作用、幂等与沙箱安全契约](../contracts/tool-approval-side-effect-safety.md)
 - 前置实现：[Tool Runtime 安全加固](2026-07-14-tool-runtime-safety-design.md)
 
-> 本设计只有在 Contract 明确批准后才能实施。设计范围止于默认拒绝的 Framework 与测试 Fake，不注册或执行真实副作用工具。
+> 本设计已获准进入实施。批准范围止于默认拒绝的 Framework 与测试 Fake，不注册或执行真实副作用工具。
 
 ## 1. 目标
 
@@ -27,7 +29,7 @@
 
 ### 3.1 `agent-kernel`
 
-新增纯 JDK 协议类型候选：
+计划新增纯 JDK 协议类型：
 
 - `ApprovalRequest`
 - `ApprovalDecision`
@@ -39,11 +41,11 @@
 
 现有 `ToolRisk` 三值保持不变。`ToolResultStatus.DENIED/SKIPPED` 从预留状态变为活动状态。
 
-生命周期候选新增 `APPROVAL_REQUESTED`、`APPROVAL_RESOLVED`、`SIDE_EFFECT_STARTED`、`SIDE_EFFECT_COMPLETED`。事件仍使用项目类型，不引入 Spring、Jackson、JDBC 或 Provider SDK。
+生命周期新增 `APPROVAL_REQUESTED`、`APPROVAL_RESOLVED`、`SIDE_EFFECT_STARTED`、`SIDE_EFFECT_COMPLETED`。事件仍使用项目类型，不引入 Spring、Jackson、JDBC 或 Provider SDK。
 
 ### 3.2 `agent-application`
 
-新增 Port 与策略候选：
+计划新增 Port 与策略：
 
 - `ApprovalPort`：提交不可变请求并返回决定；生产默认实现只拒绝。
 - `SideEffectLedger`：Claim、状态转换和已存安全结果读取。
@@ -138,13 +140,13 @@ Coordinator 接收完整调用批次和当前 Turn Context：
 
 ## 8. Approval Port 形态
 
-候选版本 1 使用同步 Port，只为了固定 Application 边界和支持确定性 Fake。生产实现为 `DenyAllApprovalPort`，不会阻塞 HTTP 请求。
+版本 1 使用同步 Port，只为了固定 Application 边界和支持确定性 Fake。生产实现为 `DenyAllApprovalPort`，不会阻塞 HTTP 请求。
 
 不实现“等待五分钟直到用户点击”的阻塞 Port，因为当前 HTTP Timeout、Session Gate 和 Turn 内存 Transcript 都不支持安全挂起。真实人类审批需要后续设计 Durable Pending Turn 与认证入口，再决定同步、异步或恢复式 Port。
 
 ## 9. Ledger 形态
 
-Port 操作候选：
+Port 操作：
 
 - `reserve(identity, approval)`
 - `markRunning(identity)`
@@ -153,7 +155,7 @@ Port 操作候选：
 - `markUnknown(identity, errorCode)`
 - `find(identity)`
 
-每次转换必须比较预期旧状态，防止并发消费。候选版本 1 只提供测试用 `InMemorySideEffectLedger`；生产装配不提供可执行 Ledger，因此 `APPROVAL_REQUIRED` 下没有真实副作用 Tool。
+每次转换必须比较预期旧状态，防止并发消费。版本 1 只提供测试用 `InMemorySideEffectLedger`；生产装配不提供可执行 Ledger，因此 `APPROVAL_REQUIRED` 下没有真实副作用 Tool。
 
 后续 Durable Adapter 必须另行批准 SQLite Schema、事务、崩溃恢复、清理期限和迁移回退。
 
@@ -167,11 +169,11 @@ Port 操作候选：
 - `SIDE_EFFECT_COMPLETED`：Side Effect 已有确定或未知结果。
 - `TOOL_CALL_COMPLETED`：本次调用对 Tool Loop 的最终投影。
 
-事件可增加不透明 `correlationHash`，但不得增加原始 Approval ID、Arguments Hash、Idempotency Key、Actor 或 Summary。Durable Audit 使用独立 Port，不把审计职责塞进普通 Logger。
+版本 1 不扩展生命周期字段，不增加原始 Approval ID、Arguments Hash、Idempotency Key、Actor、Summary 或 `correlationHash`。Durable Audit 使用独立 Port，不把审计职责塞进普通 Logger。
 
 ## 11. 错误模型
 
-新增稳定 Application 错误候选：
+新增稳定 Application 错误：
 
 - `ApprovalUnavailableException` -> `APPROVAL_UNAVAILABLE`
 - `ApprovalMismatchException` -> 对外仍映射 `APPROVAL_UNAVAILABLE`
@@ -204,14 +206,14 @@ Port 操作候选：
 
 ## 14. 配置与发布
 
-候选新增配置：
+批准新增配置：
 
-| 配置 | 环境变量 | 候选默认值 | 说明 |
+| 配置 | 环境变量 | 默认值 | 说明 |
 | --- | --- | --- | --- |
 | `agent.tools.mode` 新值 | `AGENT_TOOL_MODE` | 保持 `READ_ONLY` | 新增显式 `APPROVAL_REQUIRED` |
 | `agent.tools.approval-timeout` | `AGENT_TOOL_APPROVAL_TIMEOUT` | `5m` | Request 过期时间；不代表 HTTP 阻塞时间 |
 
-`approval-timeout` 必须大于零且有上限；上限候选为 15 分钟。当前 `.env.example` 继续使用 `DISABLED`，不增加会误导为可用的 Approval Channel 配置。
+`approval-timeout` 必须大于零且最大为 15 分钟。当前 `.env.example` 继续使用 `DISABLED`，不增加会误导为可用的 Approval Channel 配置。
 
 ## 15. 实施完成标准
 
