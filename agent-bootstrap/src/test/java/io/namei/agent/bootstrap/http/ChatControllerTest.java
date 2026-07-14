@@ -17,6 +17,7 @@ import io.namei.agent.kernel.error.InvalidModelResponseException;
 import io.namei.agent.kernel.error.ModelInvocationException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
 import io.namei.agent.kernel.error.ToolLoopLimitExceededException;
+import io.namei.agent.kernel.error.ToolCallLimitExceededException;
 import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.MessageRole;
 import jakarta.servlet.http.HttpServletRequestWrapper;
@@ -165,6 +166,16 @@ class ChatControllerTest {
                 .string(
                     org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("private call id"))));
+
+    useCase.failure = new ToolCallLimitExceededException("private count");
+    performValidChat()
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.title").value("模型调用失败"))
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("private count"))));
   }
 
   @Test

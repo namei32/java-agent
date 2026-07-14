@@ -5,6 +5,7 @@ import io.namei.agent.application.SessionLockTimeoutException;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
 import io.namei.agent.kernel.error.ModelInvocationException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
+import io.namei.agent.kernel.error.ToolCallLimitExceededException;
 import io.namei.agent.kernel.error.ToolLoopLimitExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
@@ -31,6 +32,7 @@ public class ApiExceptionHandler {
   @ExceptionHandler({
     ModelInvocationException.class,
     InvalidModelResponseException.class,
+    ToolCallLimitExceededException.class,
     ToolLoopLimitExceededException.class
   })
   ProblemDetail modelFailure(HttpServletRequest request) {

@@ -1,6 +1,7 @@
 package io.namei.agent.application;
 
 import io.namei.agent.kernel.error.InvalidModelResponseException;
+import io.namei.agent.kernel.error.ToolCallLimitExceededException;
 import io.namei.agent.kernel.error.ToolLoopLimitExceededException;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
@@ -135,6 +136,9 @@ public final class ChatService implements ChatUseCase {
   }
 
   private static String failureStatus(RuntimeException failure) {
+    if (failure instanceof ToolCallLimitExceededException) {
+      return "TOOL_CALL_LIMIT_EXCEEDED";
+    }
     if (failure instanceof ToolLoopLimitExceededException) {
       return "TOOL_LOOP_LIMIT_EXCEEDED";
     }

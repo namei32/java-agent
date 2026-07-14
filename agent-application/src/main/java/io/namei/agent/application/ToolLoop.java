@@ -1,6 +1,7 @@
 package io.namei.agent.application;
 
 import io.namei.agent.kernel.error.InvalidModelResponseException;
+import io.namei.agent.kernel.error.ToolCallLimitExceededException;
 import io.namei.agent.kernel.error.ToolLoopLimitExceededException;
 import io.namei.agent.kernel.lifecycle.TurnLifecycleEvent;
 import io.namei.agent.kernel.model.AssistantToolCallMessage;
@@ -42,6 +43,7 @@ final class ToolLoop {
 
   String complete(List<? extends ModelMessage> initialMessages) {
     var messages = new ArrayList<ModelMessage>(initialMessages);
+    int totalCalls = 0;
     for (int iteration = 1; iteration <= maxIterations; iteration++) {
       lifecycle.emit(TurnLifecycleEvent.modelRequested(iteration));
       var response = model.generate(new ChatModelRequest(messages, tools.definitions()));
@@ -60,10 +62,18 @@ final class ToolLoop {
       }
 
       lifecycle.emit(TurnLifecycleEvent.modelCompleted(iteration, "TOOL_CALLS"));
+      int callsInResponse = response.toolCalls().size();
+      if (callsInResponse > settings.maxCallsPerResponse()
+          || totalCalls + callsInResponse > settings.maxCallsPerTurn()) {
+        throw new ToolCallLimitExceededException("Tool Call 超过安全上限");
+      }
+      var preflight = tools.preflight(response.toolCalls());
+      totalCalls += callsInResponse;
       messages.add(new AssistantToolCallMessage(response.content(), response.toolCalls()));
-      for (var call : response.toolCalls()) {
+      for (int callIndex = 0; callIndex < response.toolCalls().size(); callIndex++) {
+        var call = response.toolCalls().get(callIndex);
         lifecycle.emit(TurnLifecycleEvent.toolStarted(iteration, call.id(), call.name()));
-        var result = tools.execute(call);
+        var result = preflight.get(callIndex).orElseGet(() -> tools.execute(call));
         messages.add(new ToolResultMessage(call, result));
         lifecycle.emit(
             TurnLifecycleEvent.toolCompleted(iteration, call.id(), call.name(), result.status()));
