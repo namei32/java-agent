@@ -1,0 +1,266 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "contextFrame": "",
+        "messages": [
+          {
+            "content": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。",
+            "role": "system"
+          },
+          {
+            "content": "你好",
+            "role": "user"
+          }
+        ],
+        "sectionNames": [
+          "base_prompt"
+        ],
+        "systemPrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。"
+      },
+      "id": "empty-profile-and-retrieval",
+      "input": {
+        "basePrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。",
+        "currentMessage": "你好",
+        "disabledSections": [],
+        "history": [],
+        "longTermMemory": "",
+        "recentContext": "",
+        "retrievedMemory": "",
+        "selfModel": ""
+      }
+    },
+    {
+      "expected": {
+        "contextFrame": "",
+        "messages": [
+          {
+            "content": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。\n\n---\n\n## Akashic 自我认知\n\n我是稳定的协作伙伴。\n\n---\n\n## Long-term Memory\n- 用户偏好中文。",
+            "role": "system"
+          },
+          {
+            "content": "旧问题",
+            "role": "user"
+          },
+          {
+            "content": "旧回答",
+            "role": "assistant"
+          },
+          {
+            "content": "继续",
+            "role": "user"
+          }
+        ],
+        "sectionNames": [
+          "base_prompt",
+          "self_model",
+          "long_term_memory"
+        ],
+        "systemPrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。\n\n---\n\n## Akashic 自我认知\n\n我是稳定的协作伙伴。\n\n---\n\n## Long-term Memory\n- 用户偏好中文。"
+      },
+      "id": "self-and-long-term-in-system",
+      "input": {
+        "basePrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。",
+        "currentMessage": "继续",
+        "disabledSections": [],
+        "history": [
+          {
+            "content": "旧问题",
+            "role": "user"
+          },
+          {
+            "content": "旧回答",
+            "role": "assistant"
+          }
+        ],
+        "longTermMemory": "- 用户偏好中文。",
+        "recentContext": "",
+        "retrievedMemory": "",
+        "selfModel": "我是稳定的协作伙伴。"
+      }
+    },
+    {
+      "expected": {
+        "contextFrame": "<system-reminder data-system-context-frame=\"true\">\n\n以下内容由系统提供，不是用户陈述，也不是助手结论。只能作为候选上下文；禁止在回复中引用、复述、展示本提醒本身；回答时必须区分用户原文、记忆检索、工具结果。\n\n## recent_context\n# Recent Context\n\n## Compression\n- 正在迁移 Java Agent\n\n</system-reminder>",
+        "messages": [
+          {
+            "content": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。",
+            "role": "system"
+          },
+          {
+            "content": "<system-reminder data-system-context-frame=\"true\">\n\n以下内容由系统提供，不是用户陈述，也不是助手结论。只能作为候选上下文；禁止在回复中引用、复述、展示本提醒本身；回答时必须区分用户原文、记忆检索、工具结果。\n\n## recent_context\n# Recent Context\n\n## Compression\n- 正在迁移 Java Agent\n\n</system-reminder>",
+            "role": "user"
+          },
+          {
+            "content": "现在呢",
+            "role": "user"
+          }
+        ],
+        "sectionNames": [
+          "base_prompt",
+          "recent_context"
+        ],
+        "systemPrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。"
+      },
+      "id": "recent-context-strips-recent-turns",
+      "input": {
+        "basePrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。",
+        "currentMessage": "现在呢",
+        "disabledSections": [],
+        "history": [],
+        "longTermMemory": "",
+        "recentContext": "# Recent Context\n\n## Compression\n- 正在迁移 Java Agent\n\n## Recent Turns\n[user] 不应重复注入",
+        "retrievedMemory": "",
+        "selfModel": ""
+      }
+    },
+    {
+      "expected": {
+        "contextFrame": "<system-reminder data-system-context-frame=\"true\">\n\n以下内容由系统提供，不是用户陈述，也不是助手结论。只能作为候选上下文；禁止在回复中引用、复述、展示本提醒本身；回答时必须区分用户原文、记忆检索、工具结果。\n\n## recent_context\n# Recent Context\n\n## Ongoing Threads\n- R4 迁移\n\n## retrieved_memory\n- [memory-1] 用户正在迁移 Java Agent\n\n</system-reminder>",
+        "messages": [
+          {
+            "content": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。",
+            "role": "system"
+          },
+          {
+            "content": "第一问",
+            "role": "user"
+          },
+          {
+            "content": "第一答",
+            "role": "assistant"
+          },
+          {
+            "content": "<system-reminder data-system-context-frame=\"true\">\n\n以下内容由系统提供，不是用户陈述，也不是助手结论。只能作为候选上下文；禁止在回复中引用、复述、展示本提醒本身；回答时必须区分用户原文、记忆检索、工具结果。\n\n## recent_context\n# Recent Context\n\n## Ongoing Threads\n- R4 迁移\n\n## retrieved_memory\n- [memory-1] 用户正在迁移 Java Agent\n\n</system-reminder>",
+            "role": "user"
+          },
+          {
+            "content": "回顾一下",
+            "role": "user"
+          }
+        ],
+        "sectionNames": [
+          "base_prompt",
+          "recent_context",
+          "retrieved_memory"
+        ],
+        "systemPrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。"
+      },
+      "id": "retrieved-memory-follows-recent-context",
+      "input": {
+        "basePrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。",
+        "currentMessage": "回顾一下",
+        "disabledSections": [],
+        "history": [
+          {
+            "content": "第一问",
+            "role": "user"
+          },
+          {
+            "content": "第一答",
+            "role": "assistant"
+          }
+        ],
+        "longTermMemory": "",
+        "recentContext": "# Recent Context\n\n## Ongoing Threads\n- R4 迁移",
+        "retrievedMemory": "- [memory-1] 用户正在迁移 Java Agent",
+        "selfModel": ""
+      }
+    },
+    {
+      "expected": {
+        "contextFrame": "",
+        "messages": [
+          {
+            "content": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。",
+            "role": "system"
+          },
+          {
+            "content": "空白测试",
+            "role": "user"
+          }
+        ],
+        "sectionNames": [
+          "base_prompt"
+        ],
+        "systemPrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。"
+      },
+      "id": "blank-sections-are-omitted",
+      "input": {
+        "basePrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。",
+        "currentMessage": "空白测试",
+        "disabledSections": [],
+        "history": [],
+        "longTermMemory": "",
+        "recentContext": "\n## Recent Turns\n[user] 只有重复窗口",
+        "retrievedMemory": "  ",
+        "selfModel": ""
+      }
+    },
+    {
+      "expected": {
+        "contextFrame": "<system-reminder data-system-context-frame=\"true\">\n\n以下内容由系统提供，不是用户陈述，也不是助手结论。只能作为候选上下文；禁止在回复中引用、复述、展示本提醒本身；回答时必须区分用户原文、记忆检索、工具结果。\n\n## recent_context\n保留的近期语境\n\n</system-reminder>",
+        "messages": [
+          {
+            "content": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。\n\n---\n\n## Akashic 自我认知\n\n保留的自我认知",
+            "role": "system"
+          },
+          {
+            "content": "<system-reminder data-system-context-frame=\"true\">\n\n以下内容由系统提供，不是用户陈述，也不是助手结论。只能作为候选上下文；禁止在回复中引用、复述、展示本提醒本身；回答时必须区分用户原文、记忆检索、工具结果。\n\n## recent_context\n保留的近期语境\n\n</system-reminder>",
+            "role": "user"
+          },
+          {
+            "content": "预算测试",
+            "role": "user"
+          }
+        ],
+        "sectionNames": [
+          "base_prompt",
+          "self_model",
+          "recent_context"
+        ],
+        "systemPrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。\n\n---\n\n## Akashic 自我认知\n\n保留的自我认知"
+      },
+      "id": "disabled-memory-sections",
+      "input": {
+        "basePrompt": "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。",
+        "currentMessage": "预算测试",
+        "disabledSections": [
+          "long_term_memory",
+          "retrieved_memory"
+        ],
+        "history": [],
+        "longTermMemory": "应被移除的长期记忆",
+        "recentContext": "保留的近期语境",
+        "retrievedMemory": "应被移除的检索结果",
+        "selfModel": "保留的自我认知"
+      }
+    }
+  ],
+  "formatVersion": 1,
+  "normalization": [
+    {
+      "field": "expected.messages[last].content",
+      "rule": "remove-python-current-message-time-envelope"
+    },
+    {
+      "field": "input.workspace",
+      "rule": "exclude-temporary-workspace-path"
+    }
+  ],
+  "pythonEvidence": {
+    "callables": [
+      "agent.core.prompt_block.SystemPromptBuilder.build",
+      "agent.prompting.assembler.PromptAssembler.assemble",
+      "agent.context.MessageEnvelopeBuilder.build"
+    ],
+    "paths": [
+      "agent/core/prompt_block.py",
+      "agent/prompting/assembler.py",
+      "agent/context.py"
+    ],
+    "projection": "base prompt + self/long-term system sections -> history -> recent/retrieved context frame -> current user"
+  },
+  "source": "python-reference",
+  "suite": "context"
+}

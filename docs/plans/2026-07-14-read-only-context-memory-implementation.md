@@ -4,7 +4,7 @@
 - 批准日期：2026-07-14
 - 日期：2026-07-14
 - 阶段：R4.1
-- 当前执行状态：Task C0 已完成；从 Task C1 开始实施
+- 当前执行状态：Task C0 至 C1 已完成；从 Task C2 开始实施
 - Contract：[只读上下文与记忆兼容契约](../contracts/read-only-context-memory.md)
 - Spec：[只读 Context/Memory 纵向切片设计](../specs/2026-07-14-read-only-context-memory-design.md)
 
@@ -26,7 +26,9 @@
 
 ## Task C1：Contract 评审与 Golden 基线
 
-状态：实施中。
+状态：已完成。
+
+验证证据（2026-07-14）：生成器通过 Python 生产 `SystemPromptBuilder`、`PromptAssembler` 和 `MessageEnvelopeBuilder` 生成 6 个共同投影 Case；连续生成两次后 Context Fixture 与 Manifest SHA-256 完全一致。修正 Profile 选择后，`-Pcompat` 聚焦执行 `GoldenManifestTest` 1 个测试并通过；Manifest 现包含 11 个业务夹具。
 
 - 批准 Contract 的五项决定和默认上限。
 - 扩展 Python Golden 生成器，使用临时 Workspace 和生产 Prompt helper 生成 `context/read-only-context-memory.json`。

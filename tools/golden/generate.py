@@ -25,6 +25,13 @@ REFERENCE_FILES = (
     "session/manager.py",
     "session/store.py",
     "agent/context.py",
+    "agent/core/prompt_block.py",
+    "agent/prompting/assembler.py",
+    "agent/prompting/budget.py",
+    "agent/memory.py",
+    "agent/retrieval/default_pipeline.py",
+    "agent/retrieval/protocol.py",
+    "core/memory/markdown.py",
     "agent/provider.py",
     "agent/core/passive_turn.py",
     "agent/tool_runtime.py",
@@ -46,6 +53,7 @@ def main() -> None:
 
     history = build_history_fixture()
     prompt = build_prompt_fixture()
+    read_only_context_memory = build_read_only_context_memory_fixture()
     sqlite = build_sqlite_fixture()
     configuration = build_configuration_fixture()
     configuration_validation = build_configuration_validation_fixture()
@@ -56,6 +64,10 @@ def main() -> None:
 
     write_json(output / "history/session-history.json", history)
     write_json(output / "prompt/message-envelope.json", prompt)
+    write_json(
+        output / "context/read-only-context-memory.json",
+        read_only_context_memory,
+    )
     write_json(output / "sqlite/session-store.json", sqlite)
     write_json(output / "configuration/config-resolution.json", configuration)
     write_json(
@@ -74,6 +86,11 @@ def main() -> None:
     for fixture_id, relative_path, source in (
         ("history/session-history", "history/session-history.json", "python-reference"),
         ("prompt/message-envelope", "prompt/message-envelope.json", "python-reference"),
+        (
+            "context/read-only-context-memory",
+            "context/read-only-context-memory.json",
+            "python-reference",
+        ),
         ("sqlite/session-store", "sqlite/session-store.json", "python-reference"),
         (
             "configuration/config-resolution",
@@ -584,6 +601,236 @@ def build_prompt_fixture() -> dict[str, Any]:
         },
         "source": "python-reference",
         "suite": "prompt",
+    }
+
+
+def build_read_only_context_memory_fixture() -> dict[str, Any]:
+    from agent.context import MessageEnvelopeBuilder
+    from agent.core.prompt_block import (
+        LongTermMemoryPromptBlock,
+        MemoryBlockPromptBlock,
+        RecentContextPromptBlock,
+        SelfModelPromptBlock,
+        SystemPromptBuilder,
+        TurnContext,
+    )
+    from agent.prompting import PromptAssembler, PromptSectionRender
+
+    fixed_time = datetime(2026, 7, 14, 6, 0, 0, tzinfo=timezone.utc)
+    base_prompt = "你是 Namei Agent。请根据给定的对话历史直接、准确地回答当前用户消息。"
+
+    class GoldenMemory:
+        def __init__(self, self_model: str, long_term: str, recent: str) -> None:
+            self._self_model = self_model
+            self._long_term = long_term
+            self._recent = recent
+
+        def read_self(self) -> str:
+            return self._self_model
+
+        def get_memory_context(self) -> str:
+            if not self._long_term:
+                return ""
+            return f"## Long-term Memory\n{self._long_term}"
+
+        def read_recent_context(self) -> str:
+            return self._recent
+
+    class GoldenSkills:
+        def get_always_skills(self) -> list[str]:
+            return []
+
+        def load_skills_for_context(self, names: list[str]) -> str:
+            return ""
+
+        def build_skills_summary(self) -> str:
+            return ""
+
+    class GoldenContextBuilder:
+        def __init__(self, memory: GoldenMemory, workspace: Path) -> None:
+            self._memory = memory
+            self._workspace = workspace
+            self._envelope_builder = MessageEnvelopeBuilder()
+
+        def _build_system_prompt_result(
+            self,
+            skill_names: list[str] | None = None,
+            channel: str | None = None,
+            chat_id: str | None = None,
+            retrieved_memory_block: str = "",
+            disabled_sections: set[str] | None = None,
+        ) -> Any:
+            context = TurnContext(
+                workspace=self._workspace,
+                memory=self._memory,
+                skills=GoldenSkills(),
+                skill_names=skill_names or [],
+                channel=channel,
+                chat_id=chat_id,
+                retrieved_memory_block=retrieved_memory_block,
+            )
+            return SystemPromptBuilder(
+                [
+                    SelfModelPromptBlock(),
+                    LongTermMemoryPromptBlock(),
+                    RecentContextPromptBlock(),
+                    MemoryBlockPromptBlock(),
+                ]
+            ).build(context, disabled_sections=disabled_sections)
+
+    cases = []
+    definitions = (
+        {
+            "id": "empty-profile-and-retrieval",
+            "current": "你好",
+            "history": [],
+            "selfModel": "",
+            "longTermMemory": "",
+            "recentContext": "",
+            "retrievedMemory": "",
+            "disabledSections": [],
+        },
+        {
+            "id": "self-and-long-term-in-system",
+            "current": "继续",
+            "history": [message("user", "旧问题"), message("assistant", "旧回答")],
+            "selfModel": "我是稳定的协作伙伴。",
+            "longTermMemory": "- 用户偏好中文。",
+            "recentContext": "",
+            "retrievedMemory": "",
+            "disabledSections": [],
+        },
+        {
+            "id": "recent-context-strips-recent-turns",
+            "current": "现在呢",
+            "history": [],
+            "selfModel": "",
+            "longTermMemory": "",
+            "recentContext": (
+                "# Recent Context\n\n## Compression\n- 正在迁移 Java Agent"
+                "\n\n## Recent Turns\n[user] 不应重复注入"
+            ),
+            "retrievedMemory": "",
+            "disabledSections": [],
+        },
+        {
+            "id": "retrieved-memory-follows-recent-context",
+            "current": "回顾一下",
+            "history": [message("user", "第一问"), message("assistant", "第一答")],
+            "selfModel": "",
+            "longTermMemory": "",
+            "recentContext": "# Recent Context\n\n## Ongoing Threads\n- R4 迁移",
+            "retrievedMemory": "- [memory-1] 用户正在迁移 Java Agent",
+            "disabledSections": [],
+        },
+        {
+            "id": "blank-sections-are-omitted",
+            "current": "空白测试",
+            "history": [],
+            "selfModel": "",
+            "longTermMemory": "",
+            "recentContext": "\n## Recent Turns\n[user] 只有重复窗口",
+            "retrievedMemory": "  ",
+            "disabledSections": [],
+        },
+        {
+            "id": "disabled-memory-sections",
+            "current": "预算测试",
+            "history": [],
+            "selfModel": "保留的自我认知",
+            "longTermMemory": "应被移除的长期记忆",
+            "recentContext": "保留的近期语境",
+            "retrievedMemory": "应被移除的检索结果",
+            "disabledSections": ["long_term_memory", "retrieved_memory"],
+        },
+    )
+
+    with tempfile.TemporaryDirectory(prefix="namei-context-golden-") as directory:
+        workspace = Path(directory) / "workspace"
+        for definition in definitions:
+            memory = GoldenMemory(
+                str(definition["selfModel"]),
+                str(definition["longTermMemory"]),
+                str(definition["recentContext"]),
+            )
+            context_builder = GoldenContextBuilder(memory, workspace)
+            assembled = PromptAssembler(context_builder).assemble(
+                history=list(definition["history"]),
+                current_message=str(definition["current"]),
+                media=None,
+                channel=None,
+                message_timestamp=fixed_time,
+                retrieved_memory_block=str(definition["retrievedMemory"]),
+                disabled_sections=set(definition["disabledSections"]),
+                system_sections_top=[
+                    PromptSectionRender(
+                        name="base_prompt",
+                        content=base_prompt,
+                        is_static=True,
+                    )
+                ],
+            )
+            messages = list(assembled.messages)
+            messages[-1] = {"content": definition["current"], "role": "user"}
+            context_frame = ""
+            if len(messages) >= 2:
+                candidate = messages[-2]
+                content = candidate.get("content") if isinstance(candidate, dict) else None
+                if isinstance(content, str) and content.startswith("<system-reminder"):
+                    context_frame = content
+            cases.append(
+                {
+                    "expected": {
+                        "contextFrame": context_frame,
+                        "messages": messages,
+                        "sectionNames": [item.name for item in assembled.system_sections],
+                        "systemPrompt": assembled.system_prompt,
+                    },
+                    "id": definition["id"],
+                    "input": {
+                        "basePrompt": base_prompt,
+                        "currentMessage": definition["current"],
+                        "disabledSections": definition["disabledSections"],
+                        "history": definition["history"],
+                        "longTermMemory": definition["longTermMemory"],
+                        "recentContext": definition["recentContext"],
+                        "retrievedMemory": definition["retrievedMemory"],
+                        "selfModel": definition["selfModel"],
+                    },
+                }
+            )
+
+    return {
+        "cases": cases,
+        "formatVersion": FORMAT_VERSION,
+        "normalization": [
+            {
+                "field": "expected.messages[last].content",
+                "rule": "remove-python-current-message-time-envelope",
+            },
+            {
+                "field": "input.workspace",
+                "rule": "exclude-temporary-workspace-path",
+            },
+        ],
+        "pythonEvidence": {
+            "callables": [
+                "agent.core.prompt_block.SystemPromptBuilder.build",
+                "agent.prompting.assembler.PromptAssembler.assemble",
+                "agent.context.MessageEnvelopeBuilder.build",
+            ],
+            "paths": [
+                "agent/core/prompt_block.py",
+                "agent/prompting/assembler.py",
+                "agent/context.py",
+            ],
+            "projection": (
+                "base prompt + self/long-term system sections -> history -> "
+                "recent/retrieved context frame -> current user"
+            ),
+        },
+        "source": "python-reference",
+        "suite": "context",
     }
 
 
