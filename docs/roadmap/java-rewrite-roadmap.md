@@ -25,7 +25,7 @@
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、六模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
-| R4 | 上下文与记忆 | 实施中 | R4.1 只读 Profile、Context Frame、Retrieval Port/NoOp 与 Golden 已实现，待阶段门禁 |
+| R4 | 上下文与记忆 | R4.1 已完成，R4.2 未开始 | 只读 Profile、Context Frame、Retrieval Port/NoOp、Golden 与安全门禁已完成 |
 | R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
@@ -133,7 +133,7 @@ R3.2 实现依据：
 
 前置：Tool Loop 稳定，Prompt 与 Memory Contract 已冻结。
 
-当前状态：R4.1 的 C1 至 C7 已完成：Python Golden、Kernel Port、只读 Markdown Adapter、ContextAssembler、Retrieval 注入/提交隔离、默认关闭装配和安全 HTTP 映射均已实现；待 C8 阶段门禁与自审。
+当前状态：R4.1 的 C1 至 C8 已全部完成。Python Golden、Kernel Port、只读 Markdown Adapter、ContextAssembler、Retrieval 注入/提交隔离、默认关闭装配和安全 HTTP 映射均已实现；默认 172、`failure` 50、`compat` 206 个测试以及格式、依赖、Secret/Workspace/生产写入面审计全部通过。
 
 范围：
 

@@ -1,10 +1,10 @@
 # 只读 Context/Memory 实施计划
 
-- 状态：实施中
+- 状态：已完成
 - 批准日期：2026-07-14
 - 日期：2026-07-14
 - 阶段：R4.1
-- 当前执行状态：Task C0 至 C7 已完成；从 Task C8 开始实施
+- 当前执行状态：Task C0 至 C8 已完成
 - Contract：[只读上下文与记忆兼容契约](../contracts/read-only-context-memory.md)
 - Spec：[只读 Context/Memory 纵向切片设计](../specs/2026-07-14-read-only-context-memory-design.md)
 
@@ -142,7 +142,16 @@ RED 固定配置默认值、上限校验、`DISABLED` 零文件访问、`READ_ON
 
 ## Task C8：阶段门禁、自审与提交
 
-状态：待实施。
+状态：已完成。
+
+验证证据（2026-07-14）：
+
+- `spotless:check` 首次发现本分支新增测试的机械格式差异；执行项目格式器后重跑通过。
+- 默认 `clean verify` 首次由完整 Spring Context 暴露 `AgentProperties` 多构造器导致的绑定失败；删除仅为旧测试保留的五参数重载、让配置记录恢复唯一 canonical 构造器后，重跑默认 Reactor 共 172 个非零测试（163 单元、9 集成）并全部通过。
+- `failure` Profile 实际执行 50 个测试，零失败。
+- `compat` Profile 实际执行 206 个测试，零失败；包含 6 个只读 Context/Memory Golden Case 和 12 个 HTTP 错误映射 Case。
+- Kernel 依赖树只有 JUnit、AssertJ、Jackson 测试依赖，没有 Spring、JDBC、Reactor、Spring AI、Workspace Adapter 或 Provider SDK。
+- Secret、Workspace、生产 Bean 与写入面审计通过：未跟踪 `.env`、`config.toml`、数据库、日志、真实 Workspace 或用户记忆；常见真实凭证格式零命中；生产只有 Markdown Profile Reader 与 Retrieval NoOp，没有 Memory Writer、Optimizer、Embedding、`memory2`、Memory Tool 或 Profile 写操作；模板和生产默认均为 `AGENT_MEMORY_MODE=DISABLED`。
 
 按顺序执行一次：
 
@@ -165,7 +174,7 @@ RED 固定配置默认值、上限校验、`DISABLED` 零文件访问、`READ_ON
 
 ## 完成定义
 
-- C1–C8 全部完成并记录准确测试数。
-- 生产默认关闭，没有 Workspace 写入。
+- C1–C8 已全部完成并记录准确测试数。
+- 生产 Memory 默认关闭，没有 Markdown Profile 写入面；聊天的既有 SQLite 写入边界不变。
 - Markdown Profile 和 Context Frame 共同投影通过 Golden。
 - R4.2 缺口继续明确，不把 NoOp Retrieval 描述为语义检索已完成。

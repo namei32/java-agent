@@ -80,8 +80,8 @@
 
 ## 当前优先级
 
-1. 完成 R4.1 阶段门禁；生产继续保持 `AGENT_MEMORY_MODE=DISABLED`，不执行真实 Workspace Smoke。
-2. 为 R4.2 单独冻结 `memory2` 只读查询、排序、Scope、Embedding 与 Context Budget Contract，不提前开放写入。
+1. 为 R4.2 单独冻结 `memory2` 只读查询、排序、Scope、Embedding 与 Context Budget Contract；生产继续保持 `AGENT_MEMORY_MODE=DISABLED`。
+2. 在 R4.2 Contract 获批后只实现临时数据/脱敏副本上的语义检索，不提前开放写入，也不执行真实 Workspace Smoke。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
 5. MCP、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。
