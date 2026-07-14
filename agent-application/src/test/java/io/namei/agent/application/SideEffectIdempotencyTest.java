@@ -242,7 +242,15 @@ class SideEffectIdempotencyTest {
   private static SideEffectBatchCoordinator coordinator(
       Tool tool, ApprovalPort approvals, SideEffectLedger ledger) {
     return new SideEffectBatchCoordinator(
-        new ToolRegistry(List.of(tool)),
+        new ToolRegistry(
+            List.of(tool),
+            new ToolRuntimeSettings(
+                ToolRuntimeMode.APPROVAL_REQUIRED,
+                8,
+                16,
+                Duration.ofSeconds(5),
+                32,
+                20_000)),
         approvals,
         ToolExecutionPolicy.registeredRisk(),
         CLOCK,

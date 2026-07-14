@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.namei.agent.kernel.model.ChatModelResponse;
+import io.namei.agent.kernel.approval.ApprovalDecisionStatus;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -74,6 +75,7 @@ class ApplicationConfigurationTest {
     assertThat(defaults.tools().maxConcurrentCalls()).isEqualTo(32);
     assertThat(defaults.tools().maxArgumentBytes()).isEqualTo(16_384);
     assertThat(defaults.tools().maxResultCharacters()).isEqualTo(20_000);
+    assertThat(defaults.tools().approvalTimeout()).isEqualTo(Duration.ofMinutes(5));
     assertThatThrownBy(() -> new AgentProperties(null, null, null, null, null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("agent.workspace 必填");
@@ -86,6 +88,50 @@ class ApplicationConfigurationTest {
                     null,
                     null))
         .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                new AgentProperties.Tools(
+                    io.namei.agent.application.ToolRuntimeMode.APPROVAL_REQUIRED,
+                    8,
+                    16,
+                    Duration.ofSeconds(5),
+                    32,
+                    16_384,
+                    20_000,
+                    Duration.ofMinutes(16)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("approval-timeout");
+  }
+
+  @Test
+  void wiresProductionDenyAllWithoutExecutableLedgerOrFakeToolBean() {
+    var configuration = new ApplicationConfiguration();
+    var approvalPort = configuration.approvalPort();
+    var request =
+        new io.namei.agent.kernel.approval.ApprovalRequest(
+            "approval-1",
+            "session-binding",
+            "turn-1",
+            "call-1",
+            "write_note",
+            "v1",
+            io.namei.agent.kernel.tool.ToolRisk.WRITE,
+            "a".repeat(64),
+            "idempotency-1",
+            "固定摘要",
+            java.time.Instant.parse("2026-07-14T05:00:00Z"),
+            java.time.Instant.parse("2026-07-14T05:05:00Z"),
+            "approval-fingerprint-v1",
+            "b".repeat(64));
+
+    assertThat(approvalPort.decide(request).status()).isEqualTo(ApprovalDecisionStatus.DENIED);
+    assertThat(
+            java.util.Arrays.stream(ApplicationConfiguration.class.getDeclaredMethods())
+                .filter(method -> method.isAnnotationPresent(org.springframework.context.annotation.Bean.class))
+                .map(java.lang.reflect.Method::getReturnType))
+        .doesNotContain(
+            io.namei.agent.application.SideEffectLedger.class,
+            io.namei.agent.kernel.port.Tool.class);
   }
 
   @Test
@@ -122,6 +168,7 @@ class ApplicationConfigurationTest {
             model,
             configuration.sessionExecutionGate(properties),
             configuration.turnLifecycleObserver(),
+            configuration.approvalPort(),
             properties,
             "test-model",
             "",

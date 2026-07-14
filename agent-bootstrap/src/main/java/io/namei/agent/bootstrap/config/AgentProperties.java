@@ -54,10 +54,31 @@ public record AgentProperties(
       Duration timeout,
       int maxConcurrentCalls,
       int maxArgumentBytes,
-      int maxResultCharacters) {
+      int maxResultCharacters,
+      Duration approvalTimeout) {
+    public Tools(
+        ToolRuntimeMode mode,
+        int maxCallsPerResponse,
+        int maxCallsPerTurn,
+        Duration timeout,
+        int maxConcurrentCalls,
+        int maxArgumentBytes,
+        int maxResultCharacters) {
+      this(
+          mode,
+          maxCallsPerResponse,
+          maxCallsPerTurn,
+          timeout,
+          maxConcurrentCalls,
+          maxArgumentBytes,
+          maxResultCharacters,
+          Duration.ofMinutes(5));
+    }
+
     public Tools {
       Objects.requireNonNull(mode, "agent.tools.mode");
       Objects.requireNonNull(timeout, "agent.tools.timeout");
+      Objects.requireNonNull(approvalTimeout, "agent.tools.approval-timeout");
       if (maxCallsPerResponse < 1
           || maxCallsPerTurn < 1
           || maxConcurrentCalls < 1
@@ -70,10 +91,23 @@ public record AgentProperties(
       if (maxCallsPerTurn < maxCallsPerResponse) {
         throw new IllegalArgumentException("agent.tools.max-calls-per-turn 不能小于单响应上限");
       }
+      if (approvalTimeout.isZero()
+          || approvalTimeout.isNegative()
+          || approvalTimeout.compareTo(Duration.ofMinutes(15)) > 0) {
+        throw new IllegalArgumentException("agent.tools.approval-timeout 必须大于零且不超过 15m");
+      }
     }
 
     static Tools defaults() {
-      return new Tools(ToolRuntimeMode.READ_ONLY, 8, 16, Duration.ofSeconds(5), 32, 16_384, 20_000);
+      return new Tools(
+          ToolRuntimeMode.READ_ONLY,
+          8,
+          16,
+          Duration.ofSeconds(5),
+          32,
+          16_384,
+          20_000,
+          Duration.ofMinutes(5));
     }
   }
 }

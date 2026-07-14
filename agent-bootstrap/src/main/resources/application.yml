@@ -36,6 +36,7 @@ agent:
     max-concurrent-calls: ${AGENT_TOOL_MAX_CONCURRENT_CALLS:32}
     max-argument-bytes: ${AGENT_TOOL_MAX_ARGUMENT_BYTES:16384}
     max-result-characters: ${AGENT_TOOL_MAX_RESULT_CHARACTERS:20000}
+    approval-timeout: ${AGENT_TOOL_APPROVAL_TIMEOUT:5m}
 management:
   endpoints:
     web:

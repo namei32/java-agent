@@ -4,6 +4,7 @@ import io.namei.agent.kernel.port.Tool;
 import io.namei.agent.kernel.tool.ToolCall;
 import io.namei.agent.kernel.tool.ToolDefinition;
 import io.namei.agent.kernel.tool.ToolResult;
+import io.namei.agent.kernel.tool.ToolRisk;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +55,10 @@ final class ToolRegistry {
     for (Tool tool : tools) {
       Objects.requireNonNull(tool, "tool");
       var definition = Objects.requireNonNull(tool.definition(), "tool.definition");
+      if (settings.mode() == ToolRuntimeMode.READ_ONLY
+          && definition.risk() != ToolRisk.READ_ONLY) {
+        throw new IllegalArgumentException("READ_ONLY 模式不能注册副作用工具");
+      }
       if (registered.putIfAbsent(definition.name(), tool) != null) {
         throw new IllegalArgumentException("工具名称重复: " + definition.name());
       }

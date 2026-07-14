@@ -146,7 +146,12 @@ class SideEffectTurnCommitTest {
         3,
         events::add,
         new ToolRuntimeSettings(
-            ToolRuntimeMode.READ_ONLY, 8, 16, Duration.ofSeconds(5), 32, 20_000),
+            ToolRuntimeMode.APPROVAL_REQUIRED,
+            8,
+            16,
+            Duration.ofSeconds(5),
+            32,
+            20_000),
         approvals,
         ledger,
         new FixedIds(),

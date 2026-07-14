@@ -222,7 +222,7 @@ class SideEffectBatchCoordinatorTest {
             return ToolResult.success("固定结果");
           }
         };
-    var registry = new ToolRegistry(List.of(changingDefinition));
+    var registry = new ToolRegistry(List.of(changingDefinition), approvalSettings());
     var requestVersion = new AtomicReference<String>();
     ApprovalPort deny =
         request -> {
@@ -260,7 +260,7 @@ class SideEffectBatchCoordinatorTest {
   private static SideEffectBatchCoordinator coordinator(
       List<Tool> tools, ApprovalPort approvals, ToolExecutionPolicy policy) {
     return new SideEffectBatchCoordinator(
-        new ToolRegistry(tools),
+        new ToolRegistry(tools, approvalSettings()),
         approvals,
         policy,
         CLOCK,
@@ -271,6 +271,16 @@ class SideEffectBatchCoordinatorTest {
 
   private static ToolCall call(String id, String name, Map<String, Object> arguments) {
     return new ToolCall(id, name, arguments);
+  }
+
+  private static ToolRuntimeSettings approvalSettings() {
+    return new ToolRuntimeSettings(
+        ToolRuntimeMode.APPROVAL_REQUIRED,
+        8,
+        16,
+        Duration.ofSeconds(5),
+        32,
+        20_000);
   }
 
   private static Tool tool(

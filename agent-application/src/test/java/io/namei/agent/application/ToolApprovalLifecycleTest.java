@@ -200,7 +200,7 @@ class ToolApprovalLifecycleTest {
 
   private static ToolRuntimeSettings settings() {
     return new ToolRuntimeSettings(
-        ToolRuntimeMode.READ_ONLY, 8, 16, Duration.ofSeconds(5), 32, 20_000);
+        ToolRuntimeMode.APPROVAL_REQUIRED, 8, 16, Duration.ofSeconds(5), 32, 20_000);
   }
 
   private static SessionExecutionGate directGate() {

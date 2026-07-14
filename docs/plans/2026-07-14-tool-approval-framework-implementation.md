@@ -2,7 +2,7 @@
 
 - 状态：已批准
 - 批准日期：2026-07-14
-- 当前执行状态：Task A0 至 A5 已完成；Task A6 至 A9 待实施
+- 当前执行状态：Task A0 至 A6 已完成；Task A7 至 A9 待实施
 - 日期：2026-07-14
 - 阶段：R3.2
 - Contract：[Tool 审批、副作用、幂等与沙箱安全契约](../contracts/tool-approval-side-effect-safety.md)
@@ -229,6 +229,10 @@ RED Case：
 ```
 
 ## Task A6：Bootstrap 模式与 Fail Closed 装配
+
+状态：已完成。
+
+验证证据（2026-07-14）：计划命令先因 `APPROVAL_REQUIRED` 缺失编译失败，修正测试工具名称后，同一命令实际执行 Application 的 5 个模式测试和 Bootstrap 的 7 个装配测试，全部通过。生产 Bean 为 `DenyAllApprovalPort`，没有 `SideEffectLedger`/Fake Tool Bean；`approval-timeout` 默认 5m、最大 15m，`.env.example` 继续显式 `DISABLED`。
 
 目标：增加显式 `APPROVAL_REQUIRED` 解析，但生产仍无可执行 Side Effect。
 
