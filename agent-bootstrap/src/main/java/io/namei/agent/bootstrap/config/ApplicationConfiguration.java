@@ -107,9 +107,7 @@ public class ApplicationConfiguration {
 
   @Bean
   MemoryContextService memoryContextService(
-      MemoryProfilePort profiles,
-      MemoryRetrievalPort retrieval,
-      AgentProperties properties) {
+      MemoryProfilePort profiles, MemoryRetrievalPort retrieval, AgentProperties properties) {
     return new MemoryContextService(
         profiles,
         retrieval,

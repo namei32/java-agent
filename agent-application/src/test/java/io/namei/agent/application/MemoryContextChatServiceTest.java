@@ -54,10 +54,7 @@ class MemoryContextChatServiceTest {
     var retrieval = new RecordingRetrieval(MemoryRetrievalResult.retrieved("命中的只读记忆", 1));
     var memory =
         new MemoryContextService(
-            () -> new MemoryProfile("稳定身份", "长期偏好", "近期语境"),
-            retrieval,
-            100_000,
-            20_000);
+            () -> new MemoryProfile("稳定身份", "长期偏好", "近期语境"), retrieval, 100_000, 20_000);
 
     service(repository, model, new HistoryLimits(2, 100_000), List.of(), 1, memory, event -> {})
         .chat(new ChatCommand("demo", "当前问题"));
@@ -74,7 +71,9 @@ class MemoryContextChatServiceTest {
         .contains("## recent_context\n近期语境")
         .contains("## retrieved_memory\n命中的只读记忆");
     assertThat(model.requests.getFirst().messages().getLast().content()).isEqualTo("当前问题");
-    assertThat(repository.appended).singleElement().satisfies(MemoryContextChatServiceTest::assertRealTurnOnly);
+    assertThat(repository.appended)
+        .singleElement()
+        .satisfies(MemoryContextChatServiceTest::assertRealTurnOnly);
   }
 
   @Test
@@ -89,15 +88,22 @@ class MemoryContextChatServiceTest {
         .chat(new ChatCommand("demo", "问题"));
 
     assertThat(model.requests.getFirst().messages())
-        .containsExactly(
-            message(MessageRole.SYSTEM, "基础 Prompt"), message(MessageRole.USER, "问题"));
+        .containsExactly(message(MessageRole.SYSTEM, "基础 Prompt"), message(MessageRole.USER, "问题"));
   }
 
   @Test
   @Tag("failure")
   void profileRetrievalAndBudgetFailuresStopBeforeModelAndCommitWithStableStatus() {
-    assertMemoryFailure(() -> { throw new IllegalStateException("/secret/profile/path"); }, request -> MemoryRetrievalResult.empty());
-    assertMemoryFailure(MemoryProfilePort.empty(), request -> { throw new IllegalStateException("sensitive query"); });
+    assertMemoryFailure(
+        () -> {
+          throw new IllegalStateException("/secret/profile/path");
+        },
+        request -> MemoryRetrievalResult.empty());
+    assertMemoryFailure(
+        MemoryProfilePort.empty(),
+        request -> {
+          throw new IllegalStateException("sensitive query");
+        });
     assertMemoryFailure(
         MemoryProfilePort.empty(), request -> MemoryRetrievalResult.retrieved("12345", 1), 4);
   }
@@ -107,8 +113,7 @@ class MemoryContextChatServiceTest {
     var repository = new RecordingRepository(List.of());
     var model =
         new ScriptedModel(
-            new ChatModelResponse(
-                "", List.of(new ToolCall("call-1", "lookup", Map.of()))),
+            new ChatModelResponse("", List.of(new ToolCall("call-1", "lookup", Map.of()))),
             new ChatModelResponse("工具后的最终回答"));
     var memory =
         new MemoryContextService(
@@ -134,7 +139,9 @@ class MemoryContextChatServiceTest {
     assertThat(model.requests.getLast().messages())
         .anyMatch(AssistantToolCallMessage.class::isInstance)
         .anyMatch(ToolResultMessage.class::isInstance);
-    assertThat(repository.appended).singleElement().satisfies(MemoryContextChatServiceTest::assertRealTurnOnly);
+    assertThat(repository.appended)
+        .singleElement()
+        .satisfies(MemoryContextChatServiceTest::assertRealTurnOnly);
   }
 
   private static void assertMemoryFailure(
@@ -147,17 +154,10 @@ class MemoryContextChatServiceTest {
     var repository = new RecordingRepository(List.of());
     var model = new ScriptedModel(new ChatModelResponse("不应调用"));
     var events = new ArrayList<TurnLifecycleEvent>();
-    var memory =
-        new MemoryContextService(profiles, retrieval, 100_000, maxRetrievedCharacters);
+    var memory = new MemoryContextService(profiles, retrieval, 100_000, maxRetrievedCharacters);
     var chat =
         service(
-            repository,
-            model,
-            new HistoryLimits(40, 100_000),
-            List.of(),
-            1,
-            memory,
-            events::add);
+            repository, model, new HistoryLimits(40, 100_000), List.of(), 1, memory, events::add);
 
     assertThatThrownBy(() -> chat.chat(new ChatCommand("demo", "问题")))
         .isInstanceOf(MemoryContextUnavailableException.class)
@@ -197,10 +197,7 @@ class MemoryContextChatServiceTest {
       @Override
       public ToolDefinition definition() {
         return new ToolDefinition(
-            "lookup",
-            "只读查询",
-            Map.of("type", "object", "properties", Map.of()),
-            ToolRisk.READ_ONLY);
+            "lookup", "只读查询", Map.of("type", "object", "properties", Map.of()), ToolRisk.READ_ONLY);
       }
 
       @Override

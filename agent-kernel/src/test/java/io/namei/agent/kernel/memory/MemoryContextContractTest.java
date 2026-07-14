@@ -48,10 +48,7 @@ class MemoryContextContractTest {
     assertThat(request.history()).extracting(ChatMessage::content).containsExactly("第一问");
     assertThatThrownBy(() -> request(List.of(new ChatMessage(MessageRole.SYSTEM, "系统"))))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(
-            () ->
-                new MemoryRetrievalRequest(
-                    "invalid-binding", "问题", List.of(), NOW))
+    assertThatThrownBy(() -> new MemoryRetrievalRequest("invalid-binding", "问题", List.of(), NOW))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -67,8 +64,7 @@ class MemoryContextContractTest {
                 new MemoryRetrievalResult(
                     "", new MemoryRetrievalTrace(MemoryRetrievalStatus.RETRIEVED, 1)))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(
-            () -> new MemoryRetrievalTrace(MemoryRetrievalStatus.EMPTY, -1))
+    assertThatThrownBy(() -> new MemoryRetrievalTrace(MemoryRetrievalStatus.EMPTY, -1))
         .isInstanceOf(IllegalArgumentException.class);
   }
 

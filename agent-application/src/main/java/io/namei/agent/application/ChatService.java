@@ -246,9 +246,7 @@ public final class ChatService implements ChatUseCase {
               clock.instant());
       var messages = new ArrayList<ModelMessage>(assembled.messages());
       OffsetDateTime userAt = OffsetDateTime.now(clock);
-      var context =
-          new SideEffectBatchCoordinator.Context(
-              sessionBinding, ids.newTurnId());
+      var context = new SideEffectBatchCoordinator.Context(sessionBinding, ids.newTurnId());
       var finalContent = toolLoop.complete(messages, cancellation, context);
       if (finalContent.isBlank()) {
         throw new InvalidModelResponseException("模型返回了空响应");

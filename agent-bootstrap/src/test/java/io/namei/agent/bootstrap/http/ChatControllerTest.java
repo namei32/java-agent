@@ -215,8 +215,7 @@ class ChatControllerTest {
         .andExpect(
             content()
                 .string(
-                    org.hamcrest.Matchers.not(
-                        org.hamcrest.Matchers.containsString("记忆上下文当前不可用"))));
+                    org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("记忆上下文当前不可用"))));
   }
 
   @Test

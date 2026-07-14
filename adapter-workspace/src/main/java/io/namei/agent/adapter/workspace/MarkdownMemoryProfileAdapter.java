@@ -66,8 +66,7 @@ public final class MarkdownMemoryProfileAdapter implements MemoryProfilePort {
       return null;
     }
     Path realMemory = memory.toRealPath();
-    if (!realMemory.startsWith(root)
-        || !Files.isDirectory(realMemory, LinkOption.NOFOLLOW_LINKS)) {
+    if (!realMemory.startsWith(root) || !Files.isDirectory(realMemory, LinkOption.NOFOLLOW_LINKS)) {
       throw new MemoryProfileAccessException();
     }
     return realMemory;

@@ -33,12 +33,7 @@ class ContextAssemblerTest {
 
     var assembled =
         assembler.assemble(
-            "基础 Prompt",
-            profile,
-            history,
-            " - [memory-1] 用户正在迁移 Java Agent ",
-            Set.of(),
-            current);
+            "基础 Prompt", profile, history, " - [memory-1] 用户正在迁移 Java Agent ", Set.of(), current);
 
     String system =
         "基础 Prompt\n\n---\n\n## Akashic 自我认知\n\n我是稳定的协作伙伴。"

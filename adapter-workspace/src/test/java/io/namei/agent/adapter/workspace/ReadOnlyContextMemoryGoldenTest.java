@@ -35,8 +35,7 @@ class ReadOnlyContextMemoryGoldenTest {
     var tests = new ArrayList<DynamicTest>();
     for (JsonNode testCase : fixture.path("cases")) {
       tests.add(
-          DynamicTest.dynamicTest(
-              testCase.path("id").asString(), () -> verifyCase(testCase)));
+          DynamicTest.dynamicTest(testCase.path("id").asString(), () -> verifyCase(testCase)));
     }
     return tests.stream();
   }
@@ -63,8 +62,7 @@ class ReadOnlyContextMemoryGoldenTest {
     assertThat(assembled.contextFrame()).isEqualTo(expected.path("contextFrame").asString());
     assertThat(assembled.sectionNames())
         .containsExactlyElementsOf(strings(expected.path("sectionNames")));
-    assertThat(assembled.messages())
-        .containsExactlyElementsOf(messages(expected.path("messages")));
+    assertThat(assembled.messages()).containsExactlyElementsOf(messages(expected.path("messages")));
   }
 
   private static void writeProfile(Path workspace, String fileName, String content)

@@ -83,8 +83,7 @@ public final class MemoryContextService {
       Instant requestedAt) {
     try {
       var request =
-          new MemoryRetrievalRequest(
-              sessionBinding, currentMessage, fullHistory, requestedAt);
+          new MemoryRetrievalRequest(sessionBinding, currentMessage, fullHistory, requestedAt);
       MemoryRetrievalResult result =
           Objects.requireNonNull(retrieval.retrieve(request), "retrieval result");
       if (result.block().length() > maxRetrievedCharacters) {
