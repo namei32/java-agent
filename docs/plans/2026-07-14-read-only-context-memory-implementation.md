@@ -4,7 +4,7 @@
 - 批准日期：2026-07-14
 - 日期：2026-07-14
 - 阶段：R4.1
-- 当前执行状态：Task C0 至 C1 已完成；从 Task C2 开始实施
+- 当前执行状态：Task C0 至 C2 已完成；从 Task C3 开始实施
 - Contract：[只读上下文与记忆兼容契约](../contracts/read-only-context-memory.md)
 - Spec：[只读 Context/Memory 纵向切片设计](../specs/2026-07-14-read-only-context-memory-design.md)
 
@@ -37,7 +37,9 @@
 
 ## Task C2：Kernel Memory 只读协议
 
-状态：待实施。
+状态：已完成。
+
+验证证据（2026-07-14）：聚焦命令先因 Memory Mode、Profile、Retrieval Request/Result/Trace 与两个 Port 缺失而编译失败，随后实际执行 4 个协议测试并全部通过。Kernel 类型只使用 JDK 与既有消息类型；Retrieval Trace 只保留稳定状态和注入计数。
 
 TDD 固定 Mode、Profile、Retrieval Request/Result 的不可变性、空值、上限前置字段与敏感字段边界。Kernel 只使用 JDK 类型。
 
