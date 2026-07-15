@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R6.1
-- 当前执行状态：Task C0 已完成；下一步 Task C1
+- 当前执行状态：Task C0–C1 已完成；下一步 Task C2
 - 基线：MCP R5.1 已通过 PR #3 的默认、`failure`、`compat` 远程 CI，并以 `d766bb8` 合入 `main`
 - 批准记录：用户要求完成 MCP PR 与远程 CI，然后从 R6 的版本化 Message Contract Fixture 开始连续 TDD 实现
 - Contract：[版本化渠道消息与流式运行时契约](../contracts/versioned-channel-message-runtime.md)
@@ -35,7 +35,7 @@
 
 ### Task C1：Java-owned Fixture 与 Kernel 消息值
 
-状态：待开始。
+状态：已完成。
 
 新增：
 
@@ -58,6 +58,8 @@ RED/GREEN：
 ```
 
 RED 必须因生产消息类型缺失或不满足 Fixture 行为失败；GREEN 必须实际执行全部 Fixture Case。
+
+验证证据（2026-07-15）：聚焦命令先因 `InboundMessage`、`MessageRoute`、`OutboundMessage` 和 `OutboundMessageType` 缺失而编译失败；实现纯 JDK 生产类型后，同一命令执行 1 个 Fixture 测试并逐项消费 40 个 Case。自审发现 `MessageRoute.toString()` 暴露原始 Channel，补充聚焦测试后先稳定失败，再改为全字段脱敏；同一命令最终执行 2 个测试并全部通过。
 
 ### Task C2：严格序号和唯一终态
 

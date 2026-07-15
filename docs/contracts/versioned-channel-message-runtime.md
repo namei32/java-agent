@@ -61,8 +61,8 @@
 | 类型 | Payload | 规则 |
 | --- | --- | --- |
 | `TURN_STARTED` | 无 | 必须是 `sequence=0` 的第一条消息 |
-| `CONTENT_DELTA` | `content` | 非空文本增量，只用于预览 |
-| `TURN_COMPLETED` | `content` | 非空完整最终回答，是权威快照而不是追加 Delta |
+| `CONTENT_DELTA` | `content` | 非空文本增量，只用于预览，单条最多 32,000 字符 |
+| `TURN_COMPLETED` | `content` | 非空完整最终回答，最多 32,000 字符，是权威快照而不是追加 Delta |
 | `TURN_CANCELLED` | `code` | 稳定取消原因，无正文 |
 | `TURN_FAILED` | `code`、`retryable` | 稳定安全错误，无异常正文 |
 
@@ -113,7 +113,7 @@
 
 ## 7. 背压
 
-- 每个活动 Turn 使用有界缓冲，容量必须为正且有上限。
+- 每个活动 Turn 使用有界缓冲，容量必须为正且有上限；结合单条出站正文上限形成确定的内存边界。
 - Producer 发布时最多等待配置的正 Deadline；禁止无界等待和静默丢弃 Delta。
 - 缓冲超限时原子记录 `BACKPRESSURE_EXCEEDED` 取消并抛出稳定的投递异常。
 - Consumer 只按严格序号读取；错误 Turn、错误 Session、错误 Route、重复终态或乱序消息 Fail Closed。
