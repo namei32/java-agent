@@ -20,6 +20,8 @@ import io.namei.agent.application.MemoryContextService;
 import io.namei.agent.application.MemoryDeleteService;
 import io.namei.agent.application.MemoryQueryService;
 import io.namei.agent.application.MemoryWriteService;
+import io.namei.agent.application.MessageTurnService;
+import io.namei.agent.application.ModelStreamingSettings;
 import io.namei.agent.application.SecureIdGenerator;
 import io.namei.agent.application.SemanticMemoryRetrievalAdapter;
 import io.namei.agent.application.SemanticMemoryRetrievalSettings;
@@ -27,6 +29,15 @@ import io.namei.agent.application.SessionExecutionGate;
 import io.namei.agent.application.SideEffectLedger;
 import io.namei.agent.application.ToolRuntimeMode;
 import io.namei.agent.application.ToolRuntimeSettings;
+import io.namei.agent.bootstrap.cli.CliIdGenerator;
+import io.namei.agent.bootstrap.cli.CliInput;
+import io.namei.agent.bootstrap.cli.CliOutput;
+import io.namei.agent.bootstrap.cli.CliProperties;
+import io.namei.agent.bootstrap.cli.CliThreadStarter;
+import io.namei.agent.bootstrap.cli.LocalCliRunner;
+import io.namei.agent.bootstrap.cli.SecureCliIdGenerator;
+import io.namei.agent.bootstrap.cli.Utf8CliInput;
+import io.namei.agent.bootstrap.cli.Utf8CliOutput;
 import io.namei.agent.bootstrap.health.SqliteHealthIndicator;
 import io.namei.agent.bootstrap.http.MemoryManagementApi;
 import io.namei.agent.bootstrap.observability.ObservedChatModelPort;
@@ -66,7 +77,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties({AgentProperties.class, McpProperties.class})
+@EnableConfigurationProperties({AgentProperties.class, McpProperties.class, CliProperties.class})
 @Import(SpringAiAdapterConfiguration.class)
 public class ApplicationConfiguration {
   @Bean
@@ -271,8 +282,52 @@ public class ApplicationConfiguration {
             SideEffectLedger.unavailable(),
             new SecureIdGenerator(),
             properties.tools().approvalTimeout(),
-            memoryContext);
+            memoryContext,
+            new ModelStreamingSettings(
+                properties.model().maxDeltaEvents(), properties.model().maxDeltaCodePoints()));
     return new SafeChatUseCase(service, Clock.systemUTC());
+  }
+
+  @Bean
+  MessageTurnService messageTurnService(ChatUseCase chat) {
+    return new MessageTurnService(chat);
+  }
+
+  @Bean
+  Clock cliClock() {
+    return Clock.systemUTC();
+  }
+
+  @Bean
+  CliIdGenerator cliIdGenerator() {
+    return new SecureCliIdGenerator();
+  }
+
+  @Bean
+  CliInput cliInput() {
+    return new Utf8CliInput(System.in);
+  }
+
+  @Bean
+  CliOutput cliOutput() {
+    return new Utf8CliOutput(System.out, System.err);
+  }
+
+  @Bean
+  CliThreadStarter cliThreadStarter() {
+    return (name, task) -> Thread.ofVirtual().name(name).start(task);
+  }
+
+  @Bean(destroyMethod = "shutdown")
+  LocalCliRunner localCliRunner(
+      MessageTurnService turns,
+      CliProperties properties,
+      Clock cliClock,
+      CliIdGenerator ids,
+      CliInput input,
+      CliOutput output,
+      CliThreadStarter threadStarter) {
+    return new LocalCliRunner(turns, properties, cliClock, ids, input, output, threadStarter);
   }
 
   List<Tool> configuredTools(AgentProperties properties, McpRuntime mcpRuntime) {

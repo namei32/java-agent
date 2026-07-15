@@ -32,6 +32,14 @@ AKASHIC_WORKSPACE=./workspace
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_API_KEY=replace-me
 OPENAI_MODEL=gpt-4o-mini
+AGENT_MODEL_STREAM_IDLE_TIMEOUT=30s
+AGENT_MODEL_MAX_DELTA_EVENTS=2048
+AGENT_MODEL_MAX_DELTA_CODE_POINTS=32000
+AGENT_CLI_SESSION_ID=cli:local
+AGENT_CLI_CONVERSATION_ID=local
+AGENT_CLI_BUFFER_CAPACITY=32
+AGENT_CLI_PUBLISH_TIMEOUT=2s
+AGENT_CLI_POLL_TIMEOUT=100ms
 AGENT_MEMORY_MODE=DISABLED
 AGENT_MEMORY_MAX_FILE_BYTES=65536
 AGENT_MEMORY_MAX_CONTEXT_CHARACTERS=100000
@@ -68,6 +76,10 @@ AGENT_TOOL_APPROVAL_TIMEOUT=5m
 ```
 
 `OPENAI_BASE_URL` 是 OpenAI-compatible API 根路径。OpenAI 官方地址需要包含 `/v1`。`.env` 已被 Git 忽略，禁止提交真实密钥。
+
+模型流式边界默认允许每 Turn 最多 `2048` 个 Delta 和累计 `32000` 个 Unicode Code Point，Provider 连续 `30s` 没有新 Chunk 会触发空闲超时。三个值都在启动时严格校验；它们限制预览流，不改变最终完整回答作为 SQLite 提交权威快照的语义。
+
+`AGENT_CLI_SESSION_ID` 与 `AGENT_CLI_CONVERSATION_ID` 是受信本地路由，普通输入正文不能覆盖。CLI Buffer 容量必须在 `1..1024`，发布和轮询期限必须大于零且不超过 `30s`。默认值面向单用户本地终端，不表示允许多个终端共享同一 Session 并发写入。
 
 `AGENT_MEMORY_MODE` 默认 `DISABLED`；`READ_ONLY` 只读取固定的三个 Markdown Profile 文件，Retrieval 为空，不启用记忆写入或 Embedding。`JAVA_NATIVE` 不读取旧 Markdown/Python 记忆，而是在 `${AKASHIC_WORKSPACE}/memory/agent-memory.db` 启用显式 Memory API 和语义检索；它只允许 Loopback 监听，并会在写入或当前 Scope 非空检索时调用与 `OPENAI_*` 相同 Provider 配置下的 Embedding 模型。未获得网络、费用和部署授权时必须保持 `DISABLED`。
 
@@ -219,6 +231,29 @@ set -a && source .env && set +a
 圆括号会在独立的子 Shell 中加载 `.env`，不会改变当前终端的目录、`set -a` 状态或已导出的环境变量。停止应用时按 `Ctrl+C`。
 
 应用默认监听 `127.0.0.1:8080`。不要通过配置把它改为 `0.0.0.0`；MVP 没有远程认证和 TLS。
+
+### 3.1 启动本地 CLI
+
+使用同一套 Provider、Java 专用 Workspace、Memory、Tool 和 MCP 配置，以显式 `--cli` 启动：
+
+```bash
+(
+  cd "$(git rev-parse --show-toplevel)" || exit 1
+  [[ -f .env ]] || { echo "未找到项目根目录下的 .env，请先从 .env.example 创建"; exit 1; }
+  [[ -f agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar ]] || \
+    { echo "未找到可执行 JAR，请先运行 ./mvnw clean verify"; exit 1; }
+  set -a
+  source .env || exit 1
+  set +a
+  java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar --cli
+)
+```
+
+CLI 模式使用 `WebApplicationType.NONE`，不会监听 HTTP 端口；默认 Web 启动命令保持不变。stdin 按严格、有界 UTF-8 行读取，空白行忽略，一次只执行一个 Turn。Delta 直接预览；若最终权威快照与预览不同，会另起一行输出完整结果。失败和取消只输出稳定码，不输出 Provider 原始正文。
+
+输入 EOF 会在当前 Turn 完成后正常退出。按 `Ctrl+C` 时 Spring/JVM Shutdown 会以 `SHUTDOWN` 取消活动 Turn；stdout 关闭会以 `CHANNEL_DISCONNECTED` 取消，并且不会提交半截回答。CLI 仍会调用真实 Provider 并写入 Java `sessions.db`，所以必须继续遵守网络/费用授权和 Workspace 隔离要求；`--cli` 不是只读配置检查模式。
+
+若同时传入 `--agent.config-check --cli`，配置检查优先，进程不会创建 Spring Context、CLI Runner、Workspace、SQLite 或 Provider Client。
 
 ## 4. 本地检查
 

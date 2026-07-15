@@ -1,5 +1,6 @@
 package io.namei.agent.bootstrap.config;
 
+import io.namei.agent.application.ModelStreamingSettings;
 import io.namei.agent.application.ToolRuntimeMode;
 import io.namei.agent.kernel.memory.MemoryRuntimeMode;
 import java.nio.file.Path;
@@ -123,12 +124,20 @@ public record AgentProperties(
     }
   }
 
-  public record Model(Duration timeout) {
+  public record Model(Duration timeout, int maxDeltaEvents, int maxDeltaCodePoints) {
+    public Model(Duration timeout) {
+      this(
+          timeout,
+          ModelStreamingSettings.defaults().maxDeltaEvents(),
+          ModelStreamingSettings.defaults().maxDeltaCodePoints());
+    }
+
     public Model {
       Objects.requireNonNull(timeout, "agent.model.timeout");
       if (timeout.isZero() || timeout.isNegative()) {
         throw new IllegalArgumentException("agent.model.timeout 必须为正数");
       }
+      new ModelStreamingSettings(maxDeltaEvents, maxDeltaCodePoints);
     }
   }
 

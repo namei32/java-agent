@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R6.2
-- 当前执行状态：Task D0–D6 已完成；下一步 Task D7 CLI Bootstrap 与配置
+- 当前执行状态：Task D0–D7 已完成；下一步 Task D8 故障、兼容和提交验收
 - 基线：R6.1 已通过 PR #4 三套远程 CI，并以 `a77b088` 合入 `main`
 - 批准记录：用户已批准并要求完整实现 R6 总体计划
 - Contract：[Provider Streaming 与本地 CLI 契约](../contracts/provider-streaming-cli.md)
@@ -134,7 +134,7 @@ RED/GREEN：
 
 ### Task D7：CLI Bootstrap 与配置
 
-状态：待开始。
+状态：已完成。
 
 修改 Application 启动路径、YAML、模板和 Runbook。验证显式 CLI 使用 Non-Web Context，普通启动与配置检查不变，默认无真实渠道网络。
 
@@ -143,6 +143,8 @@ RED/GREEN：
 ```bash
 ./mvnw -pl agent-bootstrap -am -Dtest=CliBootstrapTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
+
+验证证据（2026-07-15）：聚焦命令先因 `CliMode`、可测试的 Spring Application Factory、严格 UTF-8 System I/O Adapter 和扩展后的 Model Streaming 配置缺失而在 Bootstrap 测试编译阶段失败；实现后首次 GREEN 尝试由测试自身不合法的 Memory 外层预算提前失败，修正测试夹具后同一目标命令执行 5 个测试并全部通过。测试确认只有精确 `--cli` 才选择 `WebApplicationType.NONE`，普通启动仍为 `SERVLET`，真实 CLI Context 不创建 Web Server 且会装配受信 `CliProperties`、Runner 和 SQLite；同时覆盖 CRLF/EOF、畸形或超限 UTF-8、stdout 故障脱敏，以及配置的 Delta 事件/字符预算确实进入生产 `ChatService` 并阻止半轮次提交。YAML、`.env.example` 和本地运行手册已加入空闲超时、流预算、CLI 路由/Buffer/期限及显式启动说明。
 
 ### Task D8：故障、兼容和提交验收
 

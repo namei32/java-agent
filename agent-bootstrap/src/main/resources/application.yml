@@ -29,6 +29,15 @@ agent:
     max-characters: 100000
   model:
     timeout: ${AGENT_MODEL_TIMEOUT:60s}
+    stream-idle-timeout: ${AGENT_MODEL_STREAM_IDLE_TIMEOUT:30s}
+    max-delta-events: ${AGENT_MODEL_MAX_DELTA_EVENTS:2048}
+    max-delta-code-points: ${AGENT_MODEL_MAX_DELTA_CODE_POINTS:32000}
+  cli:
+    session-id: ${AGENT_CLI_SESSION_ID:cli:local}
+    conversation-id: ${AGENT_CLI_CONVERSATION_ID:local}
+    buffer-capacity: ${AGENT_CLI_BUFFER_CAPACITY:32}
+    publish-timeout: ${AGENT_CLI_PUBLISH_TIMEOUT:2s}
+    poll-timeout: ${AGENT_CLI_POLL_TIMEOUT:100ms}
   mcp:
     mode: ${AGENT_MCP_MODE:DISABLED}
     config-file: ${AGENT_MCP_CONFIG_FILE:}
