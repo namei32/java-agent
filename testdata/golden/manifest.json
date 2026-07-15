@@ -37,6 +37,12 @@
       "source": "java-contract"
     },
     {
+      "id": "message-bus/provider-streaming-cli",
+      "path": "message-bus/provider-streaming-cli.json",
+      "sha256": "c699a3ff1c514f65d7fe64313a97acc0d6c0cf60ddf89e7249e148e00fd25f03",
+      "source": "java-contract"
+    },
+    {
       "id": "sqlite/session-store",
       "path": "sqlite/session-store.json",
       "sha256": "84e43ab7d89269c53a63d6909d562588208fd515c8f26f7db289bb58c63f7f10",

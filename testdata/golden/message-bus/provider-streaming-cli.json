@@ -1,0 +1,126 @@
+{
+  "formatVersion": 1,
+  "suite": "provider-streaming-cli",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-15",
+    "adr": "docs/adr/0008-use-project-owned-synchronous-stream-observer.md",
+    "contract": "docs/contracts/provider-streaming-cli.md",
+    "spec": "docs/specs/2026-07-15-provider-streaming-cli-design.md"
+  },
+  "limits": {
+    "maxDeltaEvents": 3,
+    "maxDeltaCodePoints": 6
+  },
+  "kernelCases": [
+    {
+      "id": "fallback-text-completes-without-fake-delta",
+      "input": {"action": "generate", "cancelled": false, "responseKind": "text"},
+      "expected": {"outcome": "COMPLETED", "generateCalls": 1, "deltas": [], "content": "完整回答", "toolCalls": 0}
+    },
+    {
+      "id": "fallback-tool-call-preserves-project-response",
+      "input": {"action": "generate", "cancelled": false, "responseKind": "tool"},
+      "expected": {"outcome": "COMPLETED", "generateCalls": 1, "deltas": [], "content": "", "toolCalls": 1}
+    },
+    {
+      "id": "pre-cancel-does-not-call-provider",
+      "input": {"action": "generate", "cancelled": true, "responseKind": "text"},
+      "expected": {"outcome": "CANCELLED", "generateCalls": 0, "deltas": []}
+    },
+    {
+      "id": "null-request-is-rejected",
+      "input": {"action": "null-request"},
+      "expected": {"outcome": "INVALID_ARGUMENT"}
+    },
+    {
+      "id": "null-observer-is-rejected",
+      "input": {"action": "null-observer"},
+      "expected": {"outcome": "INVALID_ARGUMENT"}
+    },
+    {
+      "id": "null-cancellation-is-rejected",
+      "input": {"action": "null-cancellation"},
+      "expected": {"outcome": "INVALID_ARGUMENT"}
+    }
+  ],
+  "applicationCases": [
+    {
+      "id": "multiple-deltas-before-authoritative-completion",
+      "input": {"deltas": ["你", "好"], "finalContent": "你好"},
+      "expected": {"outcome": "COMPLETED", "eventTypes": ["TURN_STARTED", "CONTENT_DELTA", "CONTENT_DELTA", "TURN_COMPLETED"]}
+    },
+    {
+      "id": "whitespace-delta-is-preserved",
+      "input": {"deltas": [" "], "finalContent": "完成"},
+      "expected": {"outcome": "COMPLETED", "publishedDeltas": [" "]}
+    },
+    {
+      "id": "empty-delta-is-rejected",
+      "input": {"deltas": [""], "finalContent": "完成"},
+      "expected": {"outcome": "INVALID_MODEL_STREAM"}
+    },
+    {
+      "id": "delta-event-limit-is-inclusive",
+      "input": {"deltas": ["a", "b", "c"], "finalContent": "abc"},
+      "expected": {"outcome": "COMPLETED"}
+    },
+    {
+      "id": "delta-event-limit-overflow-fails",
+      "input": {"deltas": ["a", "b", "c", "d"], "finalContent": "abcd"},
+      "expected": {"outcome": "STREAM_LIMIT_EXCEEDED"}
+    },
+    {
+      "id": "unicode-code-point-limit-is-inclusive",
+      "input": {"deltas": ["你😀好ab"], "finalContent": "你😀好ab"},
+      "expected": {"outcome": "COMPLETED", "codePoints": 5}
+    },
+    {
+      "id": "unicode-code-point-limit-overflow-fails",
+      "input": {"deltas": ["你😀好abcd"], "finalContent": "你😀好abcd"},
+      "expected": {"outcome": "STREAM_LIMIT_EXCEEDED", "codePoints": 7}
+    },
+    {
+      "id": "tool-iteration-preview-is-tentative",
+      "input": {"deltas": ["查询中", "最终回答"], "finalContent": "最终回答", "toolIterations": 1},
+      "expected": {"outcome": "COMPLETED", "authoritativeContent": "最终回答"}
+    },
+    {
+      "id": "cancelled-stream-does-not-commit",
+      "input": {"deltas": ["部分"], "cancelAfter": 1},
+      "expected": {"outcome": "CANCELLED", "committedTurns": 0}
+    }
+  ],
+  "cliCases": [
+    {
+      "id": "matching-preview-only-adds-newline",
+      "input": {"deltas": ["你", "好"], "finalContent": "你好"},
+      "expected": {"stdout": "你好\n"}
+    },
+    {
+      "id": "authoritative-snapshot-corrects-preview",
+      "input": {"deltas": ["旧"], "finalContent": "最终"},
+      "expected": {"stdout": "旧\n最终\n"}
+    },
+    {
+      "id": "completion-without-delta-prints-full-content",
+      "input": {"deltas": [], "finalContent": "完整"},
+      "expected": {"stdout": "完整\n"}
+    },
+    {
+      "id": "stable-failure-code-only",
+      "input": {"failureCode": "MODEL_TIMEOUT"},
+      "expected": {"stderr": "MODEL_TIMEOUT\n"}
+    },
+    {
+      "id": "stable-cancellation-code-only",
+      "input": {"cancellationCode": "CHANNEL_DISCONNECTED"},
+      "expected": {"stderr": "CHANNEL_DISCONNECTED\n"}
+    },
+    {
+      "id": "blank-input-is-ignored",
+      "input": {"lines": ["", "   ", "问题"]},
+      "expected": {"turns": 1}
+    }
+  ]
+}

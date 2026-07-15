@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R6.2
-- 当前执行状态：Task D0 已完成；下一步 Task D1 Kernel 流式协议与 Fixture
+- 当前执行状态：Task D0–D1 已完成；下一步 Task D2 Application Streaming Budget 与 Tool Loop
 - 基线：R6.1 已通过 PR #4 三套远程 CI，并以 `a77b088` 合入 `main`
 - 批准记录：用户已批准并要求完整实现 R6 总体计划
 - Contract：[Provider Streaming 与本地 CLI 契约](../contracts/provider-streaming-cli.md)
@@ -37,7 +37,7 @@
 
 ### Task D1：Java-owned Fixture 与 Kernel 流式协议
 
-状态：待开始。
+状态：已完成。
 
 新增：
 
@@ -52,7 +52,9 @@ RED/GREEN：
 ./mvnw -pl agent-kernel -Dtest=ProviderStreamingContractTest test
 ```
 
-Fixture 覆盖预取消、非流式回退、Delta 保真、空 Delta、完成、Tool Call、安全码和预算边界；生产 Kernel 类型实际消费全部 Case。
+Fixture 分为 Kernel、Application 和 CLI 三组。D1 由生产 Kernel 类型实际消费全部 Kernel Case；后续 D2/D3 和 D6 分别消费 Application/CLI Case，D8 验证三组都已有生产实现覆盖。
+
+验证证据（2026-07-15）：聚焦命令先因 `CancellationSignal`、`ChatModelStreamObserver` 和 `ChatModelPort` 流式重载缺失而在测试编译阶段失败；实现纯 JDK 协议和兼容默认重载后，同一命令执行 2 个测试并全部通过，逐项消费 6 个 Kernel Fixture Case。默认重载不制造伪 Delta，预取消零 Provider 调用，原单抽象方法和 Lambda 兼容性保留；Kernel Spotless 检查退出码为 `0`。
 
 ### Task D2：Application Streaming Budget 与 Tool Loop
 
