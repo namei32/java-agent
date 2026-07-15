@@ -5,14 +5,15 @@ import io.namei.agent.kernel.channel.MessageContract;
 import io.namei.agent.kernel.channel.MessageRoute;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties("agent.cli")
 public record CliProperties(
-    String sessionId,
-    String conversationId,
-    int bufferCapacity,
-    Duration publishTimeout,
-    Duration pollTimeout) {
+    @DefaultValue("cli:local") String sessionId,
+    @DefaultValue("local") String conversationId,
+    @DefaultValue("32") int bufferCapacity,
+    @DefaultValue("2s") Duration publishTimeout,
+    @DefaultValue("100ms") Duration pollTimeout) {
   public CliProperties {
     sessionId =
         identifier(sessionId, "agent.cli.session-id", MessageContract.MAX_SESSION_ID_CHARACTERS);
