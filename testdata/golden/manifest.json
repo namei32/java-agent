@@ -25,6 +25,12 @@
       "source": "java-contract"
     },
     {
+      "id": "mcp/java-mcp-client",
+      "path": "mcp/java-mcp-client.json",
+      "sha256": "c0a78a17e5c3fe1b77d8097b25f76c1ccb8f5c20222a7a381ef6214c31db5790",
+      "source": "java-contract"
+    },
+    {
       "id": "sqlite/session-store",
       "path": "sqlite/session-store.json",
       "sha256": "84e43ab7d89269c53a63d6909d562588208fd515c8f26f7db289bb58c63f7f10",
