@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R6.2
-- 当前执行状态：Task D0–D4 已完成；下一步 Task D5 OpenAI-compatible SSE 集成
+- 当前执行状态：Task D0–D5 已完成；下一步 Task D6 纯本地 CLI Runner
 - 基线：R6.1 已通过 PR #4 三套远程 CI，并以 `a77b088` 合入 `main`
 - 批准记录：用户已批准并要求完整实现 R6 总体计划
 - Contract：[Provider Streaming 与本地 CLI 契约](../contracts/provider-streaming-cli.md)
@@ -106,15 +106,17 @@ RED/GREEN：
 
 ### Task D5：OpenAI-compatible SSE 集成
 
-状态：待开始。
+状态：已完成。
 
 扩展现有 HTTP Stub Integration，验证真实 SSE 请求、Chunk、Tool Schema、Assistant Tool Call、Tool Result 回送、最终文本和取消连接关闭。该测试使用本地 Stub，不访问真实 Provider。
 
 聚焦验收：
 
 ```bash
-./mvnw -pl adapter-spring-ai -am -Dit.test=OpenAiCompatibleStreamingAdapterIT -DskipUnitTests verify
+./mvnw -pl adapter-spring-ai -am -Dit.test=OpenAiCompatibleStreamingAdapterIT -Dfailsafe.failIfNoSpecifiedTests=false verify
 ```
+
+验证证据（2026-07-15）：真实聚焦验收先暴露两个问题：HTTP Stub 把多行 JSON 当成单条 SSE `data` 写出，导致 Provider Parser 只能读取第一行；修正 SSE framing 后，文本与 Tool Call 均通过，但运行中取消只释放了 Reactor Subscription，Spring AI 2.0.0 未把取消继续传给 OpenAI Java SDK 的 `AsyncStreamResponse`，底层连接仍保持打开。Adapter 边界随后加入按请求关联的 OkHttp 传输取消桥，内部关联头在请求发往 Provider 前删除，取消只关闭目标连接。最终同一命令执行 Adapter 24 个单元测试和 4 个本地 HTTP SSE 集成场景并全部通过；覆盖真实文本 Chunk、Tool Schema、Assistant Tool Call、Tool Result 回送、权威最终文本、连接关闭、并发流取消隔离和内部头不外泄，Spotless 同步通过。整个验收只访问进程内本地 Stub，没有访问真实 Provider 或产生费用。
 
 ### Task D6：纯本地 CLI Runner
 

@@ -38,6 +38,7 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
@@ -50,6 +51,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
   private final ChatModel chatModel;
   private final int maxArgumentBytes;
   private final Duration streamIdleTimeout;
+  private final OpenAiStreamCancellationRegistry streamCancellationRegistry;
 
   public SpringAiChatModelAdapter(ChatModel chatModel) {
     this(chatModel, 16_384, DEFAULT_STREAM_IDLE_TIMEOUT);
@@ -61,6 +63,14 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
 
   public SpringAiChatModelAdapter(
       ChatModel chatModel, int maxArgumentBytes, Duration streamIdleTimeout) {
+    this(chatModel, maxArgumentBytes, streamIdleTimeout, null);
+  }
+
+  SpringAiChatModelAdapter(
+      ChatModel chatModel,
+      int maxArgumentBytes,
+      Duration streamIdleTimeout,
+      OpenAiStreamCancellationRegistry streamCancellationRegistry) {
     this.chatModel = Objects.requireNonNull(chatModel, "chatModel");
     if (maxArgumentBytes < 1) {
       throw new IllegalArgumentException("Tool Arguments 字节上限必须大于零");
@@ -70,6 +80,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
       throw new IllegalArgumentException("模型流空闲超时必须为正数");
     }
     this.streamIdleTimeout = streamIdleTimeout;
+    this.streamCancellationRegistry = streamCancellationRegistry;
   }
 
   @Override
@@ -110,15 +121,21 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     cancellation.throwIfCancellationRequested();
 
     List<Message> instructions = request.messages().stream().map(this::toSpringMessage).toList();
-    var bridge = new StreamingBridge(observer);
-    try (var registration = cancellation.onCancellation(bridge::cancelFromSignal)) {
+    var transport =
+        streamCancellationRegistry == null
+            ? OpenAiStreamCancellationRegistry.Registration.NONE
+            : streamCancellationRegistry.open(chatModel);
+    var bridge = new StreamingBridge(observer, transport::cancel);
+    try (transport;
+        var registration = cancellation.onCancellation(bridge::cancelFromSignal)) {
       if (bridge.isDone()) {
         return bridge.await();
       }
 
       Flux<org.springframework.ai.chat.model.ChatResponse> stream;
       try {
-        stream = chatModel.stream(prompt(instructions, request.tools()));
+        stream =
+            chatModel.stream(prompt(instructions, request.tools(), transport.requestHeaders()));
       } catch (RuntimeException exception) {
         throw mapStreamingFailure(exception);
       }
@@ -133,6 +150,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
         stream.timeout(streamIdleTimeout).limitRate(1).subscribe(bridge);
       } catch (RuntimeException exception) {
         if (!bridge.isDone()) {
+          transport.cancel();
           throw mapStreamingFailure(exception);
         }
       }
@@ -141,16 +159,35 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
   }
 
   private Prompt prompt(List<Message> instructions, List<ToolDefinition> definitions) {
+    return prompt(instructions, definitions, Map.of());
+  }
+
+  private Prompt prompt(
+      List<Message> instructions,
+      List<ToolDefinition> definitions,
+      Map<String, String> transportHeaders) {
     if (definitions.isEmpty()) {
-      return new Prompt(instructions);
+      if (transportHeaders.isEmpty()) {
+        return new Prompt(instructions);
+      }
     }
     List<ToolCallback> callbacks =
         definitions.stream().<ToolCallback>map(SchemaOnlyToolCallback::new).toList();
     var configuredOptions = chatModel.getOptions();
-    var options =
-        configuredOptions instanceof ToolCallingChatOptions toolOptions
-            ? toolOptions.mutate().toolCallbacks(callbacks).build()
-            : ToolCallingChatOptions.builder().toolCallbacks(callbacks).build();
+    ToolCallingChatOptions options;
+    if (configuredOptions instanceof OpenAiChatOptions openAiOptions) {
+      var headers = new LinkedHashMap<String, String>();
+      if (openAiOptions.getCustomHeaders() != null) {
+        headers.putAll(openAiOptions.getCustomHeaders());
+      }
+      headers.putAll(transportHeaders);
+      options = openAiOptions.mutate().customHeaders(headers).toolCallbacks(callbacks).build();
+    } else {
+      options =
+          configuredOptions instanceof ToolCallingChatOptions toolOptions
+              ? toolOptions.mutate().toolCallbacks(callbacks).build()
+              : ToolCallingChatOptions.builder().toolCallbacks(callbacks).build();
+    }
     return new Prompt(instructions, options);
   }
 
@@ -278,8 +315,11 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     private final AtomicReference<RuntimeException> projectFailure = new AtomicReference<>();
     private int contentCodePoints;
 
-    private StreamingBridge(ChatModelStreamObserver observer) {
+    private final Runnable transportCancel;
+
+    private StreamingBridge(ChatModelStreamObserver observer, Runnable transportCancel) {
       this.observer = observer;
+      this.transportCancel = transportCancel;
     }
 
     @Override
@@ -340,6 +380,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
         }
       }
       completion.completeExceptionally(failure);
+      transportCancel.run();
     }
 
     private void accept(org.springframework.ai.chat.model.ChatResponse response) {
@@ -390,6 +431,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
       }
       completion.completeExceptionally(failure);
       cancel();
+      transportCancel.run();
       return true;
     }
 

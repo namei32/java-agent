@@ -11,12 +11,18 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 public class SpringAiAdapterConfiguration {
   @Bean
+  OpenAiStreamCancellationRegistry openAiStreamCancellationRegistry() {
+    return new OpenAiStreamCancellationRegistry();
+  }
+
+  @Bean
   ChatModelPort chatModelPort(
       ChatModel chatModel,
+      OpenAiStreamCancellationRegistry streamCancellationRegistry,
       @Value("${agent.tools.max-argument-bytes:16384}") int maxArgumentBytes,
       @Value("${agent.model.stream-idle-timeout:30s}") String streamIdleTimeout) {
     return new SpringAiChatModelAdapter(
-        chatModel, maxArgumentBytes, parseDuration(streamIdleTimeout));
+        chatModel, maxArgumentBytes, parseDuration(streamIdleTimeout), streamCancellationRegistry);
   }
 
   private static Duration parseDuration(String configured) {
