@@ -1,6 +1,6 @@
 # Java 原生语义记忆、持久化与优化器契约
 
-- 状态：已批准
+- 状态：实施中（Task J1–J11 已完成，待 J12 最终门禁）
 - 契约版本：2
 - 日期：2026-07-15
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
@@ -58,11 +58,12 @@ R4.2 把 R4.1 的生产 NoOp Retrieval 推进为完整、可用且可删除的 J
 | --- | --- | --- | --- | --- |
 | `DISABLED` | 空 | 不创建、不访问 | 不可用 | NoOp |
 | `READ_ONLY` | R4.1 固定文件只读 | 不创建、不访问 | 不可用 | NoOp |
-| `JAVA_NATIVE` | R4.1 固定文件只读 | 可创建、读写 | 显式启用 | 语义检索 |
+| `JAVA_NATIVE` | 空；不继承旧 Markdown/Python 记忆 | 可创建、读写 | 显式启用 | 语义检索 |
 
 - 模板、测试默认和部署默认继续为 `DISABLED`。
 - `JAVA_NATIVE` 只允许使用 Java 专用 Workspace。
 - 当前 HTTP 没有认证；只允许在 Loopback 监听时启用 Memory API。未来远程监听必须先增加认证与授权 Contract。
+- `READ_ONLY` 是 R4.1 Markdown 兼容模式；`JAVA_NATIVE` 从空 Java 库开始，不把 `SELF.md`、`MEMORY.md` 或 `RECENT_CONTEXT.md` 隐式混入新语义记忆闭环。
 
 ## 4. Java 原生持久化契约
 
@@ -348,6 +349,12 @@ R4.2 不实现上述 Optimizer 类、表、Bean、API 或后台任务。
 - Memory API、语义检索、Context Frame、Tool Loop 保留和 Conversation 提交隔离端到端通过。
 - 默认、`failure`、`compat`、依赖、Secret、Workspace、生产 Bean 和网络监听审计通过。
 - 模板继续 `DISABLED`；不访问或删除 Python Workspace，不运行真实 Embedding。
+
+J11 验收记录（2026-07-15）：
+
+- `JavaNativeMemoryContractTest` 使用生产 Initializer、Codec、SQLite Store、Application 用例、HTTP Controller、Semantic Search 与 Injection Formatter 消费 J1 的 10 个 Java-owned Case；聚焦 `compat` 命令执行 4 个测试，全部通过。
+- `JavaNativeMemoryFailureTest` 与 `MemoryControllerTest` 使用临时数据库和 Fake Embedding 验证 Provider/非法响应零写入、幂等冲突零重复费用/Mutation、数据库不可用安全映射；聚焦 `failure` 命令执行 4 个测试，全部通过。
+- 两条验收均未启动 Python、未读取 `memory2.db`、未访问真实 Workspace、未调用真实 Provider。完整默认、`failure`、`compat`、依赖与工作树审计留给 J12。
 
 ## 11. 已批准决定
 

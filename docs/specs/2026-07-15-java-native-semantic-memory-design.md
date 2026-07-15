@@ -1,6 +1,6 @@
 # Java 原生语义记忆纵向切片设计
 
-- 状态：已批准
+- 状态：实施中（Task J1–J11 已完成，待 J12 最终门禁）
 - 日期：2026-07-15
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - 阶段：R4.2
@@ -98,6 +98,7 @@ ChatService -> MemoryRetrievalPort -> EmbeddingPort -> Semantic Search
 新增 Memory Controller 和配置装配：
 
 - `JAVA_NATIVE` 创建/验证 `agent-memory.db` 并装配 Memory API、Embedding 和 Retrieval。
+- `JAVA_NATIVE` 从空 Java Memory Profile 开始，不读取 R4.1 Markdown 或旧 Python 语义记忆。
 - `READ_ONLY` 保持 R4.1 行为，不创建 Java Memory DB。
 - `DISABLED` 零文件、零 Embedding、零 Memory API。
 - 非 Loopback 监听时拒绝启用 `JAVA_NATIVE`，直到项目具备认证授权。
@@ -241,3 +242,5 @@ Controller 始终通过 `MemoryManagementApi` 门面访问 Application 用例。
 - Failure Profile 覆盖 Schema、备份、事务、幂等冲突、非法向量、候选超限和 Provider 故障。
 - Compat Profile 在 R4.2 表示 Java Contract 的向后兼容，不再表示 Python Memory 数据兼容。
 - 阶段门禁禁止真实 Workspace、真实 Embedding 和物理删除旧 Python 数据。
+
+J11 已由 `JavaNativeMemoryContractTest` 直接消费 J1 的 10 个 Java-owned Case，并通过生产 Schema/Codec/Store/Application/HTTP/Search/Formatter 做纵向核对；`JavaNativeMemoryFailureTest` 则固定零写入、幂等冲突和持久化安全失败。聚焦 `compat` 与 `failure` 各执行 4 个测试且全部通过，没有运行 Python、真实 Provider 或真实 Workspace。完整 Profile 与架构审计在 J12 执行。

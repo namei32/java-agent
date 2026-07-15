@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R4.2
-- 当前执行状态：Task J0 至 J10 已完成；下一步是 Task J11 Contract、Failure 与文档验收
+- 当前执行状态：Task J0 至 J11 已完成；下一步是 Task J12 最终门禁与自审
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
@@ -373,7 +373,7 @@ RED/GREEN 记录（2026-07-15）：
 
 ## Task J11：Contract、Failure 与文档验收
 
-状态：待实施。
+状态：已完成。
 
 使用生产 Java 实现消费 J1 Fixture，不运行 Python：
 
@@ -392,6 +392,14 @@ RED/GREEN 记录（2026-07-15）：
 ```
 
 更新 Contract、Spec、Roadmap、能力矩阵、README、Runbook 与准确测试数。
+
+验收记录（2026-07-15）：
+
+- 本任务是已实现行为的 Acceptance/Contract 固化，按仓库规则不人为制造 RED。
+- `JavaNativeMemoryContractTest` 使用生产 Initializer、Float32 Codec、SQLite Store、Memory Application 用例、HTTP Controller、Semantic Search 与 Injection Formatter，直接消费 J1 Fixture 的 10 个 Case；计划中的 `compat` 聚焦命令实际执行 4 个测试，0 Failure、0 Error、0 Skipped。
+- `JavaNativeMemoryFailureTest` 使用临时数据库和 Fake Embedding 验证 Provider/非法 Embedding 响应零 Item/零 Ledger、同幂等键冲突不重复 Embedding/ID/Mutation、数据库不可用不泄漏路径；与 `MemoryControllerTest` 共同由计划中的 `failure` 聚焦命令实际执行 4 个测试，0 Failure、0 Error、0 Skipped。
+- 两条命令均未启动 Python、未读取 `memory2.db`、未访问真实 Workspace、未调用真实 Provider；J1 Fixture 未改写。
+- Contract、Spec、Roadmap、能力矩阵、根 README、文档导航和 Runbook 已同步到 J11 当前事实；完整 Profile 测试数由 J12 最终门禁记录。
 
 提交：`test: 验证 Java 原生语义记忆`。
 
