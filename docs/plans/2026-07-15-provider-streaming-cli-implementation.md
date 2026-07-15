@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R6.2
-- 当前执行状态：Task D0–D2 已完成；下一步 Task D3 Message Turn Delta 投影
+- 当前执行状态：Task D0–D3 已完成；下一步 Task D4 Spring AI Streaming Adapter
 - 基线：R6.1 已通过 PR #4 三套远程 CI，并以 `a77b088` 合入 `main`
 - 批准记录：用户已批准并要求完整实现 R6 总体计划
 - Contract：[Provider Streaming 与本地 CLI 契约](../contracts/provider-streaming-cli.md)
@@ -78,7 +78,7 @@ RED/GREEN：
 
 ### Task D3：Message Turn Delta 投影
 
-状态：待开始。
+状态：已完成。
 
 修改 `MessageTurnService` 与测试，使其产生 Started、Delta* 和一个终态。验证 Delta Sink 故障、背压、断开、取消/完成竞争和终态失败不二次发布。
 
@@ -87,6 +87,8 @@ RED/GREEN：
 ```bash
 ./mvnw -pl agent-application -am -Dtest=MessageTurnStreamingTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
+
+验证证据（2026-07-15）：聚焦命令先执行 6 个测试并全部因 `MessageTurnService` 仍调用旧非流式 Chat 入口而失败；改为通过同一个 `OutboundMessageSequence` 发布 Delta，并把流预算异常映射为稳定 `TURN_LIMIT_EXCEEDED` 后，同一命令 6 个测试全部通过。测试消费剩余 4 个 Application Fixture Case，覆盖严格序号、空白 Delta、Tool 迭代暂定预览、权威完成快照、Delta 后取消、Sink 断开原样传播及不二次发布终态。Application 全量回归连同 Kernel 共执行 175 个测试并全部通过。
 
 ### Task D4：Spring AI Streaming Adapter
 
