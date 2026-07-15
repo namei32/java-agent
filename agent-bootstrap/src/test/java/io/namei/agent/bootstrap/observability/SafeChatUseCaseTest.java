@@ -9,15 +9,45 @@ import ch.qos.logback.core.read.ListAppender;
 import io.namei.agent.application.ChatCommand;
 import io.namei.agent.application.ChatResult;
 import io.namei.agent.application.ChatUseCase;
+import io.namei.agent.application.TurnCancellation;
+import io.namei.agent.application.TurnCancellationSource;
 import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.MessageRole;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 class SafeChatUseCaseTest {
+  @Test
+  void passesTheExactCancellationTokenThroughTheLoggingDecorator() {
+    var source = new TurnCancellationSource();
+    var observedToken = new AtomicReference<TurnCancellation>();
+    ChatUseCase delegate =
+        new ChatUseCase() {
+          @Override
+          public ChatResult chat(ChatCommand command) {
+            throw new AssertionError("取消感知调用不能退化为单参数调用");
+          }
+
+          @Override
+          public ChatResult chat(ChatCommand command, TurnCancellation cancellation) {
+            observedToken.set(cancellation);
+            return new ChatResult(
+                command.sessionId(), new ChatMessage(MessageRole.ASSISTANT, "回答"));
+          }
+        };
+    var observed =
+        new SafeChatUseCase(
+            delegate, Clock.fixed(Instant.parse("2026-07-13T00:00:00Z"), ZoneOffset.UTC));
+
+    observed.chat(new ChatCommand("session", "问题"), source.token());
+
+    assertThat(observedToken).hasValue(source.token());
+  }
+
   @Test
   void logsSuccessFieldsWithoutConversationContent() {
     Logger logger = (Logger) LoggerFactory.getLogger(SafeChatUseCase.class);

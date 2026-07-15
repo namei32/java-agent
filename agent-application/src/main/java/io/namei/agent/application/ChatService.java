@@ -224,6 +224,7 @@ public final class ChatService implements ChatUseCase {
     return chat(command, TurnCancellation.none());
   }
 
+  @Override
   public ChatResult chat(ChatCommand command, TurnCancellation cancellation) {
     Objects.requireNonNull(command, "command");
     Objects.requireNonNull(cancellation, "cancellation");

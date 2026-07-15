@@ -3,6 +3,7 @@ package io.namei.agent.bootstrap.observability;
 import io.namei.agent.application.ChatCommand;
 import io.namei.agent.application.ChatResult;
 import io.namei.agent.application.ChatUseCase;
+import io.namei.agent.application.TurnCancellation;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -27,10 +28,17 @@ public final class SafeChatUseCase implements ChatUseCase {
 
   @Override
   public ChatResult chat(ChatCommand command) {
+    return chat(command, TurnCancellation.none());
+  }
+
+  @Override
+  public ChatResult chat(ChatCommand command, TurnCancellation cancellation) {
+    Objects.requireNonNull(command, "command");
+    Objects.requireNonNull(cancellation, "cancellation");
     Instant started = clock.instant();
     String sessionHash = hash(command.sessionId());
     try {
-      ChatResult result = delegate.chat(command);
+      ChatResult result = delegate.chat(command, cancellation);
       log("success", "none", sessionHash, started);
       return result;
     } catch (RuntimeException exception) {

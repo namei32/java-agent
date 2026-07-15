@@ -1,9 +1,14 @@
 package io.namei.agent.application;
 
+import io.namei.agent.kernel.channel.TurnCancellationCode;
 import java.util.Objects;
 
 public interface TurnCancellation {
   boolean isCancellationRequested();
+
+  default TurnCancellationCode reason() {
+    return TurnCancellationCode.REQUESTED;
+  }
 
   Registration onCancellation(Runnable callback);
 

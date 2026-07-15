@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R6.1
-- 当前执行状态：Task C0–C2 已完成；下一步 Task C3
+- 当前执行状态：Task C0–C3 已完成；下一步 Task C4
 - 基线：MCP R5.1 已通过 PR #3 的默认、`failure`、`compat` 远程 CI，并以 `d766bb8` 合入 `main`
 - 批准记录：用户要求完成 MCP PR 与远程 CI，然后从 R6 的版本化 Message Contract Fixture 开始连续 TDD 实现
 - Contract：[版本化渠道消息与流式运行时契约](../contracts/versioned-channel-message-runtime.md)
@@ -83,7 +83,7 @@ RED/GREEN：
 
 ### Task C3：取消原因和取消感知 Chat 边界
 
-状态：待开始。
+状态：已完成。
 
 修改：
 
@@ -105,6 +105,8 @@ RED/GREEN：
 ```
 
 覆盖 First Writer Wins、回调至多一次和观察包装层原样透传 Token。
+
+验证证据（2026-07-15）：聚焦 Reactor 命令先因带原因 `cancel(code)`、`TurnCancellation.reason()` 和取消感知 `ChatUseCase` 缺失而在 Application 测试编译失败；实现后同一命令在 Application 执行 3 个测试、Bootstrap 执行 3 个测试，全部通过。已有无参 `cancel()` 和单参数 `chat(command)` 保持兼容；生产 `ChatService` 与 `SafeChatUseCase` 透传同一个 Token。
 
 ### Task C4：有界出站缓冲
 

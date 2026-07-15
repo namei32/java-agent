@@ -1,11 +1,13 @@
 package io.namei.agent.application;
 
+import io.namei.agent.kernel.channel.TurnCancellationCode;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class TurnCancellationSource {
-  private final AtomicBoolean cancelled = new AtomicBoolean();
+  private final AtomicReference<TurnCancellationCode> reason = new AtomicReference<>();
   private final CopyOnWriteArrayList<CallbackRegistration> callbacks = new CopyOnWriteArrayList<>();
   private final TurnCancellation token = new SourceToken();
 
@@ -14,7 +16,12 @@ public final class TurnCancellationSource {
   }
 
   public boolean cancel() {
-    if (!cancelled.compareAndSet(false, true)) {
+    return cancel(TurnCancellationCode.REQUESTED);
+  }
+
+  public boolean cancel(TurnCancellationCode cancellationCode) {
+    Objects.requireNonNull(cancellationCode, "cancellationCode");
+    if (!reason.compareAndSet(null, cancellationCode)) {
       return false;
     }
     for (CallbackRegistration callback : callbacks) {
@@ -27,19 +34,25 @@ public final class TurnCancellationSource {
   private final class SourceToken implements TurnCancellation {
     @Override
     public boolean isCancellationRequested() {
-      return cancelled.get();
+      return reason.get() != null;
+    }
+
+    @Override
+    public TurnCancellationCode reason() {
+      TurnCancellationCode current = reason.get();
+      return current == null ? TurnCancellationCode.REQUESTED : current;
     }
 
     @Override
     public Registration onCancellation(Runnable callback) {
       Objects.requireNonNull(callback, "callback");
       var registration = new CallbackRegistration(callback);
-      if (cancelled.get()) {
+      if (reason.get() != null) {
         registration.invoke();
         return registration;
       }
       callbacks.add(registration);
-      if (cancelled.get() && callbacks.remove(registration)) {
+      if (reason.get() != null && callbacks.remove(registration)) {
         registration.invoke();
       }
       return registration;
