@@ -135,7 +135,7 @@ R3.2 实现依据：
 
 当前状态：R4.1 的 C1 至 C8 已全部完成。Python Golden、Kernel Port、只读 Markdown Adapter、ContextAssembler、Retrieval 注入/提交隔离、默认关闭装配和安全 HTTP 映射均已实现；默认 172、`failure` 50、`compat` 206 个测试以及格式、依赖、Secret/Workspace/生产写入面审计全部通过。
 
-R4.2 当前状态：用户已决定不迁移旧 Python 语义记忆，并于 2026-07-15 批准 Java 原生 `agent-memory.db`、显式 Write/List/Delete API、Embedding、语义检索、Contract、ADR、Spec、HTTP API 与 TDD 计划。Task J1–J5 已完成；J4 默认 202 个、`failure` 50 个测试通过，J5 使用 Fake Model 验证实际 Provider Options、批次、Unicode 截断和输出边界。`JAVA_NATIVE` 在 J10 装配前 Fail Closed，下一步是 J6 Memory 管理用例。
+R4.2 当前状态：用户已决定不迁移旧 Python 语义记忆，并于 2026-07-15 批准 Java 原生 `agent-memory.db`、显式 Write/List/Delete API、Embedding、语义检索、Contract、ADR、Spec、HTTP API 与 TDD 计划。Task J1–J9 已完成：Java Contract、Kernel 协议、版本化 Schema/Float32 Codec、SQLite Store/Mutation、Spring AI Embedding、Memory 管理用例、HTTP API、cosine/Hotness/Scope 检索与 Chat/Context Frame 闭环均已落地。`JAVA_NATIVE` 在 J10 装配前继续 Fail Closed；下一步是 Bootstrap 配置、Loopback 门禁与默认关闭装配。
 
 范围：
 

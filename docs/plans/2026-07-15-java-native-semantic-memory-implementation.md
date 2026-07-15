@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R4.2
-- 当前执行状态：Task J0 至 J8 已完成；下一步是 Task J9 Chat 与 Context Frame 闭环
+- 当前执行状态：Task J0 至 J9 已完成；下一步是 Task J10 Bootstrap 配置与默认关闭
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
@@ -303,7 +303,7 @@ RED/GREEN 记录（2026-07-15）：
 
 ## Task J9：Chat 与 Context Frame 闭环
 
-状态：待实施。
+状态：已完成。
 
 先新增 `JavaSemanticMemoryChatServiceTest`。RED 覆盖：
 
@@ -313,6 +313,17 @@ RED/GREEN 记录（2026-07-15）：
 - 同一 Turn 只检索一次，Frame 在 Tool Loop 后续调用保留。
 - Memory Frame 不持久化，最终仍只提交真实 User/Assistant。
 - Memory 不改变 Approval、Tool Risk 或 Ledger。
+
+RED/GREEN 记录（2026-07-15）：
+
+- RED：聚焦命令在 Test Compile 阶段仅因 `SemanticMemoryRetrievalAdapter` 与 `SemanticMemoryRetrievalSettings` 缺失而失败，共 4 个目标符号错误。
+- GREEN：同一命令实际执行 7 个测试，0 Failure、0 Error、0 Skipped。
+- 当前真实 User 是唯一 Query；历史只保留在检索请求中，不进入 Embedding。
+- 当前 Scope 无候选时返回 `EMPTY` 且 Embedding/候选加载均为零；查询 Embedding 调用失败或模型/维度元数据不匹配时返回无正文 `DEGRADED`，聊天继续。
+- 候选数量与 Store 故障在 Embedding、模型、Tool 和会话提交前 Fail Closed，外层只暴露稳定 `MEMORY_CONTEXT_UNAVAILABLE`。
+- 每个 Turn 只检索一次；临时 Frame 在 Tool Loop 中保持不变，Conversation 只提交真实 User/Assistant。
+- `PROCEDURE` 记忆仍是候选上下文；显式回归证明它不能绕过 Side Effect Approval，审批拒绝时 Tool 零执行且不可用 Ledger 未被访问。
+- 本阶段只使用 Fake Embedding/Model 与内存 Store；未访问真实 Workspace、数据库或 Provider。
 
 聚焦 RED/GREEN：
 
