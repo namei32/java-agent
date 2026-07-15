@@ -27,7 +27,7 @@
     {
       "id": "mcp/java-mcp-client",
       "path": "mcp/java-mcp-client.json",
-      "sha256": "c0a78a17e5c3fe1b77d8097b25f76c1ccb8f5c20222a7a381ef6214c31db5790",
+      "sha256": "9c2e07e2c4138aeaa6498718755276249320b0898445c2b068694a290b896b4e",
       "source": "java-contract"
     },
     {
