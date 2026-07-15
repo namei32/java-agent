@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R4.2
-- 当前执行状态：Task J0 至 J6 已完成；下一步是 Task J7 Memory HTTP API
+- 当前执行状态：Task J0 至 J7 已完成；下一步是 Task J8 Semantic Search 与 Injection
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
@@ -236,7 +236,7 @@ RED/GREEN 记录（2026-07-15）：
 
 ## Task J7：Memory HTTP API
 
-状态：待实施。
+状态：已完成（2026-07-15）。
 
 先新增 `MemoryControllerTest`。RED 覆盖：
 
@@ -256,6 +256,15 @@ RED/GREEN 记录（2026-07-15）：
 ```
 
 提交：`feat: 开放显式记忆管理 API`。
+
+实施证据：
+
+- RED：聚焦命令在 Test Compile 因 `MemoryController`、`MemoryManagementApi` 和稳定 Memory API Failure 类型缺失而失败，共 7 个目标符号错误。
+- GREEN：`MemoryControllerTest` 实际执行 7 个测试，0 Failure、0 Error、0 Skipped；覆盖 J1 的 PUT 201/200、GET 公开列表、DELETE Header/200/404 Shape、固定排序透传与 Request ID 隐藏。
+- Session、Memory ID 和 `Idempotency-Key` 使用相同的 128 字符安全标识规则；正文、类型、权重、时间和 4000 字符上限在进入用例前完成协议/领域双层校验。
+- 请求 DTO 通过拒绝未知 JSON 字段禁止直接提交 Embedding、Hash、Scope 或内部字段；统一请求体上限继续返回 413，未触发 Application API。
+- 错误映射固定为 Validation/JSON 400、Idempotency Conflict 409、Not Found 404、Embedding 502、Persistence 500 和 Disabled 503；响应测试验证不泄露 Provider Message、正文、SQL 或 Workspace 路径。
+- Controller 只转换 HTTP 与 J6 请求/响应，不计算 Scope、Hash 或向量；默认装配为不可用门面，J10 通过 Loopback 门禁后才会替换为真实 `JAVA_NATIVE` 门面。
 
 ## Task J8：Semantic Search 与 Injection
 

@@ -237,6 +237,16 @@ DELETE /api/v1/sessions/{sessionId}/memories/{memoryId}
 - `NOT_FOUND` 使用 HTTP 404 Problem Detail；不存在与跨 Scope 使用相同公开标题和详情。
 - Response 不返回 `requestId`、Embedding、Hash、Scope Binding、内部模型配置或 Mutation Ledger 字段。
 
+稳定失败映射：
+
+- Bean/Path/Header 校验失败使用 HTTP 400、标题与详情 `请求参数无效`；JSON 无法解析或包含未声明字段时使用 HTTP 400、`JSON 格式无效`。
+- 请求体超过统一 HTTP 上限时使用 HTTP 413、`请求体过大`。
+- 同一幂等键绑定不同参数时使用 HTTP 409、`记忆请求幂等冲突`。
+- Embedding 调用或响应无效使用 HTTP 502、`记忆 Embedding 失败`。
+- Java Memory 请求期持久化失败使用 HTTP 500、`记忆持久化失败`。
+- Memory API 未启用时使用 HTTP 503、`记忆功能不可用`。
+- Problem Detail 不返回正文、Embedding、Hash、Scope Binding、SQL、数据库路径、Provider Message 或内部异常；`NOT_FOUND` 不区分不存在与跨 Scope。
+
 ## 6. Embedding 契约
 
 Kernel 定义项目自有 `EmbeddingPort`，不得暴露 Spring AI 或 Provider SDK 类型。

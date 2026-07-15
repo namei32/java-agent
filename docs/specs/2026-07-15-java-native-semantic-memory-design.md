@@ -212,6 +212,8 @@ PUT 的 Request ID 放在正文；DELETE 使用 Header，避免 DELETE Body。Re
 
 所有错误映射到稳定 Code，不返回 SQL、路径、正文、Session Binding 或 Provider Message。
 
+Controller 始终通过 `MemoryManagementApi` 门面访问 Application 用例。`DISABLED`/`READ_ONLY` 在 J10 装配前后都使用不可用门面并稳定返回 503；只有通过 Loopback 启动门禁的 `JAVA_NATIVE` 才可替换为 Write/List/Delete 门面。请求 DTO 拒绝未知字段，因此客户端不能借额外 JSON 字段提交 Embedding、Hash、Scope 或内部时间戳。
+
 ## 10. 并发与失败
 
 - 同一 Request ID 由数据库唯一键保证幂等，不依赖 JVM 锁。

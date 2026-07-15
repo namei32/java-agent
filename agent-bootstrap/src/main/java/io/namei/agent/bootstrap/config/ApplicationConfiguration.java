@@ -15,6 +15,7 @@ import io.namei.agent.application.SideEffectLedger;
 import io.namei.agent.application.ToolRuntimeMode;
 import io.namei.agent.application.ToolRuntimeSettings;
 import io.namei.agent.bootstrap.health.SqliteHealthIndicator;
+import io.namei.agent.bootstrap.http.MemoryManagementApi;
 import io.namei.agent.bootstrap.observability.ObservedChatModelPort;
 import io.namei.agent.bootstrap.observability.ObservedSessionRepository;
 import io.namei.agent.bootstrap.observability.SafeChatUseCase;
@@ -104,6 +105,11 @@ public class ApplicationConfiguration {
   @Bean
   MemoryRetrievalPort memoryRetrievalPort() {
     return MemoryRetrievalPort.disabled();
+  }
+
+  @Bean
+  MemoryManagementApi memoryManagementApi() {
+    return MemoryManagementApi.unavailable();
   }
 
   @Bean
