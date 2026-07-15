@@ -1,10 +1,13 @@
 package io.namei.agent.bootstrap.observability;
 
+import io.namei.agent.kernel.concurrent.CancellationSignal;
 import io.namei.agent.kernel.model.ChatModelRequest;
 import io.namei.agent.kernel.model.ChatModelResponse;
 import io.namei.agent.kernel.port.ChatModelPort;
+import io.namei.agent.kernel.port.ChatModelStreamObserver;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,10 +24,24 @@ public final class ObservedChatModelPort implements ChatModelPort {
 
   @Override
   public ChatModelResponse generate(ChatModelRequest request) {
+    return observe(request, () -> delegate.generate(request));
+  }
+
+  @Override
+  public ChatModelResponse generate(
+      ChatModelRequest request, ChatModelStreamObserver observer, CancellationSignal cancellation) {
+    Objects.requireNonNull(observer, "observer");
+    Objects.requireNonNull(cancellation, "cancellation");
+    return observe(request, () -> delegate.generate(request, observer, cancellation));
+  }
+
+  private ChatModelResponse observe(
+      ChatModelRequest request, Supplier<ChatModelResponse> invocation) {
+    Objects.requireNonNull(request, "request");
     long startedNanos = System.nanoTime();
     RuntimeException failure = null;
     try {
-      return delegate.generate(request);
+      return invocation.get();
     } catch (RuntimeException exception) {
       failure = exception;
       throw exception;

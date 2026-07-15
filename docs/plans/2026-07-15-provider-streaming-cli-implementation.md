@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R6.2
-- 当前执行状态：Task D0–D3 已完成；下一步 Task D4 Spring AI Streaming Adapter
+- 当前执行状态：Task D0–D4 已完成；下一步 Task D5 OpenAI-compatible SSE 集成
 - 基线：R6.1 已通过 PR #4 三套远程 CI，并以 `a77b088` 合入 `main`
 - 批准记录：用户已批准并要求完整实现 R6 总体计划
 - Contract：[Provider Streaming 与本地 CLI 契约](../contracts/provider-streaming-cli.md)
@@ -92,7 +92,7 @@ RED/GREEN：
 
 ### Task D4：Spring AI Streaming Adapter
 
-状态：待开始。
+状态：已完成。
 
 修改 Adapter、配置与观察包装，增加 Fake Flux 单元测试。覆盖 Options 保留、文本 Chunk、Tool Call 聚合、空闲超时、取消、Observer 异常、损坏响应和迟到事件。
 
@@ -101,6 +101,8 @@ RED/GREEN：
 ```bash
 ./mvnw -pl adapter-spring-ai -am -Dtest=SpringAiStreamingChatModelAdapterTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
+
+验证证据（2026-07-15）：聚焦命令先因流式构造和桥接缺失而在测试编译阶段失败；实现同步 Observer、单项需求、空闲超时、First Terminal Wins 和取消释放后，聚焦测试转为绿色。自审发现直接 Adapter 文本与 Tool Call 聚合仍可无界，新增 2 个测试先失败，再加入 32,000 Code Point 与 128 Tool Call Adapter 硬上限；最终同一测试类 10 个测试全部通过。另以独立 RED/GREEN 确认 `ObservedChatModelPort` 和 `SafeChatUseCase` 不会把流式重载降级为同步调用。Bootstrap 全量回归曾暴露轻量 Spring Context 无法转换 `@Value Duration`，改为严格显式解析后，`MemoryConfigurationTest` 8 个测试和最终 `agent-bootstrap -am test` 共 331 个测试全部通过；Adapter 与 Bootstrap Spotless 均通过。
 
 ### Task D5：OpenAI-compatible SSE 集成
 
