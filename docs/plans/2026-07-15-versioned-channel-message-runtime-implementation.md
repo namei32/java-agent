@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R6.1
-- 当前执行状态：Task C0–C4 已完成；下一步 Task C5
+- 当前执行状态：Task C0–C5 已完成；下一步 Task C6 阶段门禁
 - 基线：MCP R5.1 已通过 PR #3 的默认、`failure`、`compat` 远程 CI，并以 `d766bb8` 合入 `main`
 - 批准记录：用户要求完成 MCP PR 与远程 CI，然后从 R6 的版本化 Message Contract Fixture 开始连续 TDD 实现
 - Contract：[版本化渠道消息与流式运行时契约](../contracts/versioned-channel-message-runtime.md)
@@ -131,7 +131,7 @@ RED/GREEN：
 
 ### Task C5：Chat 到 Channel 的安全投影
 
-状态：待开始。
+状态：已完成。
 
 新增：
 
@@ -151,6 +151,8 @@ RED/GREEN：
 ```
 
 覆盖成功、显式取消、断开/背压原因、全部稳定错误映射、未知异常脱敏、Sink 失败不二次写入和每条路径唯一终态。
+
+验证证据（2026-07-15）：聚焦命令先因 `MessageTurnService` 和 Kernel `SessionPersistenceException` 缺失而编译失败；实现后同一命令执行 18 个测试并全部通过。证据覆盖成功、四种取消原因、11 类稳定失败投影、未知异常脱敏、首条 Sink 失败零业务执行，以及终态 Sink 失败只尝试两次发布、不递归写第二终态。SQLite 异常通过 Kernel 父类进入 Application，未产生 Adapter 反向依赖。
 
 ### Task C6：阶段门禁与文档收口
 
