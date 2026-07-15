@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R4.2
-- 当前执行状态：Task J0 至 J7 已完成；下一步是 Task J8 Semantic Search 与 Injection
+- 当前执行状态：Task J0 至 J8 已完成；下一步是 Task J9 Chat 与 Context Frame 闭环
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
@@ -268,7 +268,7 @@ RED/GREEN 记录（2026-07-15）：
 
 ## Task J8：Semantic Search 与 Injection
 
-状态：待实施。
+状态：已完成（2026-07-15）。
 
 先新增 `SemanticMemorySearchTest` 与 `MemoryInjectionFormatterTest`。RED 覆盖：
 
@@ -290,6 +290,16 @@ RED/GREEN 记录（2026-07-15）：
 ```
 
 提交：`feat: 实现 Java 语义记忆检索`。
+
+实施证据：
+
+- RED：聚焦命令在 Test Compile 因 `SemanticMemorySearch`、`MemoryInjectionFormatter` 与安全 Injection Result 缺失而失败，共 12 个目标符号错误。
+- GREEN：聚焦命令实际执行 Search 4 个、Formatter 5 个，共 9 个测试，0 Failure、0 Error、0 Skipped。
+- Search 按当前 Scope、Embedding Model 和维度过滤；使用 `double` 累加 cosine，先执行基础阈值，再计算 Contract 固定的 Frequency/Recency/Emotional Half-Life Hotness。
+- 排序固定为 Final、Semantic、UpdatedAt、ID，之后才取 Top-K；J1 Golden 的 4 条顺序与分数在容差内一致，未来时间按零 Age 处理，候选超限不静默截断。
+- Formatter 固定“偏好与规则”和“相关信息”两个候选区段，各最多 4 条；按完整行纳入字符预算，过长行整体跳过，换行等空白被压为单个空格，避免条目伪造新的 Prompt 区段。
+- Injection 只包含安全 ID、可见正文和相关信息的 HappenedAt，不包含向量、分数、Scope、Hash、模型或 Ledger；结果 `toString()` 不回显正文和 Item ID。
+- 非法 Float32 BLOB、非有限值和零范数继续由 J3 Codec/J4 Store 在进入 Search 前 Fail Closed；本阶段未调用 Provider、未写数据库或访问真实 Workspace。
 
 ## Task J9：Chat 与 Context Frame 闭环
 
