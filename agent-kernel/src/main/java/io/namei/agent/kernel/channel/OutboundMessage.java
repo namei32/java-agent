@@ -12,8 +12,7 @@ public record OutboundMessage(
     boolean retryable) {
   public OutboundMessage {
     MessageContract.requireCurrentVersion(schemaVersion);
-    turnId =
-        MessageContract.identifier(turnId, "turnId", MessageContract.MAX_TURN_ID_CHARACTERS);
+    turnId = MessageContract.identifier(turnId, "turnId", MessageContract.MAX_TURN_ID_CHARACTERS);
     sessionId =
         MessageContract.identifier(
             sessionId, "sessionId", MessageContract.MAX_SESSION_ID_CHARACTERS);
@@ -94,11 +93,7 @@ public record OutboundMessage(
   }
 
   public static OutboundMessage failed(
-      String turnId,
-      String sessionId,
-      MessageRoute route,
-      long sequence,
-      TurnFailureCode code) {
+      String turnId, String sessionId, MessageRoute route, long sequence, TurnFailureCode code) {
     if (code == null) {
       throw new IllegalArgumentException("失败码不能为空");
     }
@@ -115,11 +110,7 @@ public record OutboundMessage(
   }
 
   private static void validatePayload(
-      long sequence,
-      OutboundMessageType type,
-      String content,
-      String code,
-      boolean retryable) {
+      long sequence, OutboundMessageType type, String content, String code, boolean retryable) {
     switch (type) {
       case TURN_STARTED -> {
         requireSequence(sequence, 0, "Started");

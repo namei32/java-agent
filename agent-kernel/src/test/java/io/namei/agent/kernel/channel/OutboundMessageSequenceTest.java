@@ -19,7 +19,8 @@ class OutboundMessageSequenceTest {
     var second = sequence.delta("好");
     var completed = sequence.completed("你好");
 
-    assertThat(List.of(started.sequence(), first.sequence(), second.sequence(), completed.sequence()))
+    assertThat(
+            List.of(started.sequence(), first.sequence(), second.sequence(), completed.sequence()))
         .containsExactly(0L, 1L, 2L, 3L);
     assertThat(completed.type()).isEqualTo(OutboundMessageType.TURN_COMPLETED);
     assertThat(completed.content()).isEqualTo("你好");
@@ -41,7 +42,8 @@ class OutboundMessageSequenceTest {
     assertThatThrownBy(() -> sequence.delta("过早")).isInstanceOf(IllegalStateException.class);
     sequence.started();
     assertThatThrownBy(sequence::started).isInstanceOf(IllegalStateException.class);
-    assertThatThrownBy(() -> sequence.completed("   ")).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> sequence.completed("   "))
+        .isInstanceOf(IllegalArgumentException.class);
 
     assertThat(sequence.failed(TurnFailureCode.INTERNAL_ERROR).sequence()).isEqualTo(1);
     assertThatThrownBy(() -> sequence.delta("过晚")).isInstanceOf(IllegalStateException.class);
@@ -161,7 +163,8 @@ class OutboundMessageSequenceTest {
   }
 
   private static boolean attemptTerminal(
-      CountDownLatch ready, CountDownLatch start, TerminalAction action) throws InterruptedException {
+      CountDownLatch ready, CountDownLatch start, TerminalAction action)
+      throws InterruptedException {
     ready.countDown();
     start.await();
     try {

@@ -50,8 +50,7 @@ class MessageTurnServiceTest {
 
   @ParameterizedTest
   @EnumSource(TurnCancellationCode.class)
-  void projectsEveryPreexistingCancellationReasonWithoutCallingChat(
-      TurnCancellationCode reason) {
+  void projectsEveryPreexistingCancellationReasonWithoutCallingChat(TurnCancellationCode reason) {
     var chat = RecordingChat.success("不应执行");
     var sink = new RecordingSink();
     var cancellation = new TurnCancellationSource();
@@ -144,7 +143,9 @@ class MessageTurnServiceTest {
             new ToolLoopLimitExceededException("Bearer upstream-secret"),
             TurnFailureCode.TURN_LIMIT_EXCEEDED),
         Arguments.of(
-            "context", new MemoryContextUnavailableException(), TurnFailureCode.CONTEXT_UNAVAILABLE),
+            "context",
+            new MemoryContextUnavailableException(),
+            TurnFailureCode.CONTEXT_UNAVAILABLE),
         Arguments.of(
             "approval", new ApprovalUnavailableException(), TurnFailureCode.APPROVAL_UNAVAILABLE),
         Arguments.of(

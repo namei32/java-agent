@@ -14,7 +14,8 @@ class MessageContractGoldenTest {
 
   @Test
   void enforcesEveryVersionedMessageFixtureCase() throws Exception {
-    JsonNode fixture = JSON.readTree(goldenRoot().resolve("message-bus/versioned-channel-message.json"));
+    JsonNode fixture =
+        JSON.readTree(goldenRoot().resolve("message-bus/versioned-channel-message.json"));
     JsonNode cases = fixture.path("cases");
 
     assertThat(fixture.path("formatVersion").asInt()).isEqualTo(1);
@@ -54,13 +55,16 @@ class MessageContractGoldenTest {
             "sender-secret",
             "content-secret",
             Instant.parse("2026-07-15T00:00:00Z"));
-    var outbound = OutboundMessage.completed("turn-secret", "session-secret", route, 1, "reply-secret");
+    var outbound =
+        OutboundMessage.completed("turn-secret", "session-secret", route, 1, "reply-secret");
 
     assertThat(route.toString()).doesNotContain("private", "conversation-secret");
     assertThat(inbound.toString())
-        .doesNotContain("message-secret", "turn-secret", "session-secret", "sender-secret", "content-secret");
+        .doesNotContain(
+            "message-secret", "turn-secret", "session-secret", "sender-secret", "content-secret");
     assertThat(outbound.toString())
-        .doesNotContain("turn-secret", "session-secret", "private", "conversation-secret", "reply-secret");
+        .doesNotContain(
+            "turn-secret", "session-secret", "private", "conversation-secret", "reply-secret");
   }
 
   private static Object evaluate(JsonNode input, JsonNode defaults) {
@@ -78,8 +82,7 @@ class MessageContractGoldenTest {
         text(input, defaults, "messageId"),
         text(input, defaults, "turnId"),
         text(input, defaults, "sessionId"),
-        new MessageRoute(
-            text(input, defaults, "channel"), text(input, defaults, "conversationId")),
+        new MessageRoute(text(input, defaults, "channel"), text(input, defaults, "conversationId")),
         text(input, defaults, "senderId"),
         text(input, defaults, "content"),
         occurredAt.isNull() ? null : Instant.parse(occurredAt.asString()));
@@ -91,8 +94,7 @@ class MessageContractGoldenTest {
         integer(input, defaults, "schemaVersion"),
         text(input, defaults, "turnId"),
         text(input, defaults, "sessionId"),
-        new MessageRoute(
-            text(input, defaults, "channel"), text(input, defaults, "conversationId")),
+        new MessageRoute(text(input, defaults, "channel"), text(input, defaults, "conversationId")),
         longValue(input, defaults, "sequence"),
         OutboundMessageType.valueOf(type),
         text(input, defaults, "content"),
@@ -105,7 +107,9 @@ class MessageContractGoldenTest {
       assertThat(inbound.messageId()).as(caseId).isEqualTo(expected.path("messageId").asString());
       assertThat(inbound.turnId()).as(caseId).isEqualTo(expected.path("turnId").asString());
       assertThat(inbound.sessionId()).as(caseId).isEqualTo(expected.path("sessionId").asString());
-      assertThat(inbound.route().channel()).as(caseId).isEqualTo(expected.path("channel").asString());
+      assertThat(inbound.route().channel())
+          .as(caseId)
+          .isEqualTo(expected.path("channel").asString());
       assertThat(inbound.route().conversationId())
           .as(caseId)
           .isEqualTo(expected.path("conversationId").asString());
@@ -128,8 +132,7 @@ class MessageContractGoldenTest {
   private static JsonNode value(JsonNode input, JsonNode defaults, String field) {
     if (field.equals(input.path("repeatField").asString())) {
       return JSON.getNodeFactory()
-          .textNode(
-              input.path("repeatValue").asString().repeat(input.path("repeatCount").asInt()));
+          .textNode(input.path("repeatValue").asString().repeat(input.path("repeatCount").asInt()));
     }
     return input.has(field) ? input.get(field) : defaults.get(field);
   }

@@ -1,9 +1,9 @@
 # 版本化渠道消息 Contract Runtime 工作计划
 
-- 状态：实施中
+- 状态：已实现并验证
 - 日期：2026-07-15
 - 阶段：R6.1
-- 当前执行状态：Task C0–C5 已完成；下一步 Task C6 阶段门禁
+- 当前执行状态：Task C0–C6 已完成
 - 基线：MCP R5.1 已通过 PR #3 的默认、`failure`、`compat` 远程 CI，并以 `d766bb8` 合入 `main`
 - 批准记录：用户要求完成 MCP PR 与远程 CI，然后从 R6 的版本化 Message Contract Fixture 开始连续 TDD 实现
 - Contract：[版本化渠道消息与流式运行时契约](../contracts/versioned-channel-message-runtime.md)
@@ -156,7 +156,7 @@ RED/GREEN：
 
 ### Task C6：阶段门禁与文档收口
 
-状态：待开始。
+状态：已完成。
 
 修改：
 
@@ -177,6 +177,8 @@ RED/GREEN：
 ```
 
 另执行 Secret、敏感文件、Kernel 禁止依赖、Python Runtime 和工作树检查。记录实际测试数和退出码，更新状态为“已实现并验证”。
+
+验证证据（2026-07-15）：`spotless:check`、默认、`failure`、`compat` 和 Kernel 依赖树命令退出码均为 `0`。默认 Profile 执行 321 个测试（307 个单元、14 个集成），`failure` 执行 63 个（62 个单元、1 个集成），`compat` 执行 360 个（345 个单元、15 个集成），全部为 0 Failure、0 Error、0 Skipped。Kernel 生产依赖为空，仅保留 JUnit、AssertJ 和 Jackson 测试依赖；Kernel/Application 的 Spring、Reactor、JDBC 和 MCP SDK 禁止导入扫描无命中。常见 Secret 模式、受跟踪 `.env`/数据库/日志文件、生产 Python/Shell/ProcessBuilder/消息中间件扫描无命中；Java Reference MCP Server 无遗留进程。隔离工作树只包含本任务预期变更，原始用户工作树仍保持开始时的 100 项未提交改动且未被修改。
 
 ## 3. 提交策略
 

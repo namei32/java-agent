@@ -1,6 +1,6 @@
 # 版本化渠道消息 Contract Runtime 设计
 
-- 状态：已批准，实施中
+- 状态：已实现并验证
 - 日期：2026-07-15
 - 阶段：R6.1
 - 批准记录：用户要求完成 MCP PR 与远程 CI 后，从 R6 的版本化 Message Contract Fixture 开始连续 TDD 实现

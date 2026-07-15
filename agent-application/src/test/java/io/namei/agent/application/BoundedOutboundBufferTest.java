@@ -65,8 +65,7 @@ class BoundedOutboundBufferTest {
     assertThat(buffer.disconnect()).isFalse();
 
     assertThat(buffer.poll(Duration.ZERO)).isEmpty();
-    assertThat(buffer.cancellation().reason())
-        .isEqualTo(TurnCancellationCode.CHANNEL_DISCONNECTED);
+    assertThat(buffer.cancellation().reason()).isEqualTo(TurnCancellationCode.CHANNEL_DISCONNECTED);
     assertThatThrownBy(() -> buffer.publish(messages.delta("迟到")))
         .isInstanceOf(OutboundDeliveryException.class)
         .extracting(exception -> ((OutboundDeliveryException) exception).reason())
@@ -144,8 +143,11 @@ class BoundedOutboundBufferTest {
     var terminal = new BoundedOutboundBuffer(inbound, 2, Duration.ofSeconds(1));
     terminal.publish(messages.started());
     terminal.publish(messages.completed("完成"));
-    assertInvalid(() -> terminal.publish(OutboundMessage.delta(
-        inbound.turnId(), inbound.sessionId(), inbound.route(), 2, "过晚")));
+    assertInvalid(
+        () ->
+            terminal.publish(
+                OutboundMessage.delta(
+                    inbound.turnId(), inbound.sessionId(), inbound.route(), 2, "过晚")));
   }
 
   @Test

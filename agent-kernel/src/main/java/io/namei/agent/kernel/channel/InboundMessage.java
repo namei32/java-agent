@@ -16,8 +16,7 @@ public record InboundMessage(
     messageId =
         MessageContract.identifier(
             messageId, "messageId", MessageContract.MAX_MESSAGE_ID_CHARACTERS);
-    turnId =
-        MessageContract.identifier(turnId, "turnId", MessageContract.MAX_TURN_ID_CHARACTERS);
+    turnId = MessageContract.identifier(turnId, "turnId", MessageContract.MAX_TURN_ID_CHARACTERS);
     sessionId =
         MessageContract.identifier(
             sessionId, "sessionId", MessageContract.MAX_SESSION_ID_CHARACTERS);
@@ -25,8 +24,7 @@ public record InboundMessage(
       throw new IllegalArgumentException("route 不能为空");
     }
     senderId =
-        MessageContract.identifier(
-            senderId, "senderId", MessageContract.MAX_SENDER_ID_CHARACTERS);
+        MessageContract.identifier(senderId, "senderId", MessageContract.MAX_SENDER_ID_CHARACTERS);
     content = MessageContract.inboundContent(content);
     if (occurredAt == null) {
       throw new IllegalArgumentException("occurredAt 不能为空");
