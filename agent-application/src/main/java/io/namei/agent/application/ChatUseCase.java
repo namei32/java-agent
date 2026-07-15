@@ -10,4 +10,12 @@ public interface ChatUseCase {
     }
     return chat(command);
   }
+
+  default ChatResult chat(
+      ChatCommand command, TurnCancellation cancellation, ChatProgressListener progressListener) {
+    if (progressListener == null) {
+      throw new IllegalArgumentException("progressListener 不能为空");
+    }
+    return chat(command, cancellation);
+  }
 }

@@ -1,15 +1,18 @@
 package io.namei.agent.application;
 
 import io.namei.agent.kernel.channel.TurnCancellationCode;
+import io.namei.agent.kernel.concurrent.CancellationSignal;
 import java.util.Objects;
 
-public interface TurnCancellation {
+public interface TurnCancellation extends CancellationSignal {
+  @Override
   boolean isCancellationRequested();
 
   default TurnCancellationCode reason() {
     return TurnCancellationCode.REQUESTED;
   }
 
+  @Override
   Registration onCancellation(Runnable callback);
 
   static TurnCancellation none() {
@@ -17,7 +20,7 @@ public interface TurnCancellation {
   }
 
   @FunctionalInterface
-  interface Registration extends AutoCloseable {
+  interface Registration extends CancellationSignal.Registration {
     @Override
     void close();
   }

@@ -195,6 +195,44 @@ public final class ChatService implements ChatUseCase {
       IdGenerator ids,
       Duration approvalTimeout,
       MemoryContextService memoryContext) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
+        tools,
+        maxIterations,
+        observer,
+        toolSettings,
+        approvals,
+        ledger,
+        ids,
+        approvalTimeout,
+        memoryContext,
+        ModelStreamingSettings.defaults());
+  }
+
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
+      List<Tool> tools,
+      int maxIterations,
+      TurnLifecycleObserver observer,
+      ToolRuntimeSettings toolSettings,
+      ApprovalPort approvals,
+      SideEffectLedger ledger,
+      IdGenerator ids,
+      Duration approvalTimeout,
+      MemoryContextService memoryContext,
+      ModelStreamingSettings streamingSettings) {
     this.sessions = Objects.requireNonNull(sessions, "sessions");
     this.historySelector = Objects.requireNonNull(historySelector, "historySelector");
     this.limits = Objects.requireNonNull(limits, "limits");
@@ -216,7 +254,14 @@ public final class ChatService implements ChatUseCase {
             ledger,
             lifecycle);
     this.toolLoop =
-        new ToolLoop(model, registry, lifecycle, maxIterations, toolSettings, coordinator);
+        new ToolLoop(
+            model,
+            registry,
+            lifecycle,
+            maxIterations,
+            toolSettings,
+            coordinator,
+            streamingSettings);
   }
 
   @Override
@@ -231,7 +276,22 @@ public final class ChatService implements ChatUseCase {
     return gate.execute(command.sessionId(), () -> execute(command, cancellation));
   }
 
+  @Override
+  public ChatResult chat(
+      ChatCommand command, TurnCancellation cancellation, ChatProgressListener progressListener) {
+    Objects.requireNonNull(command, "command");
+    Objects.requireNonNull(cancellation, "cancellation");
+    Objects.requireNonNull(progressListener, "progressListener");
+    return gate.execute(
+        command.sessionId(), () -> execute(command, cancellation, progressListener));
+  }
+
   private ChatResult execute(ChatCommand command, TurnCancellation cancellation) {
+    return execute(command, cancellation, null);
+  }
+
+  private ChatResult execute(
+      ChatCommand command, TurnCancellation cancellation, ChatProgressListener progressListener) {
     lifecycle.emit(TurnLifecycleEvent.turnStarted());
     try {
       var snapshot = sessions.load(command.sessionId());
@@ -248,7 +308,10 @@ public final class ChatService implements ChatUseCase {
       var messages = new ArrayList<ModelMessage>(assembled.messages());
       OffsetDateTime userAt = OffsetDateTime.now(clock);
       var context = new SideEffectBatchCoordinator.Context(sessionBinding, ids.newTurnId());
-      var finalContent = toolLoop.complete(messages, cancellation, context);
+      var finalContent =
+          progressListener == null
+              ? toolLoop.complete(messages, cancellation, context)
+              : toolLoop.completeStreaming(messages, cancellation, context, progressListener);
       if (finalContent.isBlank()) {
         throw new InvalidModelResponseException("模型返回了空响应");
       }
@@ -274,6 +337,9 @@ public final class ChatService implements ChatUseCase {
     }
     if (failure instanceof ToolLoopLimitExceededException) {
       return "TOOL_LOOP_LIMIT_EXCEEDED";
+    }
+    if (failure instanceof ModelStreamLimitExceededException) {
+      return "MODEL_STREAM_LIMIT_EXCEEDED";
     }
     if (failure instanceof InvalidModelResponseException) {
       return "INVALID_MODEL_RESPONSE";
