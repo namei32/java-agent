@@ -37,7 +37,8 @@
 | SQLite 会话 Schema | Python Session 存储实现、现有 `sessions.db` | `SqliteSchemaInitializer` | 完成 | 核心表兼容；未来字段必须继续增量校验 | 高 |
 | 会话读取/轮次提交 | Python 会话仓储 | `JdbcSessionRepository` | 完成 | MVP 原子提交与恢复完成；需持续维护 Python 夹具 | 高 |
 | Markdown 记忆 | `agent/memory.py`、`core/memory/markdown.py` | `adapter-workspace`、`MemoryContextService` | 部分 | 三个固定 Profile 的严格 UTF-8 只读投影、上限和零写入已实现；真实 Workspace 与任何写回仍冻结 | 极高 |
-| 检索管线 | `agent/retrieval/` | `MemoryRetrievalPort`、`MemoryContextService` | 部分 | 请求/结果/安全 Trace、Fake 注入闭环和生产 NoOp 已实现；R4.2 的 Schema、Embedding、排序、Scope、预算与失败语义已形成待批准 Contract/Spec | 中 |
+| Java 原生语义记忆 | Python `memory2/` 仅作历史参考，旧数据不迁移 | 待实现 | 未开始 | R4.2 已形成 `agent-memory.db`、显式管理 API、Embedding、排序、Scope 和删除 Contract；不再追求 Python Schema 兼容 | 高 |
+| 检索管线 | `agent/retrieval/` | `MemoryRetrievalPort`、`MemoryContextService` | 部分 | 请求/结果/安全 Trace、Fake 注入闭环和生产 NoOp 已实现；待接入 Java 原生 Store、Embedding、排序与预算 | 中 |
 | 上下文预算 | `agent/prompting/budget.py` | 字符/消息上限 | 部分 | 缺 Token 估算、Block 优先级和压缩策略 | 中 |
 | Persona/身份 | `agent/persona.py` | 固定 System Prompt | 部分 | 缺工作区 Persona 加载与兼容规则 | 中 |
 
@@ -73,15 +74,15 @@
 | 测试资产 | 当前 Java 状态 | 缺口 |
 | --- | --- | --- |
 | Java 单元/集成测试 | 已建立默认、`failure`、`compat` Profile | 继续随能力扩展 |
-| Python SQLite 兼容夹具 | 已覆盖核心 Schema、Python 行与 Java 追加游标 | 增加真实版本样本、未知字段和升级路径 |
+| Python SQLite 兼容夹具 | `sessions.db` 共同 Schema 已覆盖 | 语义记忆改为 Java 原生，不增加 `memory2.db` 兼容夹具 |
 | 跨语言 Golden | 已建立格式、Manifest、生成器、历史、Prompt、只读 Context/Memory、SQLite、错误映射、Tool Loop、Runtime 安全与 Approval/Side Effect 场景及 CI | 随后增加语义检索、Memory 写回与流式事件 |
 | 真实模型 Smoke | Profile 已有，默认不执行；DeepSeek `deepseek-v4-flash` Tool Smoke 已于 2026-07-14 通过 | 其他 Provider/模型仍需逐组合授权验证；通过不自动启用部署 |
 | 真实工作区演练 | 未执行 | 只能在备份副本上先做只读差异，再做受控写入 |
 
 ## 当前优先级
 
-1. 评审并批准 R4.2 `memory2` 持久化基础、只读查询、排序、Scope、Embedding、预算和 Optimizer 安全 Contract；生产继续保持 `AGENT_MEMORY_MODE=DISABLED`。
-2. 获批后按 TDD 实现临时数据上的 Writer 原语与生产只读语义检索；不接线 Writer/Optimizer，也不执行真实 Workspace 或真实 Embedding Smoke。
+1. 评审并批准 R4.2 Java 原生 `agent-memory.db`、显式管理 API、Embedding、检索、Scope、预算和 Optimizer 安全 Contract；生产继续保持 `AGENT_MEMORY_MODE=DISABLED`。
+2. 获批后按 TDD 实现写入、查看、物理删除和语义召回的最小闭环；不实现自动提取/Optimizer，也不执行真实 Workspace 或真实 Embedding Smoke。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
 5. MCP、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。

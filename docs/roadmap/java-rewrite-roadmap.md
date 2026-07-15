@@ -1,7 +1,7 @@
 # Java 重写 Roadmap
 
 - 状态：实施中
-- 最近更新：2026-07-14
+- 最近更新：2026-07-15
 - 基准：`/Users/namei/idea/agent/akashic-agent`
 - 目标项目：`/Users/namei/idea/agent/java-agent`
 
@@ -25,7 +25,7 @@
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、六模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
-| R4 | 上下文与记忆 | R4.1 已完成，R4.2 待批准 | 只读 Profile/Context 已完成；Memory2/Embedding/Retrieval 与 Optimizer 边界已形成待批准方案 |
+| R4 | 上下文与记忆 | R4.1 已完成，R4.2 待批准 | 只读 Profile/Context 已完成；Java 原生 Store/管理 API/Embedding/Retrieval 方案待批准 |
 | R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
@@ -135,16 +135,16 @@ R3.2 实现依据：
 
 当前状态：R4.1 的 C1 至 C8 已全部完成。Python Golden、Kernel Port、只读 Markdown Adapter、ContextAssembler、Retrieval 注入/提交隔离、默认关闭装配和安全 HTTP 映射均已实现；默认 172、`failure` 50、`compat` 206 个测试以及格式、依赖、Secret/Workspace/生产写入面审计全部通过。
 
-R4.2 当前状态：已分析 Python `memory2`、Embedding、Retriever、Markdown Snapshot 与 Optimizer，并通过 45 个相关 Python 基线测试；Contract、ADR、Spec 和 TDD 计划待批准，尚未修改生产代码。
+R4.2 当前状态：用户已决定不迁移旧 Python 语义记忆。原 `memory2` 兼容草案已改写为 Java 原生 `agent-memory.db`、显式 Write/List/Delete API、Embedding 和语义检索方案；Contract、ADR、Spec、HTTP API 与 TDD 计划待批准，尚未修改生产代码。
 
 范围：
 
 - R4.1 已迁移 `SELF.md`、`MEMORY.md`、`RECENT_CONTEXT.md` 的只读共同投影、字符上限和临时 Frame；生产默认关闭且 Retrieval 为 NoOp。
-- R4.2 提议迁移 Python 兼容 Schema/内部 Writer 原语、生产只读 Query、cosine/Hotness、Scope、Embedding 和字符预算；生产 Writer 保持不接线。
-- Keyword/RRF、Query Rewrite/HyDE、memorize、recall、forget、Consolidation、Optimizer 实现和提交后写回继续冻结；Optimizer 只冻结备份、Snapshot、原子提交和恢复 Contract。
-- 真实 Workspace 只读演练不属于 R4.1；取得单独批准后只能先在脱敏备份副本执行。
+- R4.2 提议实现 Java 原生 Schema、显式写入/查看/物理删除、cosine/Hotness、Session Scope、Embedding、字符预算和 Context 注入。
+- Keyword/RRF、Query Rewrite/HyDE、自动对话提取、Memory Tool、Consolidation 与 Optimizer 实现继续冻结；Optimizer 只冻结 Java DB Revision、事务和 Undo 边界。
+- Java 不读取、迁移或删除旧 `memory2.db`；真实 Workspace 与真实 Embedding 仍需单独批准。
 
-退出门禁：真实工作区副本上的只读差异可解释；写入前后文件可审计并可回退；检索 Golden 达标。
+退出门禁：临时 Java Workspace 上写入、查看、删除、检索与 Context 闭环通过；默认模式零文件/零费用；旧 Python 数据零访问；迁移、事务和删除可审计。
 
 R4.1 设计依据：
 
@@ -154,10 +154,10 @@ R4.1 设计依据：
 
 R4.2 待批准依据：
 
-- [语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
-- [ADR-0005：`memory2` 先使用 Python 兼容 JSON 向量与有界全表检索](../adr/0005-use-python-compatible-json-vectors-for-memory2.md)
-- [Memory2 语义检索纵向切片设计](../specs/2026-07-15-memory2-semantic-retrieval-design.md)
-- [Memory2 语义检索实施计划](../plans/2026-07-15-memory2-semantic-retrieval-implementation.md)
+- [Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
+- [ADR-0005：采用 Java 原生语义记忆库](../adr/0005-use-java-native-semantic-memory-store.md)
+- [Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
+- [Java 原生语义记忆实施计划](../plans/2026-07-15-java-native-semantic-memory-implementation.md)
 
 ## R5：MCP 与外部工具
 

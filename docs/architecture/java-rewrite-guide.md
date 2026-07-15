@@ -250,7 +250,7 @@ testdata/golden/
 当前不应直接开始迁移 Memory 写入、所有工具或 MCP。下一步顺序是：
 
 1. 完成 R4.1 只读 Context/Memory 阶段门禁并保持生产 `DISABLED`；
-2. 为 R4.2 冻结 `memory2` 只读 Query、Scope、排序、Embedding 和 Context Budget Contract；
+2. 为 R4.2 冻结 Java 原生语义记忆 Schema、显式管理 API、Scope、排序、Embedding 和 Context Budget Contract；旧 Python `memory2.db` 不迁移；
 3. 在临时/脱敏副本上实现并验证语义检索，不开放 Memory 写入；
 4. 再按 Roadmap 进入 MCP、渠道、插件和后台能力。
 

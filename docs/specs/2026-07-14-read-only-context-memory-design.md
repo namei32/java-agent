@@ -11,7 +11,7 @@
 
 实现一个默认关闭、只读、可由 Golden 验证的 Context/Memory 纵向切片：从固定 Markdown Profile 读取，到 Application 组装 System Section 和临时 Context Frame，再到现有 Tool Loop、最终回答与 SQLite 原子提交。
 
-R4.1 不实现真实语义检索引擎。它先固定 Retrieval Port 和注入闭环，避免未来 `memory2`、MCP 或 Plugin 直接改写模型消息和循环控制权。
+R4.1 不实现真实语义检索引擎。它先固定 Retrieval Port 和注入闭环，避免未来语义记忆、MCP 或 Plugin 直接改写模型消息和循环控制权。
 
 ## 2. Python 基准结论
 
@@ -102,11 +102,11 @@ flowchart TD
 
 ## 7. 后续阶段
 
-R4.1 完成后，R4.2 再单独分析并迁移：
+R4.1 完成后，R4.2 再单独冻结：
 
 1. Python `MemoryQuery`、Scope、Filter、Result/Trace 共同投影。
-2. `memory2.db` Schema 和只读兼容 Adapter。
+2. 语义记忆 Store、Embedding 和 Retrieval Adapter。
 3. Embedding、排序、阈值、时间与 Scope 规则。
 4. Context Budget、Token 估算和 Trim/Retry。
 
-Memory 写入、Consolidation、Optimizer、recall/memorize/forget 和真实用户数据演练继续留在更后的独立阶段。
+后续数据决定已明确不迁移旧 Python `memory2.db`；R4.2 改为 Java 原生 Store 与显式管理 API，详见新版 R4.2 Contract。自动写入、Consolidation、Optimizer、Memory Tool 和真实用户数据演练继续留在独立阶段。

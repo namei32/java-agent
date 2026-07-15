@@ -27,7 +27,7 @@ R4.1 把 Java 从“固定 System Prompt + 会话历史”推进为具备 Python
 | `HISTORY.md`、`PENDING.md`、Journal | 搜索、维护或缓冲 | 不直接注入、不写入 | 检索与 Maintenance 分阶段迁移 |
 | Context Frame | 临时 User 消息，位于历史与当前 User 之间 | 迁移共同标记、顺序与警示语 | 渠道/Plugin Injection 后续扩展 |
 | Section 顺序 | `self_model(30)`、`long_term_memory(35)`、`recent_context(45)`、`retrieved_memory(55)` | 固定共同子集顺序 | Skills、Memes、Session Context 后续扩展 |
-| Retrieval 协议 | 每轮构造 Query，Engine 缺失时返回空 | 建立只读 Port、请求/结果与注入闭环 | Python `memory2` 排序/Embedding Adapter 为 R4.2 |
+| Retrieval 协议 | 每轮构造 Query，Engine 缺失时返回空 | 建立只读 Port、请求/结果与注入闭环 | R4.2 采用 Java 原生 Store、Embedding 与排序；旧 Python 数据不迁移 |
 | Context Budget | Section Trim Plan 与模型上下文重试 | R4.1 只做输入上限和稳定失败 | Token 估算、压缩与分级重试为 R4.2 |
 | Memory 写入 | Consolidation、Optimizer、memorize/forget | 明确禁止 | 独立数据与副作用 Contract |
 
@@ -98,7 +98,7 @@ Java 建立项目自有只读协议：
 - Engine 未配置时返回空 Result，聊天继续。
 - 调用异常、非法 Result 或超限 Result 使当前 Turn 稳定失败，不调用模型、不提交 Conversation。
 - R4.1 生产只提供 `NoOp` Retrieval Adapter；Fake 只用于证明从 Query 到 Context Frame、模型调用和最终提交的闭环。
-- Python `memory2.db`、Embedding、Cosine/Hotness 排序、时间过滤、Scope 匹配和强化计数不在 R4.1 声明完成，进入 R4.2 独立 Contract/Golden。
+- Embedding、Cosine/Hotness 排序、Scope 匹配和强化计数不在 R4.1 声明完成，进入 R4.2 独立 Contract；后续决定已改为 Java 原生 Store，不读取 Python `memory2.db`。
 
 ## 6. 安全与数据边界
 
@@ -150,10 +150,12 @@ Python Reference Case 必须调用 Python 生产 `PromptBlock`/`PromptAssembler`
 2. 接受 Java 基础 Prompt 暂不替换为完整 Python Persona。
 3. 接受符号链接逃逸与超限输入稳定失败这一安全差异。
 4. 接受 Production Retrieval 在 R4.1 为 NoOp，但端到端注入控制流由 Fake/Golden 固定。
-5. Memory 写入、真实工作区演练和 `memory2` 兼容继续延后并重新审批。
+5. Memory 写入、真实工作区演练和当时设想的 `memory2` 兼容继续延后并重新审批；R4.2 后续已改为 Java 原生方案。
 
 ## 11. 实现映射
 
 截至 2026-07-14，已实现并通过阶段门禁：Kernel Profile/Retrieval 协议、严格 UTF-8 的固定 Markdown 只读 Adapter、Python 共同投影的 `ContextAssembler`、Retrieval Fake 注入闭环、Tool Loop Frame 保留、Conversation 提交隔离、默认 `DISABLED` 的 Bootstrap 装配和脱敏 `502` 映射。
 
 生产 Retrieval 明确为 NoOp；`memory2.db`、Embedding、语义排序、Memory 写入、Optimizer、记忆 Tool 和真实 Workspace 演练均未实现，也未获本契约授权。准确门禁命令与测试数见实施计划 C8。
+
+后续决定（2026-07-15）：用户已明确旧 Python 语义记忆可以丢弃。R4.2 不再实现 `memory2.db` 兼容，而采用独立 Java 原生 `agent-memory.db`；该变化不回写或改变本契约已经完成的 R4.1 行为。

@@ -1,223 +1,303 @@
-# 语义记忆、持久化与优化器契约
+# Java 原生语义记忆、持久化与优化器契约
 
 - 状态：待批准
-- 契约版本：1
+- 契约版本：2
 - 日期：2026-07-15
-- 适用阶段：R4.2 `memory2` 持久化基础与只读语义检索
-- Python 参考 Commit：`b65a5430e332c8733b981dfc2dfbc3eb1967e9ef`
-- Python 证据：`memory2/store.py`、`memory2/embedder.py`、`memory2/retriever.py`、`plugins/default_memory/engine.py`、`proactive_v2/memory_optimizer.py`
+- 适用阶段：R4.2 Java 原生语义记忆纵向切片
+- 数据迁移决定：旧 Python 语义记忆允许丢弃，不读取或迁移 `memory2.db`
+- 关联 ADR：[ADR-0005：采用 Java 原生语义记忆库](../adr/0005-use-java-native-semantic-memory-store.md)
 
-> 本契约只授权在临时测试 Workspace 中实现和验证 `memory2` SQLite 持久化原语，并在生产装配中增加默认关闭的只读语义检索。它不授权访问真实用户 Workspace、调用真实 Embedding 服务、把 Memory Writer 接入聊天主链、运行 Optimizer、开放记忆 Tool 或让 Python 与 Java 同时写入同一数据库。
+> 本契约授权在 Java 专用或临时测试 Workspace 中实现 `agent-memory.db`、显式记忆写入/查看/删除、Embedding 和语义检索。它不授权访问或删除真实 Python Workspace，不授权自动提取所有对话、运行 Optimizer、开放 Memory Tool、调用真实 Embedding Provider 或把服务暴露到未经认证的远程网络。
 
-## 1. 目的
+## 1. 目标
 
-R4.2 把 R4.1 的 `MemoryRetrievalPort` 从生产 NoOp 推进为可选的真实只读检索链路：当前用户消息经过项目自有 Embedding Port，查询 Python 兼容的 `memory2.db`，按确定性的 cosine、Hotness、类型、Scope 和预算规则生成候选记忆块，再由既有 Context Frame 注入模型。
+R4.2 把 R4.1 的生产 NoOp Retrieval 推进为完整、可用且可删除的 Java 原生记忆闭环：
 
-同一契约同时冻结未来持久化与 Optimizer 的数据、副作用和恢复边界，避免先写数据库或 Markdown，再补幂等、备份和崩溃语义。
-
-## 2. Python 基准与 Java 迁移决定
-
-2026-07-15 对 Python 参考 Commit 执行以下基线：
-
-```bash
-.venv/bin/python -m pytest \
-  tests/test_memory2_retrieval_baseline.py \
-  tests/test_memory2_dedup_baseline.py \
-  tests/test_memory2_consolidation_idempotency.py \
-  tests/test_memory_optimizer.py \
-  tests/test_recall_memory_tool.py -q
+```text
+显式写入 -> Embedding -> agent-memory.db
+当前 User -> Embedding -> Scope/相似度/Hotness 检索 -> Context Frame -> 模型
+显式删除 -> 物理删除正文与向量
 ```
 
-结果：45 个测试全部通过。
+新库从空状态开始，因此本阶段不能只实现 Reader。必须同时提供受控的显式写入和删除用例；自动记忆提取、后台 Consolidation 与 Optimizer 执行继续延后。
 
-| 能力 | Python 当前行为 | R4.2 决定 |
-| --- | --- | --- |
-| `memory2.db` | `memory_items`、`consolidation_events`、`memory_replacements` | 兼容核心表、列、索引与 JSON Embedding；不要求 `sqlite-vec` |
-| 精确去重 | 规范化正文与类型生成 16 位 SHA-256 前缀；重复写强化原条目 | 迁移为内部 Writer 原语，但不做生产 Bean 或聊天写回 |
-| Embedding | OpenAI-compatible `/embeddings`，单批不超过 10，文本截到 2000 字符 | 通过 Kernel Port 和 Spring AI Adapter 迁移；测试只用 Fake Model |
-| 向量检索 | cosine 阈值、类型、状态、Scope、Top-K | 迁移共同子集，并增加确定性同分排序和候选上限 |
-| Hotness | frequency × half-life decay；情绪权重延长半衰期 | 迁移公式，默认 `alpha=0.20`、`half-life=14d` |
-| 注入 | 按类型阈值、段落数量和字符预算生成文本块 | 迁移普通规则/偏好/事件/Profile；不迁移强制 Tool 指令 |
-| Keyword/RRF | Keyword Lane 与 Vector Lane 进行 RRF | 本阶段延后 |
-| Query Rewrite/HyDE | 可生成辅助 Query 或假设 | 本阶段延后；只嵌入当前真实 User 消息 |
-| 检索后强化 | 部分路径更新 reinforcement | 只读主链禁止写入，本阶段不强化 |
-| Optimizer | PENDING 快照、LLM 合并、MEMORY 备份、SELF 更新 | 只冻结 Contract；不实现、不装配、不调度 |
+## 2. 已确认与待实现边界
 
-## 3. `memory2.db` 数据契约
+### 2.1 已确认决定
 
-### 3.1 固定位置与所有权
+- Java 运行、构建和测试不依赖 Python。
+- 不读取、不复制、不迁移、不修改、不自动删除 Python `memory2.db`。
+- 旧 Python 语义记忆不进入 Java；Java 首次启用时记忆为空。
+- R4.1 的 Markdown Profile Reader 可以继续存在，但 Java 原生语义记忆不写 `SELF.md`、`MEMORY.md` 或 `RECENT_CONTEXT.md`。
+- Session、配置和其他既有数据仍遵守原有兼容与备份 Contract；“旧记忆可丢弃”不等于可以删除整个 Python Workspace。
 
-- 默认相对路径为 `memory/memory2.db`，调用方不得从 HTTP 请求提供任意路径。
-- 生产 `SEMANTIC_READ_ONLY` 只允许以 SQLite Read-Only 模式打开已存在数据库，不创建目录、数据库、表、索引、WAL 或 SHM。
-- 缺失数据库等价于空记忆，不调用 Embedding；同名但不兼容的 Schema、损坏数据库或读取失败稳定失败。
-- Java Writer 只在测试和未来独立获批的 Maintenance 路径中可构造；R4.2 Bootstrap 不暴露 Writer Bean。
-- Python 和 Java 不得同时写入同一 Workspace。真实 Workspace 与真实数据库在本阶段仍禁止访问。
+### 2.2 R4.2 实现范围
 
-### 3.2 Python 兼容 Schema
+- Java 原生 SQLite Schema 与版本迁移。
+- `MemoryStorePort`、`MemoryWritePort`、`EmbeddingPort` 和应用用例。
+- 显式 Memory HTTP API：写入、查看和删除。
+- 当前消息的 Embedding、cosine、Hotness、Scope、Top-K 与字符预算。
+- 既有 R4.1 Context Frame 注入和 Conversation 提交隔离。
+- 默认关闭装配、失败分类、审计和阶段门禁。
 
-必须识别以下核心结构，未知表、未知列和未知 JSON 字段保持不变：
+### 2.3 明确延后
+
+- 自动从每轮对话提取事实或偏好。
+- `remember_memory`、`forget_memory` 等模型可调用 Tool。
+- Keyword/RRF、Query Rewrite、HyDE、时间线问答和远程 Vector Store。
+- Optimizer 生产实现、Scheduler、后台任务和自动合并。
+- 跨 Session、跨 Channel、跨用户的身份映射。
+- 真实 Workspace、真实 Embedding 和部署启用。
+
+## 3. 运行模式
+
+`MemoryRuntimeMode` 扩展为：
+
+| 模式 | Markdown Profile | Java 语义库 | Memory API | Retrieval |
+| --- | --- | --- | --- | --- |
+| `DISABLED` | 空 | 不创建、不访问 | 不可用 | NoOp |
+| `READ_ONLY` | R4.1 固定文件只读 | 不创建、不访问 | 不可用 | NoOp |
+| `JAVA_NATIVE` | R4.1 固定文件只读 | 可创建、读写 | 显式启用 | 语义检索 |
+
+- 模板、测试默认和部署默认继续为 `DISABLED`。
+- `JAVA_NATIVE` 只允许使用 Java 专用 Workspace。
+- 当前 HTTP 没有认证；只允许在 Loopback 监听时启用 Memory API。未来远程监听必须先增加认证与授权 Contract。
+
+## 4. Java 原生持久化契约
+
+### 4.1 固定路径与 Schema 所有权
+
+- 数据库固定为 `${workspace}/memory/agent-memory.db`。
+- HTTP、模型、Tool 和用户输入不能提供数据库路径。
+- Java 是唯一 Schema Owner 和 Writer；不存在 Python/Java 双写。
+- 新库使用 `memory_schema` 记录单调递增版本。发现未来版本、同名不兼容列或损坏数据库时启动失败，不猜测修复。
+- Schema 升级前必须通过 SQLite Backup API 生成一致性备份；备份失败时零 DDL/DML。
+- 新建空库不需要迁移备份；删除旧 Python 记忆不是 Schema 初始化的一部分。
+
+### 4.2 V1 Schema
 
 ```sql
-CREATE TABLE memory_items (
-  id TEXT PRIMARY KEY,
-  memory_type TEXT NOT NULL,
-  summary TEXT NOT NULL,
-  content_hash TEXT NOT NULL,
-  embedding TEXT,
-  reinforcement INTEGER NOT NULL DEFAULT 1,
-  emotional_weight INTEGER NOT NULL DEFAULT 0,
-  extra_json TEXT,
-  source_ref TEXT,
-  happened_at TEXT,
-  status TEXT NOT NULL DEFAULT 'active',
-  created_at TEXT NOT NULL,
+CREATE TABLE memory_schema (
+  singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+  version INTEGER NOT NULL,
   updated_at TEXT NOT NULL
 );
 
-CREATE UNIQUE INDEX ux_items_hash
-  ON memory_items(content_hash, memory_type);
+CREATE TABLE memory_items (
+  id TEXT PRIMARY KEY,
+  scope_binding TEXT NOT NULL,
+  memory_type TEXT NOT NULL,
+  content TEXT NOT NULL,
+  content_hash TEXT NOT NULL,
+  embedding BLOB NOT NULL,
+  embedding_model TEXT NOT NULL,
+  embedding_dimensions INTEGER NOT NULL,
+  reinforcement INTEGER NOT NULL DEFAULT 1,
+  emotional_weight INTEGER NOT NULL DEFAULT 0,
+  source_kind TEXT NOT NULL,
+  happened_at TEXT,
+  revision INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(scope_binding, memory_type, content_hash)
+);
+
+CREATE INDEX ix_memory_items_scope_updated
+  ON memory_items(scope_binding, updated_at DESC, id ASC);
+
+CREATE TABLE memory_mutations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  scope_binding TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  operation TEXT NOT NULL,
+  argument_hash TEXT NOT NULL,
+  item_id TEXT,
+  result_status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(scope_binding, request_id)
+);
 ```
 
-`consolidation_events` 与 `memory_replacements` 按 Python 当前列和索引建立兼容结构，但 R4.2 不把 Consolidation、Replacement、Undo 或 Dashboard 管理行为接入生产。
+约束：
 
-Embedding 继续存为 JSON Number Array，避免 Java 写入 Python 无法读取的私有二进制格式。`vec_items` 如果存在必须忽略且不得修改；未来 Python 重新独占数据库后，由 Python 自己的启动同步逻辑重建向量索引。
+- `memory_type` 只接受 `NOTE`、`FACT`、`PREFERENCE`、`PROCEDURE`、`EVENT`。
+- `content` Strip 后不能为空，最大 4000 Java 字符。
+- `scope_binding` 是 Session ID 的 SHA-256，不存原始 Session ID。
+- `content_hash` 是规范化 Content 的 SHA-256；唯一键包含 Scope 和类型。
+- `embedding` 使用 Little-Endian Float32 BLOB，维度由 `embedding_dimensions` 明确记录。
+- `embedding_model` 必须与当前检索配置匹配；模型或维度不同的条目不参与检索，未来由独立 Backfill 处理。
+- `reinforcement >= 1`；`emotional_weight` 在 `0..10`。
+- 时间使用 UTC ISO-8601；`happened_at` 可为空。
+- `argument_hash` 只固定 Operation、类型、Content Hash 或目标 Item ID，不保存正文。
+- `memory_mutations` 不保存正文、Embedding、原始 Session ID 或 Provider 响应。
 
-### 3.3 条目和值约束
+### 4.3 显式写入与幂等
 
-- `memory_type` 只接受 `procedure`、`preference`、`event`、`profile`。
-- `status` 只接受 `active`、`superseded`；生产查询默认只读 `active`。
-- `summary` Strip 后不能为空；单条上限为 20,000 Java 字符。
-- `reinforcement >= 1`；`emotional_weight` 归一化到 `0..10`。
-- `extra_json` 必须为 JSON Object；未知字段原样保留。
-- 时间使用 ISO-8601；无 Offset 的 Python 时间按原文本保留，参与 Hotness 的 `updated_at` 无 Offset 时按 UTC 解释，避免依赖宿主默认时区。
-- Embedding 维度必须等于配置维度，每个数必须有限；零范数条目不参与检索。
+写入流程：
 
-### 3.4 写入、去重与备份
+1. 校验 Session、Request ID、类型、正文、长度和情绪权重。
+2. 计算不含正文的 Argument Hash，以 `(scope_binding, request_id)` 检查幂等结果；相同 Hash 返回原结果，不调用 Embedding，不写数据库。
+3. 同一 Request ID 对应不同 Argument Hash 时返回 `IDEMPOTENCY_CONFLICT`。
+4. 首次请求对规范化正文调用一次 Embedding；失败时不开始数据库事务。
+5. 使用单个显式事务再次检查幂等键，插入或强化条目，同时写 `memory_mutations`。
+6. 提交后才返回成功。
 
-内部 Writer 的 `upsert` 行为冻结如下：
+重复 `(scope_binding, memory_type, content_hash)`：
 
-1. `content_hash = SHA-256(normalize(summary) + memory_type)` 的前 16 个小写十六进制字符；`normalize` 为 Strip、转小写并把连续空白压成单个空格。
-2. 新内容创建不透明 ID，写入 Embedding、Extra、Source、HappenedAt 与时间戳。
-3. 同 `(content_hash, memory_type)` 重复写入时不创建第二条；`reinforcement + 1`、`updated_at` 更新、`emotional_weight` 取较大值，`superseded` 恢复为 `active`。
-4. 重复 Event 只在原 `happened_at` 为空时补入新值；不静默替换已有时间。
-5. 每个 Upsert 使用单个显式事务；失败全部回滚。
+- 不创建第二条。
+- `reinforcement + 1`、`revision + 1`、`updated_at` 更新。
+- `emotional_weight` 取较大值。
+- 既有 Content、Embedding、Model 和 HappenedAt 不被静默替换。
+- 返回 `REINFORCED` 与原 Item ID。
 
-打开已存在数据库进行第一次 Java 可写操作前，必须先用 SQLite Backup API 生成一致性备份。备份失败时不得执行 DDL 或 DML。新建的空测试数据库无需备份。R4.2 不提供删除、Forget、Replacement、批量强化或自动迁移真实数据库的运行时入口。
+同一 Scope 下的同一 `request_id` 重试必须返回原结果，不能重复 Embedding 或再次强化。事务失败必须完整回滚条目和 Mutation Ledger。
 
-## 4. Embedding Contract
+### 4.4 查看与删除
 
-Kernel 定义项目自有 `EmbeddingPort`，不得暴露 Spring AI、OpenAI 或供应商 SDK 类型。
+- 查看只返回当前 Scope 的 ID、类型、正文、强化次数、情绪权重和时间；不返回 Embedding、Hash、Scope Binding 或内部模型配置。
+- 删除必须同时匹配当前 Scope 与 Item ID。
+- Forget 采用物理删除，确保正文和 Embedding 不再存在；Mutation Ledger 只保留不含正文的操作结果。
+- 同一删除 Request ID 重试返回原结果；不存在或不属于当前 Scope 的 ID 对外统一返回 `NOT_FOUND`。
+- R4.2 不实现批量删除、修改正文、合并或跨 Scope 移动。
 
-- 输入顺序必须保留，输出数量必须与输入数量一致。
-- 空批次直接返回空，不调用模型；单批最多 10 条。
-- 每条输入 Strip 后不能为空，并按 Unicode Code Point 截到 2000，不能截断 surrogate pair。
-- 配置维度范围为 `1..4096`；每个返回向量必须维度一致、全部有限且范数大于零。
-- Adapter 使用已配置的 Spring AI `EmbeddingModel`，不得接管 Agent Loop、重试、Context 或会话提交。
-- R4.2 测试只使用 Fake `EmbeddingModel`；真实 Provider 调用、费用和密钥必须另行批准。
+## 5. Memory HTTP API
 
-## 5. 只读语义检索 Contract
+R4.2 提议增加：
 
-### 5.1 Query 与 Scope
+```text
+PUT    /api/v1/sessions/{sessionId}/memories
+GET    /api/v1/sessions/{sessionId}/memories
+DELETE /api/v1/sessions/{sessionId}/memories/{memoryId}
+```
 
-- Query 只使用当前真实 User 消息的 Strip 文本；完整历史仍保留在 Request 中，但本阶段不拼接进 Embedding。
-- Java HTTP 当前没有 Python Channel/Chat 身份，因此不能猜测或降级匹配 Python 的 `scope_channel`、`scope_chat_id`。
-- `extra_json.scope_session_binding` 非空的 Java 条目只允许与当前不可逆 Session Binding 精确匹配。
-- 带 Python `scope_channel` 或 `scope_chat_id` 的条目在 R4.2 HTTP 主链中一律排除。
-- 三个 Scope 字段都缺失的 Legacy 条目视为单用户全局记忆，只在显式 `allow-global=true` 时参与检索；该开关只在 `SEMANTIC_READ_ONLY` 下生效。
-- 只有单个字段存在、JSON 类型错误或 Scope 形状不完整的条目一律排除。
+写入请求：
 
-### 5.2 候选、评分与排序
+```json
+{
+  "requestId": "client-generated-id",
+  "type": "PREFERENCE",
+  "content": "回答时先给结论",
+  "emotionalWeight": 0,
+  "happenedAt": null
+}
+```
 
-查询顺序固定为：
+规则：
 
-1. 数据库缺失或无 Active Embedding 时返回空，不调用 Embedding。
-2. SQL 预过滤 `active`、合法类型与 Scope；候选超过 `max-candidates` 时稳定失败，不静默截断。
+- Session ID 沿用 Chat API 的字符集和 128 字符上限。
+- `requestId` 必填、最大 128 字符，只允许 `[A-Za-z0-9_-]+`。
+- DELETE 的 Request ID 通过必填 `Idempotency-Key` Header 提供，使用相同格式和上限。
+- 写入返回 `CREATED` 或 `REINFORCED`；删除返回 `DELETED` 或 `NOT_FOUND`。
+- API 不允许直接提交 Embedding、Hash、Scope、Reinforcement、CreatedAt 或 UpdatedAt。
+- Memory API 只在 `JAVA_NATIVE` 和 Loopback 监听下可用；其他模式返回稳定不可用结果。
+- 该 API 是显式管理入口，不从普通聊天文本中自动推断“请记住”。
+
+## 6. Embedding 契约
+
+Kernel 定义项目自有 `EmbeddingPort`，不得暴露 Spring AI 或 Provider SDK 类型。
+
+- 空批次零调用；单批最多 10 条。
+- 每条输入 Strip 后不能为空，按 Unicode Code Point 截到 2000，不拆 surrogate pair。
+- 配置维度范围 `1..4096`。
+- 输出数量与输入顺序必须一致；每个向量维度一致、全部有限且范数大于零。
+- Adapter 使用 Spring AI `EmbeddingModel` 的实际 Provider Options，不读取或记录 API Key。
+- 写入 Embedding 失败：Memory API 稳定失败且零数据变化。
+- 查询 Embedding 失败：返回无正文 `DEGRADED`，聊天继续。
+- 测试只用 Fake Model；真实调用、费用和密钥另行批准。
+
+## 7. 语义检索契约
+
+### 7.1 Query 与 Scope
+
+- Query 只使用当前真实 User 消息；历史保留在 Request，但本阶段不拼入 Embedding。
+- 检索只读取与当前 Session Binding 精确匹配的条目。
+- 不存在全局、Legacy、Channel Fallback 或跨 Session 召回。
+- Session ID 不相同即视为不同 Scope；R6 引入稳定用户身份后再扩展。
+
+### 7.2 候选与评分
+
+顺序固定：
+
+1. 当前 Scope 没有条目时返回 `EMPTY`，零 Embedding 调用。
+2. 候选超过 `max-candidates=10000` 时稳定失败，不静默截断。
 3. 对当前消息调用一次 Embedding。
-4. 对维度相同且非零范数的候选计算 cosine。
-5. 先应用基础 `score-threshold=0.45`。
+4. 只保留 Embedding Model 与维度匹配、BLOB 长度正确、数值有限且非零范数的条目。
+5. 计算 cosine，先应用基础 `score-threshold=0.45`。
 6. 计算 Hotness：
 
 ```text
 effective_half_life = max(half_life * (1 + 0.5 * emotional_weight / 10), 0.1)
-frequency = 1 / (1 + exp(-log1p(max(0, reinforcement))))
+frequency = 1 / (1 + exp(-log1p(reinforcement)))
 recency = exp(-ln(2) / effective_half_life * max(age_days, 0))
 hotness = frequency * recency
 final = (1 - alpha) * semantic + alpha * hotness
 ```
 
-7. 排序固定为 `final DESC, semantic DESC, updated_at DESC, id ASC`，再截取 `top-k=8`。
-8. 对 Injection 再应用类型阈值：`procedure=0.66`，其余三类为 `0.50`。
+默认 `alpha=0.20`、`half-life=14d`。排序固定为 `final DESC, semantic DESC, updated_at DESC, id ASC`，再取 `top-k=8`。
 
-检索是严格只读的：不更新 reinforcement、updated_at、数据库、Markdown 或 Conversation。
+检索严格只读，不强化、不更新时间、不写 Mutation Ledger。
 
-### 5.3 Injection 与预算
-
-Injection 只允许以下两个候选上下文 Section：
+### 7.3 Context Injection
 
 ```text
-## 【流程规范】用户偏好与规则
-- [id] summary
+## 【偏好与规则】候选记忆
+- [id] content
 
-## 【相关历史】记忆检索结果
-- [id] [happened_at] summary
+## 【相关信息】候选记忆
+- [id] [happened_at] content
 ```
 
-- `procedure` 与 `preference` 合计最多 4 条；`event` 与 `profile` 合计最多 4 条。
-- 整块默认最多 6000 Java 字符，且不得超过 R4.1 外层 `maxRetrievedCharacters`。
-- 预算按完整行添加；不截断 ID、Unicode 字符或半条记忆。放不下的后续条目省略。
-- 顺序沿用检索排序；空 Section 不渲染。
-- `source_ref`、`extra_json`、内部分数与 Scope 不进入模型文本。
-- Python 的“强制约束”“必须调用工具”投影明确不迁移。记忆不能授予 Tool 权限、降低风险、伪造审批或覆盖 System Policy。
+- `PREFERENCE`、`PROCEDURE` 合计最多 4 条；其余类型合计最多 4 条。
+- Injection 默认最多 6000 Java 字符，并受 R4.1 外层上限约束。
+- 按完整行添加，不截断 ID、Unicode 字符或半条记忆。
+- 不注入 Embedding、分数、Scope、Hash、内部模型名或 Mutation 信息。
+- `PROCEDURE` 也只是候选上下文，不能强制 Tool Call、改变风险或绕过 Approval。
+- Frame 继续位于历史之后、当前 User 之前，不进入 SQLite Conversation。
 
-## 6. 失败与降级
+## 8. 失败与隐私
 
-- 模式 `DISABLED` 或 `READ_ONLY`：Retrieval 保持 NoOp，零数据库和零 Embedding 调用。
-- `SEMANTIC_READ_ONLY` 且数据库缺失/没有候选：返回 `EMPTY`，聊天继续。
-- Embedding 超时、供应商不可用或返回非法向量：返回无正文的 `DEGRADED` Trace，聊天继续，不泄露供应商正文。
-- Schema 不兼容、数据库损坏、候选超限、非法持久化数据导致无法安全判断边界：抛出稳定 Memory Context 失败，模型、Tool 和 Conversation 提交均为零。
-- Trace 只包含稳定状态和计数，不包含 Query、Summary、ID、Scope、Embedding、路径或供应商错误。
+| 故障 | 行为 |
+| --- | --- |
+| Memory 模式未启用 | Memory API 不可用；Retrieval NoOp |
+| Scope 为空 | `EMPTY`；零 Embedding |
+| Query Embedding 不可用 | `DEGRADED`；聊天继续 |
+| Write Embedding 不可用 | 写入失败；零数据库变化 |
+| Schema/DB 损坏、候选超限 | `MEMORY_CONTEXT_UNAVAILABLE`；模型/Tool/提交均为零 |
+| Mutation 事务失败 | API 失败；条目与 Ledger 完整回滚 |
 
-## 7. Optimizer Contract（仅冻结，不实施）
+日志和 Trace 只能包含稳定状态、候选/命中/注入数量、耗时 Bucket 和逻辑模型名。禁止记录正文、原始 Session ID、Item ID、向量、数据库路径、API Key 或 Provider 错误正文。
 
-未来 Optimizer 必须满足：
+## 9. Optimizer Contract（仅冻结）
 
-1. 默认关闭，不注册 Scheduler；手动或定时入口共用非等待的独占锁，重复运行返回 `BUSY`。
-2. `PENDING.md` 先通过同目录原子 Rename 形成 Snapshot；运行期间新增 Pending 写入新的 `PENDING.md`。
-3. LLM 合并只接收 MEMORY 与 Snapshot，不使用 HISTORY；Tools 必须为空。
-4. 合并结果必须通过标题、允许 Section、字符上限和严格 UTF-8 校验。
-5. 写 MEMORY 前先生成一致性备份，再使用临时文件、fsync 和原子替换；不允许原地覆盖。
-6. MEMORY 与归档 HISTORY 成功后才能删除 Snapshot；任何合并、验证、备份或写入失败都按“旧 Snapshot 在前、新 Pending 在后”回滚。
-7. SELF 更新是 MEMORY 提交后的独立步骤；SELF 失败不回滚已成功的 MEMORY，但必须保留可重试状态。
-8. 启动时发现遗留 Snapshot 必须先恢复；不得静默丢弃。
-9. Optimizer 不写 `memory2.db`；Markdown 优化与向量摄入必须保持两个独立事务和幂等键。
-10. 真实 Workspace 首次写入、模型费用、Scheduler 与运维恢复演练必须重新批准。
+未来 Java Optimizer 直接操作 `agent-memory.db`，不使用 Python `PENDING.md`、`MEMORY.md` 或 `memory2.db`：
 
-## 8. 明确非目标
+1. 默认关闭且不注册 Scheduler；手动和定时入口共用非等待独占锁，重复运行返回 `BUSY`。
+2. 在固定 Scope 下读取条目与 Revision Snapshot；模型只产生候选 Mutation Plan，不能直接写数据库。
+3. Plan 只允许合并重复内容、修正分类、降低冗余或标记过期；不能创建 Tool 权限、Secret、可执行代码或跨 Scope 内容。
+4. Plan 必须通过 Schema、数量、字符、Scope、引用 ID、Embedding 和内容安全校验。
+5. 单个显式事务检查原 Revision，写入新条目/删除旧条目和 Optimization Audit；Revision 冲突则零写入重试或失败。
+6. 每次成功优化必须保留可撤销的条目版本；Audit 不记录原始 Provider 响应。
+7. 模型、验证、Embedding、备份或事务失败均不得产生部分优化。
+8. Optimizer 不修改 Markdown Profile，也不与显式 Memory API 并发覆盖同一 Revision。
+9. 真实模型、Scheduler、自动运行、Undo API 和生产恢复演练必须重新批准。
 
-- 不实现 Keyword/RRF、Query Rewriter、HyDE、Sufficiency Checker 或时间线查询。
-- 不引入 `sqlite-vec`、本地向量数据库、JPA、R2DBC 或新服务。
-- 不实现对话后自动摄入、Consolidation、Post Response Worker、Optimizer 或 Scheduler。
-- 不开放 recall/memorize/forget/reinforce Tool、Dashboard 管理 API 或批量删除。
-- 不读取真实 Workspace，不调用真实 Embedding，不运行真实模型 Smoke。
-- 不把 Memory 命中当成事实、权限、用户原文、Tool Result 或审批决定。
+R4.2 不实现上述 Optimizer 类、表、Bean、API 或后台任务。
 
-## 9. 完成门禁
+## 10. 完成门禁
 
-- Contract、ADR、Spec 和实施计划明确获批。
-- Python 生产 helper 生成的 Schema、Hash、排序、Scope 和 Injection Golden 可重复。
-- Kernel 端口不依赖 Spring、JDBC、Reactor、Spring AI 或 Provider SDK。
-- Read-Only Adapter 对缺失、兼容 Schema、损坏、候选上限、非法 JSON/Embedding、Scope 和零写入有测试。
-- Writer 原语对精确去重、强化、回滚、备份先行和备份失败零写入有测试，但生产无 Writer Bean。
-- Spring AI Embedding Adapter 对批次、Code Point 截断、顺序、维度和非法值有 Fake 测试。
-- 真实检索端到端证明 Query、Embedding、排序、预算、Context Frame、Tool Loop 保留和 Conversation 提交隔离。
-- 默认、`failure`、`compat`、依赖、Secret、Workspace、生产 Bean 与 SQLite 写入面审计通过。
-- 模板和生产默认继续 `AGENT_MEMORY_MODE=DISABLED`。
+- Contract、ADR、Spec、HTTP API 与实施计划明确获批。
+- Java Contract Test 固定 Schema、Vector 编码、Hash、幂等、删除、cosine、Hotness、Scope 和 Injection；不调用 Python。
+- Kernel 只依赖 JDK；Spring AI 和 JDBC 类型不越界。
+- 新库、迁移备份、事务回滚、Mutation 幂等和物理删除有测试。
+- Embedding Adapter 的批次、Code Point、顺序、维度与非法值有 Fake 测试。
+- Memory API、语义检索、Context Frame、Tool Loop 保留和 Conversation 提交隔离端到端通过。
+- 默认、`failure`、`compat`、依赖、Secret、Workspace、生产 Bean 和网络监听审计通过。
+- 模板继续 `DISABLED`；不访问或删除 Python Workspace，不运行真实 Embedding。
 
-## 10. 待批准决定
+## 11. 待批准决定
 
-1. 接受 R4.2 生产只装配 `SEMANTIC_READ_ONLY`，Writer 仅作为未接线的持久化原语，不做聊天后写回。
-2. 接受使用 Python 兼容 JSON Embedding 加纯 Java 全表 cosine；本阶段不引入 `sqlite-vec`，候选超限失败。
-3. 接受 Scope 的安全差异：不匹配 Python Channel/Chat 记忆；Legacy 全局记忆只由显式开关启用。
-4. 接受 Embedding 故障降级为空、数据边界故障稳定失败的分类。
-5. 接受删除 Python 的强制 Tool 记忆语义，Memory 永远不能绕过 Tool Policy 和 Approval。
-6. 接受 Optimizer 本阶段只冻结 Contract，不实现、不装配、不调度。
+1. 接受 `JAVA_NATIVE` 同时启用 Java 语义库、显式 Memory API 和 Retrieval；默认保持 `DISABLED`。
+2. 接受 V1 使用 Float32 BLOB、有界全表 cosine 和 Session 级 Scope，不实现跨 Session 全局记忆。
+3. 接受增加三个显式 Memory HTTP Endpoint，先解决空库写入与删除，不从聊天自动提取。
+4. 接受写入 Embedding 失败零数据变化、查询 Embedding 失败降级聊天的差异。
+5. 接受 Java 原生 Optimizer 本阶段只冻结 Contract，不实现、不装配、不调度。

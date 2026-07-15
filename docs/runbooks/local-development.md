@@ -181,7 +181,7 @@ curl --fail-with-body \
 
 `APPROVAL_REQUIRED` 是已经实现的安全框架模式，不是可用的人类审批功能。当前生产装配只有 `DenyAllApprovalPort`，没有 Approval API/UI/Channel、生产 Durable Ledger 或任何 `WRITE`/`EXTERNAL_SIDE_EFFECT` Tool；因此切换该值不会出现审批入口，也不会获得真实副作用能力。模板与现有部署继续保持 `DISABLED`。未来只有在 Approval Channel、Durable Ledger、具体 Tool Capability/Sandbox Contract 和部署批准全部具备后，才会编写相应启用手册。
 
-Memory 默认同样保持 `DISABLED`。`READ_ONLY` 会把 `SELF.md` 和 `MEMORY.md` 加入 System Prompt，把去除 `Recent Turns` 的 `RECENT_CONTEXT.md` 放入历史之后、当前用户消息之前的临时 Context Frame。Frame 与检索结果不会提交到 SQLite。当前没有生产语义检索实现，`HISTORY.md`、`PENDING.md`、Journal 和 `memory2.db` 均不会读取。
+Memory 默认同样保持 `DISABLED`。`READ_ONLY` 会把 `SELF.md` 和 `MEMORY.md` 加入 System Prompt，把去除 `Recent Turns` 的 `RECENT_CONTEXT.md` 放入历史之后、当前用户消息之前的临时 Context Frame。Frame 与检索结果不会提交到 SQLite。当前没有生产语义检索实现，`HISTORY.md`、`PENDING.md`、Journal 和 `memory2.db` 均不会读取。后续 R4.2 已决定使用独立 Java `agent-memory.db`，旧 Python 语义记忆不迁移；该方案仍待批准且尚未进入生产代码。
 
 除 `/actuator/health` 外的 Actuator 端点应返回 `404`。
 
