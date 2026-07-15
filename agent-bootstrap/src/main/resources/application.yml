@@ -15,6 +15,9 @@ spring:
     openai:
       base-url: ${OPENAI_BASE_URL:}
       api-key: ${OPENAI_API_KEY:}
+      embedding:
+        model: ${agent.memory.embedding.model}
+        dimensions: ${agent.memory.embedding.dimensions}
       chat:
         model: ${OPENAI_MODEL:}
         temperature: 0.7
@@ -26,6 +29,22 @@ agent:
     max-characters: 100000
   model:
     timeout: ${AGENT_MODEL_TIMEOUT:60s}
+  memory:
+    mode: ${AGENT_MEMORY_MODE:DISABLED}
+    max-file-bytes: ${AGENT_MEMORY_MAX_FILE_BYTES:65536}
+    max-context-characters: ${AGENT_MEMORY_MAX_CONTEXT_CHARACTERS:100000}
+    max-retrieved-characters: ${AGENT_MEMORY_MAX_RETRIEVED_CHARACTERS:20000}
+    embedding:
+      model: ${AGENT_MEMORY_EMBEDDING_MODEL:text-embedding-v3}
+      dimensions: ${AGENT_MEMORY_EMBEDDING_DIMENSIONS:1024}
+      max-text-code-points: ${AGENT_MEMORY_EMBEDDING_MAX_TEXT_CODE_POINTS:2000}
+    retrieval:
+      top-k: ${AGENT_MEMORY_RETRIEVAL_TOP_K:8}
+      score-threshold: ${AGENT_MEMORY_RETRIEVAL_SCORE_THRESHOLD:0.45}
+      hotness-alpha: ${AGENT_MEMORY_RETRIEVAL_HOTNESS_ALPHA:0.20}
+      hotness-half-life-days: ${AGENT_MEMORY_RETRIEVAL_HOTNESS_HALF_LIFE_DAYS:14}
+      max-candidates: ${AGENT_MEMORY_RETRIEVAL_MAX_CANDIDATES:10000}
+      max-injected-characters: ${AGENT_MEMORY_RETRIEVAL_MAX_INJECTED_CHARACTERS:6000}
   tool-loop:
     max-iterations: ${AGENT_TOOL_MAX_ITERATIONS:6}
   tools:

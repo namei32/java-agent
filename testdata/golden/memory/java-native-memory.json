@@ -1,0 +1,523 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "databaseRelativePath": "memory/agent-memory.db",
+        "indexes": [
+          {
+            "columns": [
+              "scope_binding ASC",
+              "updated_at DESC",
+              "id ASC"
+            ],
+            "name": "ix_memory_items_scope_updated",
+            "table": "memory_items",
+            "unique": false
+          }
+        ],
+        "schemaVersion": 1,
+        "tables": [
+          {
+            "checks": [
+              "singleton = 1"
+            ],
+            "columns": [
+              {
+                "name": "singleton",
+                "nullable": false,
+                "primaryKey": true,
+                "type": "INTEGER"
+              },
+              {
+                "name": "version",
+                "nullable": false,
+                "type": "INTEGER"
+              },
+              {
+                "name": "updated_at",
+                "nullable": false,
+                "type": "TEXT"
+              }
+            ],
+            "name": "memory_schema",
+            "rows": [
+              {
+                "singleton": 1,
+                "updated_at": "UTC_INSTANT",
+                "version": 1
+              }
+            ]
+          },
+          {
+            "columns": [
+              {
+                "name": "id",
+                "nullable": false,
+                "primaryKey": true,
+                "type": "TEXT"
+              },
+              {
+                "name": "scope_binding",
+                "nullable": false,
+                "type": "TEXT"
+              },
+              {
+                "name": "memory_type",
+                "nullable": false,
+                "type": "TEXT"
+              },
+              {
+                "name": "content",
+                "nullable": false,
+                "type": "TEXT"
+              },
+              {
+                "name": "content_hash",
+                "nullable": false,
+                "type": "TEXT"
+              },
+              {
+                "name": "embedding",
+                "nullable": false,
+                "type": "BLOB"
+              },
+              {
+                "name": "embedding_model",
+                "nullable": false,
+                "type": "TEXT"
+              },
+              {
+                "name": "embedding_dimensions",
+                "nullable": false,
+                "type": "INTEGER"
+              },
+              {
+                "default": "1",
+                "name": "reinforcement",
+                "nullable": false,
+                "type": "INTEGER"
+              },
+              {
+                "default": "0",
+                "name": "emotional_weight",
+                "nullable": false,
+                "type": "INTEGER"
+              },
+              {
+                "name": "source_kind",
+                "nullable": false,
+                "type": "TEXT"
+              },
+              {
+                "name": "happened_at",
+                "nullable": true,
+                "type": "TEXT"
+              },
+              {
+                "default": "1",
+                "name": "revision",
+                "nullable": false,
+                "type": "INTEGER"
+              },
+              {
+                "name": "created_at",
+                "nullable": false,
+                "type": "TEXT"
+              },
+              {
+                "name": "updated_at",
+                "nullable": false,
+                "type": "TEXT"
+              }
+            ],
+            "name": "memory_items",
+            "uniqueConstraints": [
+              [
+                "scope_binding",
+                "memory_type",
+                "content_hash"
+              ]
+            ]
+          },
+          {
+            "columns": [
+              {
+                "autoIncrement": true,
+                "name": "id",
+                "nullable": false,
+                "primaryKey": true,
+                "type": "INTEGER"
+              },
+              {
+                "name": "scope_binding",
+                "nullable": false,
+                "type": "TEXT"
+              },
+              {
+                "name": "request_id",
+                "nullable": false,
+                "type": "TEXT"
+              },
+              {
+                "name": "operation",
+                "nullable": false,
+                "type": "TEXT"
+              },
+              {
+                "name": "argument_hash",
+                "nullable": false,
+                "type": "TEXT"
+              },
+              {
+                "name": "item_id",
+                "nullable": true,
+                "type": "TEXT"
+              },
+              {
+                "name": "result_status",
+                "nullable": false,
+                "type": "TEXT"
+              },
+              {
+                "name": "created_at",
+                "nullable": false,
+                "type": "TEXT"
+              }
+            ],
+            "name": "memory_mutations",
+            "uniqueConstraints": [
+              [
+                "scope_binding",
+                "request_id"
+              ]
+            ]
+          }
+        ]
+      },
+      "id": "schema-v1",
+      "input": {
+        "databaseState": "ABSENT",
+        "initializerVersion": 1
+      }
+    },
+    {
+      "expected": {
+        "byteLength": 16,
+        "byteOrder": "LITTLE_ENDIAN",
+        "dimensions": 4,
+        "format": "IEEE_754_FLOAT32",
+        "hex": "0000803f000020c00000803e00000000",
+        "roundTrip": [
+          1.0,
+          -2.5,
+          0.25,
+          0.0
+        ]
+      },
+      "id": "float32-little-endian",
+      "input": {
+        "vector": [
+          1.0,
+          -2.5,
+          0.25,
+          0.0
+        ]
+      }
+    },
+    {
+      "expected": {
+        "contentHash": "2045db36c8d05d336314d4fb52493f90be951eaa09b8a024e0339233d14909a7",
+        "hashAlgorithm": "SHA-256",
+        "hashEncoding": "lowercase-hex",
+        "normalizedContent": "回答时 先给结论",
+        "scopeBinding": "971db4818fc2a938f4d66a981618ddd5e5c2e094d28e1a4eb669ac7c863cc02e"
+      },
+      "id": "scope-and-content-hash",
+      "input": {
+        "content": "  回答时\t先给结论  ",
+        "sessionId": "session-java-memory-001"
+      }
+    },
+    {
+      "expected": {
+        "argumentHash": "a22856775ceb7cac500204b3a15c1f2915b090de8d949bf8f401021b1e0538ba",
+        "canonicalHex": "000000176a6176612d6d656d6f72792d6d75746174696f6e2d7631000000065550534552540000000a505245464552454e43450000004032303435646233366338643035643333363331346434666235323439336639306265393531656161303962386130323465303333393233336431343930396137000000013200000014323032362d30372d31355430343a30303a30305a",
+        "fieldEncoding": "uint32-big-endian-utf8-byte-length",
+        "hashAlgorithm": "SHA-256"
+      },
+      "id": "write-argument-hash-v1",
+      "input": {
+        "canonicalFields": [
+          "java-memory-mutation-v1",
+          "UPSERT",
+          "PREFERENCE",
+          "2045db36c8d05d336314d4fb52493f90be951eaa09b8a024e0339233d14909a7",
+          "2",
+          "2026-07-15T04:00:00Z"
+        ]
+      }
+    },
+    {
+      "expected": {
+        "argumentHash": "f616218eb50197b7b366ceca8786373e89fca941bcd42349a078a5e0cb5e2439",
+        "canonicalHex": "000000176a6176612d6d656d6f72792d6d75746174696f6e2d76310000000644454c455445000000000000000b6d656d6f72792d303030310000000000000000",
+        "fieldEncoding": "uint32-big-endian-utf8-byte-length",
+        "hashAlgorithm": "SHA-256"
+      },
+      "id": "delete-argument-hash-v1",
+      "input": {
+        "canonicalFields": [
+          "java-memory-mutation-v1",
+          "DELETE",
+          "",
+          "memory-0001",
+          "",
+          ""
+        ]
+      }
+    },
+    {
+      "expected": {
+        "body": {
+          "memory": {
+            "content": "回答时 先给结论",
+            "createdAt": "2026-07-15T05:00:00Z",
+            "emotionalWeight": 2,
+            "happenedAt": "2026-07-15T04:00:00Z",
+            "id": "memory-0001",
+            "reinforcement": 1,
+            "type": "PREFERENCE",
+            "updatedAt": "2026-07-15T05:00:00Z"
+          },
+          "status": "CREATED"
+        },
+        "httpStatus": 201
+      },
+      "id": "http-write-created",
+      "input": {
+        "request": {
+          "body": {
+            "content": "  回答时\t先给结论  ",
+            "emotionalWeight": 2,
+            "happenedAt": "2026-07-15T04:00:00Z",
+            "requestId": "req-write-001",
+            "type": "PREFERENCE"
+          },
+          "method": "PUT",
+          "path": "/api/v1/sessions/session-java-memory-001/memories"
+        },
+        "serverValues": {
+          "createdAt": "2026-07-15T05:00:00Z",
+          "itemId": "memory-0001"
+        }
+      }
+    },
+    {
+      "expected": {
+        "body": {
+          "memories": [
+            {
+              "content": "Java Agent 使用原生记忆库",
+              "createdAt": "2026-07-15T05:30:00Z",
+              "emotionalWeight": 0,
+              "happenedAt": null,
+              "id": "memory-0002",
+              "reinforcement": 1,
+              "type": "NOTE",
+              "updatedAt": "2026-07-15T06:00:00Z"
+            },
+            {
+              "content": "回答时 先给结论",
+              "createdAt": "2026-07-15T05:00:00Z",
+              "emotionalWeight": 2,
+              "happenedAt": "2026-07-15T04:00:00Z",
+              "id": "memory-0001",
+              "reinforcement": 1,
+              "type": "PREFERENCE",
+              "updatedAt": "2026-07-15T05:00:00Z"
+            }
+          ]
+        },
+        "httpStatus": 200
+      },
+      "id": "http-list-public-fields",
+      "input": {
+        "request": {
+          "method": "GET",
+          "path": "/api/v1/sessions/session-java-memory-001/memories"
+        }
+      }
+    },
+    {
+      "expected": {
+        "body": {
+          "id": "memory-0001",
+          "status": "DELETED"
+        },
+        "httpStatus": 200
+      },
+      "id": "http-delete",
+      "input": {
+        "request": {
+          "headers": {
+            "Idempotency-Key": "req-delete-001"
+          },
+          "method": "DELETE",
+          "path": "/api/v1/sessions/session-java-memory-001/memories/memory-0001"
+        }
+      }
+    },
+    {
+      "expected": {
+        "excludedIds": [
+          "memory-e"
+        ],
+        "ordered": [
+          {
+            "final": 0.9333333333333333,
+            "hotness": 0.6666666666666666,
+            "id": "memory-a",
+            "semantic": 1.0
+          },
+          {
+            "final": 0.7554927629070302,
+            "hotness": 0.5774638145351502,
+            "id": "memory-b",
+            "semantic": 0.8
+          },
+          {
+            "final": 0.6133333333333333,
+            "hotness": 0.6666666666666666,
+            "id": "memory-c",
+            "semantic": 0.6
+          },
+          {
+            "final": 0.6133333333333333,
+            "hotness": 0.6666666666666666,
+            "id": "memory-d",
+            "semantic": 0.6
+          }
+        ]
+      },
+      "id": "hotness-and-stable-order",
+      "input": {
+        "alpha": 0.2,
+        "candidates": [
+          {
+            "emotionalWeight": 0,
+            "id": "memory-a",
+            "reinforcement": 1,
+            "semantic": 1.0,
+            "updatedAt": "2026-07-15T12:00:00Z"
+          },
+          {
+            "emotionalWeight": 10,
+            "id": "memory-b",
+            "reinforcement": 10,
+            "semantic": 0.8,
+            "updatedAt": "2026-07-01T12:00:00Z"
+          },
+          {
+            "emotionalWeight": 0,
+            "id": "memory-d",
+            "reinforcement": 1,
+            "semantic": 0.6,
+            "updatedAt": "2026-07-15T12:00:00Z"
+          },
+          {
+            "emotionalWeight": 0,
+            "id": "memory-c",
+            "reinforcement": 1,
+            "semantic": 0.6,
+            "updatedAt": "2026-07-15T12:00:00Z"
+          },
+          {
+            "emotionalWeight": 10,
+            "id": "memory-e",
+            "reinforcement": 100,
+            "semantic": 0.44,
+            "updatedAt": "2026-07-15T12:00:00Z"
+          }
+        ],
+        "halfLifeDays": 14.0,
+        "referenceTime": "2026-07-15T12:00:00Z",
+        "scoreThreshold": 0.45,
+        "topK": 4
+      }
+    },
+    {
+      "expected": {
+        "injectedText": "## 【偏好与规则】候选记忆\n- [memory-a] 回答时先给结论\n- [memory-b] 代码变更先运行聚焦测试\n\n## 【相关信息】候选记忆\n- [memory-c] Java Agent 正在迁移 R4.2\n- [memory-d] [2026-07-15T04:00:00Z] 已批准 Java 原生记忆方案",
+        "relatedCount": 2,
+        "rulesCount": 2
+      },
+      "id": "two-section-injection",
+      "input": {
+        "hits": [
+          {
+            "content": "回答时先给结论",
+            "happenedAt": null,
+            "id": "memory-a",
+            "type": "PREFERENCE"
+          },
+          {
+            "content": "代码变更先运行聚焦测试",
+            "happenedAt": null,
+            "id": "memory-b",
+            "type": "PROCEDURE"
+          },
+          {
+            "content": "Java Agent 正在迁移 R4.2",
+            "happenedAt": null,
+            "id": "memory-c",
+            "type": "NOTE"
+          },
+          {
+            "content": "已批准 Java 原生记忆方案",
+            "happenedAt": "2026-07-15T04:00:00Z",
+            "id": "memory-d",
+            "type": "EVENT"
+          }
+        ],
+        "maxCharacters": 6000,
+        "maxRelated": 4,
+        "maxRules": 4
+      }
+    }
+  ],
+  "contractEvidence": {
+    "adr": "docs/adr/0005-use-java-native-semantic-memory-store.md",
+    "approvedOn": "2026-07-15",
+    "contract": "docs/contracts/semantic-memory-persistence-optimizer.md",
+    "spec": "docs/specs/2026-07-15-java-native-semantic-memory-design.md"
+  },
+  "formatVersion": 1,
+  "normalization": [
+    {
+      "field": "hashes",
+      "rule": "sha256-utf8-lowercase-hex"
+    },
+    {
+      "field": "mutationCanonicalFields",
+      "rule": "ordered-uint32-big-endian-utf8-byte-length"
+    },
+    {
+      "field": "float32Hex",
+      "rule": "little-endian-lowercase-contiguous-hex"
+    },
+    {
+      "field": "timestamps",
+      "rule": "utc-instant-string"
+    },
+    {
+      "field": "rankingScores",
+      "rule": "double-tolerance-1e-12"
+    },
+    {
+      "field": "injectedText",
+      "rule": "lf-line-endings-no-trailing-newline"
+    }
+  ],
+  "source": "java-contract",
+  "suite": "java-native-memory"
+}

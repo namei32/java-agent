@@ -32,6 +32,19 @@ AKASHIC_WORKSPACE=./workspace
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_API_KEY=replace-me
 OPENAI_MODEL=gpt-4o-mini
+AGENT_MEMORY_MODE=DISABLED
+AGENT_MEMORY_MAX_FILE_BYTES=65536
+AGENT_MEMORY_MAX_CONTEXT_CHARACTERS=100000
+AGENT_MEMORY_MAX_RETRIEVED_CHARACTERS=20000
+AGENT_MEMORY_EMBEDDING_MODEL=text-embedding-v3
+AGENT_MEMORY_EMBEDDING_DIMENSIONS=1024
+AGENT_MEMORY_EMBEDDING_MAX_TEXT_CODE_POINTS=2000
+AGENT_MEMORY_RETRIEVAL_TOP_K=8
+AGENT_MEMORY_RETRIEVAL_SCORE_THRESHOLD=0.45
+AGENT_MEMORY_RETRIEVAL_HOTNESS_ALPHA=0.20
+AGENT_MEMORY_RETRIEVAL_HOTNESS_HALF_LIFE_DAYS=14
+AGENT_MEMORY_RETRIEVAL_MAX_CANDIDATES=10000
+AGENT_MEMORY_RETRIEVAL_MAX_INJECTED_CHARACTERS=6000
 AGENT_TOOL_MAX_ITERATIONS=6
 AGENT_TOOL_MODE=DISABLED
 AGENT_TOOL_MAX_CALLS_PER_RESPONSE=8
@@ -44,6 +57,10 @@ AGENT_TOOL_APPROVAL_TIMEOUT=5m
 ```
 
 `OPENAI_BASE_URL` 是 OpenAI-compatible API 根路径。OpenAI 官方地址需要包含 `/v1`。`.env` 已被 Git 忽略，禁止提交真实密钥。
+
+`AGENT_MEMORY_MODE` 默认 `DISABLED`；`READ_ONLY` 只读取固定的三个 Markdown Profile 文件，Retrieval 为空，不启用记忆写入或 Embedding。`JAVA_NATIVE` 不读取旧 Markdown/Python 记忆，而是在 `${AKASHIC_WORKSPACE}/memory/agent-memory.db` 启用显式 Memory API 和语义检索；它只允许 Loopback 监听，并会在写入或当前 Scope 非空检索时调用与 `OPENAI_*` 相同 Provider 配置下的 Embedding 模型。未获得网络、费用和部署授权时必须保持 `DISABLED`。
+
+三个外层 `AGENT_MEMORY_MAX_*` 值分别限制单文件 UTF-8 字节、全部 Context 字符和单检索块字符。Embedding 配置限制逻辑模型、维度和单条输入 Code Point；Retrieval 配置限制 Top-K、cosine 阈值、Hotness、候选总数和注入字符。所有范围在启动时校验，`MAX_INJECTED_CHARACTERS` 不得超过外层 `MAX_RETRIEVED_CHARACTERS`。任何模式都不注册 Optimizer、Scheduler、自动摄入或 Memory Tool。
 
 `AGENT_TOOL_MAX_ITERATIONS` 表示一次聊天最多允许多少次模型调用，必须大于零，默认 `6`。其余 `AGENT_TOOL_*` 配置分别限制运行模式、单响应/单轮调用数、等待加执行的共享超时、JVM 并发许可、参数 UTF-8 字节数、结果 Unicode 字符数和审批请求有效期。整数必须大于零，单轮上限不得小于单响应上限，工具超时必须小于模型超时；审批有效期默认 `5m`，必须大于零且不超过 `15m`。非法值会使应用启动失败。
 
@@ -81,13 +98,15 @@ AGENT_TOOL_MODE=DISABLED
 
 ## 2. 工作区安全
 
-Python 和 Java 禁止同时写同一个 Workspace。真实 Python Workspace 在本里程碑中只允许读取，不允许由 Java 写入。
+Python 和 Java 禁止同时写同一个 Workspace。R4.1/R4.2 都不授权 Java 读取或写入真实 Python Workspace；测试只使用临时目录或 Java 专用目录。旧 Python `memory2.db` 可以被 Java 忽略，但不得由 Java 读取、迁移或自动删除。
+
+注意：`AGENT_MEMORY_MODE=READ_ONLY` 只表示 Markdown Profile Adapter 不写文件，不表示整个应用只读。应用仍会在 `${AKASHIC_WORKSPACE}` 创建或更新 `sessions.db`。不得通过切换该模式规避工作区备份和隔离要求。
 
 第一次写入既有工作区前：
 
 1. 停止所有 Python 和 Java Agent 进程。
 2. 确认没有进程持有 SQLite 文件。
-3. 同时备份 `sessions.db`、`sessions.db-wal` 和 `sessions.db-shm`；后两个文件不存在时记录这一事实。
+3. 同时备份 `sessions.db`、`sessions.db-wal` 和 `sessions.db-shm`；若已存在 Java `memory/agent-memory.db`，也一起备份其数据库、`-wal` 和 `-shm`。不存在的伴随文件需记录这一事实。
 4. 在备份副本或全新的 Java 专用目录中完成兼容性验证。
 5. 未经单独批准，不得把 Java 指向真实 Python Workspace。
 
@@ -173,6 +192,30 @@ curl --fail-with-body \
 
 `APPROVAL_REQUIRED` 是已经实现的安全框架模式，不是可用的人类审批功能。当前生产装配只有 `DenyAllApprovalPort`，没有 Approval API/UI/Channel、生产 Durable Ledger 或任何 `WRITE`/`EXTERNAL_SIDE_EFFECT` Tool；因此切换该值不会出现审批入口，也不会获得真实副作用能力。模板与现有部署继续保持 `DISABLED`。未来只有在 Approval Channel、Durable Ledger、具体 Tool Capability/Sandbox Contract 和部署批准全部具备后，才会编写相应启用手册。
 
+Memory 默认同样保持 `DISABLED`。`READ_ONLY` 会把 `SELF.md` 和 `MEMORY.md` 加入 System Prompt，把去除 `Recent Turns` 的 `RECENT_CONTEXT.md` 放入历史之后、当前用户消息之前的临时 Context Frame。`JAVA_NATIVE` 改用独立 `agent-memory.db`：显式 API 写入后，聊天只对当前真实 User 消息做 Scope/cosine/Hotness 检索，并把有界结果放在历史之后、当前消息之前；同一 Tool Loop 复用该 Frame。两种 Frame 都不会提交到会话 SQLite，普通聊天也不会自动写 Memory。
+
+`JAVA_NATIVE` 要求 `server.address` 显式配置为 Loopback；为空、`0.0.0.0`、局域网或公网地址都会在创建 Java Memory DB 前启动失败。当前无认证，因此不得通过代理或端口转发暴露 Memory API。旧 `HISTORY.md`、`PENDING.md`、Journal 和 `memory2.db` 始终不读取。
+
+以下 API 仅用于已经获得 Provider/费用、Java 专用 Workspace 和部署启用授权的 Loopback 实例；默认 `DISABLED` 下会返回 HTTP 503：
+
+```bash
+curl --fail-with-body \
+  -X PUT \
+  -H 'Content-Type: application/json' \
+  -d '{"requestId":"memory-write-001","type":"PREFERENCE","content":"回答时先给结论","emotionalWeight":2}' \
+  http://127.0.0.1:8080/api/v1/sessions/demo/memories
+
+curl --fail-with-body \
+  http://127.0.0.1:8080/api/v1/sessions/demo/memories
+
+curl --fail-with-body \
+  -X DELETE \
+  -H 'Idempotency-Key: memory-delete-001' \
+  http://127.0.0.1:8080/api/v1/sessions/demo/memories/memory-id-from-list
+```
+
+PUT 的重试必须复用相同 `requestId` 和完全相同的业务参数；DELETE 的重试必须复用相同 `Idempotency-Key` 和 Item ID。相同幂等键绑定不同参数会返回 HTTP 409，不能通过生成新键盲目绕过未知结果。
+
 除 `/actuator/health` 外的 Actuator 端点应返回 `404`。
 
 ## 5. 测试 Profile
@@ -191,7 +234,7 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pfailure verify
 ```
 
-`failure` 独立覆盖审批错配与过期、批准后取消、Ledger 持久化故障、并发一次性消费和 `UNKNOWN` 停机；这些测试使用内存 Fake，不会执行真实外部变更。
+`failure` 独立覆盖审批错配与过期、批准后取消、Ledger 持久化故障、并发一次性消费、`UNKNOWN` 停机，以及 Memory Embedding 零写入、幂等冲突、数据库不可用、Profile/检索/预算和安全 HTTP 映射失败；这些测试使用临时目录或内存 Fake，不会执行真实外部变更。
 
 Python/Java Golden 与 Schema 固定样本兼容性：
 
@@ -200,7 +243,11 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pcompat verify
 ```
 
-`compat` 直接读取仓库内的 `testdata/golden/`，包括 Approval/Side Effect Golden；不会启动 Python、访问模型、执行真实副作用或读取 `.env`。只有在 Python 基准或已批准 Contract 发生变化时才重新生成夹具：
+`compat` 直接读取仓库内的 `testdata/golden/`，包括只读 Context/Memory、Approval/Side Effect Golden，以及 Java-owned `memory/java-native-memory.json`。生产 Java 实现会直接消费后者的 Schema、Codec、Hash、HTTP、排序和 Injection Case；测试不会启动 Python、访问模型、执行真实副作用、读取真实 Workspace 或读取 `.env`。
+
+R4.2 于 2026-07-15 完成离线基线：默认 Profile 共 244 个测试（235 个单元、9 个集成），`failure` 共 55 个（54 个单元、1 个集成），`compat` 共 282 个（272 个单元、10 个集成），均为 0 Failure、0 Error、0 Skipped。该结果不包含真实 Provider、真实 Workspace 或部署启用验证。
+
+`memory/java-native-memory.json` 不由 Python 生成器维护，只能在 Java Memory Contract 获得新批准后人工更新并同步 Manifest。其他 Python 基准夹具只有在对应 Python 行为或已批准 Contract 变化时才重新生成：
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -259,7 +306,7 @@ TOML 模式先运行 `--agent.config-check`。如果诊断为 `CONFIG_ENV_UNRESO
 
 ### 返回 502
 
-表示提供方拒绝请求、返回服务错误、非法 JSON、缺失响应项、空回答、Tool Call 超过调用预算、Tool Loop 在得到最终回答前耗尽迭代次数、Approval/Ledger 不可用，或副作用执行状态未知。使用 `X-Request-Id` 关联安全日志；响应不会返回上游正文、Tool Arguments、Tool Result、Approval ID、Fingerprint、Actor、幂等键、Ledger 状态、具体数量或 Call ID。当前生产没有真实审批入口；若在 `APPROVAL_REQUIRED` 下遇到该错误，应保持 `DISABLED` 并检查装配，不能通过重试绕过 Fail Closed。
+表示 Chat Provider 拒绝/响应无效、Tool/Approval/Ledger/检索上下文失败，或显式 Memory 写入的 Embedding 调用/响应无效。聊天 Query Embedding 失败会降级为空检索并继续，不单独返回 502；显式 Memory 写入则保证零 Item/零 Mutation 后失败。使用 `X-Request-Id` 关联安全日志；响应不会返回上游正文、Memory 正文或路径、检索查询/结果、Tool Arguments/Result、审批/幂等内部状态或 Provider Message。当前生产没有真实审批入口；若在 `APPROVAL_REQUIRED` 下遇到该错误，应保持 `DISABLED` 并检查装配，不能通过重试绕过 Fail Closed。
 
 ### 返回 504
 
@@ -269,7 +316,13 @@ TOML 模式先运行 `--agent.config-check`。如果诊断为 `CONFIG_ENV_UNRESO
 
 ### 返回 500
 
-检查 Java 专用 Workspace 的目录权限、磁盘空间和 SQLite 文件状态。不要手工删除 `-wal` 或 `-shm` 文件来“修复”数据库。
+检查 Java 专用 Workspace 的目录权限、磁盘空间、`sessions.db` 和 `memory/agent-memory.db` 状态。不要手工删除 `-wal` 或 `-shm` 文件来“修复”数据库，也不要把 `memory2.db` 重命名为 `agent-memory.db`。
+
+### Memory API 返回 503/409/404
+
+- `503 记忆功能不可用`：当前模式是 `DISABLED`/`READ_ONLY`，或 Java Memory 未完整装配；不要用重试绕过，先恢复 `DISABLED` 并检查配置。
+- `409 记忆请求幂等冲突`：同一 Session 下的 Request ID/Idempotency Key 已绑定其他参数；核对原请求，不要自动生成新键重复副作用。
+- `404 记忆不存在`：Item 不存在与属于其他 Scope 使用相同安全结果；先按相同 Session 列表确认，不会暴露跨 Scope 信息。
 
 ### SQLite busy 或锁等待
 

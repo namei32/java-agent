@@ -13,6 +13,18 @@
       "source": "python-reference"
     },
     {
+      "id": "context/read-only-context-memory",
+      "path": "context/read-only-context-memory.json",
+      "sha256": "db9057d25a21cde40885e7787c3f81f23a698d032090bf4a0f6008c2b25e23dc",
+      "source": "python-reference"
+    },
+    {
+      "id": "memory/java-native-memory",
+      "path": "memory/java-native-memory.json",
+      "sha256": "8c58d500ca6b2bc0e651a827ca32a4927968f1e699b981832357a131cab32883",
+      "source": "java-contract"
+    },
+    {
       "id": "sqlite/session-store",
       "path": "sqlite/session-store.json",
       "sha256": "84e43ab7d89269c53a63d6909d562588208fd515c8f26f7db289bb58c63f7f10",
@@ -57,7 +69,7 @@
     {
       "id": "errors/http-error-mapping",
       "path": "errors/http-error-mapping.json",
-      "sha256": "917fd52de98589f6b865713855748f0a9ecf61df9b12036f62458b4b511990b7",
+      "sha256": "44d9983e58cc5d4816312f1dc1970e1bdcb76e2c8e430d5b05c0b2b870afe465",
       "source": "migration-contract"
     }
   ],
@@ -70,7 +82,13 @@
       "agent/config_models.py": "fcdf7ed979ff4121ec1cba7618c7dea948f523a1af4c1e5ac55629fad7e9d355",
       "agent/context.py": "9e57923a315cc37fe669c43d0862deeab10005bdd548ae7b051ee84696241fc6",
       "agent/core/passive_turn.py": "6c3af88ddd875b4f41ba4221d1974f4142a03dc65a7c3bd7a57a872f4a6fdf5b",
+      "agent/core/prompt_block.py": "9b98e99ebf50e0e4884aa25ccf3cbe5fae0f50ea2a01b693af3b54694e96be15",
+      "agent/memory.py": "3652c3e8a49f0410efb35f715f0ea510325999ddc0b6d5467ed4b37705435ff6",
+      "agent/prompting/assembler.py": "6ba792d100c88d1f3b7e2059928d1392e70d6f269f897f76a97ff24e0dfe078f",
+      "agent/prompting/budget.py": "f3ce28d8d3f13ceb8398456051abbe352d40b765a112c8f10b83d40b328376fe",
       "agent/provider.py": "06f5fffcdf9f81db83ab8cf801c119e6980779611541a390cde65b9205d84c36",
+      "agent/retrieval/default_pipeline.py": "88ae76534824c25f8d223c1b908db3518735f696a984620a030bc6a74e587dfe",
+      "agent/retrieval/protocol.py": "20fd0c36227a4ba34b25b9a16454a474b3ea141a4880d6950b04f29746658c95",
       "agent/tool_hooks/base.py": "b04d0f5e984a5350877d4d4582c753ea1b4fb4ec7128b8276576ddabc0616813",
       "agent/tool_hooks/executor.py": "dadf36b86b15f36f4b063122d8525e2d225ddafbd665e50c794fe360f091e157",
       "agent/tool_hooks/types.py": "3e0e4494ef8855f5a1409bc997ec467d98c58294e149185e3d650e90c14e2d5f",
@@ -79,6 +97,7 @@
       "agent/tools/registry.py": "869873131ceecff7284812c4788d7a0915f3b32e320163670e4c1eb79198cb70",
       "bus/events_lifecycle.py": "c81a667d64711bb6688809a563e7bbe8060c5917d2987f952543760fa946a1c8",
       "config.example.toml": "7d3f2024e2812dddc0ec4f51cd057566eefa0ac522fa1ca647c4212fc29540ad",
+      "core/memory/markdown.py": "f5ae4dbc98f20eb94b753dd72d9f2f44db7be81bd9425efd960585b38f09ce25",
       "proactive_v2/config.py": "a91c05b9186c23f5fbfa4570ea8deca642f4a8d3c7132259c46431ad9d10a268",
       "proactive_v2/config_loader.py": "2c5d79ac52fd29c595a07ea7f6db6c3be7f63c188054e5773fcfbc7224a949e5",
       "session/manager.py": "d2f232ecfb437bd78ebb0cf4d5050f75f135e12fb60933efceacf473fc26f973",

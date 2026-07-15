@@ -1,7 +1,7 @@
 # Java 重写 Roadmap
 
 - 状态：实施中
-- 最近更新：2026-07-14
+- 最近更新：2026-07-15
 - 基准：`/Users/namei/idea/agent/akashic-agent`
 - 目标项目：`/Users/namei/idea/agent/java-agent`
 
@@ -22,10 +22,10 @@
 | 阶段 | 名称 | 状态 | 主要结果 |
 | --- | --- | --- | --- |
 | R0 | 治理与基线 | 部分完成 | 被动聊天、配置和 Tool Golden 已建立；核心 Tool/Lifecycle Contract 已批准 |
-| R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、五模块、CI/质量门禁 |
+| R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、六模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
-| R4 | 上下文与记忆 | 未开始 | Prompt 预算、Markdown 记忆、检索与提交语义 |
+| R4 | 上下文与记忆 | R4.1、R4.2 已完成 | Java 原生显式记忆管理与语义检索闭环已通过最终门禁；自动写回/Optimizer 仍冻结 |
 | R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
@@ -63,11 +63,11 @@
 交付物：
 
 - JDK 21、Maven Wrapper、Spring Boot 4.1、Spring AI 2.0。
-- `agent-kernel`、`agent-application`、`adapter-sqlite`、`adapter-spring-ai`、`agent-bootstrap`。
+- `agent-kernel`、`agent-application`、`adapter-workspace`、`adapter-sqlite`、`adapter-spring-ai`、`agent-bootstrap`。
 - Maven Enforcer、Spotless、JaCoCo、ArchUnit、默认/`failure`/`compat` Profile。
 - 独立 Git 仓库、Secret 与 Workspace 排除规则。
 
-退出证据：五模块 Reactor 可构建；核心模块不依赖 Spring、JDBC 或供应商 SDK。
+退出证据：六模块 Reactor 可构建；核心模块不依赖 Spring、JDBC 或供应商 SDK。
 
 ## R2：被动聊天纵向切片
 
@@ -133,14 +133,31 @@ R3.2 实现依据：
 
 前置：Tool Loop 稳定，Prompt 与 Memory Contract 已冻结。
 
+当前状态：R4.1 的 C1 至 C8 已全部完成。Python Golden、Kernel Port、只读 Markdown Adapter、ContextAssembler、Retrieval 注入/提交隔离、默认关闭装配和安全 HTTP 映射均已实现；默认 172、`failure` 50、`compat` 206 个测试以及格式、依赖、Secret/Workspace/生产写入面审计全部通过。
+
+R4.2 当前状态：已完成。用户决定不迁移旧 Python 语义记忆后，于 2026-07-15 批准并完成 Java 原生 `agent-memory.db`、显式 Write/List/Delete API、Embedding、cosine/Hotness/Scope 检索、Chat/Context Frame、默认关闭装配、Java-owned Contract/Failure 验收和 Task J1–J12。最终默认 244 个、`failure` 55 个、`compat` 282 个测试全部通过，Kernel 依赖与 Secret/Workspace/生产 Bean/默认配置/工作树审计通过；全过程未运行 Python、真实 Provider 或真实 Workspace。`JAVA_NATIVE` 只在显式 Loopback 配置下启用，生产默认仍为 `DISABLED`。
+
 范围：
 
-- 迁移 Prompt Block、Token/字符预算和历史路由策略。
-- 以只读模式验证 Markdown 记忆解析和检索结果，再开放写入。
-- 迁移 memorize、recall、forget 及提交后记忆更新；保留未知 Markdown 内容。
-- 对齐 Python `agent/memory.py`、`agent/retrieval/`、`agent/prompting/` 的可观察行为。
+- R4.1 已迁移 `SELF.md`、`MEMORY.md`、`RECENT_CONTEXT.md` 的只读共同投影、字符上限和临时 Frame；生产默认关闭且 Retrieval 为 NoOp。
+- R4.2 已批准实现 Java 原生 Schema、显式写入/查看/物理删除、cosine/Hotness、Session Scope、Embedding、字符预算和 Context 注入。
+- Keyword/RRF、Query Rewrite/HyDE、自动对话提取、Memory Tool、Consolidation 与 Optimizer 实现继续冻结；Optimizer 只冻结 Java DB Revision、事务和 Undo 边界。
+- Java 不读取、迁移或删除旧 `memory2.db`；真实 Workspace 与真实 Embedding 仍需单独批准。
 
-退出门禁：真实工作区副本上的只读差异可解释；写入前后文件可审计并可回退；检索 Golden 达标。
+退出门禁：临时 Java Workspace 上写入、查看、删除、检索与 Context 闭环通过；默认模式零文件/零费用；旧 Python 数据零访问；迁移、事务和删除可审计。
+
+R4.1 设计依据：
+
+- [只读上下文与记忆兼容契约](../contracts/read-only-context-memory.md)
+- [只读 Context/Memory 纵向切片设计](../specs/2026-07-14-read-only-context-memory-design.md)
+- [只读 Context/Memory 实施计划](../plans/2026-07-14-read-only-context-memory-implementation.md)
+
+R4.2 已批准依据：
+
+- [Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
+- [ADR-0005：采用 Java 原生语义记忆库](../adr/0005-use-java-native-semantic-memory-store.md)
+- [Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
+- [Java 原生语义记忆实施计划](../plans/2026-07-15-java-native-semantic-memory-implementation.md)
 
 ## R5：MCP 与外部工具
 

@@ -3,6 +3,7 @@
   <artifactId>agent-bootstrap</artifactId>
   <dependencies>
     <dependency><groupId>io.namei.agent</groupId><artifactId>agent-application</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>io.namei.agent</groupId><artifactId>adapter-workspace</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>io.namei.agent</groupId><artifactId>adapter-sqlite</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>io.namei.agent</groupId><artifactId>adapter-spring-ai</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-webmvc</artifactId></dependency>

@@ -1,7 +1,7 @@
 # Akashic Agent Java 重写指南
 
 - 状态：当前架构基线
-- 最近更新：2026-07-13
+- 最近更新：2026-07-14
 - 来源：由 Python 仓库 `_handbook/java-rewrite-guide.md` 迁移、裁剪并按当前 Java 实现更新
 
 ## 1. 指南用途
@@ -48,13 +48,13 @@ HTTP ChatController
   -> SafeChatUseCase
   -> ChatService
   -> SessionRepository.load
-  -> ConversationHistorySelector + PromptAssembler
-  -> ChatModel.generate
+  -> MemoryContextService + ConversationHistorySelector + ContextAssembler
+  -> ToolLoop -> ChatModel / Tool
   -> SessionRepository.appendTurn
   -> HTTP ChatResponse
 ```
 
-它已经支持同步非流式被动聊天、SQLite 会话恢复、OpenAI-compatible 模型和原子轮次提交。它不包含 Python 的 Message Bus、Tool Loop、Memory、MCP、渠道和主动能力。
+它已经支持同步非流式被动聊天、SQLite 会话恢复、OpenAI-compatible 模型、有界只读 Tool Loop、只读 Markdown Profile、Java 原生显式语义记忆/临时 Context Frame 和原子轮次提交。Memory 默认 `DISABLED`，只有显式 `JAVA_NATIVE` 才启用语义检索；它仍不包含 Python 的 Message Bus、自动 Memory 写回、MCP、渠道和主动能力。
 
 ## 3. 固定技术基线
 
@@ -78,6 +78,7 @@ HTTP ChatController
 agent-bootstrap
   -> adapter-spring-ai
   -> adapter-sqlite
+  -> adapter-workspace
   -> agent-application
        -> agent-kernel
 ```
@@ -108,7 +109,7 @@ agent-bootstrap
 
 - `adapter-mcp`：MCP 客户端和进程生命周期；
 - `adapter-channel-*`：CLI、Telegram 等渠道；
-- `adapter-memory-markdown`：Markdown 记忆解析和安全写入；
+- `adapter-workspace` 已承载固定 Markdown Profile 的只读解析；未来安全写入必须先重新评估是否需要独立模块和 ADR；
 - `agent-testkit`：只有测试基础设施形成稳定独立职责后，才考虑承载跨语言夹具读取和 Fake；当前 Golden 继续由现有模块直接验证。
 
 新增 Maven 模块前写 ADR，说明为何包级隔离不足。
@@ -177,6 +178,7 @@ testdata/golden/
   manifest.json
   history/session-history.json
   prompt/message-envelope.json
+  context/read-only-context-memory.json
   sqlite/session-store.json
   errors/http-error-mapping.json
 ```
@@ -245,11 +247,12 @@ testdata/golden/
 
 ## 12. 当前下一步
 
-当前不应直接开始迁移所有工具。正确顺序是：
+R4.1 与 R4.2 已完成，Memory 默认仍为 `DISABLED`，自动写回和 Optimizer 继续冻结。下一主线候选是 R5.1 MCP 只读客户端：
 
-1. 设计并批准核心消息、生命周期和 Tool 协议；
-2. 为 Tool 调用轨迹、审批、失败和提交语义建立 Golden；
-3. 实现最小 Tool Loop；
-4. 按 Roadmap 依次迁移 Memory、MCP、渠道和后台能力。
+1. 先批准 MCP Contract、Spec、SDK ADR 和 Java-owned Fixture；
+2. 只实现静态配置、stdio、明确 Allowlist 的 `READ_ONLY` Tool；
+3. 复用现有 Tool Runtime 的预算、取消、风险和会话提交语义；
+4. 默认零 MCP 文件、子进程和网络，真实 Server 与副作用能力另行批准；
+5. R5.1 门禁通过后，再按 Roadmap 进入远程 MCP、渠道、插件和后台能力。
 
-这样可以让每一步都可运行、可比较、可回退，而不是形成一个长期不可验证的“大重写”分支。
+具体边界和 TDD 顺序见 [MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)。该计划当前仍是草案，不能作为实施授权。

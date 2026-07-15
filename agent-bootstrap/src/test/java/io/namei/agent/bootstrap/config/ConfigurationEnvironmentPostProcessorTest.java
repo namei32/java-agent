@@ -124,6 +124,8 @@ class ConfigurationEnvironmentPostProcessorTest {
     }
 
     assertThat(factories.getProperty(EnvironmentPostProcessor.class.getName()))
-        .contains(AgentConfigurationEnvironmentPostProcessor.class.getName());
+        .contains(
+            AgentConfigurationEnvironmentPostProcessor.class.getName(),
+            JavaNativeMemoryEnvironmentPostProcessor.class.getName());
   }
 }

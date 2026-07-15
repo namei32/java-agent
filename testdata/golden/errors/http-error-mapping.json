@@ -114,6 +114,20 @@
     },
     {
       "expected": {
+        "detail": "模型调用失败",
+        "instance": "/api/v1/chat",
+        "status": 502,
+        "title": "模型调用失败",
+        "type": "about:blank"
+      },
+      "id": "memory-context-unavailable",
+      "input": {
+        "scenario": "MEMORY_CONTEXT_UNAVAILABLE"
+      },
+      "pythonFailureSource": null
+    },
+    {
+      "expected": {
         "detail": "会话持久化失败",
         "instance": "/api/v1/chat",
         "status": 500,

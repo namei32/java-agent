@@ -52,7 +52,8 @@ class HttpErrorMappingGoldenTest {
       case "MODEL_INVOCATION",
           "INVALID_MODEL_RESPONSE",
           "APPROVAL_UNAVAILABLE",
-          "SIDE_EFFECT_STATE_UNKNOWN" ->
+          "SIDE_EFFECT_STATE_UNKNOWN",
+          "MEMORY_CONTEXT_UNAVAILABLE" ->
           handler.modelFailure(request);
       case "MODEL_TIMEOUT", "SESSION_LOCK_TIMEOUT" -> handler.timeout(request);
       case "SQLITE" -> handler.persistence(request);

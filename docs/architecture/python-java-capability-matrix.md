@@ -1,7 +1,7 @@
 # Python/Java 能力差距矩阵
 
 - 状态：当前事实
-- 最近更新：2026-07-14
+- 最近更新：2026-07-15
 - Python 基准：`/Users/namei/idea/agent/akashic-agent`
 
 ## 状态说明
@@ -22,8 +22,8 @@
 | 入站 HTTP | Dashboard/Bootstrap API | `ChatController` | 完成 | 当前只支持同步 JSON API | 低 |
 | 消息总线 | `bus/` | 无 | 未开始 | 需定义版本化入站、出站和生命周期事件 | 中 |
 | 被动轮次编排 | `agent/core/passive_turn.py`、`agent/turns/orchestrator.py` | `ChatService`、`ToolLoop`、`SafeChatUseCase` | 部分 | 请求—模型—只读工具—提交闭环与安全生命周期完成；完整 Python 事件总线未迁移 | 中 |
-| 历史选择 | `agent/policies/history_route.py`、被动支持代码 | `ConversationHistorySelector` | 部分 | 普通 user/assistant 文本投影已有 Golden；缺 Tool、Proactive 与 Context Frame | 中 |
-| Prompt 组装 | `agent/prompting/`、`agent/persona.py` | `PromptAssembler` | 部分 | 系统—历史—当前用户投影已有 Golden；缺 Block、Persona、预算 | 中 |
+| 历史选择 | `agent/policies/history_route.py`、被动支持代码 | `ConversationHistorySelector`、`ContextAssembler` | 部分 | 普通 user/assistant 与临时 Context Frame 顺序已有 Golden；缺 Proactive 与完整历史路由 | 中 |
+| Prompt 组装 | `agent/prompting/`、`agent/persona.py` | `ContextAssembler` | 部分 | 基础 Prompt、Self、长期记忆、近期语境和检索块共同投影已有 Golden；缺完整 Block、Persona、Token 预算 | 中 |
 | 模型调用 | `agent/provider.py` | `adapter-spring-ai` | 部分 | OpenAI-compatible 非流式文本与 Tool Call 映射完成；Provider Options 运行时类型和模型配置可保留；缺流式和多 Provider 策略 | 低 |
 | 失败语义 | `agent/core/runtime_support.py`、错误上下文 | `ToolLoop`、`SafeChatUseCase`、HTTP 异常映射 | 部分 | 模型、只读工具、迭代上限和提交失败已隔离；需跨渠道与副作用工具错误契约 | 低 |
 | 会话内并发 | Python Chat Lane/队列 | `KeyedSessionExecutionGate`、`TurnCancellation` | 部分 | 单 JVM 同会话串行和 Application 取消协议已完成；缺 HTTP 断连传播与跨进程租约 | 中 |
@@ -36,8 +36,9 @@
 | --- | --- | --- | --- | --- | --- |
 | SQLite 会话 Schema | Python Session 存储实现、现有 `sessions.db` | `SqliteSchemaInitializer` | 完成 | 核心表兼容；未来字段必须继续增量校验 | 高 |
 | 会话读取/轮次提交 | Python 会话仓储 | `JdbcSessionRepository` | 完成 | MVP 原子提交与恢复完成；需持续维护 Python 夹具 | 高 |
-| Markdown 记忆 | `agent/memory.py`、`_handbook/memory-markdown.md` | 无 | 未开始 | 先只读解析与 Golden，再开放写入 | 极高 |
-| 检索管线 | `agent/retrieval/` | 无 | 未开始 | 定义 Query/Result Port、排序与预算契约 | 中 |
+| Markdown 记忆 | `agent/memory.py`、`core/memory/markdown.py` | `adapter-workspace`、`MemoryContextService` | 部分 | 三个固定 Profile 的严格 UTF-8 只读投影、上限和零写入已实现；真实 Workspace 与任何写回仍冻结 | 极高 |
+| Java 原生语义记忆 | Python `memory2/` 仅作历史参考，旧数据不迁移 | Kernel Memory 协议、`JdbcJavaMemoryStore`、`SpringAiEmbeddingAdapter`、Memory Application/HTTP、Bootstrap | 完成 | J1 至 J12 已完成：独立 V1 库、显式 Write/List/Delete、幂等、物理删除、Embedding、检索、默认关闭装配和三套最终门禁均已验收；自动写回/Optimizer 属于未来新范围，仍冻结 | 高 |
+| 检索管线 | `agent/retrieval/` | `SemanticMemoryRetrievalAdapter`、`SemanticMemorySearch`、`MemoryInjectionFormatter`、`MemoryContextService` | 部分 | 当前 User 的 Scope/cosine/Hotness/Top-K/字符预算与 Chat Frame 复用已实现；缺 Keyword/RRF、Rewrite/HyDE、跨 Session 身份与 Token 预算 | 中 |
 | 上下文预算 | `agent/prompting/budget.py` | 字符/消息上限 | 部分 | 缺 Token 估算、Block 优先级和压缩策略 | 中 |
 | Persona/身份 | `agent/persona.py` | 固定 System Prompt | 部分 | 缺工作区 Persona 加载与兼容规则 | 中 |
 
@@ -73,15 +74,15 @@
 | 测试资产 | 当前 Java 状态 | 缺口 |
 | --- | --- | --- |
 | Java 单元/集成测试 | 已建立默认、`failure`、`compat` Profile | 继续随能力扩展 |
-| Python SQLite 兼容夹具 | 已覆盖核心 Schema、Python 行与 Java 追加游标 | 增加真实版本样本、未知字段和升级路径 |
-| 跨语言 Golden | 已建立格式、Manifest、生成器、历史、Prompt、SQLite、错误映射、Tool Loop、Runtime 安全与 Approval/Side Effect 场景及 CI | 随后增加 Memory 与流式事件 |
+| Python SQLite 兼容夹具 | `sessions.db` 共同 Schema 已覆盖 | 语义记忆改为 Java 原生，不增加 `memory2.db` 兼容夹具 |
+| 跨语言/Java Contract Fixture | 已建立 Python/Java Golden；R4.2 另由生产 Java 实现直接消费 Java-owned Schema/Codec/Hash/HTTP/检索/Injection Fixture，不运行 Python | 后续随新能力增加 Optimizer 与流式事件 Contract |
 | 真实模型 Smoke | Profile 已有，默认不执行；DeepSeek `deepseek-v4-flash` Tool Smoke 已于 2026-07-14 通过 | 其他 Provider/模型仍需逐组合授权验证；通过不自动启用部署 |
 | 真实工作区演练 | 未执行 | 只能在备份副本上先做只读差异，再做受控写入 |
 
 ## 当前优先级
 
-1. 分别设计并批准真实 Approval Channel、Durable Pending Turn 和生产 Durable Ledger；当前 Framework 只会在生产 Fail Closed。
-2. 为首个隔离 Workspace 文件写入 Tool 制定独立 Capability/Sandbox Contract；批准前不开放任何真实副作用工具。
-3. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
-4. 在 Approval Channel、Durable Ledger 和具体 Tool Contract 落地前，不迁移文件写入、Shell、Web 写入或消息发送工具。
-5. 记忆、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。
+1. 以 R4.2 已完成基线重新盘点 Java 重写主线，下一候选是 R5 MCP/外部工具的 Contract 与最小无副作用纵向切片；实施前需单独批准。
+2. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
+3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
+4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
+5. MCP、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。

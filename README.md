@@ -1,16 +1,19 @@
 # Namei Agent Java
 
-Namei Agent Java 是 Akashic Agent 的渐进式 Java 重写项目。当前已实现同步 HTTP 被动聊天、会话历史恢复、具备安全预算的只读 Tool Runtime，并把最终 `user/assistant` 对话轮次原子写入 SQLite。启动配置支持原有环境变量模式，以及只读解析 Python `config.toml` 的兼容模式。
+Namei Agent Java 是 Akashic Agent 的渐进式 Java 重写项目。当前已实现同步 HTTP 被动聊天、会话历史恢复、具备安全预算的只读 Tool Runtime，以及默认关闭的 Context/Memory 能力，并把最终 `user/assistant` 对话轮次原子写入 SQLite。Memory 可选择 R4.1 只读 Markdown Profile，或在 Loopback 上显式启用独立 Java `agent-memory.db`、管理 API、Embedding、cosine/Hotness 检索和临时 Context Frame。启动配置支持原有环境变量模式，以及只读解析 Python `config.toml` 的兼容模式。
 
 项目使用 JDK 21、Maven Wrapper、Spring Boot 4.1、Spring AI 2.0 和 SQLite。默认仅监听 `127.0.0.1`，不提供远程访问认证。当前 Tool Runtime 只注册无副作用的 `current_time`，具有模式、调用预算、Schema 校验、Arguments/Result 上限、超时、并发许可和取消协议。审批指纹、整批门禁、幂等 Ledger Port 和 `UNKNOWN` 安全语义已经实现，但生产只装配 Deny All；尚无可用的人类审批渠道、生产 Durable Ledger、真实副作用工具、MCP、主动消息或流式响应。
+
+Java 原生语义记忆不读取、迁移或删除 Python `memory2.db`，也不会从普通聊天自动提取记忆。模板和部署默认保持 `AGENT_MEMORY_MODE=DISABLED`；当前实现不包含 Optimizer、Scheduler、Memory Tool、远程 Vector Store 或真实用户数据迁移。
 
 ## 模块
 
 - `agent-kernel`：领域模型、历史选择和 Port，只依赖 JDK。
-- `agent-application`：聊天用例、失败语义和单进程会话串行控制。
-- `adapter-sqlite`：显式 SQL、Schema 兼容检查和原子轮次持久化。
-- `adapter-spring-ai`：项目模型类型与 Spring AI 的协议适配。
-- `agent-bootstrap`：Spring Boot 启动、HTTP、配置、健康检查和安全日志。
+- `agent-application`：聊天与记忆用例、语义排序/注入、失败语义和单进程会话串行控制。
+- `adapter-workspace`：固定 Markdown Profile 的严格 UTF-8 只读适配器。
+- `adapter-sqlite`：会话与 Java Memory 的显式 SQL、版本化 Schema、Float32 Codec 和事务持久化。
+- `adapter-spring-ai`：Chat/Embedding 项目协议与 Spring AI 的边界适配。
+- `agent-bootstrap`：Spring Boot 启动、Chat/Memory HTTP、配置、安全门禁、健康检查和安全日志。
 
 ## 本地要求
 
@@ -40,6 +43,13 @@ java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar
 - `OPENAI_API_KEY`：模型服务密钥。
 - `OPENAI_MODEL`：模型名。
 - `AKASHIC_WORKSPACE`：Java 专用工作区，默认 `./workspace`。
+- `AGENT_MEMORY_MODE`：支持 `DISABLED`、`READ_ONLY` 和 `JAVA_NATIVE`，模板与部署默认 `DISABLED`。`READ_ONLY` 只读取 `memory/SELF.md`、`memory/MEMORY.md`、`memory/RECENT_CONTEXT.md`；`JAVA_NATIVE` 不读取旧 Markdown/Python 记忆，而是在 Loopback 上启用独立 Java 语义库、管理 API 和 Retrieval。
+- `AGENT_MEMORY_MAX_FILE_BYTES`：单个 Profile 文件 UTF-8 字节上限，默认 `65536`。
+- `AGENT_MEMORY_MAX_CONTEXT_CHARACTERS`/`AGENT_MEMORY_MAX_RETRIEVED_CHARACTERS`：全部 Profile Section 与单个检索块字符上限，默认 `100000`/`20000`。
+- `AGENT_MEMORY_EMBEDDING_MODEL`/`AGENT_MEMORY_EMBEDDING_DIMENSIONS`/`AGENT_MEMORY_EMBEDDING_MAX_TEXT_CODE_POINTS`：Java Memory 的逻辑 Embedding 模型、维度和单条输入 Code Point 上限，默认 `text-embedding-v3`/`1024`/`2000`。
+- `AGENT_MEMORY_RETRIEVAL_TOP_K`/`AGENT_MEMORY_RETRIEVAL_SCORE_THRESHOLD`：召回上限和 cosine 基础阈值，默认 `8`/`0.45`。
+- `AGENT_MEMORY_RETRIEVAL_HOTNESS_ALPHA`/`AGENT_MEMORY_RETRIEVAL_HOTNESS_HALF_LIFE_DAYS`：Hotness 混合权重和基础半衰期，默认 `0.20`/`14`。
+- `AGENT_MEMORY_RETRIEVAL_MAX_CANDIDATES`/`AGENT_MEMORY_RETRIEVAL_MAX_INJECTED_CHARACTERS`：候选硬上限和注入字符预算，默认 `10000`/`6000`；注入预算不得超过外层检索预算。
 - `AGENT_TOOL_MAX_ITERATIONS`：单次聊天允许的最大模型调用次数，默认 `6`。
 - `AGENT_TOOL_MODE`：支持 `DISABLED`、`READ_ONLY` 和 `APPROVAL_REQUIRED`。模板和部署保持 `DISABLED`；`READ_ONLY` 仍需同一 Provider/模型组合的真实 Tool Smoke 与部署批准。`APPROVAL_REQUIRED` 当前只有生产 Deny All，不提供审批入口或副作用能力。
 - `AGENT_TOOL_MAX_CALLS_PER_RESPONSE`/`AGENT_TOOL_MAX_CALLS_PER_TURN`：单响应与单轮 Tool Call 上限，默认 `8`/`16`。
@@ -107,7 +117,7 @@ curl --fail-with-body http://127.0.0.1:8080/actuator/health
 
 ## 数据安全
 
-默认数据库位于 `${AKASHIC_WORKSPACE}/sessions.db`。首次让 Java 写入任何既有数据前，必须停止 Python 和 Java 进程，并一起备份 `sessions.db`、`sessions.db-wal`、`sessions.db-shm`。本里程碑不得写入真实 Python 工作区。
+会话数据库位于 `${AKASHIC_WORKSPACE}/sessions.db`。`AGENT_MEMORY_MODE=READ_ONLY` 只约束 Markdown Profile，不会把整个 Java 进程变成只读：聊天仍会写入会话 SQLite。`JAVA_NATIVE` 还会创建 `${AKASHIC_WORKSPACE}/memory/agent-memory.db`，并在写入与非空检索时调用 Embedding Provider。所有模式都只能使用 Java 专用或测试 Workspace，禁止把 Java 指向真实 Python Workspace；Java 不读取、迁移或删除 `memory2.db`。首次让 Java 写入任何既有 Java 数据前，必须停止相关进程，并完整备份数据库及其 `-wal`/`-shm` 文件。
 
 文档入口：
 
@@ -120,5 +130,7 @@ curl --fail-with-body http://127.0.0.1:8080/actuator/health
 - [Python/Java Golden Test 夹具规范](docs/contracts/golden-test-fixtures.md)
 - [Python/Java 配置兼容契约](docs/contracts/python-java-configuration.md)
 - [Tool 审批、副作用、幂等与沙箱安全契约](docs/contracts/tool-approval-side-effect-safety.md)
+- [只读上下文与记忆兼容契约](docs/contracts/read-only-context-memory.md)
+- [Java 原生语义记忆、持久化与优化器契约](docs/contracts/semantic-memory-persistence-optimizer.md)
 - [MVP 设计](docs/specs/2026-07-12-passive-chat-mvp-design.md)
 - [轻量 Vibe Coding 工作流](docs/vibe-coding-workflow.md)

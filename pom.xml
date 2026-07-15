@@ -18,6 +18,7 @@
   <modules>
     <module>agent-kernel</module>
     <module>agent-application</module>
+    <module>adapter-workspace</module>
     <module>adapter-sqlite</module>
     <module>adapter-spring-ai</module>
     <module>agent-bootstrap</module>
