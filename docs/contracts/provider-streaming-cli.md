@@ -1,6 +1,6 @@
 # Provider Streaming 与本地 CLI 契约
 
-- 状态：已批准，实施中
+- 状态：已实现并验证
 - 契约版本：1
 - 日期：2026-07-15
 - 阶段：R6.2
@@ -152,3 +152,16 @@ Python 仅作为行为参考。Java 有意不复制：
 - CLI 普通回答、Tool/MCP 最终回答、取消、失败、背压和输出故障均有确定性测试。
 - SQLite 只提交完整成功轮次。
 - 默认、`failure`、`compat`、Kernel 依赖和安全门禁通过。
+
+## 10. 实现与验收证据
+
+2026-07-15 已完成本契约范围：
+
+- `message-bus/provider-streaming-cli.json` 的 Kernel/Application/CLI 6/9/6 共 21 个 Case 由生产路径消费。
+- 本地 OpenAI-compatible SSE Stub 验证真实文本 Chunk、Tool Schema、Assistant Tool Call、Tool Result 回送、Provider Options 保留和请求级连接取消。
+- CLI 验证普通回答、Tool/MCP 最终回答、严格 UTF-8、权威快照、stdout 故障、背压、断开、启动失败和关闭竞态。
+- 临时真实 SQLite 验证取消或无效完成即使已经发布 Delta，`sessions` 与 `messages` 仍保持零行；成功轮次只提交最终完整回答。
+- 默认门禁通过 363 个测试（345 单元、18 集成），`failure` 通过 99 个（96 单元、3 集成），`compat` 通过 402 个（383 单元、19 集成），均为零失败、零错误、零跳过。
+- Kernel 生产依赖仍为空；Secret、敏感文件、无界队列、后台线程、Subscription、子进程和工作树审计无未解释项。
+
+以上证据全部来自离线 Fake、本地 HTTP Stub、Java Reference MCP Server 和临时数据库。真实外部 Provider/渠道、Secret、付费调用和用户工作区不在本契约的执行授权内，仍须单独批准与验收。

@@ -1,10 +1,10 @@
 # R6 渠道、消息总线与控制面总体工作计划
 
-- 状态：已批准，实施中
+- 状态：已批准，R6.1–R6.2 已完成
 - 日期：2026-07-15
 - 阶段：R6
 - 批准记录：用户要求完整实现本计划；各子阶段仍须先冻结对应 Contract、Spec、ADR 和实施计划，真实网络、Secret 与付费 Smoke 保留独立授权门禁
-- 功能基线：R6.1 实现提交 `ca04083`；分支 `agent/r6-message-contract` 已推送，尚未创建 PR
+- 功能基线：R6.1 已通过 PR #4 三套远程 CI，并以 `a77b088` 合入 `main`；R6.2 已在独立分支完成本地实现与三套阶段门禁
 - Python 参考：`bus/`、`bootstrap/channel_host.py`、`bootstrap/channels.py`、`agent/provider.py` 和 Dashboard API
 - 关联 Roadmap：[Java 重写 Roadmap](../roadmap/java-rewrite-roadmap.md)
 - R6.1 Contract：[版本化渠道消息与流式运行时契约](../contracts/versioned-channel-message-runtime.md)
@@ -63,8 +63,8 @@ R6 完成不等于 Python 全部渠道、插件或主动能力已经迁移。Sch
 
 | 子阶段 | 名称 | 状态 | 主要结果 |
 | --- | --- | --- | --- |
-| R6.1 | 版本化 Message Contract Runtime | 实现完成，待 PR/远程 CI/合并 | Java-owned Fixture、消息值、唯一终态、取消原因、有界背压、安全终态投影 |
-| R6.2 | 本地 CLI 与 Provider Streaming | Contract 已冻结，实施中 | 供应商无关流式 Port、真实 Adapter、CLI 纵向闭环 |
+| R6.1 | 版本化 Message Contract Runtime | 已完成并合入 `main` | Java-owned Fixture、消息值、唯一终态、取消原因、有界背压、安全终态投影 |
+| R6.2 | 本地 CLI 与 Provider Streaming | 已完成并通过本地阶段门禁 | 供应商无关流式 Port、Spring AI Adapter、本地 CLI、取消与提交隔离 |
 | R6.3 | Channel Host 与首个真实渠道 | 总体范围已批准，待子阶段 Contract | 统一宿主、身份路由、代表性真实渠道、网络生命周期 |
 | R6.4 | 渠道幂等、可靠投递与恢复 | 条件范围已批准，待持久化 Contract | 入站去重、投递状态、崩溃恢复和有界重试 |
 | R6.5 | Dashboard 与最小控制面 | 总体范围已批准，待子阶段 Contract | 安全状态、事件流和活动 Turn 取消 |
@@ -82,16 +82,13 @@ R6 完成不等于 Python 全部渠道、插件或主动能力已经迁移。Sch
 - 现有非流式 Chat 到 Started/Completed/Cancelled/Failed 的安全投影。
 - 默认 321、`failure` 63、`compat` 360 个测试及格式、依赖、Secret、敏感文件和孤儿进程审计。
 
-### 4.2 剩余发布任务
+### 4.2 发布证据
 
-1. 为 `agent/r6-message-contract` 创建 R6.1 PR。
-2. 运行远程默认、`failure`、`compat` CI。
-3. 完成 Review，确认 Fixture Hash、文档状态和本地证据一致。
-4. 合并到 `main`，同步本地基线后再创建 R6.2 分支。
+R6.1 已通过 PR #4 的默认、`failure`、`compat` 远程 CI 和 Review，并以 `a77b088` 合入 `main`。R6.2 从该基线创建独立分支，没有依赖未合并的 R6.1 工作树。
 
 ## 5. R6.2：本地 CLI 与 Provider Streaming
 
-R6.2 是下一主线。它复用 R6.1 协议，不新增 CLI 私有消息格式，也不同时接入真实外部渠道。
+R6.2 已完成。它复用 R6.1 协议，没有新增 CLI 私有消息格式，也没有同时接入真实外部渠道。
 
 ### Task D0：冻结 R6.2 Contract、Spec、ADR 和实施计划
 
@@ -208,6 +205,10 @@ CLI 只负责：
 同时审计 Secret、敏感文件、Kernel 禁止依赖、无界队列、后台线程、Provider 任务和工作树。更新 Contract、Spec、Plan、Roadmap、能力矩阵和 Runbook 后，才能声明 R6.2 完成。
 
 R6.2 退出门禁：CLI 完成普通回答、Tool/MCP 回答和多 Delta 回答；取消、断开、背压和失败都只有一个终态；SQLite 只提交完整成功轮次。
+
+完成证据（2026-07-15）：Java-owned Streaming/CLI Fixture 的 Kernel/Application/CLI 6/9/6 共 21 个 Case 由生产实现消费；本地 OpenAI-compatible SSE Stub 验证文本 Chunk、Tool Schema/Call/Result、Options 保留和目标连接取消；CLI、Tool/MCP、输出故障、背压、断开、关闭及临时真实 SQLite 提交隔离均通过。最终默认门禁 363 个测试（345 单元、18 集成）、`failure` 99 个（96 单元、3 集成）、`compat` 402 个（383 单元、19 集成）全部通过，Kernel 生产依赖与安全/资源审计通过。
+
+R6.2 没有访问真实外部 Provider/渠道、Secret、付费服务或用户工作区。其完成状态不表示渠道可部署，也不扩大 R6.3 的网络、身份或数据授权。
 
 ## 6. R6.3：Channel Host 与首个真实渠道
 
@@ -403,8 +404,8 @@ R6 总退出条件：
 
 ## 12. 当前立即执行顺序
 
-1. 为 R6.1 远程分支创建 PR，跑远程三套 CI 并合并。
-2. 从合并后的 `main` 创建 R6.2 分支。
-3. 编写并批准 R6.2 Streaming/CLI Contract、Spec、ADR 和实施计划。
-4. 从 Task D1 开始按单任务 RED/GREEN 连续实现。
-5. R6.2 完成前不启动真实渠道、持久投递或 Dashboard 实现。
+1. R6.1 已完成 PR、远程三套 CI 并合入 `main`。
+2. R6.2 已完成 Contract、ADR、Fixture、连续 TDD 实现和本地三套阶段门禁。
+3. 下一步只冻结 R6.3 Channel Host/首个真实渠道 Contract、Spec、ADR 和实施计划。
+4. 渠道选择、SDK、身份路由、网络、Secret、费用和数据范围必须在实现前分别批准；获得授权前只允许 Fake Server 或脱敏协议样本。
+5. R6.3 证明确有重启恢复需求前，不启动持久 Inbox/Outbox、自动重放或 Exactly Once 实现；Dashboard 仍按后续独立子阶段推进。

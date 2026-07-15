@@ -1,6 +1,6 @@
 # Provider Streaming 与本地 CLI 设计
 
-- 状态：已批准，实施中
+- 状态：已实现并验证
 - 日期：2026-07-15
 - 阶段：R6.2
 - 批准记录：用户已批准并要求完整实现 R6 总体计划
@@ -185,3 +185,11 @@ Adapter 对 `chatModel.stream(prompt)`：
 ## 8. 非目标
 
 不新增 Maven 模块、数据库表、网络渠道、Dashboard API、终端 UI 框架、Signal Library、消息中间件或 Provider 自动重试策略。
+
+## 9. 实现结果
+
+设计已按模块边界落地。Spring AI Reactor 流由 Adapter 内部同步桥接，Application 负责跨 Tool Loop 的 Delta 预算、取消和最终提交，CLI 只做受信路由与有界输入输出。为补足 Spring AI Reactor Subscription 取消不能稳定关闭底层 OpenAI HTTP 调用的缺口，Adapter 使用请求关联的 OkHttp Cancellation Registry：内部关联 Header 在 Transport 层定位目标 Call，并在发送给 Provider 前移除，因此并发流只取消目标连接且不会把内部标识泄漏给上游。
+
+实现期间的全量门禁还发现轻量 Spring Context 未加载 YAML 时，`CliProperties` 会得到空值/零值。最终在配置绑定层用与 YAML 一致的 `@DefaultValue` 固定 `cli:local`、`local`、`32`、`2s` 和 `100ms`，同时保留显式非法配置的启动拒绝。
+
+最终离线证据为：默认 363 个测试（345 单元、18 集成）、`failure` 99 个（96 单元、3 集成）、`compat` 402 个（383 单元、19 集成），全部零失败、零错误、零跳过；Kernel 生产依赖和安全审计通过。真实外部 Provider/渠道、Secret、费用和用户工作区没有执行，也不由本设计自动授权。

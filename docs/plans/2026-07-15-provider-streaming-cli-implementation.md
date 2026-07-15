@@ -1,9 +1,9 @@
 # Provider Streaming 与本地 CLI 工作计划
 
-- 状态：实施中
+- 状态：已实现并验证
 - 日期：2026-07-15
 - 阶段：R6.2
-- 当前执行状态：Task D0–D8 已完成；下一步 Task D9 阶段门禁与文档收口
+- 当前执行状态：Task D0–D9 已完成；R6.2 已通过阶段门禁
 - 基线：R6.1 已通过 PR #4 三套远程 CI，并以 `a77b088` 合入 `main`
 - 批准记录：用户已批准并要求完整实现 R6 总体计划
 - Contract：[Provider Streaming 与本地 CLI 契约](../contracts/provider-streaming-cli.md)
@@ -156,7 +156,7 @@ RED/GREEN：
 
 ### Task D9：阶段门禁与文档收口
 
-状态：待开始。
+状态：已完成。
 
 执行：
 
@@ -169,6 +169,12 @@ RED/GREEN：
 ```
 
 另执行 Secret、敏感文件、Kernel 禁止依赖、无界队列、后台任务、Subscription、进程和工作树检查。记录实际测试数，更新状态为“已实现并验证”。
+
+验收证据（2026-07-15）：第一次执行完整 `clean verify` 真实暴露 `MemoryConfigurationTest` 的两个轻量 Context 场景没有加载 `application.yml`，导致 `CliProperties` 绑定为空值/零值并启动失败。相同聚焦命令先稳定复现 2 个失败，再以配置绑定 `@DefaultValue` 补齐与 YAML 一致的安全默认值；同一命令转为 8 个测试全部通过，显式非法值仍由 Validator 拒绝。
+
+修复后从干净构建重新执行全部门禁：默认 Profile 通过 363 个测试（345 单元、18 集成），`failure` 通过 99 个（96 单元、3 集成），`compat` 通过 402 个（383 单元、19 集成），全部为 0 Failure、0 Error、0 Skipped。`agent-kernel dependency:tree` 只包含测试范围的 JUnit、AssertJ 和 Jackson，生产依赖为零；Spotless、Kernel 禁止依赖、Secret/敏感文件、根工作区运行时产物、无界队列、后台任务、Subscription、进程和孤儿 Java Reference Server 审计均无未解释项。
+
+门禁只使用本地桩、Java Reference MCP Server 和临时 SQLite；未运行 Python、真实外部 Provider/渠道、Secret、付费调用或用户工作区。真实 Provider Streaming Smoke 与真实渠道验收仍需分别取得网络、凭证、费用和数据范围授权。
 
 ## 3. 提交策略
 
