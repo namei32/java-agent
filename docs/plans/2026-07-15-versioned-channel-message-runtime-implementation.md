@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R6.1
-- 当前执行状态：Task C0–C3 已完成；下一步 Task C4
+- 当前执行状态：Task C0–C4 已完成；下一步 Task C5
 - 基线：MCP R5.1 已通过 PR #3 的默认、`failure`、`compat` 远程 CI，并以 `d766bb8` 合入 `main`
 - 批准记录：用户要求完成 MCP PR 与远程 CI，然后从 R6 的版本化 Message Contract Fixture 开始连续 TDD 实现
 - Contract：[版本化渠道消息与流式运行时契约](../contracts/versioned-channel-message-runtime.md)
@@ -110,7 +110,7 @@ RED/GREEN：
 
 ### Task C4：有界出站缓冲
 
-状态：待开始。
+状态：已完成。
 
 新增：
 
@@ -126,6 +126,8 @@ RED/GREEN：
 ```
 
 覆盖顺序消费、容量满、Deadline、中断、断开、错误 Turn 和终态后发布；不得使用 `sleep` 制造竞态。
+
+验证证据（2026-07-15）：聚焦命令先因 `BoundedOutboundBuffer` 和 `OutboundDeliveryException` 缺失而编译失败；实现项目自持 `ReentrantLock`/`Condition` 有界队列后，同一命令执行 7 个测试并全部通过。容量满保留既有事件并记录 `BACKPRESSURE_EXCEEDED`；断开清空预览、唤醒等待 Producer 并记录 `CHANNEL_DISCONNECTED`；线程中断恢复标记。全部竞态使用闩锁和线程状态门禁，未使用休眠。
 
 ### Task C5：Chat 到 Channel 的安全投影
 
