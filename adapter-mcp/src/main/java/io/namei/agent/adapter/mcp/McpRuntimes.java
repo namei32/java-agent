@@ -11,6 +11,10 @@ public final class McpRuntimes {
     return DisabledRuntime.INSTANCE;
   }
 
+  public static McpRuntime staticReadOnly(McpConfiguration configuration, McpSettings settings) {
+    return new DefaultMcpRuntime(configuration, settings);
+  }
+
   private enum DisabledRuntime implements McpRuntime {
     INSTANCE;
 
