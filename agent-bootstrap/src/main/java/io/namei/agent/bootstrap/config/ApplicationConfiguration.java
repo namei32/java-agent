@@ -97,6 +97,7 @@ public class ApplicationConfiguration {
       case READ_ONLY ->
           new MarkdownMemoryProfileAdapter(
               properties.workspace(), properties.memory().maxFileBytes());
+      case JAVA_NATIVE -> throw new IllegalStateException("JAVA_NATIVE 记忆尚未装配");
     };
   }
 

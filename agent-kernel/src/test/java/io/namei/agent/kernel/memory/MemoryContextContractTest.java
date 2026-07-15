@@ -19,7 +19,8 @@ class MemoryContextContractTest {
   @Test
   void fixesReadOnlyModesAndEmptyPorts() {
     assertThat(MemoryRuntimeMode.values())
-        .containsExactly(MemoryRuntimeMode.DISABLED, MemoryRuntimeMode.READ_ONLY);
+        .containsExactly(
+            MemoryRuntimeMode.DISABLED, MemoryRuntimeMode.READ_ONLY, MemoryRuntimeMode.JAVA_NATIVE);
     assertThat(MemoryProfilePort.empty().load()).isEqualTo(MemoryProfile.empty());
 
     var request = request(List.of());
@@ -59,6 +60,8 @@ class MemoryContextContractTest {
         .isEqualTo(new MemoryRetrievalTrace(MemoryRetrievalStatus.RETRIEVED, 2));
     assertThat(MemoryRetrievalResult.empty().trace().status())
         .isEqualTo(MemoryRetrievalStatus.EMPTY);
+    assertThat(MemoryRetrievalResult.degraded().trace().status())
+        .isEqualTo(MemoryRetrievalStatus.DEGRADED);
     assertThatThrownBy(
             () ->
                 new MemoryRetrievalResult(

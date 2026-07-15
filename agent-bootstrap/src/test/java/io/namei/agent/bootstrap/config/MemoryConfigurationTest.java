@@ -79,6 +79,18 @@ class MemoryConfigurationTest {
   }
 
   @Test
+  void javaNativeModeFailsClosedUntilItsBootstrapTaskWithoutTouchingWorkspace() {
+    Path workspace = temporaryDirectory.resolve("java-native-must-not-start-yet");
+    var properties = properties(workspace, MemoryRuntimeMode.JAVA_NATIVE);
+    var configuration = new ApplicationConfiguration();
+
+    assertThatThrownBy(() -> configuration.memoryProfilePort(properties))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("JAVA_NATIVE 记忆尚未装配");
+    assertThat(workspace).doesNotExist();
+  }
+
+  @Test
   void templatesKeepMemoryExplicitlyDisabledWithApprovedLimits() throws Exception {
     String yaml = Files.readString(Path.of("src/main/resources/application.yml"));
     String environmentTemplate = Files.readString(Path.of("../.env.example"));

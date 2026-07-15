@@ -21,6 +21,11 @@ public record MemoryRetrievalResult(String block, MemoryRetrievalTrace trace) {
     return new MemoryRetrievalResult("", new MemoryRetrievalTrace(MemoryRetrievalStatus.EMPTY, 0));
   }
 
+  public static MemoryRetrievalResult degraded() {
+    return new MemoryRetrievalResult(
+        "", new MemoryRetrievalTrace(MemoryRetrievalStatus.DEGRADED, 0));
+  }
+
   public static MemoryRetrievalResult retrieved(String block, int injectedCount) {
     return new MemoryRetrievalResult(
         block, new MemoryRetrievalTrace(MemoryRetrievalStatus.RETRIEVED, injectedCount));

@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R4.2
-- 当前执行状态：Task J0、J1 已完成；下一步是 Task J2 Kernel Memory 与 Embedding 协议
+- 当前执行状态：Task J0 至 J2 已完成；下一步是 Task J3 Schema 与 Float32 Vector Codec
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
@@ -60,7 +60,7 @@
 
 ## Task J2：Kernel Memory 与 Embedding 协议
 
-状态：待实施。
+状态：已完成。
 
 先新增 `JavaMemoryContractTest` 与 `EmbeddingContractTest`。有效 RED 必须因目标类型或不变量缺失而失败，随后实现：
 
@@ -80,6 +80,14 @@
 ```
 
 自审 Defensive Copy、Hash/Scope 敏感字段、枚举、不变量和 Kernel 禁止依赖。
+
+RED/GREEN 记录（2026-07-15）：
+
+- RED：聚焦命令因 `EmbeddingPort`、`MemoryStorePort`、`MemoryWritePort`、Memory/Embedding 值对象、`JAVA_NATIVE` 和 `DEGRADED` 缺失而在 Test Compile 失败，属于有效目标行为缺失。
+- GREEN：同一命令实际执行 `JavaMemoryContractTest` 5 个、`EmbeddingContractTest` 3 个，共 8 个测试，0 Failure、0 Error、0 Skipped。
+- 自审修复：下游 Bootstrap 的旧枚举 Switch 因 `JAVA_NATIVE` 不穷尽而 RED；增加 J10 前 Fail Closed 且零 Workspace 访问的回归后，`MemoryConfigurationTest` 5 个测试通过。
+- R4.1 回归：`MemoryContextContractTest` 4 个测试通过；`agent-kernel` 与 `agent-bootstrap` Spotless 通过。
+- Kernel 新协议只依赖 JDK；向量、防御性集合和敏感 `toString()` 均有不变量，不包含 Spring、JDBC、HTTP、Python 或 Provider 类型。
 
 提交：`feat: 固定 Java 原生记忆协议`。
 
