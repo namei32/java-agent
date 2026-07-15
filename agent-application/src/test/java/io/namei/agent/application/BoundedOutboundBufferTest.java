@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class BoundedOutboundBufferTest {
@@ -35,6 +36,7 @@ class BoundedOutboundBufferTest {
   }
 
   @Test
+  @Tag("failure")
   void fullBufferTimesOutWithoutDroppingAndCancelsTheTurn() {
     var inbound = inbound();
     var messages = new OutboundMessageSequence(inbound);
@@ -55,6 +57,7 @@ class BoundedOutboundBufferTest {
   }
 
   @Test
+  @Tag("failure")
   void disconnectClearsPreviewRejectsNewMessagesAndCancelsWithOneReason() {
     var inbound = inbound();
     var messages = new OutboundMessageSequence(inbound);
@@ -73,6 +76,7 @@ class BoundedOutboundBufferTest {
   }
 
   @Test
+  @Tag("failure")
   void disconnectWakesAPublisherWaitingForCapacity() throws Exception {
     var inbound = inbound();
     var messages = new OutboundMessageSequence(inbound);
@@ -104,6 +108,7 @@ class BoundedOutboundBufferTest {
   }
 
   @Test
+  @Tag("failure")
   void interruptedBackpressureRestoresInterruptAndCancelsSafely() {
     var inbound = inbound();
     var messages = new OutboundMessageSequence(inbound);
@@ -124,6 +129,7 @@ class BoundedOutboundBufferTest {
   }
 
   @Test
+  @Tag("failure")
   void rejectsWrongIdentityMissingStartAndEventsAfterTerminal() {
     var inbound = inbound();
     var missingStart = new BoundedOutboundBuffer(inbound, 2, Duration.ofSeconds(1));

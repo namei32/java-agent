@@ -31,6 +31,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.IntStream;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -92,6 +93,7 @@ class SpringAiStreamingChatModelAdapterTest {
   }
 
   @Test
+  @Tag("failure")
   void cancellationDisposesSubscriptionAndRejectsLateCompletion() throws Exception {
     var disposed = new AtomicBoolean();
     var firstDelta = new CountDownLatch(1);
@@ -129,6 +131,7 @@ class SpringAiStreamingChatModelAdapterTest {
   }
 
   @Test
+  @Tag("failure")
   void preservesObserverRuntimeFailureIdentityAndCancelsUpstream() {
     var disposed = new AtomicBoolean();
     var observerFailure = new ObserverFailure();
@@ -156,6 +159,7 @@ class SpringAiStreamingChatModelAdapterTest {
   }
 
   @Test
+  @Tag("failure")
   void mapsIdleTimeoutToStableModelTimeoutAndDisposesUpstream() {
     var disposed = new AtomicBoolean();
     var chatModel =
@@ -173,6 +177,7 @@ class SpringAiStreamingChatModelAdapterTest {
   }
 
   @Test
+  @Tag("failure")
   void rejectsMissingOutputAndEmptyStreamAsInvalidModelResponses() {
     var missingOutput =
         new StreamingStubChatModel(
@@ -184,6 +189,7 @@ class SpringAiStreamingChatModelAdapterTest {
   }
 
   @Test
+  @Tag("failure")
   void mapsProviderStreamFailureWithoutLeakingPayload() {
     var providerFailure = new IllegalStateException("Bearer provider-secret");
     var chatModel = new StreamingStubChatModel(null, ignored -> Flux.error(providerFailure));
@@ -199,6 +205,7 @@ class SpringAiStreamingChatModelAdapterTest {
   }
 
   @Test
+  @Tag("failure")
   void rejectsDuplicateToolCallIdentifiersAsDamagedStream() {
     var chatModel =
         new StreamingStubChatModel(
@@ -212,6 +219,7 @@ class SpringAiStreamingChatModelAdapterTest {
   }
 
   @Test
+  @Tag("failure")
   void boundsDirectTextAggregationEvenWhenObserverDoesNotEnforceApplicationBudget() {
     String oversized = "a".repeat(MessageContract.MAX_CONTENT_CHARACTERS + 1);
     var chatModel = new StreamingStubChatModel(null, ignored -> Flux.just(response(oversized)));
@@ -220,6 +228,7 @@ class SpringAiStreamingChatModelAdapterTest {
   }
 
   @Test
+  @Tag("failure")
   void boundsToolCallAggregationBeforeBuildingProjectResponse() {
     var responses =
         IntStream.range(0, 129)

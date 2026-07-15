@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R6.2
-- 当前执行状态：Task D0–D7 已完成；下一步 Task D8 故障、兼容和提交验收
+- 当前执行状态：Task D0–D8 已完成；下一步 Task D9 阶段门禁与文档收口
 - 基线：R6.1 已通过 PR #4 三套远程 CI，并以 `a77b088` 合入 `main`
 - 批准记录：用户已批准并要求完整实现 R6 总体计划
 - Contract：[Provider Streaming 与本地 CLI 契约](../contracts/provider-streaming-cli.md)
@@ -148,9 +148,11 @@ RED/GREEN：
 
 ### Task D8：故障、兼容和提交验收
 
-状态：待开始。
+状态：已完成。
 
 把 Idle Timeout、损坏流、取消/完成、背压/断开、输出故障、Tool/MCP 取消和 SQLite 半轮次隔离加入 `failure`/`compat`。Fixture-only Task 不人为破坏生产实现。
+
+验收证据（2026-07-15）：`GoldenManifestTest` 的聚焦 `compat` 首次执行真实暴露其只接受单一 `cases` 数组，无法识别已批准的 `kernelCases`、`applicationCases` 和 `cliCases` 分组结构；窄化扩展后同一命令执行 1 个测试并通过，其他 Fixture 仍强制使用原有 `normalization/cases` 规则。聚焦 `failure` 验收共执行 51 个测试并全部通过：Application 27 个、Spring AI 单元 8 个、本地 OpenAI-compatible SSE 集成 2 个、MCP 8 个、Bootstrap/CLI/SQLite 6 个；覆盖空闲超时、损坏流、真实 SSE 定向取消、背压与断开唤醒、输出/启动/关闭故障、Tool/MCP 取消。新增的 `StreamingCommitIsolationFailureTest` 使用真实临时 SQLite，确认取消或无效完成即使已经发布预览 Delta，`sessions` 与 `messages` 仍均为零行。随后聚焦 `compat` 命令执行 20 个测试并通过，Kernel、Application、Message 投影和 CLI 生产实现实际消费 Fixture 的 6/9/6 共 21 个 Case。所有测试只使用本地桩、Java Reference MCP Server 和临时数据库；未访问真实 Provider、真实 MCP Server、Secret 或用户工作区。
 
 ### Task D9：阶段门禁与文档收口
 

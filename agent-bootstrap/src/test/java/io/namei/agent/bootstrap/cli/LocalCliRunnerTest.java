@@ -32,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -137,6 +138,7 @@ class LocalCliRunnerTest {
   }
 
   @Test
+  @Tag("failure")
   void mapsModelFailureToStableCodeWithoutLeakingExceptionText() {
     var output = new RecordingOutput();
     var runner =
@@ -158,6 +160,7 @@ class LocalCliRunnerTest {
   }
 
   @Test
+  @Tag("failure")
   void outputFailureDisconnectsAndCancelsTheActiveTurnWithoutLeakingAThread() throws Exception {
     var cancellationReason = new AtomicReference<TurnCancellationCode>();
     var waiting = new CountDownLatch(1);
@@ -199,6 +202,7 @@ class LocalCliRunnerTest {
   }
 
   @Test
+  @Tag("failure")
   void startupFailureDoesNotInvokeChatAndUsesSafeError() {
     var calls = new AtomicInteger();
     CliThreadStarter failingStarter =
@@ -224,6 +228,7 @@ class LocalCliRunnerTest {
   }
 
   @Test
+  @Tag("failure")
   void shutdownCancelsActiveTurnAndJoinsProducer() throws Exception {
     var cancellationReason = new AtomicReference<TurnCancellationCode>();
     var ready = new CountDownLatch(1);

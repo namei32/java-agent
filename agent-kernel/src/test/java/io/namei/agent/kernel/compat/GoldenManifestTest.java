@@ -41,9 +41,24 @@ class GoldenManifestTest {
       assertThat(document.path("suite").asString()).isNotBlank();
       assertThat(document.path("source").asString()).isEqualTo(source);
       assertEvidence(document, source, fixture);
-      assertThat(document.path("normalization").isArray()).isTrue();
-      assertUniqueCaseIds(document, fixture);
+      assertFixtureCases(document, fixture);
     }
+  }
+
+  private static void assertFixtureCases(JsonNode document, Path fixture) {
+    if (document.path("suite").asString().equals("provider-streaming-cli")) {
+      assertThat(document.path("normalization").isMissingNode())
+          .as("Provider Streaming Fixture 不使用跨语言 normalization: %s", fixture)
+          .isTrue();
+      assertThat(document.path("limits").isObject())
+          .as("Provider Streaming Fixture 必须固定 limits: %s", fixture)
+          .isTrue();
+      assertUniqueGroupedCaseIds(document, fixture, "kernelCases", "applicationCases", "cliCases");
+      return;
+    }
+
+    assertThat(document.path("normalization").isArray()).isTrue();
+    assertUniqueCaseIds(document, fixture);
   }
 
   private static void assertEvidence(JsonNode document, String source, Path fixture) {
@@ -79,6 +94,26 @@ class GoldenManifestTest {
               testCase.path("input").isMissingNode() && testCase.path("javaAppend").isMissingNode())
           .as("Case 必须包含 input 或 javaAppend: %s#%s", fixture, id)
           .isFalse();
+    }
+  }
+
+  private static void assertUniqueGroupedCaseIds(
+      JsonNode document, Path fixture, String... groupNames) {
+    var caseIds = new HashSet<String>();
+    for (String groupName : groupNames) {
+      JsonNode cases = document.path(groupName);
+      assertThat(cases.isArray()).as("%s 必须是数组: %s", groupName, fixture).isTrue();
+      assertThat(cases.isEmpty()).as("%s 不能为空: %s", groupName, fixture).isFalse();
+      for (JsonNode testCase : cases) {
+        String id = requiredText(testCase, "id");
+        assertThat(caseIds.add(id)).as("重复 Case ID: %s#%s", fixture, id).isTrue();
+        assertThat(testCase.path("input").isMissingNode())
+            .as("Case 必须包含 input: %s#%s", fixture, id)
+            .isFalse();
+        assertThat(testCase.path("expected").isMissingNode())
+            .as("Case 必须包含 expected: %s#%s", fixture, id)
+            .isFalse();
+      }
     }
   }
 

@@ -33,6 +33,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
@@ -151,6 +152,7 @@ class OpenAiCompatibleStreamingAdapterIT {
   }
 
   @Test
+  @Tag("failure")
   void cancellationStopsObserverAndClosesRealSseConnection() throws Exception {
     SERVER.respondSse(
         Duration.ofSeconds(1),
@@ -185,6 +187,7 @@ class OpenAiCompatibleStreamingAdapterIT {
   }
 
   @Test
+  @Tag("failure")
   void cancellationClosesOnlyTheTargetSseConnection() throws Exception {
     SERVER.respondSse(
         Duration.ofMillis(250),

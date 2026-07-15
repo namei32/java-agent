@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -99,6 +100,7 @@ class StreamingToolLoopTest {
   }
 
   @Test
+  @Tag("failure")
   void preCancellationSkipsProviderAndDoesNotCommit() {
     var repository = new RecordingRepository();
     var model = new ScriptedStreamingModel(new Step(List.of("不应出现"), new ChatModelResponse("回答")));
@@ -115,6 +117,7 @@ class StreamingToolLoopTest {
   }
 
   @Test
+  @Tag("failure")
   void cancellationFromProgressStopsLaterDeltasAndPreventsCommit() {
     var repository = new RecordingRepository();
     var model =
