@@ -258,4 +258,4 @@ R4.1、R4.2、R5.1 与 R6.1 已完成，Memory/MCP 默认仍为 `DISABLED`，自
 4. 把 CLI 断开、用户取消和缓冲背压传播到同一个 `TurnCancellation`，并验证模型、Tool/MCP 和会话提交边界；
 5. 暂不引入 Telegram、SSE/WebSocket、持久队列、新数据库或消息中间件；R5.2 远程 MCP 也保持独立批准。
 
-R5.1 的完成边界与验证证据见 [MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)，R6.1 的完成证据见[版本化渠道消息 Contract Runtime 工作计划](../plans/2026-07-15-versioned-channel-message-runtime-implementation.md)。R6.2 仍须先形成独立 Spec 和 Plan，再进入生产实现。
+R5.1 的完成边界与验证证据见 [MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)，R6.1 的完成证据见[版本化渠道消息 Contract Runtime 工作计划](../plans/2026-07-15-versioned-channel-message-runtime-implementation.md)。R6.2 的 Contract、ADR、Spec 和计划已经冻结，下一步按 [Provider Streaming 与本地 CLI 工作计划](../plans/2026-07-15-provider-streaming-cli-implementation.md)从 Kernel 流式协议开始 TDD。

@@ -81,7 +81,7 @@
 
 ## 当前优先级
 
-1. R6.1 版本化 Message Contract Runtime 已完成；主线进入 R6.2，复用既有 Contract 实现本地 CLI 与真实 Provider Streaming 最小纵向切片。
+1. R6.1 版本化 Message Contract Runtime 已完成；R6.2 Contract、ADR、Spec 和计划已经冻结，主线从 Kernel 流式协议开始实现本地 CLI 与真实 Provider Streaming 最小纵向切片。
 2. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。

@@ -15,6 +15,7 @@
 - 已完成：R4.2 Java 原生语义记忆的 Task J1–J12，包含 Java-owned Fixture、Kernel 协议、版本化 Schema/Float32 Codec、SQLite Store/Mutation 幂等、Spring AI Embedding、显式 Memory API、cosine/Hotness/Scope 检索、Chat/Context Frame、默认关闭装配、Contract/Failure 验收与最终门禁；生产默认继续保持 `DISABLED`。
 - 已完成：R5.1 默认关闭、静态配置、stdio-only 的 MCP 只读客户端，包含官方 SDK 隔离、自有有界 Transport、分页发现、稳定命名、安全 Schema 投影、Wire Cancellation、Stale/单次重连、Chat 闭环、Bootstrap 装配和 Java Reference Server 验收；生产与模板仍为 `DISABLED`。
 - 已完成：R6.1 版本化渠道消息 Contract Runtime，包含 Java-owned Fixture、`InboundMessage`/`OutboundMessage`、严格序号与唯一终态、取消原因透传、有界背压、稳定安全错误和现有 Chat 终态投影；尚未接入 CLI 或真实 Provider Streaming。
+- 实施中：R6.2 Provider Streaming 与本地 CLI；Contract、ADR、Spec 和逐任务 TDD 计划已经冻结，下一步从 Kernel 流式协议与 Java-owned Fixture 开始。
 - 尚未覆盖：自动 Memory 写回/Optimizer、真实 Embedding/真实 Workspace 启用、可用的人类审批渠道、生产 Durable Ledger、真实副作用工具、真实 Provider 流式输出、CLI/真实渠道、真实 MCP Server/Streamable HTTP、插件、主动任务、Drift 和 Subagent。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。
@@ -39,6 +40,8 @@ R5.1 的已实现边界见 [MCP 只读客户端契约](contracts/mcp-client-tool
 R6.1 的已实现边界见 [版本化渠道消息与流式运行时契约](contracts/versioned-channel-message-runtime.md)、[ADR-0007](adr/0007-use-project-owned-bounded-channel-message-protocol.md)、[设计](specs/2026-07-15-versioned-channel-message-runtime-design.md)和[实施计划](plans/2026-07-15-versioned-channel-message-runtime-implementation.md)。该切片建立 Channel Contract Runtime，不代表 CLI、真实 Provider Streaming 或真实渠道已经完成；下一纵向切片是 R6.2 本地 CLI 与 Provider Streaming Adapter。
 
 R6.1 至 R6.6 的完整阶段拆分、全局不变量、门禁、暂停条件和合并顺序见 [R6 渠道、消息总线与控制面总体工作计划](plans/2026-07-15-r6-channel-message-control-plane-master-plan.md)。总体计划已批准并进入实施；每个子阶段仍须先冻结自己的 Contract、Spec、ADR 和实施计划，真实网络、Secret 与付费 Smoke 保留独立授权门禁。
+
+R6.2 的已批准边界见 [Provider Streaming 与本地 CLI 契约](contracts/provider-streaming-cli.md)、[ADR-0008](adr/0008-use-project-owned-synchronous-stream-observer.md)、[设计](specs/2026-07-15-provider-streaming-cli-design.md)和[实施计划](plans/2026-07-15-provider-streaming-cli-implementation.md)。该阶段只实现本地 CLI 与 Provider 文本流，不授权真实渠道或默认真实 Provider Smoke。
 
 ## 目录职责
 
