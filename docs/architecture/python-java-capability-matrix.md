@@ -1,7 +1,7 @@
 # Python/Java 能力差距矩阵
 
 - 状态：当前事实
-- 最近更新：2026-07-14
+- 最近更新：2026-07-15
 - Python 基准：`/Users/namei/idea/agent/akashic-agent`
 
 ## 状态说明
@@ -37,7 +37,7 @@
 | SQLite 会话 Schema | Python Session 存储实现、现有 `sessions.db` | `SqliteSchemaInitializer` | 完成 | 核心表兼容；未来字段必须继续增量校验 | 高 |
 | 会话读取/轮次提交 | Python 会话仓储 | `JdbcSessionRepository` | 完成 | MVP 原子提交与恢复完成；需持续维护 Python 夹具 | 高 |
 | Markdown 记忆 | `agent/memory.py`、`core/memory/markdown.py` | `adapter-workspace`、`MemoryContextService` | 部分 | 三个固定 Profile 的严格 UTF-8 只读投影、上限和零写入已实现；真实 Workspace 与任何写回仍冻结 | 极高 |
-| 检索管线 | `agent/retrieval/` | `MemoryRetrievalPort`、`MemoryContextService` | 部分 | 请求/结果/安全 Trace、Fake 注入闭环和生产 NoOp 已实现；R4.2 再迁移 `memory2` Query、排序、Scope、Embedding 与预算 | 中 |
+| 检索管线 | `agent/retrieval/` | `MemoryRetrievalPort`、`MemoryContextService` | 部分 | 请求/结果/安全 Trace、Fake 注入闭环和生产 NoOp 已实现；R4.2 的 Schema、Embedding、排序、Scope、预算与失败语义已形成待批准 Contract/Spec | 中 |
 | 上下文预算 | `agent/prompting/budget.py` | 字符/消息上限 | 部分 | 缺 Token 估算、Block 优先级和压缩策略 | 中 |
 | Persona/身份 | `agent/persona.py` | 固定 System Prompt | 部分 | 缺工作区 Persona 加载与兼容规则 | 中 |
 
@@ -80,8 +80,8 @@
 
 ## 当前优先级
 
-1. 为 R4.2 单独冻结 `memory2` 只读查询、排序、Scope、Embedding 与 Context Budget Contract；生产继续保持 `AGENT_MEMORY_MODE=DISABLED`。
-2. 在 R4.2 Contract 获批后只实现临时数据/脱敏副本上的语义检索，不提前开放写入，也不执行真实 Workspace Smoke。
+1. 评审并批准 R4.2 `memory2` 持久化基础、只读查询、排序、Scope、Embedding、预算和 Optimizer 安全 Contract；生产继续保持 `AGENT_MEMORY_MODE=DISABLED`。
+2. 获批后按 TDD 实现临时数据上的 Writer 原语与生产只读语义检索；不接线 Writer/Optimizer，也不执行真实 Workspace 或真实 Embedding Smoke。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
 5. MCP、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。
