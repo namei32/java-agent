@@ -28,7 +28,8 @@ class GoldenManifestTest {
     for (JsonNode entry : manifest.path("fixtures")) {
       String id = requiredText(entry, "id");
       assertThat(fixtureIds.add(id)).as("重复 Fixture ID: %s", id).isTrue();
-      assertThat(requiredText(entry, "source")).isIn("python-reference", "migration-contract");
+      String source = requiredText(entry, "source");
+      assertThat(source).isIn("python-reference", "migration-contract", "java-contract");
 
       Path fixture = root.resolve(requiredText(entry, "path")).normalize();
       assertThat(fixture).as("夹具必须位于 Golden 根目录内").startsWith(root.normalize());
@@ -38,11 +39,33 @@ class GoldenManifestTest {
       JsonNode document = JSON.readTree(fixture);
       assertThat(document.path("formatVersion").asInt()).isEqualTo(1);
       assertThat(document.path("suite").asString()).isNotBlank();
-      assertThat(document.path("source").asString()).isEqualTo(entry.path("source").asString());
-      assertThat(document.path("pythonEvidence").isMissingNode()).isFalse();
+      assertThat(document.path("source").asString()).isEqualTo(source);
+      assertEvidence(document, source, fixture);
       assertThat(document.path("normalization").isArray()).isTrue();
       assertUniqueCaseIds(document, fixture);
     }
+  }
+
+  private static void assertEvidence(JsonNode document, String source, Path fixture) {
+    if (source.equals("java-contract")) {
+      assertThat(document.path("pythonEvidence").isMissingNode())
+          .as("Java Contract Fixture 不得声明 Python Evidence: %s", fixture)
+          .isTrue();
+      JsonNode evidence = document.path("contractEvidence");
+      assertThat(evidence.isObject()).as("缺少 Contract Evidence: %s", fixture).isTrue();
+      assertThat(requiredText(evidence, "approvedOn")).matches("\\d{4}-\\d{2}-\\d{2}");
+      assertThat(requiredText(evidence, "adr")).endsWith(".md");
+      assertThat(requiredText(evidence, "contract")).endsWith(".md");
+      assertThat(requiredText(evidence, "spec")).endsWith(".md");
+      return;
+    }
+
+    assertThat(document.path("pythonEvidence").isMissingNode())
+        .as("缺少 Python Evidence: %s", fixture)
+        .isFalse();
+    assertThat(document.path("contractEvidence").isMissingNode())
+        .as("非 Java Contract Fixture 不得声明 Contract Evidence: %s", fixture)
+        .isTrue();
   }
 
   private static void assertUniqueCaseIds(JsonNode document, Path fixture) {

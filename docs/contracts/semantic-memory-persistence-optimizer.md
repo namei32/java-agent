@@ -123,16 +123,29 @@ CREATE TABLE memory_mutations (
 
 - `memory_type` 只接受 `NOTE`、`FACT`、`PREFERENCE`、`PROCEDURE`、`EVENT`。
 - `content` Strip 后不能为空，最大 4000 Java 字符。
-- `scope_binding` 是 Session ID 的 SHA-256，不存原始 Session ID。
-- `content_hash` 是规范化 Content 的 SHA-256；唯一键包含 Scope 和类型。
+- `scope_binding` 是原始 Session ID UTF-8 字节的 SHA-256 小写十六进制，不存原始 Session ID。
+- `content_hash` 是规范化 Content UTF-8 字节的 SHA-256 小写十六进制；唯一键包含 Scope 和类型。
 - `embedding` 使用 Little-Endian Float32 BLOB，维度由 `embedding_dimensions` 明确记录。
 - `embedding_model` 必须与当前检索配置匹配；模型或维度不同的条目不参与检索，未来由独立 Backfill 处理。
 - `reinforcement >= 1`；`emotional_weight` 在 `0..10`。
 - 时间使用 UTC ISO-8601；`happened_at` 可为空。
-- `argument_hash` 只固定 Operation、类型、Content Hash 或目标 Item ID，不保存正文。
+- `argument_hash` 固定 Mutation V1 的全部语义参数，不保存正文、Request ID 或原始 Session ID。
 - `memory_mutations` 不保存正文、Embedding、原始 Session ID 或 Provider 响应。
 
 ### 4.3 显式写入与幂等
+
+#### 4.3.1 Hash V1
+
+正文先执行与 Java `String.strip()` 等价的首尾去空白，再把每段连续 `Character.isWhitespace` 字符压成一个 ASCII 空格。不得大小写折叠、Unicode Normalization 或语言相关转换。`content_hash` 对该规范化正文的 UTF-8 字节做 SHA-256。
+
+`argument_hash` 使用固定字段序列。每个字段先写 4 Byte Big-Endian 无符号 UTF-8 Byte Length，再写 UTF-8 内容；空字段写零长度。对最终 Byte Sequence 做 SHA-256，并输出小写十六进制：
+
+- 写入：`java-memory-mutation-v1`、`UPSERT`、Memory Type、Content Hash、Emotional Weight 十进制、规范化为 `Instant.toString()` 的 HappenedAt；HappenedAt 为空时写空字段。
+- 删除：`java-memory-mutation-v1`、`DELETE`、空字段、Item ID、空字段、空字段。
+
+Scope 已包含在 Ledger 唯一键中，Request ID 是 Ledger Key，因此二者不重复进入 `argument_hash`。固定的显式 API Source Kind 也不进入 Hash。任何类型、正文、情绪权重、HappenedAt、Operation 或 Item ID 变化都必须产生不同 Hash。
+
+#### 4.3.2 写入流程
 
 写入流程：
 
@@ -156,6 +169,7 @@ CREATE TABLE memory_mutations (
 ### 4.4 查看与删除
 
 - 查看只返回当前 Scope 的 ID、类型、正文、强化次数、情绪权重和时间；不返回 Embedding、Hash、Scope Binding 或内部模型配置。
+- 查看按 `updated_at DESC, id ASC` 排序，最多返回 100 条，不接受客户端覆盖排序或上限。
 - 删除必须同时匹配当前 Scope 与 Item ID。
 - Forget 采用物理删除，确保正文和 Embedding 不再存在；Mutation Ledger 只保留不含正文的操作结果。
 - 同一删除 Request ID 重试返回原结果；不存在或不属于当前 Scope 的 ID 对外统一返回 `NOT_FOUND`。
@@ -192,6 +206,30 @@ DELETE /api/v1/sessions/{sessionId}/memories/{memoryId}
 - API 不允许直接提交 Embedding、Hash、Scope、Reinforcement、CreatedAt 或 UpdatedAt。
 - Memory API 只在 `JAVA_NATIVE` 和 Loopback 监听下可用；其他模式返回稳定不可用结果。
 - 该 API 是显式管理入口，不从普通聊天文本中自动推断“请记住”。
+
+成功响应固定为：
+
+```json
+{
+  "status": "CREATED",
+  "memory": {
+    "id": "memory-0001",
+    "type": "PREFERENCE",
+    "content": "回答时 先给结论",
+    "reinforcement": 1,
+    "emotionalWeight": 2,
+    "happenedAt": "2026-07-15T04:00:00Z",
+    "createdAt": "2026-07-15T05:00:00Z",
+    "updatedAt": "2026-07-15T05:00:00Z"
+  }
+}
+```
+
+- `CREATED` 使用 HTTP 201；`REINFORCED` 使用 HTTP 200，二者返回相同公开 Memory Shape。
+- GET 使用 HTTP 200 和 `{"memories":[...]}`；数组元素使用相同公开 Memory Shape。
+- `DELETED` 使用 HTTP 200 和 `{"status":"DELETED","id":"..."}`。
+- `NOT_FOUND` 使用 HTTP 404 Problem Detail；不存在与跨 Scope 使用相同公开标题和详情。
+- Response 不返回 `requestId`、Embedding、Hash、Scope Binding、内部模型配置或 Mutation Ledger 字段。
 
 ## 6. Embedding 契约
 

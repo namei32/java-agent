@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R4.2
-- 当前执行状态：Task J0 已完成；Task J1 Java Contract Fixture 实施中
+- 当前执行状态：Task J0、J1 已完成；下一步是 Task J2 Kernel Memory 与 Embedding 协议
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
@@ -30,7 +30,7 @@
 
 ## Task J1：Java Contract Fixture
 
-状态：实施中。
+状态：已完成。
 
 目标：固定 Java V1 Schema、Float32 编码、HTTP Request/Response、Hash、Scope、排序和 Injection 示例，不依赖 Python。
 
@@ -48,6 +48,13 @@
   -Dtest=GoldenManifestTest \
   -Dsurefire.failIfNoSpecifiedTests=false test
 ```
+
+验收记录（2026-07-15）：
+
+- Fixture 固定 V1 Schema、Float32 Little-Endian、Scope/Content/Mutation Hash、Memory HTTP Request/Response、Hotness 稳定排序和双区段 Injection。
+- Manifest 新增 `java-contract` 来源；该来源必须包含批准后的 ADR/Contract/Spec Evidence，且禁止 `pythonEvidence`。
+- 按纯契约资产规则不制造 RED；聚焦验收实际执行 1 个测试，0 Failure、0 Error、0 Skipped。
+- 未运行 Python、真实 Workspace、真实数据库或真实 Embedding。
 
 提交：`test: 固定 Java 原生记忆契约`。
 

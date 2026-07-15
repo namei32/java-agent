@@ -136,7 +136,9 @@ flowchart TD
     J --> K["Write mutation ledger and COMMIT"]
 ```
 
-Hash 规范化由 Application 的纯 JDK helper 固定：Strip、Unicode 原文保留、连续空白压成一个空格，再做 SHA-256。大小写不折叠，避免 Java 原生记忆把有意义的大小写差异合并。
+Hash 规范化由 Application 的纯 JDK helper 固定：使用 `String.strip()` 语义、把连续 `Character.isWhitespace` 压成一个 ASCII 空格、保留 Unicode 原文，再对 UTF-8 字节做 SHA-256。大小写和 Unicode Form 均不折叠，避免 Java 原生记忆把有意义的差异合并。
+
+Mutation Argument Hash 使用 Contract 固定的 V1 Length-Prefixed Binary Encoding：每个字段写 4 Byte Big-Endian UTF-8 Byte Length 和内容。写入覆盖 Operation、类型、Content Hash、Emotional Weight 与 HappenedAt；删除覆盖 Operation 与 Item ID。Scope 和 Request ID 分别由 Ledger 组合键承载，不进入 Argument Hash。
 
 Item ID 和 Request ID 分离：Item ID 由服务端安全生成，Request ID 由调用方提供并用于网络重试幂等。
 
@@ -201,6 +203,10 @@ Memory Controller 只做协议转换：
 - `DELETE /api/v1/sessions/{sessionId}/memories/{memoryId}`：按 Request ID 幂等物理删除；Request ID 使用 `Idempotency-Key` Header。
 
 PUT 的 Request ID 放在正文；DELETE 使用 Header，避免 DELETE Body。Response 不返回向量、Hash、Scope 或内部 Provider 配置。
+
+- PUT `CREATED` 返回 HTTP 201；`REINFORCED` 返回 HTTP 200，Body 为 `status + memory`。
+- GET 返回 HTTP 200 和最多 100 条公开 Memory，排序为 `updatedAt DESC, id ASC`。
+- DELETE `DELETED` 返回 HTTP 200 和 `status + id`；`NOT_FOUND` 返回 HTTP 404 Problem Detail。
 
 所有错误映射到稳定 Code，不返回 SQL、路径、正文、Session Binding 或 Provider Message。
 
