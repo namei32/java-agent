@@ -25,7 +25,7 @@
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、六模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
-| R4 | 上下文与记忆 | R4.1 已完成，R4.2 实施中 | J1 Fixture、J2 Kernel 协议和 J3 Schema/Codec 已完成；下一步 J4 SQLite Store |
+| R4 | 上下文与记忆 | R4.1 已完成，R4.2 实施中 | J1–J4 已完成；下一步 J5 Spring AI Embedding Adapter |
 | R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
@@ -135,7 +135,7 @@ R3.2 实现依据：
 
 当前状态：R4.1 的 C1 至 C8 已全部完成。Python Golden、Kernel Port、只读 Markdown Adapter、ContextAssembler、Retrieval 注入/提交隔离、默认关闭装配和安全 HTTP 映射均已实现；默认 172、`failure` 50、`compat` 206 个测试以及格式、依赖、Secret/Workspace/生产写入面审计全部通过。
 
-R4.2 当前状态：用户已决定不迁移旧 Python 语义记忆，并于 2026-07-15 批准 Java 原生 `agent-memory.db`、显式 Write/List/Delete API、Embedding、语义检索、Contract、ADR、Spec、HTTP API 与 TDD 计划。Task J1 Fixture、J2 Kernel 协议和 J3 Schema/Float32 Codec 已完成；`JAVA_NATIVE` 在 J10 装配前 Fail Closed，下一步是 J4 SQLite Store 与 Mutation 幂等。
+R4.2 当前状态：用户已决定不迁移旧 Python 语义记忆，并于 2026-07-15 批准 Java 原生 `agent-memory.db`、显式 Write/List/Delete API、Embedding、语义检索、Contract、ADR、Spec、HTTP API 与 TDD 计划。Task J1 Fixture、J2 Kernel 协议、J3 Schema/Float32 Codec 和 J4 SQLite Store/Mutation 幂等已完成；J4 默认 202 个、`failure` 50 个测试通过。`JAVA_NATIVE` 在 J10 装配前 Fail Closed，下一步是 J5 Spring AI Embedding Adapter。
 
 范围：
 

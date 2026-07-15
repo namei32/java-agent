@@ -29,4 +29,9 @@ public final class JavaMemoryRepositoryException extends RuntimeException {
     return new JavaMemoryRepositoryException(
         JavaMemoryRepositoryFailure.BACKUP_FAILED, "Memory Schema 备份失败", cause);
   }
+
+  static JavaMemoryRepositoryException operationFailed(Throwable cause) {
+    return new JavaMemoryRepositoryException(
+        JavaMemoryRepositoryFailure.OPERATION_FAILED, "Java Memory 操作失败", cause);
+  }
 }

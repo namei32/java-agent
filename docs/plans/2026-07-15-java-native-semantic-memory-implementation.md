@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R4.2
-- 当前执行状态：Task J0 至 J3 已完成；下一步是 Task J4 SQLite Writer、Reader 与 Mutation 幂等
+- 当前执行状态：Task J0 至 J4 已完成；下一步是 Task J5 Spring AI Embedding Adapter
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
@@ -126,7 +126,7 @@ RED/GREEN 记录（2026-07-15）：
 
 ## Task J4：SQLite Writer、Reader 与 Mutation 幂等
 
-状态：待实施。
+状态：已完成（2026-07-15）。
 
 先新增 `JdbcJavaMemoryStoreTest`。RED 覆盖：
 
@@ -149,6 +149,15 @@ RED/GREEN 记录（2026-07-15）：
 ```
 
 提交：`feat: 持久化 Java 原生记忆`。
+
+实施证据：
+
+- RED：聚焦命令在 Test Compile 因 `JdbcJavaMemoryStore`、候选上限/幂等冲突异常和稳定操作失败类别缺失而失败，共 9 个目标符号错误。
+- GREEN：最终聚焦命令实际执行 11 个测试，0 Failure、0 Error、0 Skipped；覆盖参数化 SQL、Float32 BLOB、Scope/类型隔离、强化、列表、候选上限、物理删除、Ledger 重放与同事务回滚。
+- 并发复核先暴露 Deferred 事务升级导致的 `SQLITE_BUSY`，改为显式 `BEGIN IMMEDIATE`；同 Request ID 并发重试只落一条，同正文的不同请求收敛为创建加一次强化。
+- 时序复核先暴露并发锁顺序与请求时间顺序相反时 `updated_at` 回退，改为单调更新时间；11 个聚焦测试重新通过。
+- 明确物理删除后的旧 UPSERT 重放 Fail Closed，不恢复正文、向量或 Ledger；DELETE 重放仍返回已记录状态。
+- `adapter-sqlite -am verify` 通过：Kernel 33 个、SQLite 34 个测试；全量默认 202 个、`failure` 50 个测试全部通过。
 
 ### J4 数据阶段门禁
 

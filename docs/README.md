@@ -12,7 +12,7 @@
 - 已完成：Tool Runtime 安全契约实现，包括模式、预算、Schema、Arguments/Result 边界、超时、并发许可、取消和安全 Golden。
 - 已完成：审批参数指纹、整批门禁、一次性消费、幂等/`UNKNOWN`、安全生命周期、Approval Golden、生产 Deny All 装配，以及 R3.2 默认、`failure`、`compat` 与依赖/安全阶段门禁。
 - 已完成：R4.1 只读 Markdown Profile、Context Frame、Retrieval Port/NoOp、Golden、默认关闭装配、安全错误映射和阶段门禁。
-- 实施中：R4.2 Java 原生方案已于 2026-07-15 获批，Task J1 Fixture、J2 Kernel 协议和 J3 Schema/Float32 Codec 已完成，下一步进入 J4 SQLite Store 与 Mutation 幂等；生产默认继续保持 `DISABLED`。
+- 实施中：R4.2 Java 原生方案已于 2026-07-15 获批，Task J1 Fixture、J2 Kernel 协议、J3 Schema/Float32 Codec 和 J4 SQLite Store/Mutation 幂等已完成，下一步进入 J5 Spring AI Embedding Adapter；生产默认继续保持 `DISABLED`。
 - 尚未覆盖：真实语义检索、Memory 写回/Optimizer、可用的人类审批渠道、生产 Durable Ledger、真实副作用工具、流式输出、MCP、渠道、插件、主动任务、Drift 和 Subagent。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。

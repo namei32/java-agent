@@ -216,6 +216,7 @@ PUT 的 Request ID 放在正文；DELETE 使用 Header，避免 DELETE Body。Re
 
 - 同一 Request ID 由数据库唯一键保证幂等，不依赖 JVM 锁。
 - 相同内容的并发 Upsert 由唯一键和事务收敛为一条；失败方重读后强化或返回原结果。
+- UPSERT 重放返回 Ledger 的原 Status/Item ID 与条目当前快照；条目已被物理删除时 Fail Closed，禁止复活已删除内容。
 - 列表与检索只读，不改变 Hotness 字段。
 - Schema 迁移有进程内独占 Gate；未来多进程部署前另立租约 Contract。
 - 首次幂等探测在 Embedding 前完成，网络重试零额外费用；事务内再次检查以处理并发竞态。
