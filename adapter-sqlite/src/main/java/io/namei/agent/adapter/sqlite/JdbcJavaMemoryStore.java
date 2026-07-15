@@ -15,6 +15,7 @@ import io.namei.agent.kernel.memory.MemorySearchRequest;
 import io.namei.agent.kernel.memory.MemorySourceKind;
 import io.namei.agent.kernel.memory.MemoryType;
 import io.namei.agent.kernel.memory.MemoryWriteCommand;
+import io.namei.agent.kernel.memory.MemoryWriteReplayQuery;
 import io.namei.agent.kernel.memory.MemoryWriteResult;
 import io.namei.agent.kernel.memory.MemoryWriteStatus;
 import io.namei.agent.kernel.port.MemoryStorePort;
@@ -106,6 +107,29 @@ public final class JdbcJavaMemoryStore implements MemoryStorePort, MemoryWritePo
     try (var connection = schema.openConnection()) {
       return findMutation(connection, key);
     } catch (JavaMemoryRepositoryException exception) {
+      throw exception;
+    } catch (SQLException | RuntimeException exception) {
+      throw JavaMemoryRepositoryException.operationFailed(exception);
+    }
+  }
+
+  @Override
+  public Optional<MemoryWriteResult> replayUpsert(MemoryWriteReplayQuery query) {
+    Objects.requireNonNull(query, "query");
+    try (var connection = schema.openConnection()) {
+      return transaction(
+          connection,
+          false,
+          () -> {
+            Optional<MemoryMutation> recorded = findMutation(connection, query.key());
+            if (recorded.isEmpty()) {
+              return Optional.empty();
+            }
+            return Optional.of(
+                replayUpsert(
+                    connection, query.key().scope(), query.argumentHash(), recorded.orElseThrow()));
+          });
+    } catch (MemoryIdempotencyConflictException | JavaMemoryRepositoryException exception) {
       throw exception;
     } catch (SQLException | RuntimeException exception) {
       throw JavaMemoryRepositoryException.operationFailed(exception);

@@ -37,7 +37,7 @@ ChatService -> MemoryRetrievalPort -> EmbeddingPort -> Semantic Search
 
 - `EmbeddingPort`、`EmbeddingRequest`、`EmbeddingResult`。
 - `MemoryStorePort`：候选探测、检索、列表。
-- `MemoryWritePort`：幂等 Upsert 和物理删除。
+- `MemoryWritePort`：写前幂等重放查询、事务内幂等 Upsert 和物理删除。重放查询按 Scope、Request ID 与 Argument Hash 原子读取 Ledger 和当前 Item 快照，避免网络重试再次调用 Embedding。
 - `MemoryItem`、`MemoryType`、`MemoryWriteCommand`、`MemoryWriteResult`。
 - `MemorySearchRequest`、`MemorySearchHit`、`MemoryScope`。
 - `MemoryRetrievalStatus.DEGRADED`。

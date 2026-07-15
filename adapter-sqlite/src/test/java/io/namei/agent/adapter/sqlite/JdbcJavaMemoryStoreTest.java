@@ -16,6 +16,7 @@ import io.namei.agent.kernel.memory.MemorySearchRequest;
 import io.namei.agent.kernel.memory.MemorySourceKind;
 import io.namei.agent.kernel.memory.MemoryType;
 import io.namei.agent.kernel.memory.MemoryWriteCommand;
+import io.namei.agent.kernel.memory.MemoryWriteReplayQuery;
 import io.namei.agent.kernel.memory.MemoryWriteResult;
 import io.namei.agent.kernel.memory.MemoryWriteStatus;
 import java.nio.file.Path;
@@ -150,6 +151,16 @@ class JdbcJavaMemoryStoreTest {
               assertThat(mutation.argumentHash()).isEqualTo(command.argumentHash());
             });
     assertThat(rawLong("SELECT COUNT(*) FROM memory_mutations")).isEqualTo(1);
+    assertThat(
+            store.replayUpsert(
+                new MemoryWriteReplayQuery(
+                    new MemoryMutationKey(SCOPE_A, "req-1"), command.argumentHash())))
+        .contains(first);
+    assertThat(
+            store.replayUpsert(
+                new MemoryWriteReplayQuery(
+                    new MemoryMutationKey(SCOPE_A, "missing"), command.argumentHash())))
+        .isEmpty();
 
     var changed =
         command(
@@ -168,6 +179,12 @@ class JdbcJavaMemoryStoreTest {
     assertThatThrownBy(() -> store.upsert(changed))
         .isInstanceOf(MemoryIdempotencyConflictException.class)
         .hasMessage("Memory Request ID 已绑定其他参数");
+    assertThatThrownBy(
+            () ->
+                store.replayUpsert(
+                    new MemoryWriteReplayQuery(
+                        new MemoryMutationKey(SCOPE_A, "req-1"), changed.argumentHash())))
+        .isInstanceOf(MemoryIdempotencyConflictException.class);
     assertThatThrownBy(
             () ->
                 store.delete(
@@ -295,6 +312,14 @@ class JdbcJavaMemoryStoreTest {
         new MemoryDeleteCommand(
             SCOPE_A, "req-delete", "memory-1", "f".repeat(64), NOW.plusSeconds(1)));
 
+    assertThatThrownBy(
+            () ->
+                store.replayUpsert(
+                    new MemoryWriteReplayQuery(
+                        new MemoryMutationKey(SCOPE_A, "req-write"), write.argumentHash())))
+        .isInstanceOf(JavaMemoryRepositoryException.class)
+        .extracting(exception -> ((JavaMemoryRepositoryException) exception).failure())
+        .isEqualTo(JavaMemoryRepositoryFailure.OPERATION_FAILED);
     assertThatThrownBy(() -> store.upsert(write))
         .isInstanceOf(JavaMemoryRepositoryException.class)
         .extracting(exception -> ((JavaMemoryRepositoryException) exception).failure())

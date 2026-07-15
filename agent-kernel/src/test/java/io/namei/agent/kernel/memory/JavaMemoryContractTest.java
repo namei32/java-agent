@@ -163,6 +163,11 @@ class JavaMemoryContractTest {
           }
 
           @Override
+          public Optional<MemoryWriteResult> replayUpsert(MemoryWriteReplayQuery query) {
+            return Optional.empty();
+          }
+
+          @Override
           public MemoryWriteResult upsert(MemoryWriteCommand command) {
             return new MemoryWriteResult(MemoryWriteStatus.CREATED, item);
           }
@@ -177,6 +182,11 @@ class JavaMemoryContractTest {
     assertThat(store.loadCandidates(searchRequest())).containsExactly(item);
     assertThat(store.list(SCOPE, 100)).containsExactly(item);
     assertThat(writer.findMutation(new MemoryMutationKey(SCOPE, "req-write-001"))).isEmpty();
+    assertThat(
+            writer.replayUpsert(
+                new MemoryWriteReplayQuery(
+                    new MemoryMutationKey(SCOPE, "req-write-001"), "c".repeat(64))))
+        .isEmpty();
     assertThat(writer.upsert(writeCommand()).status()).isEqualTo(MemoryWriteStatus.CREATED);
   }
 

@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R4.2
-- 当前执行状态：Task J0 至 J5 已完成；下一步是 Task J6 Memory Write/List/Delete Application Use Case
+- 当前执行状态：Task J0 至 J6 已完成；下一步是 Task J7 Memory HTTP API
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
@@ -203,12 +203,12 @@ RED/GREEN 记录（2026-07-15）：
 
 ## Task J6：Memory Write/List/Delete Application Use Case
 
-状态：待实施。
+状态：已完成（2026-07-15）。
 
 先新增 `MemoryManagementServiceTest`。RED 覆盖：
 
 - Session ID 生成不可逆 Scope Binding。
-- 写入先 Embedding、后事务；Embedding 失败零 Store 调用。
+- 写入先只读重放探测，再 Embedding、后写事务；成功重试零 Embedding，Embedding 失败零 Store Mutation。
 - Hash 只压缩空白，不折叠大小写。
 - List 不返回 Vector、Hash、Scope 或 Provider 配置。
 - Delete Scope 隔离、Request ID 幂等和 `NOT_FOUND`。
@@ -224,6 +224,15 @@ RED/GREEN 记录（2026-07-15）：
 ```
 
 提交：`feat: 增加显式记忆管理用例`。
+
+实施证据：
+
+- RED：聚焦命令在 Test Compile 因 `MemoryWriteReplayQuery`、Write/List/Delete 用例、公开投影和 Memory Item ID Generator 缺失而失败，共 29 个目标符号错误。
+- GREEN：聚焦测试实际执行 8 个测试，0 Failure、0 Error、0 Skipped；覆盖 J1 Golden Scope、Content Hash、写入/删除 Argument Hash、空白规范化、Scope 隔离、公开字段和输入拒绝。
+- 为满足“重试零额外 Embedding”补齐 `MemoryWritePort.replayUpsert`：SQLite 在同一只读事务中读取 Mutation Ledger 与当前 Item；相同 Hash 返回当前快照，不同 Hash 稳定冲突，已物理删除的旧 UPSERT 继续 Fail Closed。
+- 写入顺序固定为只读重放探测、Embedding、服务端安全 ID、事务 Upsert；Embedding 调用或响应失败不会生成 ID，也不会产生 Store Mutation。首次请求允许一次只读重放探测，该语义已同步回 Contract 与 Spec。
+- List 固定当前 Scope、最多 100 条且只投影 8 个公开字段；Delete 使用 Scope、Request ID 与 V1 Argument Hash，保持 `DELETED`/`NOT_FOUND` 幂等结果。
+- 聚焦 SQLite/Kernel 回归实际执行 Kernel 5 个、SQLite 11 个测试并全部通过；测试只使用 Fake Embedding 和临时数据库，未访问网络、真实 Workspace 或 Python 数据。
 
 ## Task J7：Memory HTTP API
 

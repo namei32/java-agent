@@ -3,7 +3,7 @@ package io.namei.agent.application;
 import java.security.SecureRandom;
 import java.util.HexFormat;
 
-public final class SecureIdGenerator implements IdGenerator {
+public final class SecureIdGenerator implements IdGenerator, MemoryItemIdGenerator {
   private final SecureRandom random;
 
   public SecureIdGenerator() {
@@ -27,6 +27,11 @@ public final class SecureIdGenerator implements IdGenerator {
   @Override
   public String newIdempotencyKey() {
     return "operation-" + random128BitId();
+  }
+
+  @Override
+  public String newMemoryItemId() {
+    return "memory-" + random128BitId();
   }
 
   private String random128BitId() {
