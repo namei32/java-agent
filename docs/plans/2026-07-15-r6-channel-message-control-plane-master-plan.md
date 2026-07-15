@@ -1,8 +1,9 @@
 # R6 渠道、消息总线与控制面总体工作计划
 
-- 状态：草案，待批准
+- 状态：已批准，实施中
 - 日期：2026-07-15
 - 阶段：R6
+- 批准记录：用户要求完整实现本计划；各子阶段仍须先冻结对应 Contract、Spec、ADR 和实施计划，真实网络、Secret 与付费 Smoke 保留独立授权门禁
 - 功能基线：R6.1 实现提交 `ca04083`；分支 `agent/r6-message-contract` 已推送，尚未创建 PR
 - Python 参考：`bus/`、`bootstrap/channel_host.py`、`bootstrap/channels.py`、`agent/provider.py` 和 Dashboard API
 - 关联 Roadmap：[Java 重写 Roadmap](../roadmap/java-rewrite-roadmap.md)
@@ -63,10 +64,10 @@ R6 完成不等于 Python 全部渠道、插件或主动能力已经迁移。Sch
 | 子阶段 | 名称 | 状态 | 主要结果 |
 | --- | --- | --- | --- |
 | R6.1 | 版本化 Message Contract Runtime | 实现完成，待 PR/远程 CI/合并 | Java-owned Fixture、消息值、唯一终态、取消原因、有界背压、安全终态投影 |
-| R6.2 | 本地 CLI 与 Provider Streaming | 待批准 | 供应商无关流式 Port、真实 Adapter、CLI 纵向闭环 |
-| R6.3 | Channel Host 与首个真实渠道 | 待批准 | 统一宿主、身份路由、代表性真实渠道、网络生命周期 |
-| R6.4 | 渠道幂等、可靠投递与恢复 | 条件阶段，待持久化 Contract | 入站去重、投递状态、崩溃恢复和有界重试 |
-| R6.5 | Dashboard 与最小控制面 | 待批准 | 安全状态、事件流和活动 Turn 取消 |
+| R6.2 | 本地 CLI 与 Provider Streaming | 总体范围已批准，待子阶段 Contract | 供应商无关流式 Port、真实 Adapter、CLI 纵向闭环 |
+| R6.3 | Channel Host 与首个真实渠道 | 总体范围已批准，待子阶段 Contract | 统一宿主、身份路由、代表性真实渠道、网络生命周期 |
+| R6.4 | 渠道幂等、可靠投递与恢复 | 条件范围已批准，待持久化 Contract | 入站去重、投递状态、崩溃恢复和有界重试 |
+| R6.5 | Dashboard 与最小控制面 | 总体范围已批准，待子阶段 Contract | 安全状态、事件流和活动 Turn 取消 |
 | R6.6 | 阶段总验收与灰度 | 待前序完成 | Golden、故障/压力、安全审计、Runbook 和回退 |
 
 ## 4. R6.1：版本化 Message Contract Runtime

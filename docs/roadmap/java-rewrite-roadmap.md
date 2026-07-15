@@ -183,7 +183,7 @@ R5.1 最终门禁通过：默认 284 个测试（270 单元、14 集成）、`fa
 
 状态：R6.1 已实现并验证；R6 整体仍在进行中。
 
-R6.1 至 R6.6 的建议实施顺序见 [R6 渠道、消息总线与控制面总体工作计划](../plans/2026-07-15-r6-channel-message-control-plane-master-plan.md)。该总体计划当前为草案，后续子阶段仍须分别批准 Contract、Spec 和实施计划。
+R6.1 至 R6.6 的实施顺序见 [R6 渠道、消息总线与控制面总体工作计划](../plans/2026-07-15-r6-channel-message-control-plane-master-plan.md)。总体计划已批准并进入实施，后续子阶段仍须先分别冻结 Contract、Spec、ADR 和实施计划。
 
 R6.1 已交付：
 
