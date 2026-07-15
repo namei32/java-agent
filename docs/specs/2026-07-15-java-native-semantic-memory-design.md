@@ -62,6 +62,8 @@ ChatService -> MemoryRetrievalPort -> EmbeddingPort -> Semantic Search
 - `busy_timeout` 有界。
 - 写入、强化、删除和 Mutation Ledger 使用显式事务。
 - Schema Migration 与正常写入不能并发。
+- Initializer 只接受固定文件名 `agent-memory.db`；不存在或空库直接创建 V1，合法 V0 Marker 先经 SQLite Backup API 备份再迁移。
+- V1 启动只验证不改写 Schema Timestamp 或数据；同名不兼容对象、额外表、View、Trigger、损坏库和任意未来版本 Fail Closed。
 - SQL 不拼接用户字段；所有值使用参数。
 
 ### 3.3 `adapter-spring-ai`

@@ -69,11 +69,13 @@ R4.2 把 R4.1 的生产 NoOp Retrieval 推进为完整、可用且可删除的 J
 ### 4.1 固定路径与 Schema 所有权
 
 - 数据库固定为 `${workspace}/memory/agent-memory.db`。
+- Schema Initializer 只接受文件名 `agent-memory.db`，拒绝被指向 `memory2.db` 或其他文件。
 - HTTP、模型、Tool 和用户输入不能提供数据库路径。
 - Java 是唯一 Schema Owner 和 Writer；不存在 Python/Java 双写。
 - 新库使用 `memory_schema` 记录单调递增版本。发现未来版本、同名不兼容列或损坏数据库时启动失败，不猜测修复。
 - Schema 升级前必须通过 SQLite Backup API 生成一致性备份；备份失败时零 DDL/DML。
 - 新建空库不需要迁移备份；删除旧 Python 记忆不是 Schema 初始化的一部分。
+- R4.2 实现保留仅含合法 `memory_schema` 且 `version=0` 的 Java 内部迁移锚点；它没有生产 Writer。V0 升 V1 必须先备份，其他缺表、额外表、View、Trigger、超大或未来版本均拒绝。
 
 ### 4.2 V1 Schema
 

@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R4.2
-- 当前执行状态：Task J0 至 J2 已完成；下一步是 Task J3 Schema 与 Float32 Vector Codec
+- 当前执行状态：Task J0 至 J3 已完成；下一步是 Task J4 SQLite Writer、Reader 与 Mutation 幂等
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
@@ -93,7 +93,7 @@ RED/GREEN 记录（2026-07-15）：
 
 ## Task J3：Schema 与 Float32 Vector Codec
 
-状态：待实施。
+状态：已完成。
 
 先新增 `JavaMemorySchemaInitializerTest` 与 `Float32VectorCodecTest`。RED 覆盖：
 
@@ -112,6 +112,15 @@ RED/GREEN 记录（2026-07-15）：
   -Dtest=JavaMemorySchemaInitializerTest,Float32VectorCodecTest \
   -Dsurefire.failIfNoSpecifiedTests=false test
 ```
+
+RED/GREEN 记录（2026-07-15）：
+
+- RED：聚焦命令因 `JavaMemorySchemaInitializer`、稳定 Repository Failure 类型和 `Float32VectorCodec` 缺失而在 Test Compile 失败，属于有效目标行为缺失。
+- GREEN：最终同一聚焦命令实际执行 Schema 7 个、Codec 3 个，共 10 个测试，0 Failure、0 Error、0 Skipped。
+- Schema 覆盖固定文件名、新/空库 V1 创建、精确表/列/唯一键/索引、重复初始化零改写、损坏库、同名不兼容、未来版本、V0 SQLite Backup API 升级和备份失败零 DDL/DML。
+- 自审修复：新增 `4294967297` 未来版本回归，先复现 `getInt()` 截断为 V1 的 RED，再改为 `long` 边界检查；聚焦测试 1 个通过。
+- Codec 覆盖 J1 Fixture 的 Little-Endian Hex、Defensive Copy、维度/BLOB 长度、NaN、Infinity 和零范数。
+- `adapter-sqlite` Spotless 通过；所有数据库、备份和旧 `memory2.db` 哨兵都只位于 JUnit 临时目录。
 
 提交：`feat: 建立 Java 原生记忆 Schema`。
 
