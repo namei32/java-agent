@@ -54,7 +54,7 @@ HTTP ChatController
   -> HTTP ChatResponse
 ```
 
-它已经支持同步非流式被动聊天、SQLite 会话恢复、OpenAI-compatible 模型、有界只读 Tool Loop、只读 Markdown Profile、Java 原生显式语义记忆/临时 Context Frame 和原子轮次提交。Memory 默认 `DISABLED`，只有显式 `JAVA_NATIVE` 才启用语义检索；它仍不包含 Python 的 Message Bus、自动 Memory 写回、MCP、渠道和主动能力。
+它已经支持同步非流式被动聊天、SQLite 会话恢复、OpenAI-compatible 模型、有界只读 Tool Loop、只读 Markdown Profile、Java 原生显式语义记忆/临时 Context Frame、静态 stdio MCP 只读客户端和原子轮次提交。Memory 与 MCP 默认均为 `DISABLED`；它仍不包含 Python 的 Message Bus、自动 Memory 写回、远程/副作用 MCP、渠道和主动能力。
 
 ## 3. 固定技术基线
 
@@ -247,12 +247,12 @@ testdata/golden/
 
 ## 12. 当前下一步
 
-R4.1 与 R4.2 已完成，Memory 默认仍为 `DISABLED`，自动写回和 Optimizer 继续冻结。下一主线候选是 R5.1 MCP 只读客户端：
+R4.1、R4.2 与 R5.1 已完成，Memory/MCP 默认仍为 `DISABLED`，自动写回、Optimizer、真实 MCP Server 和副作用能力继续冻结。下一主线是 R6 的消息总线与 CLI 最小纵向切片：
 
-1. 先批准 MCP Contract、Spec、SDK ADR 和 Java-owned Fixture；
-2. 只实现静态配置、stdio、明确 Allowlist 的 `READ_ONLY` Tool；
-3. 复用现有 Tool Runtime 的预算、取消、风险和会话提交语义；
-4. 默认零 MCP 文件、子进程和网络，真实 Server 与副作用能力另行批准；
-5. R5.1 门禁通过后，再按 Roadmap 进入远程 MCP、渠道、插件和后台能力。
+1. 先冻结版本化 `InboundMessage`、`OutboundMessage`、生命周期事件和错误 Contract；
+2. 固定流式 Delta、完成、取消、断线、背压和乱序语义；
+3. 先接入本地 CLI，保持 Channel Adapter 无业务编排；
+4. 复用现有 Chat/Tool/Memory/MCP Application 能力，不同时引入真实渠道或新的数据写入协议；
+5. R5.2 远程 MCP、认证和真实 Server 作为独立高风险范围另行批准，不扩张 R5.1 权限。
 
-具体边界和 TDD 顺序见 [MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)。该计划当前仍是草案，不能作为实施授权。
+R5.1 的完成边界与验证证据见 [MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)。R6 仍须先形成新的 Contract、Spec 和 Plan，再进入实现。

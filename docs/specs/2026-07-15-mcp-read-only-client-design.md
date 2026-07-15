@@ -1,6 +1,6 @@
 # MCP 只读客户端纵向切片设计
 
-- 状态：已批准，实施中
+- 状态：已实现并验证
 - 日期：2026-07-15
 - 批准记录：2026-07-15，用户要求先合并并推送既有 Java 主线，随后开始实现 MCP 只读客户端纵向切片
 - 阶段：R5.1
@@ -32,7 +32,7 @@ Strict static config
 
 - Maven 坐标 `io.modelcontextprotocol.sdk:mcp:2.0.0` 可解析，许可证为 MIT。
 - SDK Client 支持 MCP `2025-11-25`、初始化、Tools、分页和 Tools List Changed Consumer。
-- `mcp-json-jackson3` 使用 Jackson Databind `3.0.3`，可与当前 Spring Boot 4 / Jackson 3 基线共存。
+- `mcp-json-jackson3` 使用 Jackson 3 API；当前 Spring Boot 4 Dependency Management 下的有效 Reactor 依赖树解析为 Jackson Databind `3.1.4`，兼容测试已通过。
 - `mcp-core` 引入 Reactor；通过独立 Adapter 可以阻止 Reactor 进入 Kernel/Application。
 - 内置 `StdioClientTransport` 使用无界 `BufferedReader.readLine()`，不能在 JSON 反序列化前执行 Wire 字节上限。
 - `ServerParameters` 会默认继承 HOME、PATH、SHELL 等变量，且内置 Transport 在现有 Environment 上追加值，不满足“先清空再 Allowlist”。
