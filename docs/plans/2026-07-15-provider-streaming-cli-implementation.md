@@ -176,6 +176,8 @@ RED/GREEN：
 
 门禁只使用本地桩、Java Reference MCP Server 和临时 SQLite；未运行 Python、真实外部 Provider/渠道、Secret、付费调用或用户工作区。真实 Provider Streaming Smoke 与真实渠道验收仍需分别取得网络、凭证、费用和数据范围授权。
 
+远程 CI 补充证据（PR #5）：首次远程 `failure` Job 在 `cancellationClosesOnlyTheTargetSseConnection` 等待首个并发 Delta 的固定 2 秒处失败，而默认与 `compat` Job 通过；日志显示生产取消断言尚未执行，属于受限 Runner 调度放大的测试启动竞态。修复只调整测试设施：Stub Server 先等待两条 SSE 连接均到达再释放事件，测试改用有界 Awaitility 等待，生产 Cancellation Registry 未修改。原失败方法连续执行 3 次均通过，完整 `failure` Profile 再次通过 99 个测试，随后推送触发远程复验。
+
 ## 3. 提交策略
 
 - D0：文档与决策。

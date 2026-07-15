@@ -8,8 +8,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 final class OpenAiStubServer implements AutoCloseable {
@@ -45,6 +47,10 @@ final class OpenAiStubServer implements AutoCloseable {
 
   void respondSse(Duration eventDelay, List<String> events) {
     response = Response.sse(events, eventDelay);
+  }
+
+  void respondConcurrentSse(int expectedConnections, Duration eventDelay, List<String> events) {
+    response = Response.concurrentSse(expectedConnections, events, eventDelay);
   }
 
   void reset() {
@@ -138,6 +144,7 @@ final class OpenAiStubServer implements AutoCloseable {
         exchange.getResponseBody().write(body);
       } else {
         exchange.sendResponseHeaders(selected.status(), 0);
+        selected.awaitConnections();
         for (String event : selected.events()) {
           writeEvent(exchange, event);
           Thread.sleep(selected.eventDelay());
@@ -173,17 +180,42 @@ final class OpenAiStubServer implements AutoCloseable {
       Duration initialDelay,
       String contentType,
       List<String> events,
-      Duration eventDelay) {
+      Duration eventDelay,
+      CountDownLatch connectionsReady) {
     private Response {
       events = List.copyOf(events);
     }
 
     private static Response json(int status, String body, Duration delay) {
-      return new Response(status, body, delay, "application/json", List.of(), Duration.ZERO);
+      return new Response(
+          status, body, delay, "application/json", List.of(), Duration.ZERO, new CountDownLatch(0));
     }
 
     private static Response sse(List<String> events, Duration eventDelay) {
-      return new Response(200, "", Duration.ZERO, "text/event-stream", events, eventDelay);
+      return new Response(
+          200, "", Duration.ZERO, "text/event-stream", events, eventDelay, new CountDownLatch(0));
+    }
+
+    private static Response concurrentSse(
+        int expectedConnections, List<String> events, Duration eventDelay) {
+      if (expectedConnections < 2) {
+        throw new IllegalArgumentException("expectedConnections must be at least 2");
+      }
+      return new Response(
+          200,
+          "",
+          Duration.ZERO,
+          "text/event-stream",
+          events,
+          eventDelay,
+          new CountDownLatch(expectedConnections));
+    }
+
+    private void awaitConnections() throws IOException, InterruptedException {
+      connectionsReady.countDown();
+      if (!connectionsReady.await(10, TimeUnit.SECONDS)) {
+        throw new IOException("Timed out waiting for concurrent SSE connections");
+      }
     }
   }
 }

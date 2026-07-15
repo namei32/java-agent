@@ -175,7 +175,7 @@ class OpenAiCompatibleStreamingAdapterIT {
                         firstDelta.countDown();
                       },
                       cancellation));
-      assertThat(firstDelta.await(2, SECONDS)).isTrue();
+      await().atMost(Duration.ofSeconds(10)).until(() -> firstDelta.getCount() == 0);
 
       cancellation.cancel();
 
@@ -189,7 +189,8 @@ class OpenAiCompatibleStreamingAdapterIT {
   @Test
   @Tag("failure")
   void cancellationClosesOnlyTheTargetSseConnection() throws Exception {
-    SERVER.respondSse(
+    SERVER.respondConcurrentSse(
+        2,
         Duration.ofMillis(250),
         List.of(
             OpenAiStubServer.textDelta("首段"),
@@ -222,8 +223,9 @@ class OpenAiCompatibleStreamingAdapterIT {
                         secondStarted.countDown();
                       },
                       CancellationSignal.none()));
-      assertThat(firstStarted.await(2, SECONDS)).isTrue();
-      assertThat(secondStarted.await(2, SECONDS)).isTrue();
+      await()
+          .atMost(Duration.ofSeconds(10))
+          .until(() -> firstStarted.getCount() == 0 && secondStarted.getCount() == 0);
 
       firstCancellation.cancel();
 
