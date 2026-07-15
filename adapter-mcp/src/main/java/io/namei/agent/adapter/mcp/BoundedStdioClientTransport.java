@@ -32,6 +32,7 @@ import reactor.core.publisher.Mono;
 
 /** Stdio transport with pre-deserialization wire bounds and adapter-owned cancellation. */
 final class BoundedStdioClientTransport implements McpClientTransport {
+  private static final int MAX_PENDING_REQUESTS = 256;
   private static final TypeRef<Map<String, Object>> MAP_TYPE = new TypeRef<>() {};
   private static final Consumer<JSONRPCMessage> NOOP_OBSERVER = ignored -> {};
 
@@ -50,6 +51,7 @@ final class BoundedStdioClientTransport implements McpClientTransport {
   private final CountDownLatch closed = new CountDownLatch(1);
   private final ThreadLocal<McpCallHandle> currentCall = new ThreadLocal<>();
   private final ConcurrentHashMap<McpCallHandle, Boolean> calls = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Object, Boolean> pendingRequestIds = new ConcurrentHashMap<>();
 
   private volatile Function<Mono<JSONRPCMessage>, Mono<JSONRPCMessage>> inboundHandler;
   private volatile Consumer<Throwable> exceptionHandler = ignored -> {};
@@ -157,6 +159,10 @@ final class BoundedStdioClientTransport implements McpClientTransport {
     return current.toHandle();
   }
 
+  boolean failed() {
+    return failure.get() != null;
+  }
+
   void trySendCancellation(Object requestId) {
     try {
       var notification =
@@ -203,20 +209,35 @@ final class BoundedStdioClientTransport implements McpClientTransport {
   private void writeMessage(JSONRPCMessage message) {
     awaitConnection();
     McpCallHandle handle = null;
-    if (message instanceof McpSchema.JSONRPCRequest request
-        && McpSchema.METHOD_TOOLS_CALL.equals(request.method())) {
-      handle = currentCall.get();
-      if (handle == null) {
+    Object requestId = null;
+    if (message instanceof McpSchema.JSONRPCRequest request) {
+      requestId = request.id();
+      if (pendingRequestIds.size() >= MAX_PENDING_REQUESTS
+          || pendingRequestIds.putIfAbsent(requestId, Boolean.TRUE) != null) {
         throw unavailable();
       }
-      handle.bind(request.id());
-    }
-    synchronized (writeLock) {
-      ensureAvailable();
-      writeEncoded(message);
-      if (handle != null) {
-        handle.markWritten();
+      if (McpSchema.METHOD_TOOLS_CALL.equals(request.method())) {
+        handle = currentCall.get();
+        if (handle == null) {
+          pendingRequestIds.remove(requestId);
+          throw unavailable();
+        }
+        handle.bind(request.id());
       }
+    }
+    try {
+      synchronized (writeLock) {
+        ensureAvailable();
+        writeEncoded(message);
+        if (handle != null) {
+          handle.markWritten();
+        }
+      }
+    } catch (RuntimeException exception) {
+      if (requestId != null) {
+        pendingRequestIds.remove(requestId);
+      }
+      throw exception;
     }
   }
 
@@ -269,6 +290,10 @@ final class BoundedStdioClientTransport implements McpClientTransport {
           return;
         }
         JSONRPCMessage message = decodeMessage(line);
+        if (message instanceof McpSchema.JSONRPCResponse response
+            && pendingRequestIds.remove(response.id()) == null) {
+          throw unavailable();
+        }
         observer.accept(message);
         Function<Mono<JSONRPCMessage>, Mono<JSONRPCMessage>> handler = inboundHandler;
         if (handler == null) {
@@ -369,6 +394,7 @@ final class BoundedStdioClientTransport implements McpClientTransport {
     }
     try {
       calls.keySet().forEach(McpCallHandle::cancel);
+      pendingRequestIds.clear();
       closeQuietly(stdin);
       Process current = process;
       if (current != null && current.isAlive() && !waitFor(current, shutdownTimeout)) {

@@ -75,7 +75,7 @@ final class DefaultMcpRuntime implements McpRuntime {
       switch (connection.state()) {
         case READY -> ready++;
         case STALE -> stale++;
-        case STARTING, UNAVAILABLE, CLOSED -> unavailable++;
+        case STARTING, RECONNECTING, UNAVAILABLE, CLOSED -> unavailable++;
       }
     }
     McpRuntimeStatus.State aggregate =

@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -17,11 +19,14 @@ public final class McpJavaReferenceServer {
   private static final ObjectMapper JSON = new ObjectMapper();
   private static final Object WRITE_LOCK = new Object();
   private static final AtomicReference<Object> SLOW_REQUEST_ID = new AtomicReference<>();
+  private static List<String> scenarioArguments = List.of();
 
   private McpJavaReferenceServer() {}
 
   public static void main(String[] arguments) throws Exception {
     String scenario = arguments.length == 0 ? "normal" : arguments[0];
+    scenarioArguments =
+        arguments.length <= 1 ? List.of() : List.of(arguments).subList(1, arguments.length);
     if ("kill-on-close".equals(scenario)) {
       Runtime.getRuntime()
           .addShutdownHook(
@@ -60,8 +65,8 @@ public final class McpJavaReferenceServer {
       case "notifications/initialized" -> {
         // Lifecycle notification has no response.
       }
-      case "tools/list" -> listTools(message, id, writer);
-      case "tools/call" -> callTool(message, id, writer);
+      case "tools/list" -> listTools(scenario, message, id, writer);
+      case "tools/call" -> callTool(scenario, message, id, writer);
       case "notifications/cancelled" -> cancel(message, writer);
       default -> {
         if (id != null) {
@@ -87,13 +92,25 @@ public final class McpJavaReferenceServer {
       }
       return;
     }
+    if ("malformed-json".equals(scenario) || "stdout-noise".equals(scenario)) {
+      synchronized (WRITE_LOCK) {
+        writer.println(
+            "malformed-json".equals(scenario) ? "{private-malformed-json" : "private-stdout-noise");
+        writer.flush();
+      }
+      return;
+    }
+    if ("slow-reconnect".equals(scenario) && markerExists(0)) {
+      Thread.sleep(600);
+    }
+    Object responseId = "wrong-id".equals(scenario) ? Objects.requireNonNull(id) + "-wrong" : id;
     send(
         writer,
         Map.of(
             "jsonrpc",
             "2.0",
             "id",
-            Objects.requireNonNull(id),
+            Objects.requireNonNull(responseId),
             "result",
             Map.of(
                 "protocolVersion",
@@ -104,7 +121,8 @@ public final class McpJavaReferenceServer {
                 Map.of("name", "java-reference", "version", "1.0.0"))));
   }
 
-  private static void listTools(JsonNode message, Object id, PrintWriter writer) throws Exception {
+  private static void listTools(String scenario, JsonNode message, Object id, PrintWriter writer)
+      throws Exception {
     JsonNode cursorNode = message.path("params").path("cursor");
     String cursor =
         cursorNode.isMissingNode() || cursorNode.isNull() ? null : cursorNode.asString();
@@ -128,7 +146,9 @@ public final class McpJavaReferenceServer {
               "result",
               Map.of(
                   "tools",
-                  List.of(tool("echo", echoSchema()), tool("slow", Map.of())),
+                  List.of(
+                      tool("echo", echoSchema(), catalogDescriptionSuffix(scenario)),
+                      tool("slow", Map.of(), catalogDescriptionSuffix(scenario))),
                   "nextCursor",
                   "page-2")));
       return;
@@ -144,12 +164,12 @@ public final class McpJavaReferenceServer {
             Map.of(
                 "tools",
                 List.of(
-                    tool("remote_error", Map.of()),
-                    tool("image", Map.of()),
-                    tool("env_probe", Map.of())))));
+                    tool("remote_error", Map.of(), catalogDescriptionSuffix(scenario)),
+                    tool("image", Map.of(), catalogDescriptionSuffix(scenario)),
+                    tool("env_probe", Map.of(), catalogDescriptionSuffix(scenario))))));
   }
 
-  private static void callTool(JsonNode message, Object id, PrintWriter writer) {
+  private static void callTool(String scenario, JsonNode message, Object id, PrintWriter writer) {
     String name = message.path("params").path("name").asString();
     JsonNode toolArguments = message.path("params").path("arguments");
     Thread.ofVirtual()
@@ -159,11 +179,22 @@ public final class McpJavaReferenceServer {
               try {
                 switch (name) {
                   case "echo" -> {
+                    if (("sudden-until-marker".equals(scenario)
+                            || "catalog-change".equals(scenario)
+                            || "slow-reconnect".equals(scenario))
+                        && !markerExists(0)) {
+                      Runtime.getRuntime().halt(74);
+                    }
                     long delay = toolArguments.path("delayMillis").asLong(0);
                     if (delay > 0) {
                       Thread.sleep(Math.min(delay, 2_000));
                     }
                     String text = toolArguments.path("text").asString();
+                    if ("list-changed".equals(scenario)) {
+                      send(
+                          writer,
+                          Map.of("jsonrpc", "2.0", "method", "notifications/tools/list_changed"));
+                    }
                     result(writer, id, List.of(Map.of("type", "text", "text", text)), false);
                   }
                   case "remote_error" ->
@@ -258,16 +289,25 @@ public final class McpJavaReferenceServer {
     }
   }
 
-  private static Map<String, Object> tool(String name, Map<String, Object> schema) {
+  private static Map<String, Object> tool(
+      String name, Map<String, Object> schema, String descriptionSuffix) {
     return Map.of(
         "name",
         name,
         "description",
-        "Java reference " + name,
+        "Java reference " + name + descriptionSuffix,
         "inputSchema",
         schema,
         "annotations",
         Map.of("readOnlyHint", false));
+  }
+
+  private static String catalogDescriptionSuffix(String scenario) {
+    return "catalog-change".equals(scenario) && markerExists(1) ? " changed" : "";
+  }
+
+  private static boolean markerExists(int index) {
+    return scenarioArguments.size() > index && Files.exists(Path.of(scenarioArguments.get(index)));
   }
 
   private static Map<String, Object> echoSchema() {

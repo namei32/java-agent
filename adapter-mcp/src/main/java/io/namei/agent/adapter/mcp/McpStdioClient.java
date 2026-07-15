@@ -133,7 +133,7 @@ final class McpStdioClient implements AutoCloseable {
       if (future != null) {
         future.cancel(true);
       }
-      return McpCallOutcome.timeout();
+      return transport.failed() ? McpCallOutcome.unavailable() : McpCallOutcome.timeout();
     } catch (ExecutionException exception) {
       if (handle != null && handle.isCancelled()) {
         throw cancelled();
@@ -142,7 +142,7 @@ final class McpStdioClient implements AutoCloseable {
         if (handle != null) {
           handle.cancel();
         }
-        return McpCallOutcome.timeout();
+        return transport.failed() ? McpCallOutcome.unavailable() : McpCallOutcome.timeout();
       }
       return McpCallOutcome.unavailable();
     } catch (RuntimeException exception) {
