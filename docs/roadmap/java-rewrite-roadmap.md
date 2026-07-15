@@ -22,11 +22,11 @@
 | 阶段 | 名称 | 状态 | 主要结果 |
 | --- | --- | --- | --- |
 | R0 | 治理与基线 | 部分完成 | 被动聊天、配置和 Tool Golden 已建立；核心 Tool/Lifecycle Contract 已批准 |
-| R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、六模块、CI/质量门禁 |
+| R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、模块化 Reactor、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
 | R4 | 上下文与记忆 | R4.1、R4.2 已完成 | Java 原生显式记忆管理与语义检索闭环已通过最终门禁；自动写回/Optimizer 仍冻结 |
-| R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
+| R5 | MCP 与外部工具 | R5.1 已完成 | 静态 stdio 只读 Client、工具发现/投影、取消、隔离和进程回收已验收；远程与副作用范围未开始 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
 | R8 | 主动运行时 | 未开始 | Scheduler、Proactive、Drift、Subagent |
@@ -161,9 +161,22 @@ R4.2 已批准依据：
 
 ## R5：MCP 与外部工具
 
-范围包括 MCP 配置、连接生命周期、工具发现、名称冲突、超时、重连和隔离。MCP Server 不得把框架对象泄漏到核心模块。
+状态：R5.1 已实现并验证。完成默认关闭、静态版本化配置、stdio-only、官方 MCP Java SDK `2.0.0` 隔离、Adapter 自有有界 Transport、分页 `tools/list`、稳定名称、安全 Schema、只读 `tools/call`、Wire Cancellation、Stale、一次有界重连、Chat/SQLite 提交闭环和 Bootstrap Destroy Hook。
 
-退出门禁：参考 Server 的发现与调用 Golden 通过；单个 Server 故障不会使主聊天不可用；连接和进程能可靠回收。
+R5.1 最终门禁通过：默认 284 个测试（270 单元、14 集成）、`failure` 63 个（62 单元、1 集成）、`compat` 323 个（308 单元、15 集成），均为零失败、零错误、零跳过。Kernel 生产依赖仍为空；SDK/Reactor 只存在于 `adapter-mcp`。Java Reference Server 测试后无存活进程，Secret、运行时文件、生产 Python/Shell/HTTP Transport/动态管理/副作用能力扫描均无命中。
+
+当前生产和模板保持 `AGENT_MCP_MODE=DISABLED`。已完成结果只覆盖仓库内 Java Reference Server，不授权真实 MCP Server、Secret、网络、Streamable HTTP、Resources/Prompts/Sampling、动态 Catalog 或副作用 Tool。
+
+实现依据：
+
+- [MCP 只读客户端与 Tool Runtime 契约](../contracts/mcp-client-tool-runtime.md)
+- [ADR-0006：采用官方 MCP Java SDK 并自持有界 stdio Transport](../adr/0006-use-official-mcp-java-sdk.md)
+- [MCP 只读客户端纵向切片设计](../specs/2026-07-15-mcp-read-only-client-design.md)
+- [MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)
+
+后续 R5 子阶段如需 Streamable HTTP、认证、真实 Server 或副作用 Tool，必须重新冻结相应网络、身份、审批、Ledger、沙箱和数据 Contract，不能沿用 R5.1 授权。
+
+退出门禁：R5.1 已满足参考 Server 发现/调用 Golden、单 Server 故障隔离以及连接/进程可靠回收；后续 R5 子阶段按各自新 Contract 重新验收。
 
 ## R6：渠道、消息总线与控制面
 

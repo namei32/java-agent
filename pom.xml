@@ -21,6 +21,7 @@
     <module>adapter-workspace</module>
     <module>adapter-sqlite</module>
     <module>adapter-spring-ai</module>
+    <module>adapter-mcp</module>
     <module>agent-bootstrap</module>
   </modules>
 
@@ -28,6 +29,7 @@
     <java.version>21</java.version>
     <maven.version>3.9.16</maven.version>
     <spring-ai.version>2.0.0</spring-ai.version>
+    <mcp-java-sdk.version>2.0.0</mcp-java-sdk.version>
     <sqlite-jdbc.version>3.53.2.0</sqlite-jdbc.version>
     <tomlj.version>1.1.1</tomlj.version>
     <archunit.version>1.4.2</archunit.version>
@@ -48,6 +50,11 @@
         <version>${spring-ai.version}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.modelcontextprotocol.sdk</groupId>
+        <artifactId>mcp</artifactId>
+        <version>${mcp-java-sdk.version}</version>
       </dependency>
       <dependency>
         <groupId>org.xerial</groupId>

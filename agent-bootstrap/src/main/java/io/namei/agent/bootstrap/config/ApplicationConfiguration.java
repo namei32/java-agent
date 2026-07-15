@@ -1,5 +1,9 @@
 package io.namei.agent.bootstrap.config;
 
+import io.namei.agent.adapter.mcp.McpConfigLoader;
+import io.namei.agent.adapter.mcp.McpMode;
+import io.namei.agent.adapter.mcp.McpRuntime;
+import io.namei.agent.adapter.mcp.McpRuntimes;
 import io.namei.agent.adapter.springai.SpringAiAdapterConfiguration;
 import io.namei.agent.adapter.springai.SpringAiEmbeddingAdapter;
 import io.namei.agent.adapter.sqlite.Float32VectorCodec;
@@ -38,10 +42,12 @@ import io.namei.agent.kernel.port.MemoryRetrievalPort;
 import io.namei.agent.kernel.port.SessionRepository;
 import io.namei.agent.kernel.port.Tool;
 import io.namei.agent.kernel.port.TurnLifecycleObserver;
+import io.namei.agent.kernel.tool.ToolRisk;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
@@ -60,7 +66,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(AgentProperties.class)
+@EnableConfigurationProperties({AgentProperties.class, McpProperties.class})
 @Import(SpringAiAdapterConfiguration.class)
 public class ApplicationConfiguration {
   @Bean
@@ -204,6 +210,25 @@ public class ApplicationConfiguration {
         properties.memory().maxRetrievedCharacters());
   }
 
+  @Bean(destroyMethod = "close")
+  McpRuntime mcpRuntime(McpProperties mcpProperties, AgentProperties agentProperties) {
+    var settings = mcpProperties.toSettings();
+    if (settings.mode() == McpMode.DISABLED) {
+      return McpRuntimes.disabled();
+    }
+    if (agentProperties.tools().mode() == ToolRuntimeMode.DISABLED) {
+      throw new IllegalStateException("启用 MCP 前必须启用全局 Tool Runtime");
+    }
+    if (settings.requestTimeout().compareTo(agentProperties.tools().timeout()) >= 0) {
+      throw new IllegalStateException("agent.mcp.request-timeout 必须小于 agent.tools.timeout");
+    }
+    if (settings.connectTimeout().compareTo(agentProperties.model().timeout()) >= 0) {
+      throw new IllegalStateException("agent.mcp.connect-timeout 必须小于 agent.model.timeout");
+    }
+    var configuration = new McpConfigLoader().load(settings);
+    return McpRuntimes.staticReadOnly(configuration, settings);
+  }
+
   @Bean
   ChatUseCase chatUseCase(
       SessionRepository sessions,
@@ -212,16 +237,14 @@ public class ApplicationConfiguration {
       TurnLifecycleObserver lifecycleObserver,
       ApprovalPort approvalPort,
       MemoryContextService memoryContext,
+      McpRuntime mcpRuntime,
       AgentProperties properties,
       @Value("${spring.ai.openai.chat.model}") String modelName,
       @Value("${agent.compatibility.system-prompt-base64:}") String compatibilityPrompt,
       @Value("classpath:/prompts/system.md") Resource systemPrompt)
       throws IOException {
     String prompt = systemPrompt(compatibilityPrompt, systemPrompt);
-    List<Tool> tools =
-        properties.tools().mode() != ToolRuntimeMode.DISABLED
-            ? List.of(new CurrentTimeTool(Clock.systemUTC()))
-            : List.of();
+    List<Tool> tools = configuredTools(properties, mcpRuntime);
     var toolSettings =
         new ToolRuntimeSettings(
             properties.tools().mode(),
@@ -250,6 +273,23 @@ public class ApplicationConfiguration {
             properties.tools().approvalTimeout(),
             memoryContext);
     return new SafeChatUseCase(service, Clock.systemUTC());
+  }
+
+  List<Tool> configuredTools(AgentProperties properties, McpRuntime mcpRuntime) {
+    Objects.requireNonNull(properties, "properties");
+    Objects.requireNonNull(mcpRuntime, "mcpRuntime");
+    if (properties.tools().mode() == ToolRuntimeMode.DISABLED) {
+      return List.of();
+    }
+    List<Tool> tools = new ArrayList<>();
+    tools.add(new CurrentTimeTool(Clock.systemUTC()));
+    for (Tool tool : mcpRuntime.tools()) {
+      if (tool.definition().risk() != ToolRisk.READ_ONLY) {
+        throw new IllegalStateException("MCP Runtime 暴露了非只读工具");
+      }
+      tools.add(tool);
+    }
+    return List.copyOf(tools);
   }
 
   String systemPrompt(String compatibilityPrompt, Resource fallback) throws IOException {

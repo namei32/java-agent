@@ -178,6 +178,7 @@ class ApplicationConfigurationTest {
                 configuration.memoryProfilePort(properties),
                 io.namei.agent.kernel.port.MemoryRetrievalPort.disabled(),
                 properties),
+            io.namei.agent.adapter.mcp.McpRuntimes.disabled(),
             properties,
             "test-model",
             "",

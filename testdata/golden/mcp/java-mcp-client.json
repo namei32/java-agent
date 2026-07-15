@@ -1,0 +1,500 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "clientCreated": false,
+        "configFileRead": false,
+        "networkAccess": false,
+        "processStarted": false,
+        "publishedTools": []
+      },
+      "id": "disabled-zero-effects",
+      "input": {
+        "configFile": "/must/not/be/read.json",
+        "mode": "DISABLED"
+      }
+    },
+    {
+      "expected": {
+        "arguments": [
+          "-jar",
+          "/opt/namei/docs-mcp.jar"
+        ],
+        "environment": {
+          "DOCS_MCP_TOKEN": "FROM_PARENT_ENVIRONMENT"
+        },
+        "environmentClearedBeforeCopy": true,
+        "executable": "/usr/bin/java",
+        "serverId": "docs",
+        "transport": "STDIO",
+        "workingDirectory": "/var/lib/namei/mcp"
+      },
+      "id": "static-config-v1",
+      "input": {
+        "document": {
+          "schemaVersion": 1,
+          "servers": [
+            {
+              "arguments": [
+                "-jar",
+                "/opt/namei/docs-mcp.jar"
+              ],
+              "environmentVariables": [
+                "DOCS_MCP_TOKEN"
+              ],
+              "executable": "/usr/bin/java",
+              "id": "docs",
+              "tools": {
+                "search": {
+                  "enabled": true,
+                  "risk": "READ_ONLY"
+                }
+              },
+              "transport": "STDIO",
+              "workingDirectory": "/var/lib/namei/mcp"
+            }
+          ]
+        },
+        "mode": "STATIC_READ_ONLY",
+        "parentEnvironment": {
+          "DOCS_MCP_TOKEN": "FROM_PARENT_ENVIRONMENT",
+          "HOME": "/private/home",
+          "PATH": "/private/bin",
+          "PROVIDER_API_KEY": "MUST_NOT_BE_COPIED"
+        }
+      }
+    },
+    {
+      "expected": {
+        "configurationStatus": "INVALID",
+        "processesStarted": 0,
+        "publicError": "MCP 静态配置无效。"
+      },
+      "id": "config-unknown-field-fails-before-process",
+      "input": {
+        "document": {
+          "schemaVersion": 1,
+          "servers": [],
+          "secret": "must-not-be-accepted"
+        },
+        "mode": "STATIC_READ_ONLY"
+      }
+    },
+    {
+      "expected": {
+        "clientCapabilities": {},
+        "clientInfo": {
+          "name": "namei-agent-mcp-client",
+          "version": "0.1.0"
+        },
+        "initializedNotification": true,
+        "negotiatedProtocolVersion": "2025-11-25",
+        "serverToolsCapabilityRequired": true
+      },
+      "id": "initialize-tools-only",
+      "input": {
+        "serverCapabilities": {
+          "tools": {
+            "listChanged": true
+          }
+        },
+        "serverProtocolVersion": "2025-11-25"
+      }
+    },
+    {
+      "expected": {
+        "catalogOrder": [
+          "lookup",
+          "search"
+        ],
+        "pagesConsumed": 2,
+        "requestCursors": [
+          null,
+          "page-2"
+        ]
+      },
+      "id": "paginated-tool-catalog",
+      "input": {
+        "maxListPages": 8,
+        "pages": [
+          {
+            "nextCursor": "page-2",
+            "tools": [
+              {
+                "description": "Search documents",
+                "inputSchema": {
+                  "additionalProperties": false,
+                  "properties": {},
+                  "type": "object"
+                },
+                "name": "search"
+              }
+            ]
+          },
+          {
+            "nextCursor": null,
+            "tools": [
+              {
+                "description": "Look up one document",
+                "inputSchema": {
+                  "additionalProperties": false,
+                  "properties": {},
+                  "type": "object"
+                },
+                "name": "lookup"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "expected": {
+        "localName": "mcp_docs__search"
+      },
+      "id": "name-ordinary",
+      "input": {
+        "remoteName": "search",
+        "serverId": "docs"
+      }
+    },
+    {
+      "expected": {
+        "localName": "mcp_docs__search_docs_65863dec2f"
+      },
+      "id": "name-dot-normalization",
+      "input": {
+        "remoteName": "search.docs",
+        "serverId": "docs"
+      }
+    },
+    {
+      "expected": {
+        "localName": "mcp_docs_____3bf972e6ce"
+      },
+      "id": "name-unicode-normalization",
+      "input": {
+        "remoteName": "搜索",
+        "serverId": "docs"
+      }
+    },
+    {
+      "expected": {
+        "localName": "mcp_docs__aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_ce4b1ca784",
+        "utf16Length": 64
+      },
+      "id": "name-truncation",
+      "input": {
+        "remoteName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "serverId": "docs"
+      }
+    },
+    {
+      "expected": {
+        "mapped": {
+          "docs/search.docs": "mcp_docs__search_docs_65863dec2f",
+          "docs/search_docs": "mcp_docs__search_docs",
+          "other/search": "mcp_other__search"
+        },
+        "stableAcrossDiscoveryOrder": true
+      },
+      "id": "name-normalization-and-server-collision",
+      "input": {
+        "tools": [
+          {
+            "remoteName": "search_docs",
+            "serverId": "docs"
+          },
+          {
+            "remoteName": "search.docs",
+            "serverId": "docs"
+          },
+          {
+            "remoteName": "search",
+            "serverId": "other"
+          }
+        ]
+      }
+    },
+    {
+      "expected": {
+        "definition": {
+          "description": "Search public documentation",
+          "inputSchema": {
+            "additionalProperties": false,
+            "properties": {
+              "limit": {
+                "type": "integer"
+              },
+              "query": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "query"
+            ],
+            "type": "object"
+          },
+          "name": "mcp_docs__search",
+          "risk": "READ_ONLY"
+        },
+        "projectionStatus": "PUBLISHED"
+      },
+      "id": "schema-safe-object-projection",
+      "input": {
+        "localPolicy": {
+          "enabled": true,
+          "risk": "READ_ONLY"
+        },
+        "remoteTool": {
+          "annotations": {
+            "readOnlyHint": false
+          },
+          "description": "Search public documentation",
+          "inputSchema": {
+            "additionalProperties": false,
+            "properties": {
+              "limit": {
+                "type": "integer"
+              },
+              "query": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "query"
+            ],
+            "type": "object"
+          },
+          "name": "search"
+        },
+        "serverId": "docs"
+      }
+    },
+    {
+      "expected": {
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "projectionStatus": "PUBLISHED"
+      },
+      "id": "schema-empty-parameters-normalized",
+      "input": {
+        "description": "Return server status",
+        "inputSchema": null,
+        "remoteName": "status",
+        "serverId": "docs"
+      }
+    },
+    {
+      "expected": {
+        "modelVisibleReason": false,
+        "projectionStatus": "UNSUPPORTED_SCHEMA",
+        "published": false
+      },
+      "id": "schema-unsupported-ref-isolated",
+      "input": {
+        "description": "Unsafe schema",
+        "inputSchema": {
+          "$ref": "https://example.invalid/schema.json",
+          "type": "object"
+        },
+        "remoteName": "unsafe",
+        "serverId": "docs"
+      }
+    },
+    {
+      "expected": {
+        "published": false,
+        "remoteCallCount": 0,
+        "risk": "READ_ONLY"
+      },
+      "id": "remote-annotation-cannot-lower-risk",
+      "input": {
+        "localPolicy": {
+          "enabled": true,
+          "risk": "WRITE"
+        },
+        "remoteAnnotations": {
+          "readOnlyHint": true
+        },
+        "remoteName": "mutate"
+      }
+    },
+    {
+      "expected": {
+        "status": "SUCCESS",
+        "text": "first line\n第二行"
+      },
+      "id": "call-text-result",
+      "input": {
+        "callResult": {
+          "content": [
+            {
+              "text": "first line",
+              "type": "text"
+            },
+            {
+              "text": "第二行",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "expected": {
+        "status": "ERROR",
+        "text": "MCP 工具执行失败。"
+      },
+      "id": "call-server-error-redacted",
+      "input": {
+        "callResult": {
+          "content": [
+            {
+              "text": "private server stack and token",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "expected": {
+        "status": "ERROR",
+        "text": "MCP 工具结果类型不支持。"
+      },
+      "id": "call-non-text-rejected",
+      "input": {
+        "callResult": {
+          "content": [
+            {
+              "data": "not-in-model-result",
+              "mimeType": "image/png",
+              "type": "image"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "expected": {
+        "businessResultDelivered": false,
+        "lateResponseDiscarded": true,
+        "wireNotification": {
+          "jsonrpc": "2.0",
+          "method": "notifications/cancelled",
+          "params": {
+            "reason": "client request cancelled",
+            "requestId": "namei-mcp-42"
+          }
+        }
+      },
+      "id": "wire-cancellation-and-late-response",
+      "input": {
+        "activeRequest": {
+          "id": "namei-mcp-42",
+          "method": "tools/call"
+        },
+        "event": "OUTER_TOOL_THREAD_INTERRUPTED",
+        "lateResponse": {
+          "id": "namei-mcp-42",
+          "result": {
+            "content": [
+              {
+                "text": "too late",
+                "type": "text"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "expected": {
+        "bytesAcceptedBeforeFailure": 1048576,
+        "deserializationAttempted": false,
+        "status": "WIRE_LIMIT_EXCEEDED"
+      },
+      "id": "wire-limit-before-deserialization",
+      "input": {
+        "maxWireBytes": 1048576,
+        "messageBytes": 1048577
+      }
+    },
+    {
+      "expected": {
+        "currentTurnRegistryChanged": false,
+        "nextCallStatus": "ERROR",
+        "nextCallText": "MCP 工具不可用。",
+        "serverState": "STALE"
+      },
+      "id": "tools-list-changed-fails-closed",
+      "input": {
+        "notification": {
+          "jsonrpc": "2.0",
+          "method": "notifications/tools/list_changed"
+        },
+        "previousState": "READY"
+      }
+    },
+    {
+      "expected": {
+        "currentCallReplayed": false,
+        "futureCallReconnectAttempts": 1,
+        "stateAfterChangedFingerprint": "STALE",
+        "stateAfterSameFingerprint": "READY"
+      },
+      "id": "bounded-reconnect-with-catalog-fingerprint",
+      "input": {
+        "event": "TRANSPORT_DISCONNECTED",
+        "maxReconnectAttemptsPerFutureCall": 1,
+        "startupCatalogFingerprint": "sha256:catalog-v1"
+      }
+    },
+    {
+      "expected": {
+        "idempotent": true,
+        "processAlive": false,
+        "sequence": [
+          "REJECT_NEW_CALLS",
+          "CANCEL_IN_FLIGHT",
+          "CLOSE_STDIN",
+          "WAIT",
+          "TERM",
+          "WAIT",
+          "KILL_IF_ALIVE",
+          "JOIN_IO_TASKS",
+          "CLOSE_SDK_CLIENT"
+        ]
+      },
+      "id": "bounded-shutdown-no-orphan",
+      "input": {
+        "processBehavior": "IGNORES_STDIN_EOF_AND_TERM",
+        "shutdownTimeoutMillis": 2000
+      }
+    }
+  ],
+  "contractEvidence": {
+    "adr": "docs/adr/0006-use-official-mcp-java-sdk.md",
+    "approvedOn": "2026-07-15",
+    "contract": "docs/contracts/mcp-client-tool-runtime.md",
+    "spec": "docs/specs/2026-07-15-mcp-read-only-client-design.md"
+  },
+  "formatVersion": 1,
+  "normalization": [
+    "MCP Server、Tool、Schema、Annotation、Result、Error、stdout 和 stderr 均为不可信输入",
+    "配置和公开错误不保留 Secret、命令、参数、路径或 Server 原始正文",
+    "Tool Name 映射使用 serverId + NUL + remoteName 的 SHA-256 前 10 个小写十六进制字符",
+    "非文本结果、开放 Schema、未知风险和动态列表变化全部 Fail Closed",
+    "取消必须在 Wire 上携带准确 Request ID，迟到响应不得进入模型",
+    "所有测试只使用 Java Reference Server，不运行 Python、Shell、网络或真实数据"
+  ],
+  "source": "java-contract",
+  "suite": "mcp/java-mcp-client"
+}

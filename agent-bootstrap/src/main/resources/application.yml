@@ -29,6 +29,18 @@ agent:
     max-characters: 100000
   model:
     timeout: ${AGENT_MODEL_TIMEOUT:60s}
+  mcp:
+    mode: ${AGENT_MCP_MODE:DISABLED}
+    config-file: ${AGENT_MCP_CONFIG_FILE:}
+    max-servers: ${AGENT_MCP_MAX_SERVERS:4}
+    max-tools-per-server: ${AGENT_MCP_MAX_TOOLS_PER_SERVER:32}
+    max-list-pages: ${AGENT_MCP_MAX_LIST_PAGES:8}
+    connect-timeout: ${AGENT_MCP_CONNECT_TIMEOUT:5s}
+    request-timeout: ${AGENT_MCP_REQUEST_TIMEOUT:4s}
+    shutdown-timeout: ${AGENT_MCP_SHUTDOWN_TIMEOUT:2s}
+    max-schema-bytes: ${AGENT_MCP_MAX_SCHEMA_BYTES:65536}
+    max-wire-bytes: ${AGENT_MCP_MAX_WIRE_BYTES:1048576}
+    max-concurrent-calls-per-server: ${AGENT_MCP_MAX_CONCURRENT_CALLS_PER_SERVER:1}
   memory:
     mode: ${AGENT_MEMORY_MODE:DISABLED}
     max-file-bytes: ${AGENT_MEMORY_MAX_FILE_BYTES:65536}
@@ -56,6 +68,9 @@ agent:
     max-argument-bytes: ${AGENT_TOOL_MAX_ARGUMENT_BYTES:16384}
     max-result-characters: ${AGENT_TOOL_MAX_RESULT_CHARACTERS:20000}
     approval-timeout: ${AGENT_TOOL_APPROVAL_TIMEOUT:5m}
+logging:
+  level:
+    io.modelcontextprotocol: "OFF"
 management:
   endpoints:
     web:

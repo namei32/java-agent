@@ -45,6 +45,17 @@ AGENT_MEMORY_RETRIEVAL_HOTNESS_ALPHA=0.20
 AGENT_MEMORY_RETRIEVAL_HOTNESS_HALF_LIFE_DAYS=14
 AGENT_MEMORY_RETRIEVAL_MAX_CANDIDATES=10000
 AGENT_MEMORY_RETRIEVAL_MAX_INJECTED_CHARACTERS=6000
+AGENT_MCP_MODE=DISABLED
+AGENT_MCP_CONFIG_FILE=
+AGENT_MCP_MAX_SERVERS=4
+AGENT_MCP_MAX_TOOLS_PER_SERVER=32
+AGENT_MCP_MAX_LIST_PAGES=8
+AGENT_MCP_CONNECT_TIMEOUT=5s
+AGENT_MCP_REQUEST_TIMEOUT=4s
+AGENT_MCP_SHUTDOWN_TIMEOUT=2s
+AGENT_MCP_MAX_SCHEMA_BYTES=65536
+AGENT_MCP_MAX_WIRE_BYTES=1048576
+AGENT_MCP_MAX_CONCURRENT_CALLS_PER_SERVER=1
 AGENT_TOOL_MAX_ITERATIONS=6
 AGENT_TOOL_MODE=DISABLED
 AGENT_TOOL_MAX_CALLS_PER_RESPONSE=8
@@ -66,7 +77,46 @@ AGENT_TOOL_APPROVAL_TIMEOUT=5m
 
 未显式指定配置文件，且启动目录不存在 `config.toml` 时使用此模式。
 
-### 1.2 TOML 兼容模式（DeepSeek 示例）
+### 1.2 MCP 静态只读模式（默认关闭）
+
+`AGENT_MCP_MODE` 默认且模板固定为 `DISABLED`。此时 Bootstrap 不读取 `AGENT_MCP_CONFIG_FILE`，不创建 SDK Client，不启动子进程、不访问 MCP 网络，也不发布 MCP Tool。仅设置配置文件路径不会改变这一行为。
+
+R5.1 只支持 `STATIC_READ_ONLY` 和本地 stdio Server。只有在 Executable、版本、Tool Allowlist、风险、Secret 来源、数据范围和部署均单独获批后，才可以同时设置：
+
+```dotenv
+AGENT_TOOL_MODE=READ_ONLY
+AGENT_MCP_MODE=STATIC_READ_ONLY
+AGENT_MCP_CONFIG_FILE=/absolute/path/to/mcp-read-only.json
+```
+
+静态文件必须是无符号链接的有界普通 JSON 文件。以下结构仅说明 Schema，不代表其中 Server 已获准运行：
+
+```json
+{
+  "schemaVersion": 1,
+  "servers": [
+    {
+      "id": "docs",
+      "transport": "STDIO",
+      "executable": "/absolute/path/to/java",
+      "arguments": ["-jar", "/absolute/path/to/docs-mcp.jar"],
+      "workingDirectory": "/absolute/path/to/runtime",
+      "environmentVariables": ["DOCS_MCP_TOKEN"],
+      "tools": {
+        "search": {"enabled": true, "risk": "READ_ONLY"}
+      }
+    }
+  ]
+}
+```
+
+配置只能保存环境变量名，Secret 值必须由进程环境提供。子进程环境会先清空，再复制显式 Allowlist；不会继承 `PATH`、`HOME`、Provider Key 或云凭证。Executable 与 Working Directory 必须是绝对路径；禁止 Shell、`sh -c`、`npx` 动态下载、相对命令、单字符串命令行、HTTP Transport 和非 `READ_ONLY` 风险。
+
+`AGENT_MCP_REQUEST_TIMEOUT` 必须小于 `AGENT_TOOL_TIMEOUT`，`AGENT_MCP_CONNECT_TIMEOUT` 必须小于 `AGENT_MODEL_TIMEOUT`。其余 MCP 配置分别限制 Server/Tool/分页数量、关闭时间、Schema/Wire 字节和单 Server 并发数；范围以 [MCP 只读客户端契约](../contracts/mcp-client-tool-runtime.md)为准，非法值会在读取 Server 配置或启动子进程前失败。
+
+Runtime 在应用启动时发现工具并形成不可变快照。`tools/list_changed` 会使对应 Wrapper 进入 `STALE` 并拒绝后续调用；断线调用不重放，下一次新调用最多尝试一次有界重连，且 Catalog 指纹必须不变。R5.1 没有动态增删 API、后台无限重试或 MCP 状态 HTTP 端点。SDK 包日志在生产配置中关闭，Server 原始 stdout、stderr、命令、路径和错误正文不得用于排障输出。
+
+### 1.3 TOML 兼容模式（DeepSeek 示例）
 
 从仓库内的安全模板创建本地配置：
 
@@ -188,7 +238,7 @@ curl --fail-with-body \
   http://127.0.0.1:8080/api/v1/chat
 ```
 
-`READ_ONLY` 模式下生产注册表只有只读 `current_time`。模型可在需要当前 UTC 时间时调用它；工具中间消息不会写入 SQLite，最终仍只保存一组 `user/assistant`。`DISABLED` 模式不注册工具，也不向模型发送 Tool Definition。
+当 `AGENT_TOOL_MODE=READ_ONLY` 且 MCP 保持 `DISABLED` 时，生产注册表只有只读 `current_time`。经单独批准启用 `STATIC_READ_ONLY` 后，Bootstrap 会把通过本地 Allowlist、风险与 Schema 门禁的 MCP Tool 加入同一个不可变快照；MCP Server 不能改变风险、审批、预算、循环或提交语义。工具中间消息不会写入 SQLite，最终仍只保存一组 `user/assistant`。全局 `AGENT_TOOL_MODE=DISABLED` 时不注册任何工具，也不向模型发送 Tool Definition。
 
 `APPROVAL_REQUIRED` 是已经实现的安全框架模式，不是可用的人类审批功能。当前生产装配只有 `DenyAllApprovalPort`，没有 Approval API/UI/Channel、生产 Durable Ledger 或任何 `WRITE`/`EXTERNAL_SIDE_EFFECT` Tool；因此切换该值不会出现审批入口，也不会获得真实副作用能力。模板与现有部署继续保持 `DISABLED`。未来只有在 Approval Channel、Durable Ledger、具体 Tool Capability/Sandbox Contract 和部署批准全部具备后，才会编写相应启用手册。
 
@@ -234,7 +284,7 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pfailure verify
 ```
 
-`failure` 独立覆盖审批错配与过期、批准后取消、Ledger 持久化故障、并发一次性消费、`UNKNOWN` 停机，以及 Memory Embedding 零写入、幂等冲突、数据库不可用、Profile/检索/预算和安全 HTTP 映射失败；这些测试使用临时目录或内存 Fake，不会执行真实外部变更。
+`failure` 独立覆盖审批错配与过期、批准后取消、Ledger 持久化故障、并发一次性消费、`UNKNOWN` 停机，Memory Embedding 零写入、幂等冲突、数据库不可用、Profile/检索/预算和安全 HTTP 映射，以及 MCP 损坏 JSON、stdout 噪声、错误 Response ID、突然退出、Stale、Catalog 变化和关闭/重连竞态。MCP 故障测试只启动仓库编译的 Java Reference Server，不执行真实外部变更。
 
 Python/Java Golden 与 Schema 固定样本兼容性：
 
@@ -243,11 +293,11 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pcompat verify
 ```
 
-`compat` 直接读取仓库内的 `testdata/golden/`，包括只读 Context/Memory、Approval/Side Effect Golden，以及 Java-owned `memory/java-native-memory.json`。生产 Java 实现会直接消费后者的 Schema、Codec、Hash、HTTP、排序和 Injection Case；测试不会启动 Python、访问模型、执行真实副作用、读取真实 Workspace 或读取 `.env`。
+`compat` 直接读取仓库内的 `testdata/golden/`，包括只读 Context/Memory、Approval/Side Effect Golden，以及 Java-owned `memory/java-native-memory.json` 和 `mcp/java-mcp-client.json`。生产 Java 实现会消费这些 Fixture 的 Schema、Codec、Hash、HTTP、排序、Injection、配置、命名、Schema 投影、结果和生命周期 Case；测试不会启动 Python、访问真实模型/MCP Server、执行真实副作用、读取真实 Workspace 或读取 `.env`。
 
-R4.2 于 2026-07-15 完成离线基线：默认 Profile 共 244 个测试（235 个单元、9 个集成），`failure` 共 55 个（54 个单元、1 个集成），`compat` 共 282 个（272 个单元、10 个集成），均为 0 Failure、0 Error、0 Skipped。该结果不包含真实 Provider、真实 Workspace 或部署启用验证。
+R5.1 于 2026-07-15 完成离线基线：默认 Profile 共 284 个测试（270 个单元、14 个集成），`failure` 共 63 个（62 个单元、1 个集成），`compat` 共 323 个（308 个单元、15 个集成），均为 0 Failure、0 Error、0 Skipped。MCP Integration 使用受控 Java stdio 子进程并验证结束后零孤儿进程；该结果不包含真实 Provider、真实 MCP Server、真实 Secret、真实 Workspace 或部署启用验证。
 
-`memory/java-native-memory.json` 不由 Python 生成器维护，只能在 Java Memory Contract 获得新批准后人工更新并同步 Manifest。其他 Python 基准夹具只有在对应 Python 行为或已批准 Contract 变化时才重新生成：
+`memory/java-native-memory.json` 与 `mcp/java-mcp-client.json` 不由 Python 生成器维护，只能在对应 Java Contract 获得新批准后人工更新并同步 Manifest。其他 Python 基准夹具只有在对应 Python 行为或已批准 Contract 变化时才重新生成：
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -269,6 +319,8 @@ cd "$(git rev-parse --show-toplevel)"
 ```
 
 测试使用临时 Workspace，并断言普通回答、`current_time` Tool Call、Java 执行、两次模型请求、最终文本以及 SQLite 仅提交最终 `user/assistant`。测试通过只形成 Provider/模型能力证据，不会修改部署的 `AGENT_TOOL_MODE`。
+
+该 Profile 不执行真实 MCP Smoke。真实 MCP Server 验证必须另行批准 Server、Executable、版本、Allowlist、Secret、网络/费用、沙箱和数据范围；R5.1 没有可直接复制执行的真实 Smoke 命令。
 
 ## 6. 故障排查
 
@@ -299,6 +351,12 @@ TOML 模式先运行 `--agent.config-check`。如果诊断为 `CONFIG_ENV_UNRESO
 - `CONFIG_TOML_INVALID`/`CONFIG_TYPE_INVALID`：检查 UTF-8、TOML 语法和原生类型。
 - `CONFIG_REQUIRED_MISSING`/`CONFIG_ENV_UNRESOLVED`：补齐必填字段或占位符环境变量。
 - `CONFIG_URL_INVALID`：Base URL 必须是带 Host 的 `http` 或 `https` 绝对 URI。
+
+### MCP 启动失败或工具不可用
+
+先把 `AGENT_MCP_MODE` 恢复为 `DISABLED` 并重启，确认普通聊天不依赖 MCP。静态启用失败时核对全局 Tool Mode、两个超时关系、配置文件是否为绝对路径的非符号链接普通文件，以及 Executable/Working Directory 的 Real Path、权限、Server/Tool 上限和 `READ_ONLY` Allowlist。不要改用 Shell、相对命令、`npx`、全环境继承或放宽 Schema 来绕过门禁。
+
+已发布工具在 `tools/list_changed` 后会安全变为不可用，Catalog 改变的重连也不会热替换；恢复方式是审查新 Catalog、更新 Contract/Allowlist 后重启。公开错误只会说明 MCP 工具不可用、执行失败、类型不支持或通信超限，不会显示 Server 正文。不得为了排障打开 SDK/Server 原始内容日志或把 Secret、命令、路径、stdout/stderr 粘贴到工单。
 
 ### 模型返回 404
 

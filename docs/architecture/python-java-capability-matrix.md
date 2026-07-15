@@ -18,7 +18,7 @@
 | 能力 | Python 基准位置 | Java 位置 | 状态 | 主要差距/下一步 | 数据风险 |
 | --- | --- | --- | --- | --- | --- |
 | 配置加载 | `agent/config.py`、`agent/config_models.py`、`config.example.toml` | `agent-bootstrap/.../config`、环境变量 | 完成 | 已实现批准范围内的只读 TOML/环境变量双模式、Golden、严格诊断和无副作用检查；Deferred 字段随能力迁移激活 | 中 |
-| 启动与装配 | `bootstrap/app.py`、`bootstrap/wiring.py` | `agent-bootstrap` | 部分 | 已装配配置兼容、HTTP 被动聊天和只读最小 Tool Loop；消息总线、渠道和后台能力待迁移 | 低 |
+| 启动与装配 | `bootstrap/app.py`、`bootstrap/wiring.py` | `agent-bootstrap` | 部分 | 已装配配置兼容、HTTP 被动聊天、只读 Tool Loop 和默认关闭的静态 MCP Runtime；消息总线、渠道和后台能力待迁移 | 低 |
 | 入站 HTTP | Dashboard/Bootstrap API | `ChatController` | 完成 | 当前只支持同步 JSON API | 低 |
 | 消息总线 | `bus/` | 无 | 未开始 | 需定义版本化入站、出站和生命周期事件 | 中 |
 | 被动轮次编排 | `agent/core/passive_turn.py`、`agent/turns/orchestrator.py` | `ChatService`、`ToolLoop`、`SafeChatUseCase` | 部分 | 请求—模型—只读工具—提交闭环与安全生命周期完成；完整 Python 事件总线未迁移 | 中 |
@@ -51,7 +51,7 @@
 | 文件/Shell/Web 工具 | `agent/tools/` | `CurrentTimeTool`（仅时间） | 部分 | 仅完成无副作用时间工具；R3.2 批准不授权真实副作用，仍需逐工具 Capability Contract | 极高 |
 | Tool Hook | `agent/tool_hooks/` | 无 | 未开始 | 定义顺序、异常和可变性边界 | 高 |
 | Tool Bundle/Search | `agent/tool_bundles.py`、`tool_search.py` | 无 | 未开始 | 在基础 Tool Loop 稳定后迁移 | 中 |
-| MCP | `agent/mcp/`、`bootstrap/toolsets/mcp.py` | 无 | 未开始 | 连接生命周期、发现、重连和名称冲突 | 高 |
+| MCP | `agent/mcp/`、`bootstrap/toolsets/mcp.py` | `adapter-mcp`、Bootstrap `McpRuntime` 装配 | 部分 | R5.1 已完成静态 stdio、官方 SDK 隔离、分页发现、稳定命名、安全 Schema、只读调用、Wire Cancellation、Stale/单次重连和进程回收；缺 Streamable HTTP/OAuth、Resources/Prompts、真实 Server Smoke、动态 Catalog 与副作用能力 | 高 |
 | Skills | `agent/skills.py` | 无 | 未开始 | 明确技能文件格式及 Java/进程外执行边界 | 中 |
 | Plugins | `agent/plugins/` | 无 | 未开始 | Java SPI + Python 进程外 Bridge；不承诺运行时猴子补丁 | 高 |
 
@@ -75,14 +75,14 @@
 | --- | --- | --- |
 | Java 单元/集成测试 | 已建立默认、`failure`、`compat` Profile | 继续随能力扩展 |
 | Python SQLite 兼容夹具 | `sessions.db` 共同 Schema 已覆盖 | 语义记忆改为 Java 原生，不增加 `memory2.db` 兼容夹具 |
-| 跨语言/Java Contract Fixture | 已建立 Python/Java Golden；R4.2 另由生产 Java 实现直接消费 Java-owned Schema/Codec/Hash/HTTP/检索/Injection Fixture，不运行 Python | 后续随新能力增加 Optimizer 与流式事件 Contract |
+| 跨语言/Java Contract Fixture | 已建立 Python/Java Golden；R4.2 与 R5.1 另由生产 Java 实现消费 Java-owned Memory/MCP Fixture，不运行 Python | 后续随新能力增加 Optimizer、消息总线与流式事件 Contract |
 | 真实模型 Smoke | Profile 已有，默认不执行；DeepSeek `deepseek-v4-flash` Tool Smoke 已于 2026-07-14 通过 | 其他 Provider/模型仍需逐组合授权验证；通过不自动启用部署 |
 | 真实工作区演练 | 未执行 | 只能在备份副本上先做只读差异，再做受控写入 |
 
 ## 当前优先级
 
-1. 以 R4.2 已完成基线重新盘点 Java 重写主线，下一候选是 R5 MCP/外部工具的 Contract 与最小无副作用纵向切片；实施前需单独批准。
+1. R5.1 已完成后，主线进入 R6：先冻结版本化消息总线、生命周期事件、取消和流式顺序 Contract，再实现 CLI 的最小纵向切片。
 2. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
-5. MCP、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。
+5. R5.2 远程 MCP、渠道、插件和主动能力仍按 Roadmap/独立 Contract 推进，不并行改写真实数据协议；R5.1 的本地只读授权不能扩张为真实 Server 或副作用授权。
