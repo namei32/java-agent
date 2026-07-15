@@ -1,8 +1,9 @@
 # Java 原生语义记忆、持久化与优化器契约
 
-- 状态：待批准
+- 状态：已批准
 - 契约版本：2
 - 日期：2026-07-15
+- 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - 适用阶段：R4.2 Java 原生语义记忆纵向切片
 - 数据迁移决定：旧 Python 语义记忆允许丢弃，不读取或迁移 `memory2.db`
 - 关联 ADR：[ADR-0005：采用 Java 原生语义记忆库](../adr/0005-use-java-native-semantic-memory-store.md)
@@ -162,7 +163,7 @@ CREATE TABLE memory_mutations (
 
 ## 5. Memory HTTP API
 
-R4.2 提议增加：
+R4.2 增加：
 
 ```text
 PUT    /api/v1/sessions/{sessionId}/memories
@@ -294,7 +295,7 @@ R4.2 不实现上述 Optimizer 类、表、Bean、API 或后台任务。
 - 默认、`failure`、`compat`、依赖、Secret、Workspace、生产 Bean 和网络监听审计通过。
 - 模板继续 `DISABLED`；不访问或删除 Python Workspace，不运行真实 Embedding。
 
-## 11. 待批准决定
+## 11. 已批准决定
 
 1. 接受 `JAVA_NATIVE` 同时启用 Java 语义库、显式 Memory API 和 Retrieval；默认保持 `DISABLED`。
 2. 接受 V1 使用 Float32 BLOB、有界全表 cosine 和 Session 级 Scope，不实现跨 Session 全局记忆。

@@ -25,7 +25,7 @@
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、六模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
-| R4 | 上下文与记忆 | R4.1 已完成，R4.2 待批准 | 只读 Profile/Context 已完成；Java 原生 Store/管理 API/Embedding/Retrieval 方案待批准 |
+| R4 | 上下文与记忆 | R4.1 已完成，R4.2 实施中 | 只读 Profile/Context 已完成；Java 原生 Store/管理 API/Embedding/Retrieval 从 J1 开始实施 |
 | R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
@@ -135,12 +135,12 @@ R3.2 实现依据：
 
 当前状态：R4.1 的 C1 至 C8 已全部完成。Python Golden、Kernel Port、只读 Markdown Adapter、ContextAssembler、Retrieval 注入/提交隔离、默认关闭装配和安全 HTTP 映射均已实现；默认 172、`failure` 50、`compat` 206 个测试以及格式、依赖、Secret/Workspace/生产写入面审计全部通过。
 
-R4.2 当前状态：用户已决定不迁移旧 Python 语义记忆。原 `memory2` 兼容草案已改写为 Java 原生 `agent-memory.db`、显式 Write/List/Delete API、Embedding 和语义检索方案；Contract、ADR、Spec、HTTP API 与 TDD 计划待批准，尚未修改生产代码。
+R4.2 当前状态：用户已决定不迁移旧 Python 语义记忆，并于 2026-07-15 批准 Java 原生 `agent-memory.db`、显式 Write/List/Delete API、Embedding、语义检索、Contract、ADR、Spec、HTTP API 与 TDD 计划。当前从 Task J1 Java Contract Fixture 开始实施，尚未修改生产代码。
 
 范围：
 
 - R4.1 已迁移 `SELF.md`、`MEMORY.md`、`RECENT_CONTEXT.md` 的只读共同投影、字符上限和临时 Frame；生产默认关闭且 Retrieval 为 NoOp。
-- R4.2 提议实现 Java 原生 Schema、显式写入/查看/物理删除、cosine/Hotness、Session Scope、Embedding、字符预算和 Context 注入。
+- R4.2 已批准实现 Java 原生 Schema、显式写入/查看/物理删除、cosine/Hotness、Session Scope、Embedding、字符预算和 Context 注入。
 - Keyword/RRF、Query Rewrite/HyDE、自动对话提取、Memory Tool、Consolidation 与 Optimizer 实现继续冻结；Optimizer 只冻结 Java DB Revision、事务和 Undo 边界。
 - Java 不读取、迁移或删除旧 `memory2.db`；真实 Workspace 与真实 Embedding 仍需单独批准。
 
@@ -152,7 +152,7 @@ R4.1 设计依据：
 - [只读 Context/Memory 纵向切片设计](../specs/2026-07-14-read-only-context-memory-design.md)
 - [只读 Context/Memory 实施计划](../plans/2026-07-14-read-only-context-memory-implementation.md)
 
-R4.2 待批准依据：
+R4.2 已批准依据：
 
 - [Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - [ADR-0005：采用 Java 原生语义记忆库](../adr/0005-use-java-native-semantic-memory-store.md)

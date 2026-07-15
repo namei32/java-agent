@@ -1,7 +1,8 @@
 # Java 原生语义记忆纵向切片设计
 
-- 状态：待批准
+- 状态：已批准
 - 日期：2026-07-15
+- 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - 阶段：R4.2
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - ADR：[ADR-0005：采用 Java 原生语义记忆库](../adr/0005-use-java-native-semantic-memory-store.md)

@@ -1,7 +1,8 @@
 # ADR-0005：采用 Java 原生语义记忆库
 
-- 状态：提议
+- 状态：已接受
 - 日期：2026-07-15
+- 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - 数据迁移决定：用户已明确允许丢弃旧 Python 语义记忆，不迁移或读取 `memory2.db`
 - 关联 Contract：[语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - 关联 Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)

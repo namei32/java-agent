@@ -1,14 +1,15 @@
 # Java 原生语义记忆实施计划
 
-- 状态：待批准
+- 状态：实施中
 - 日期：2026-07-15
 - 阶段：R4.2
-- 当前执行状态：Task J0 已完成；等待新版 Contract、ADR、Spec、HTTP API 和计划批准
+- 当前执行状态：Task J0 已完成；Task J1 Java Contract Fixture 实施中
+- 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
 - ADR：[ADR-0005：采用 Java 原生语义记忆库](../adr/0005-use-java-native-semantic-memory-store.md)
 
-> 批准前只修改文档。整个 R4.2 不使用 Python、不读取或删除 `memory2.db`，不访问真实 Workspace，不调用真实 Embedding，不实现自动记忆提取或 Optimizer。
+> 已批准边界：整个 R4.2 不使用 Python、不读取或删除 `memory2.db`，不访问真实 Workspace，不调用真实 Embedding，不实现自动记忆提取或 Optimizer。
 
 ## Task J0：数据决定与方案重写
 
@@ -29,7 +30,7 @@
 
 ## Task J1：Java Contract Fixture
 
-状态：待批准。
+状态：实施中。
 
 目标：固定 Java V1 Schema、Float32 编码、HTTP Request/Response、Hash、Scope、排序和 Injection 示例，不依赖 Python。
 
@@ -37,13 +38,13 @@
 
 - `testdata/golden/memory/java-native-memory.json`
 - `testdata/golden/manifest.json`
-- `agent-bootstrap/.../GoldenManifestTest.java`
+- `agent-kernel/src/test/java/io/namei/agent/kernel/compat/GoldenManifestTest.java`
 
 本任务只增加人工评审的契约资产，不人为破坏实现制造 RED。验证：
 
 ```bash
 ./mvnw --batch-mode --no-transfer-progress \
-  -Pcompat -pl agent-bootstrap -am \
+  -Pcompat -pl agent-kernel -am \
   -Dtest=GoldenManifestTest \
   -Dsurefire.failIfNoSpecifiedTests=false test
 ```
