@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R6.2
-- 当前执行状态：Task D0–D5 已完成；下一步 Task D6 纯本地 CLI Runner
+- 当前执行状态：Task D0–D6 已完成；下一步 Task D7 CLI Bootstrap 与配置
 - 基线：R6.1 已通过 PR #4 三套远程 CI，并以 `a77b088` 合入 `main`
 - 批准记录：用户已批准并要求完整实现 R6 总体计划
 - Contract：[Provider Streaming 与本地 CLI 契约](../contracts/provider-streaming-cli.md)
@@ -120,7 +120,7 @@ RED/GREEN：
 
 ### Task D6：纯本地 CLI Runner
 
-状态：待开始。
+状态：已完成。
 
 新增 `CliProperties`、输入/输出边界、`LocalCliRunner` 和可控 Thread Starter。测试普通回答、多 Delta、权威快照纠正、稳定错误、EOF、输出故障、启动失败和 Shutdown。
 
@@ -129,6 +129,8 @@ RED/GREEN：
 ```bash
 ./mvnw -pl agent-bootstrap -am -Dtest=LocalCliRunnerTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
+
+验证证据（2026-07-15）：聚焦命令先因 `CliProperties`、输入/输出边界、`CliMessageRenderer`、`LocalCliRunner` 和可控 Thread Starter 全部缺失而在 Bootstrap 测试编译阶段失败；最小实现完成后，同一命令执行 7 个测试并全部通过。测试逐项消费 6 个版本化 CLI Fixture Case，覆盖空白输入忽略、受信 Session/Route、多个 Delta、权威完成快照纠正、无 Delta 完成、稳定失败/取消码、stdout 故障触发 `CHANNEL_DISCONNECTED`、线程启动失败脱敏、活动 Turn 的 `SHUTDOWN` 取消和 Producer 有界 Join；Bootstrap Spotless 检查退出码为 `0`。
 
 ### Task D7：CLI Bootstrap 与配置
 
