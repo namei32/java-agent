@@ -54,7 +54,7 @@ HTTP ChatController
   -> HTTP ChatResponse
 ```
 
-它已经支持同步非流式被动聊天、SQLite 会话恢复、OpenAI-compatible 模型、有界只读 Tool Loop、只读 Markdown Profile、Java 原生显式语义记忆/临时 Context Frame、静态 stdio MCP 只读客户端和原子轮次提交。Memory 与 MCP 默认均为 `DISABLED`；它仍不包含 Python 的 Message Bus、自动 Memory 写回、远程/副作用 MCP、渠道和主动能力。
+它已经支持同步非流式被动聊天、SQLite 会话恢复、OpenAI-compatible 模型、有界只读 Tool Loop、只读 Markdown Profile、Java 原生显式语义记忆/临时 Context Frame、静态 stdio MCP 只读客户端和原子轮次提交。R6.1 另建立了尚未装配到入口的版本化 Channel Message Runtime：严格事件序号、唯一终态、取消原因、有界背压和安全 Chat 终态投影。Memory 与 MCP 默认均为 `DISABLED`；Java 仍不包含 CLI、真实 Provider Streaming、真实渠道、自动 Memory 写回、远程/副作用 MCP 和主动能力。
 
 ## 3. 固定技术基线
 
@@ -181,6 +181,9 @@ testdata/golden/
   context/read-only-context-memory.json
   sqlite/session-store.json
   errors/http-error-mapping.json
+  memory/java-native-memory.json
+  mcp/java-mcp-client.json
+  message-bus/versioned-channel-message.json
 ```
 
 每个夹具包含输入、Python 基准输出、可忽略的非确定字段和 Java 实际输出。时间、UUID、模型自由文本等非确定值要注入或规范化，不能用删除所有字段的方式让测试失去意义。
@@ -192,7 +195,7 @@ testdata/golden/
 3. 工具调用轨迹和失败；
 4. 会话数据库及回滚；
 5. Memory 解析、检索和写回；
-6. 流式事件顺序、取消与断线。
+6. 已固定的渠道消息顺序、取消与断线，以及下一步真实 Provider Delta/Adapter 投影。
 
 完整格式、非确定字段和审批要求见 [Python/Java Golden Test 夹具规范](../contracts/golden-test-fixtures.md)。Golden 更新必须说明是批准的契约变化还是缺陷修复，不能通过批量重录隐藏回归。
 
@@ -247,12 +250,12 @@ testdata/golden/
 
 ## 12. 当前下一步
 
-R4.1、R4.2 与 R5.1 已完成，Memory/MCP 默认仍为 `DISABLED`，自动写回、Optimizer、真实 MCP Server 和副作用能力继续冻结。下一主线是 R6 的消息总线与 CLI 最小纵向切片：
+R4.1、R4.2、R5.1 与 R6.1 已完成，Memory/MCP 默认仍为 `DISABLED`，自动写回、Optimizer、真实 MCP Server 和副作用能力继续冻结。下一主线是 R6.2 的本地 CLI 与真实 Provider Streaming 最小纵向切片：
 
-1. 先冻结版本化 `InboundMessage`、`OutboundMessage`、生命周期事件和错误 Contract；
-2. 固定流式 Delta、完成、取消、断线、背压和乱序语义；
-3. 先接入本地 CLI，保持 Channel Adapter 无业务编排；
-4. 复用现有 Chat/Tool/Memory/MCP Application 能力，不同时引入真实渠道或新的数据写入协议；
-5. R5.2 远程 MCP、认证和真实 Server 作为独立高风险范围另行批准，不扩张 R5.1 权限。
+1. 复用 R6.1 的版本 1 `InboundMessage`、`OutboundMessage` 和唯一终态，不建立 CLI 私有消息格式；
+2. 先接本地 CLI Adapter，只负责可信身份/Route 规范化、输入读取和事件渲染，不取得业务编排权；
+3. 在 Spring AI Adapter 边界引入真实 Provider Delta，Application 继续以完成快照作为权威结果；
+4. 把 CLI 断开、用户取消和缓冲背压传播到同一个 `TurnCancellation`，并验证模型、Tool/MCP 和会话提交边界；
+5. 暂不引入 Telegram、SSE/WebSocket、持久队列、新数据库或消息中间件；R5.2 远程 MCP 也保持独立批准。
 
-R5.1 的完成边界与验证证据见 [MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)。R6 仍须先形成新的 Contract、Spec 和 Plan，再进入实现。
+R5.1 的完成边界与验证证据见 [MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)，R6.1 的完成证据见[版本化渠道消息 Contract Runtime 工作计划](../plans/2026-07-15-versioned-channel-message-runtime-implementation.md)。R6.2 仍须先形成独立 Spec 和 Plan，再进入生产实现。

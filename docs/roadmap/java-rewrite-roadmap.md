@@ -27,7 +27,7 @@
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
 | R4 | 上下文与记忆 | R4.1、R4.2 已完成 | Java 原生显式记忆管理与语义检索闭环已通过最终门禁；自动写回/Optimizer 仍冻结 |
 | R5 | MCP 与外部工具 | R5.1 已完成 | 静态 stdio 只读 Client、工具发现/投影、取消、隔离和进程回收已验收；远程与副作用范围未开始 |
-| R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
+| R6 | 渠道与控制面 | R6.1 已完成 | 版本化 Message Contract Runtime 已验收；CLI、真实流式、真实渠道与 Dashboard 待后续切片 |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
 | R8 | 主动运行时 | 未开始 | Scheduler、Proactive、Drift、Subagent |
 | R9 | 生产切换 | 未开始 | 真实工作区演练、灰度、回退和 Python 退役 |
@@ -48,11 +48,12 @@
 - Python 配置解析、安全校验 Golden，以及 TomlJ Parser 选型 ADR。
 - Java 只读 TOML Resolver、环境变量双模式、Spring Boot 启动装配和无副作用配置检查。
 - 核心消息、生命周期与只读 Tool Contract，以及 Python Tool Message/迁移循环 Golden。
+- R6.1 的版本化渠道消息 Contract、Java-owned Fixture、严格序号、唯一终态、取消与背压语义。
 
 待交付：
 
-- 随能力迁移继续固化工具调用、Memory 和流式事件夹具。
-- 为消息、工具、记忆、流式事件建立版本化 Contract。
+- 随能力迁移继续固化真实 Provider Streaming、渠道 Adapter 和后续扩展能力夹具。
+- 为尚未覆盖的插件、主动任务和跨进程生命周期建立版本化 Contract。
 
 退出门禁：下一阶段所依赖的协议都有契约；相同夹具能在 Python 生成基准、在 Java 验证；Golden 变化必须人工批准。
 
@@ -179,6 +180,21 @@ R5.1 最终门禁通过：默认 284 个测试（270 单元、14 集成）、`fa
 退出门禁：R5.1 已满足参考 Server 发现/调用 Golden、单 Server 故障隔离以及连接/进程可靠回收；后续 R5 子阶段按各自新 Contract 重新验收。
 
 ## R6：渠道、消息总线与控制面
+
+状态：R6.1 已实现并验证；R6 整体仍在进行中。
+
+R6.1 至 R6.6 的实施顺序见 [R6 渠道、消息总线与控制面总体工作计划](../plans/2026-07-15-r6-channel-message-control-plane-master-plan.md)。总体计划已批准并进入实施，后续子阶段仍须先分别冻结 Contract、Spec、ADR 和实施计划。
+
+R6.1 已交付：
+
+- Java-owned 版本 1 Message Fixture，以及纯 JDK `InboundMessage`、`OutboundMessage` 和 Route 值对象。
+- 从 `TURN_STARTED` 开始的严格连续序号、唯一终态和并发终态竞争保护。
+- `REQUESTED`、`CHANNEL_DISCONNECTED`、`BACKPRESSURE_EXCEEDED`、`SHUTDOWN` 四类取消原因的 First Writer Wins 传播。
+- 项目自持的有界出站缓冲、发布 Deadline、断开唤醒和背压取消，不引入无界队列或消息中间件。
+- 现有非流式 Chat 成功、取消和失败到安全渠道终态的投影；完成消息携带权威完整文本，错误只暴露稳定码。
+- 默认 321 个、`failure` 63 个、`compat` 360 个测试以及格式、依赖、Secret、敏感文件、禁止运行时和孤儿进程审计全部通过。
+
+R6.1 只建立可复用的运行时边界，没有新增启动入口、真实 Delta 来源或渠道部署。下一纵向切片 R6.2 应在不重定义消息格式的前提下先接本地 CLI，再接真实 Provider Streaming，并把断开与背压取消传回同一个 Turn Token。
 
 范围：
 

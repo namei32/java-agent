@@ -1,0 +1,396 @@
+{
+  "formatVersion": 1,
+  "suite": "versioned-channel-message",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-15",
+    "adr": "docs/adr/0007-use-project-owned-bounded-channel-message-protocol.md",
+    "contract": "docs/contracts/versioned-channel-message-runtime.md",
+    "spec": "docs/specs/2026-07-15-versioned-channel-message-runtime-design.md"
+  },
+  "normalization": [
+    "schemaVersion 必须精确为 1",
+    "入站标识与正文去除首尾空白，出站正文保持原样",
+    "标识拒绝 ISO Control 字符",
+    "CONTENT_DELTA 保留仅由空白组成的有效增量",
+    "失败码决定 retryable，调用方不能自行覆盖"
+  ],
+  "defaults": {
+    "inbound": {
+      "schemaVersion": 1,
+      "messageId": "msg-001",
+      "turnId": "turn-001",
+      "sessionId": "cli:demo",
+      "channel": "cli",
+      "conversationId": "demo",
+      "senderId": "local-user",
+      "content": "你好",
+      "occurredAt": "2026-07-15T00:00:00Z"
+    },
+    "outbound": {
+      "schemaVersion": 1,
+      "turnId": "turn-001",
+      "sessionId": "cli:demo",
+      "channel": "cli",
+      "conversationId": "demo",
+      "sequence": 0,
+      "type": "TURN_STARTED",
+      "content": "",
+      "code": "",
+      "retryable": false
+    }
+  },
+  "cases": [
+    {
+      "id": "inbound-minimum-valid",
+      "input": {"kind": "inbound"},
+      "expected": {
+        "accepted": true,
+        "messageId": "msg-001",
+        "turnId": "turn-001",
+        "sessionId": "cli:demo",
+        "channel": "cli",
+        "conversationId": "demo",
+        "senderId": "local-user",
+        "content": "你好",
+        "occurredAt": "2026-07-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "inbound-outer-whitespace-normalized",
+      "input": {
+        "kind": "inbound",
+        "messageId": "  msg-002  ",
+        "turnId": "  turn-002  ",
+        "sessionId": "  cli:trimmed  ",
+        "conversationId": "  trimmed  ",
+        "senderId": "  local-user  ",
+        "content": "  保留正文内部 空格  "
+      },
+      "expected": {
+        "accepted": true,
+        "messageId": "msg-002",
+        "turnId": "turn-002",
+        "sessionId": "cli:trimmed",
+        "channel": "cli",
+        "conversationId": "trimmed",
+        "senderId": "local-user",
+        "content": "保留正文内部 空格",
+        "occurredAt": "2026-07-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "inbound-rejects-version-zero",
+      "input": {"kind": "inbound", "schemaVersion": 0},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-future-version",
+      "input": {"kind": "inbound", "schemaVersion": 2},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-blank-message-id",
+      "input": {"kind": "inbound", "messageId": "   "},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-control-in-message-id",
+      "input": {"kind": "inbound", "messageId": "msg\n001"},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-overlong-message-id",
+      "input": {
+        "kind": "inbound",
+        "repeatField": "messageId",
+        "repeatValue": "m",
+        "repeatCount": 129
+      },
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-blank-turn-id",
+      "input": {"kind": "inbound", "turnId": ""},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-control-in-turn-id",
+      "input": {"kind": "inbound", "turnId": "turn\u0000id"},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-blank-session-id",
+      "input": {"kind": "inbound", "sessionId": "  "},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-overlong-session-id",
+      "input": {
+        "kind": "inbound",
+        "repeatField": "sessionId",
+        "repeatValue": "s",
+        "repeatCount": 257
+      },
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-uppercase-channel",
+      "input": {"kind": "inbound", "channel": "CLI"},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-dot-channel",
+      "input": {"kind": "inbound", "channel": "local.cli"},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-overlong-channel",
+      "input": {
+        "kind": "inbound",
+        "repeatField": "channel",
+        "repeatValue": "a",
+        "repeatCount": 33
+      },
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-blank-conversation-id",
+      "input": {"kind": "inbound", "conversationId": ""},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-control-in-conversation-id",
+      "input": {"kind": "inbound", "conversationId": "demo\rnext"},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-blank-sender-id",
+      "input": {"kind": "inbound", "senderId": ""},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-control-in-sender-id",
+      "input": {"kind": "inbound", "senderId": "user\t1"},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-blank-content",
+      "input": {"kind": "inbound", "content": " \n\t "},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-overlong-content",
+      "input": {
+        "kind": "inbound",
+        "repeatField": "content",
+        "repeatValue": "文",
+        "repeatCount": 32001
+      },
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "inbound-rejects-null-time",
+      "input": {"kind": "inbound", "occurredAt": null},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-started-valid",
+      "input": {"kind": "outbound"},
+      "expected": {
+        "accepted": true,
+        "sequence": 0,
+        "type": "TURN_STARTED",
+        "content": "",
+        "code": "",
+        "retryable": false
+      }
+    },
+    {
+      "id": "outbound-whitespace-delta-preserved",
+      "input": {
+        "kind": "outbound",
+        "sequence": 1,
+        "type": "CONTENT_DELTA",
+        "content": " "
+      },
+      "expected": {
+        "accepted": true,
+        "sequence": 1,
+        "type": "CONTENT_DELTA",
+        "content": " ",
+        "code": "",
+        "retryable": false
+      }
+    },
+    {
+      "id": "outbound-completed-valid",
+      "input": {
+        "kind": "outbound",
+        "sequence": 2,
+        "type": "TURN_COMPLETED",
+        "content": "完整回答"
+      },
+      "expected": {
+        "accepted": true,
+        "sequence": 2,
+        "type": "TURN_COMPLETED",
+        "content": "完整回答",
+        "code": "",
+        "retryable": false
+      }
+    },
+    {
+      "id": "outbound-cancelled-valid",
+      "input": {
+        "kind": "outbound",
+        "sequence": 1,
+        "type": "TURN_CANCELLED",
+        "code": "CHANNEL_DISCONNECTED"
+      },
+      "expected": {
+        "accepted": true,
+        "sequence": 1,
+        "type": "TURN_CANCELLED",
+        "content": "",
+        "code": "CHANNEL_DISCONNECTED",
+        "retryable": false
+      }
+    },
+    {
+      "id": "outbound-retryable-failure-valid",
+      "input": {
+        "kind": "outbound",
+        "sequence": 1,
+        "type": "TURN_FAILED",
+        "code": "MODEL_TIMEOUT",
+        "retryable": true
+      },
+      "expected": {
+        "accepted": true,
+        "sequence": 1,
+        "type": "TURN_FAILED",
+        "content": "",
+        "code": "MODEL_TIMEOUT",
+        "retryable": true
+      }
+    },
+    {
+      "id": "outbound-rejects-future-version",
+      "input": {"kind": "outbound", "schemaVersion": 2},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-rejects-negative-sequence",
+      "input": {"kind": "outbound", "sequence": -1},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-rejects-started-content",
+      "input": {"kind": "outbound", "content": "不允许"},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-rejects-started-nonzero-sequence",
+      "input": {"kind": "outbound", "sequence": 1},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-rejects-empty-delta",
+      "input": {"kind": "outbound", "sequence": 1, "type": "CONTENT_DELTA"},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-rejects-blank-completion",
+      "input": {
+        "kind": "outbound",
+        "sequence": 1,
+        "type": "TURN_COMPLETED",
+        "content": "   "
+      },
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-rejects-cancelled-content",
+      "input": {
+        "kind": "outbound",
+        "sequence": 1,
+        "type": "TURN_CANCELLED",
+        "content": "泄漏",
+        "code": "REQUESTED"
+      },
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-rejects-unknown-cancel-code",
+      "input": {
+        "kind": "outbound",
+        "sequence": 1,
+        "type": "TURN_CANCELLED",
+        "code": "UNKNOWN"
+      },
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-rejects-failure-content",
+      "input": {
+        "kind": "outbound",
+        "sequence": 1,
+        "type": "TURN_FAILED",
+        "content": "provider secret",
+        "code": "INTERNAL_ERROR"
+      },
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-rejects-retryable-override",
+      "input": {
+        "kind": "outbound",
+        "sequence": 1,
+        "type": "TURN_FAILED",
+        "code": "INTERNAL_ERROR",
+        "retryable": true
+      },
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-rejects-unknown-failure-code",
+      "input": {
+        "kind": "outbound",
+        "sequence": 1,
+        "type": "TURN_FAILED",
+        "code": "PROVIDER_RAW_500"
+      },
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-rejects-overlong-delta",
+      "input": {
+        "kind": "outbound",
+        "sequence": 1,
+        "type": "CONTENT_DELTA",
+        "repeatField": "content",
+        "repeatValue": "d",
+        "repeatCount": 32001
+      },
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-rejects-overlong-completion",
+      "input": {
+        "kind": "outbound",
+        "sequence": 1,
+        "type": "TURN_COMPLETED",
+        "repeatField": "content",
+        "repeatValue": "答",
+        "repeatCount": 32001
+      },
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "outbound-rejects-unknown-type",
+      "input": {"kind": "outbound", "type": "THINKING_DELTA"},
+      "expected": {"accepted": false}
+    }
+  ]
+}
