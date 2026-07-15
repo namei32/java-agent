@@ -81,8 +81,8 @@
 
 ## 当前优先级
 
-1. 按 TDD 完成 R4.2 Task J10 Bootstrap 配置、Loopback 门禁与默认关闭装配；模板继续保持 `AGENT_MEMORY_MODE=DISABLED`。
-2. 随后执行 J11 Contract/Failure/文档验收和 J12 全门禁；不实现自动提取/Optimizer，也不执行真实 Workspace 或真实 Embedding Smoke。
+1. 完成 R4.2 Task J11 Java Contract/Failure/文档验收，生产实现直接消费 J1 Fixture 且不运行 Python。
+2. 随后执行 J12 全门禁与最终审计；不实现自动提取/Optimizer，也不执行真实 Workspace 或真实 Embedding Smoke。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
 5. MCP、渠道、插件和主动能力按 Roadmap 顺序推进，不并行改写真实数据协议。

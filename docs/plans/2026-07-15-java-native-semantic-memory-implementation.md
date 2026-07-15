@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R4.2
-- 当前执行状态：Task J0 至 J9 已完成；下一步是 Task J10 Bootstrap 配置与默认关闭
+- 当前执行状态：Task J0 至 J10 已完成；下一步是 Task J11 Contract、Failure 与文档验收
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
@@ -338,7 +338,7 @@ RED/GREEN 记录（2026-07-15）：
 
 ## Task J10：Bootstrap 配置与默认关闭
 
-状态：待实施。
+状态：已完成。
 
 扩展 `MemoryConfigurationTest` 和 `ApplicationConfigurationTest`。RED 覆盖：
 
@@ -348,6 +348,17 @@ RED/GREEN 记录（2026-07-15）：
 - 非 Loopback 监听拒绝启用 `JAVA_NATIVE`。
 - 所有维度、Top-K、阈值、Alpha、Half-Life、候选和预算范围。
 - Spring Context 无 Python Bridge、Optimizer、Scheduler、Memory Tool 或 Vector Store。
+
+RED/GREEN 记录（2026-07-15）：
+
+- RED：聚焦命令在 Test Compile 阶段仅因 Memory 的 `Embedding`/`Retrieval` 配置、Loopback Guard 与 Embedding Environment Post Processor 缺失而失败，共 23 个目标符号错误。
+- GREEN：最终同一聚焦命令实际执行 `MemoryConfigurationTest` 8 个、`ApplicationConfigurationTest` 7 个，共 15 个测试，0 Failure、0 Error、0 Skipped。
+- 默认和模板继续 `DISABLED`；`READ_ONLY` 继续读取 R4.1 Markdown Profile，Retrieval 为 NoOp、Memory API 不可用且不创建 `agent-memory.db`。
+- `JAVA_NATIVE` 在临时 Workspace 中装配并实测版本化 Schema、SQLite Store、Spring AI Embedding Adapter、Semantic Retrieval 和 Memory API 的 Write/List/Retrieve/Delete 闭环。
+- 新增真实 Spring Boot 启动验收：Environment Post Processor 自动把 `JAVA_NATIVE` 映射为 OpenAI Embedding Auto Configuration，实际 `EmbeddingModel` Bean 可离线创建且测试没有调用 Provider。
+- 非 Loopback 地址在 Java Memory Schema 初始化前拒绝；配置完整验证 Model、Dimensions、Code Point、Top-K、Threshold、Alpha、Half-Life、候选与 Injection/外层预算。
+- 自审修复嵌套 Record 多构造器导致的 Spring Boot 绑定分裂，最终只保留 canonical constructor；生产上下文确认无实际 `TaskScheduler`、Python Bridge、Optimizer、Memory Tool 或 Vector Store Bean。
+- J10 阶段门禁：`spotless:check`、`adapter-spring-ai,agent-bootstrap -am verify` 与完整 `clean verify` 均通过；完整 Reactor 实际执行 232 个单元测试和 9 个集成测试，0 Failure、0 Error、0 Skipped。
 
 聚焦 RED/GREEN：
 

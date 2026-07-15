@@ -1,6 +1,10 @@
 package io.namei.agent.bootstrap.config;
 
 import io.namei.agent.adapter.springai.SpringAiAdapterConfiguration;
+import io.namei.agent.adapter.springai.SpringAiEmbeddingAdapter;
+import io.namei.agent.adapter.sqlite.Float32VectorCodec;
+import io.namei.agent.adapter.sqlite.JavaMemorySchemaInitializer;
+import io.namei.agent.adapter.sqlite.JdbcJavaMemoryStore;
 import io.namei.agent.adapter.sqlite.JdbcSessionRepository;
 import io.namei.agent.adapter.sqlite.SqliteSchemaInitializer;
 import io.namei.agent.adapter.workspace.MarkdownMemoryProfileAdapter;
@@ -9,7 +13,12 @@ import io.namei.agent.application.ChatService;
 import io.namei.agent.application.ChatUseCase;
 import io.namei.agent.application.KeyedSessionExecutionGate;
 import io.namei.agent.application.MemoryContextService;
+import io.namei.agent.application.MemoryDeleteService;
+import io.namei.agent.application.MemoryQueryService;
+import io.namei.agent.application.MemoryWriteService;
 import io.namei.agent.application.SecureIdGenerator;
+import io.namei.agent.application.SemanticMemoryRetrievalAdapter;
+import io.namei.agent.application.SemanticMemoryRetrievalSettings;
 import io.namei.agent.application.SessionExecutionGate;
 import io.namei.agent.application.SideEffectLedger;
 import io.namei.agent.application.ToolRuntimeMode;
@@ -23,6 +32,7 @@ import io.namei.agent.bootstrap.tool.CurrentTimeTool;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
 import io.namei.agent.kernel.port.ChatModelPort;
+import io.namei.agent.kernel.port.EmbeddingPort;
 import io.namei.agent.kernel.port.MemoryProfilePort;
 import io.namei.agent.kernel.port.MemoryRetrievalPort;
 import io.namei.agent.kernel.port.SessionRepository;
@@ -34,8 +44,13 @@ import java.nio.file.Files;
 import java.time.Clock;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
+import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.openai.OpenAiEmbeddingOptions;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -92,24 +107,91 @@ public class ApplicationConfiguration {
   }
 
   @Bean
+  JavaNativeMemoryAccessGuard javaNativeMemoryAccessGuard(
+      AgentProperties properties, Environment environment) {
+    var guard = new JavaNativeMemoryAccessGuard(properties, environment);
+    guard.validate();
+    return guard;
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = "agent.memory", name = "mode", havingValue = "JAVA_NATIVE")
+  JavaMemorySchemaInitializer javaMemorySchema(
+      AgentProperties properties, JavaNativeMemoryAccessGuard accessGuard) {
+    Objects.requireNonNull(accessGuard, "accessGuard");
+    var schema =
+        new JavaMemorySchemaInitializer(
+            properties.workspace().resolve("memory").resolve("agent-memory.db"), 5_000);
+    schema.initialize();
+    return schema;
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = "agent.memory", name = "mode", havingValue = "JAVA_NATIVE")
+  JdbcJavaMemoryStore javaMemoryStore(JavaMemorySchemaInitializer schema) {
+    return new JdbcJavaMemoryStore(schema, new Float32VectorCodec());
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = "agent.memory", name = "mode", havingValue = "JAVA_NATIVE")
+  EmbeddingPort javaMemoryEmbeddingPort(EmbeddingModel embeddingModel, AgentProperties properties) {
+    AgentProperties.Embedding embedding = properties.memory().embedding();
+    var options = OpenAiEmbeddingOptions.builder();
+    options.model(embedding.model());
+    options.dimensions(embedding.dimensions());
+    return new SpringAiEmbeddingAdapter(
+        embeddingModel, options.build(), embedding.maxTextCodePoints());
+  }
+
+  @Bean
   MemoryProfilePort memoryProfilePort(AgentProperties properties) {
     return switch (properties.memory().mode()) {
       case DISABLED -> MemoryProfilePort.empty();
       case READ_ONLY ->
           new MarkdownMemoryProfileAdapter(
               properties.workspace(), properties.memory().maxFileBytes());
-      case JAVA_NATIVE -> throw new IllegalStateException("JAVA_NATIVE 记忆尚未装配");
+      case JAVA_NATIVE -> MemoryProfilePort.empty();
     };
   }
 
   @Bean
-  MemoryRetrievalPort memoryRetrievalPort() {
-    return MemoryRetrievalPort.disabled();
+  MemoryRetrievalPort memoryRetrievalPort(
+      AgentProperties properties,
+      ObjectProvider<JdbcJavaMemoryStore> stores,
+      ObjectProvider<EmbeddingPort> embeddings) {
+    if (properties.memory().mode() != io.namei.agent.kernel.memory.MemoryRuntimeMode.JAVA_NATIVE) {
+      return MemoryRetrievalPort.disabled();
+    }
+    AgentProperties.Memory memory = properties.memory();
+    AgentProperties.Retrieval retrieval = memory.retrieval();
+    var settings =
+        new SemanticMemoryRetrievalSettings(
+            memory.embedding().model(),
+            memory.embedding().dimensions(),
+            retrieval.topK(),
+            retrieval.scoreThreshold(),
+            retrieval.hotnessAlpha(),
+            retrieval.hotnessHalfLifeDays(),
+            retrieval.maxCandidates(),
+            retrieval.maxInjectedCharacters());
+    return new SemanticMemoryRetrievalAdapter(required(stores), required(embeddings), settings);
   }
 
   @Bean
-  MemoryManagementApi memoryManagementApi() {
-    return MemoryManagementApi.unavailable();
+  MemoryManagementApi memoryManagementApi(
+      AgentProperties properties,
+      ObjectProvider<JdbcJavaMemoryStore> stores,
+      ObjectProvider<EmbeddingPort> embeddings) {
+    if (properties.memory().mode() != io.namei.agent.kernel.memory.MemoryRuntimeMode.JAVA_NATIVE) {
+      return MemoryManagementApi.unavailable();
+    }
+    JdbcJavaMemoryStore store = required(stores);
+    EmbeddingPort embedding = required(embeddings);
+    Clock clock = Clock.systemUTC();
+    return MemoryManagementApi.enabled(
+        new MemoryWriteService(embedding, store, new SecureIdGenerator(), clock),
+        new MemoryQueryService(store),
+        new MemoryDeleteService(store, clock));
   }
 
   @Bean
@@ -180,5 +262,13 @@ public class ApplicationConfiguration {
   @Bean
   SqliteHealthIndicator sqliteHealthIndicator(JdbcSessionRepository repository) {
     return new SqliteHealthIndicator(repository);
+  }
+
+  private static <T> T required(ObjectProvider<T> provider) {
+    T value = provider.getIfUnique();
+    if (value == null) {
+      throw new IllegalStateException("JAVA_NATIVE 记忆装配不完整");
+    }
+    return value;
   }
 }

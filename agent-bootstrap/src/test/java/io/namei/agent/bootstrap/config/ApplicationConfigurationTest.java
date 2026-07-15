@@ -176,7 +176,7 @@ class ApplicationConfigurationTest {
             configuration.approvalPort(),
             configuration.memoryContextService(
                 configuration.memoryProfilePort(properties),
-                configuration.memoryRetrievalPort(),
+                io.namei.agent.kernel.port.MemoryRetrievalPort.disabled(),
                 properties),
             properties,
             "test-model",
