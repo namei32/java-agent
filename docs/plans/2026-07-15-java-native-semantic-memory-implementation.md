@@ -1,9 +1,9 @@
 # Java 原生语义记忆实施计划
 
-- 状态：实施中
+- 状态：已实现并验证
 - 日期：2026-07-15
 - 阶段：R4.2
-- 当前执行状态：Task J0 至 J11 已完成；下一步是 Task J12 最终门禁与自审
+- 当前执行状态：Task J0 至 J12 已全部完成
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
@@ -399,13 +399,13 @@ RED/GREEN 记录（2026-07-15）：
 - `JavaNativeMemoryContractTest` 使用生产 Initializer、Float32 Codec、SQLite Store、Memory Application 用例、HTTP Controller、Semantic Search 与 Injection Formatter，直接消费 J1 Fixture 的 10 个 Case；计划中的 `compat` 聚焦命令实际执行 4 个测试，0 Failure、0 Error、0 Skipped。
 - `JavaNativeMemoryFailureTest` 使用临时数据库和 Fake Embedding 验证 Provider/非法 Embedding 响应零 Item/零 Ledger、同幂等键冲突不重复 Embedding/ID/Mutation、数据库不可用不泄漏路径；与 `MemoryControllerTest` 共同由计划中的 `failure` 聚焦命令实际执行 4 个测试，0 Failure、0 Error、0 Skipped。
 - 两条命令均未启动 Python、未读取 `memory2.db`、未访问真实 Workspace、未调用真实 Provider；J1 Fixture 未改写。
-- Contract、Spec、Roadmap、能力矩阵、根 README、文档导航和 Runbook 已同步到 J11 当前事实；完整 Profile 测试数由 J12 最终门禁记录。
+- Contract、Spec、Roadmap、能力矩阵、根 README、文档导航和 Runbook 已同步到 J11 当前事实；完整 Profile 测试数由 J12 最终门禁记录于下节。
 
 提交：`test: 验证 Java 原生语义记忆`。
 
 ## Task J12：最终门禁与自审
 
-状态：待实施。
+状态：已完成（2026-07-15）。
 
 ```bash
 ./mvnw --batch-mode --no-transfer-progress spotless:check
@@ -428,6 +428,19 @@ RED/GREEN 记录（2026-07-15）：
 - `git diff --check`、工作树、提交历史和文档状态一致。
 
 不运行真实 Workspace、真实 Embedding、真实模型或旧 Python 数据清理。
+
+最终验收记录（2026-07-15）：
+
+- `spotless:check` 与六模块 Reactor 均通过。
+- 默认 `clean verify` 执行 235 个单元测试、9 个集成测试，共 244 个；0 Failure、0 Error、0 Skipped。
+- `failure verify` 执行 54 个单元测试、1 个集成测试，共 55 个；0 Failure、0 Error、0 Skipped。
+- `compat verify` 执行 272 个单元测试、10 个集成测试，共 282 个；0 Failure、0 Error、0 Skipped。
+- Kernel Dependency Tree 只有 Test Scope 的 JUnit、AssertJ 与 Jackson；生产源码无 Spring、Spring AI、JDBC、SQLite、Jakarta 或 HTTP 类型导入。
+- Secret/Workspace/产物审计未发现被跟踪的 `.env`、数据库、WAL/SHM、真实 Workspace、用户记忆或高置信凭证；工作树外的 Maven `target/` 只包含构建产物。
+- R4.2 生产代码无 Python 进程、Python Fixture 或旧库访问；`memory2.db` 仅出现在 JUnit 哨兵中，用于证明固定文件名门禁拒绝旧库且原文件不变。
+- 配置、Spring Context 与回归测试共同确认默认 `DISABLED`，`READ_ONLY` 不创建 Java Memory DB，`JAVA_NATIVE` 必须显式使用 Loopback，且生产无 Optimizer、Scheduler、自动摄入、Memory Tool 或远程 Vector Store。
+- 物理删除、Mutation 重放/冲突、Schema 备份、事务回滚、Scope 隔离、Approval 不可绕过和 Context Frame 不持久化均有自动化证据。
+- 静态审计、`git diff --check`、Spotless、工作树和文档状态一致；未运行真实 Provider、真实模型、真实 Workspace 或旧 Python 数据清理。
 
 ## 完成定义
 

@@ -194,7 +194,7 @@ curl --fail-with-body \
 
 Memory 默认同样保持 `DISABLED`。`READ_ONLY` 会把 `SELF.md` 和 `MEMORY.md` 加入 System Prompt，把去除 `Recent Turns` 的 `RECENT_CONTEXT.md` 放入历史之后、当前用户消息之前的临时 Context Frame。`JAVA_NATIVE` 改用独立 `agent-memory.db`：显式 API 写入后，聊天只对当前真实 User 消息做 Scope/cosine/Hotness 检索，并把有界结果放在历史之后、当前消息之前；同一 Tool Loop 复用该 Frame。两种 Frame 都不会提交到会话 SQLite，普通聊天也不会自动写 Memory。
 
-`JAVA_NATIVE` 只允许 `server.address` 为空或 Loopback；配置为 `0.0.0.0`、局域网或公网地址会在创建 Java Memory DB 前启动失败。当前无认证，因此不得通过代理或端口转发暴露 Memory API。旧 `HISTORY.md`、`PENDING.md`、Journal 和 `memory2.db` 始终不读取。
+`JAVA_NATIVE` 要求 `server.address` 显式配置为 Loopback；为空、`0.0.0.0`、局域网或公网地址都会在创建 Java Memory DB 前启动失败。当前无认证，因此不得通过代理或端口转发暴露 Memory API。旧 `HISTORY.md`、`PENDING.md`、Journal 和 `memory2.db` 始终不读取。
 
 以下 API 仅用于已经获得 Provider/费用、Java 专用 Workspace 和部署启用授权的 Loopback 实例；默认 `DISABLED` 下会返回 HTTP 503：
 
@@ -244,6 +244,8 @@ cd "$(git rev-parse --show-toplevel)"
 ```
 
 `compat` 直接读取仓库内的 `testdata/golden/`，包括只读 Context/Memory、Approval/Side Effect Golden，以及 Java-owned `memory/java-native-memory.json`。生产 Java 实现会直接消费后者的 Schema、Codec、Hash、HTTP、排序和 Injection Case；测试不会启动 Python、访问模型、执行真实副作用、读取真实 Workspace 或读取 `.env`。
+
+R4.2 于 2026-07-15 完成离线基线：默认 Profile 共 244 个测试（235 个单元、9 个集成），`failure` 共 55 个（54 个单元、1 个集成），`compat` 共 282 个（272 个单元、10 个集成），均为 0 Failure、0 Error、0 Skipped。该结果不包含真实 Provider、真实 Workspace 或部署启用验证。
 
 `memory/java-native-memory.json` 不由 Python 生成器维护，只能在 Java Memory Contract 获得新批准后人工更新并同步 Manifest。其他 Python 基准夹具只有在对应 Python 行为或已批准 Contract 变化时才重新生成：
 

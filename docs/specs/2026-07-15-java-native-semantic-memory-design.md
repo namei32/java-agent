@@ -1,6 +1,6 @@
 # Java 原生语义记忆纵向切片设计
 
-- 状态：实施中（Task J1–J11 已完成，待 J12 最终门禁）
+- 状态：已实现并验证（Task J1–J12 已完成）
 - 日期：2026-07-15
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - 阶段：R4.2
@@ -243,4 +243,6 @@ Controller 始终通过 `MemoryManagementApi` 门面访问 Application 用例。
 - Compat Profile 在 R4.2 表示 Java Contract 的向后兼容，不再表示 Python Memory 数据兼容。
 - 阶段门禁禁止真实 Workspace、真实 Embedding 和物理删除旧 Python 数据。
 
-J11 已由 `JavaNativeMemoryContractTest` 直接消费 J1 的 10 个 Java-owned Case，并通过生产 Schema/Codec/Store/Application/HTTP/Search/Formatter 做纵向核对；`JavaNativeMemoryFailureTest` 则固定零写入、幂等冲突和持久化安全失败。聚焦 `compat` 与 `failure` 各执行 4 个测试且全部通过，没有运行 Python、真实 Provider 或真实 Workspace。完整 Profile 与架构审计在 J12 执行。
+J11 已由 `JavaNativeMemoryContractTest` 直接消费 J1 的 10 个 Java-owned Case，并通过生产 Schema/Codec/Store/Application/HTTP/Search/Formatter 做纵向核对；`JavaNativeMemoryFailureTest` 则固定零写入、幂等冲突和持久化安全失败。聚焦 `compat` 与 `failure` 各执行 4 个测试且全部通过，没有运行 Python、真实 Provider 或真实 Workspace。
+
+J12 最终门禁记录（2026-07-15）：默认 244 个测试（235 单元、9 集成），`failure` 55 个（54 单元、1 集成），`compat` 282 个（272 单元、10 集成）全部通过；Kernel 生产零外部依赖，Secret/Workspace/产物、默认关闭、Loopback、生产 Bean 和禁止 Python/旧库访问的静态审计通过。

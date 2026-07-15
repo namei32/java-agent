@@ -25,7 +25,7 @@
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、六模块、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
-| R4 | 上下文与记忆 | R4.1 已完成，R4.2 最终验收中 | J1–J11 已完成；下一步 J12 全门禁与自审 |
+| R4 | 上下文与记忆 | R4.1、R4.2 已完成 | Java 原生显式记忆管理与语义检索闭环已通过最终门禁；自动写回/Optimizer 仍冻结 |
 | R5 | MCP 与外部工具 | 未开始 | MCP 生命周期、工具发现和隔离 |
 | R6 | 渠道与控制面 | 未开始 | Message Bus、CLI/Telegram、流式输出、Dashboard |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
@@ -135,7 +135,7 @@ R3.2 实现依据：
 
 当前状态：R4.1 的 C1 至 C8 已全部完成。Python Golden、Kernel Port、只读 Markdown Adapter、ContextAssembler、Retrieval 注入/提交隔离、默认关闭装配和安全 HTTP 映射均已实现；默认 172、`failure` 50、`compat` 206 个测试以及格式、依赖、Secret/Workspace/生产写入面审计全部通过。
 
-R4.2 当前状态：用户已决定不迁移旧 Python 语义记忆，并于 2026-07-15 批准 Java 原生 `agent-memory.db`、显式 Write/List/Delete API、Embedding、语义检索、Contract、ADR、Spec、HTTP API 与 TDD 计划。Task J1–J11 已完成：Java Contract、Kernel 协议、版本化 Schema/Float32 Codec、SQLite Store/Mutation、Spring AI Embedding、Memory 管理用例、HTTP API、cosine/Hotness/Scope 检索、Chat/Context Frame 闭环、默认关闭的 Bootstrap 装配，以及生产实现直接消费 J1 Fixture 的 Contract/Failure 验收均已落地。聚焦 `compat` 4 个、`failure` 4 个测试全部通过，未运行 Python、真实 Provider 或真实 Workspace。`JAVA_NATIVE` 只在 Loopback 显式启用；下一步是 J12 全门禁与最终审计。
+R4.2 当前状态：已完成。用户决定不迁移旧 Python 语义记忆后，于 2026-07-15 批准并完成 Java 原生 `agent-memory.db`、显式 Write/List/Delete API、Embedding、cosine/Hotness/Scope 检索、Chat/Context Frame、默认关闭装配、Java-owned Contract/Failure 验收和 Task J1–J12。最终默认 244 个、`failure` 55 个、`compat` 282 个测试全部通过，Kernel 依赖与 Secret/Workspace/生产 Bean/默认配置/工作树审计通过；全过程未运行 Python、真实 Provider 或真实 Workspace。`JAVA_NATIVE` 只在显式 Loopback 配置下启用，生产默认仍为 `DISABLED`。
 
 范围：
 

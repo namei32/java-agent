@@ -1,6 +1,6 @@
 # Java 原生语义记忆、持久化与优化器契约
 
-- 状态：实施中（Task J1–J11 已完成，待 J12 最终门禁）
+- 状态：已实现并验证（Task J1–J12 已完成）
 - 契约版本：2
 - 日期：2026-07-15
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
@@ -354,7 +354,8 @@ J11 验收记录（2026-07-15）：
 
 - `JavaNativeMemoryContractTest` 使用生产 Initializer、Codec、SQLite Store、Application 用例、HTTP Controller、Semantic Search 与 Injection Formatter 消费 J1 的 10 个 Java-owned Case；聚焦 `compat` 命令执行 4 个测试，全部通过。
 - `JavaNativeMemoryFailureTest` 与 `MemoryControllerTest` 使用临时数据库和 Fake Embedding 验证 Provider/非法响应零写入、幂等冲突零重复费用/Mutation、数据库不可用安全映射；聚焦 `failure` 命令执行 4 个测试，全部通过。
-- 两条验收均未启动 Python、未读取 `memory2.db`、未访问真实 Workspace、未调用真实 Provider。完整默认、`failure`、`compat`、依赖与工作树审计留给 J12。
+- 两条聚焦验收均未启动 Python、未读取 `memory2.db`、未访问真实 Workspace、未调用真实 Provider。
+- J12 最终门禁全部通过：默认 244 个测试（235 单元、9 集成），`failure` 55 个（54 单元、1 集成），`compat` 282 个（272 单元、10 集成），均为 0 Failure、0 Error、0 Skipped；Kernel 依赖、Secret/Workspace、生产 Bean、默认配置和工作树审计通过。
 
 ## 11. 已批准决定
 
