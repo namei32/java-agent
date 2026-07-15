@@ -3,7 +3,7 @@
 - 状态：实施中
 - 日期：2026-07-15
 - 阶段：R4.2
-- 当前执行状态：Task J0 至 J4 已完成；下一步是 Task J5 Spring AI Embedding Adapter
+- 当前执行状态：Task J0 至 J5 已完成；下一步是 Task J6 Memory Write/List/Delete Application Use Case
 - 批准记录：2026-07-15，用户批准新版方案并授权从 Task J1 开始实施
 - Contract：[Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - Spec：[Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
@@ -172,7 +172,7 @@ RED/GREEN 记录（2026-07-15）：
 
 ## Task J5：Spring AI Embedding Adapter
 
-状态：待实施。
+状态：已完成（2026-07-15）。
 
 先新增 `SpringAiEmbeddingAdapterTest`，使用 Fake `EmbeddingModel` RED 覆盖：
 
@@ -192,6 +192,14 @@ RED/GREEN 记录（2026-07-15）：
 ```
 
 提交：`feat: 适配 Java 记忆 Embedding`。
+
+实施证据：
+
+- RED：聚焦命令在 Test Compile 因 `SpringAiEmbeddingAdapter` 与两个稳定 Embedding 异常缺失而失败，共 12 个目标符号错误。
+- GREEN：聚焦测试实际执行 5 个测试，0 Failure、0 Error、0 Skipped；`adapter-spring-ai -am test` 实际执行 Kernel 33 个、Adapter 14 个测试并全部通过。
+- Adapter 对空批次零调用、单批最多 10 条，Strip 后按最多 2000 Unicode Code Point 截断，不拆代理对。
+- Spring AI Request 复用实际 `OpenAiEmbeddingOptions` 实例并保留模型、维度和 Provider 专有选项；返回结果按 Provider Index 恢复输入顺序。
+- 输出数量、Index、维度、有限值和非零范数严格验证；Provider 异常映射为不含输入和上游消息的稳定异常。测试只使用 Fake Model，未发网络请求。
 
 ## Task J6：Memory Write/List/Delete Application Use Case
 
