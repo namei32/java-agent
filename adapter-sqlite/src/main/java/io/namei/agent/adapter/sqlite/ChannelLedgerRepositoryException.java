@@ -1,8 +1,11 @@
 package io.namei.agent.adapter.sqlite;
 
+import io.namei.agent.kernel.channel.reliability.ChannelLedgerFailureCarrier;
+import io.namei.agent.kernel.channel.reliability.ChannelLedgerFailureKind;
 import java.util.Objects;
 
-public final class ChannelLedgerRepositoryException extends RuntimeException {
+public final class ChannelLedgerRepositoryException extends RuntimeException
+    implements ChannelLedgerFailureCarrier {
   private final ChannelLedgerRepositoryFailure failure;
 
   private ChannelLedgerRepositoryException(
@@ -13,6 +16,17 @@ public final class ChannelLedgerRepositoryException extends RuntimeException {
 
   public ChannelLedgerRepositoryFailure failure() {
     return failure;
+  }
+
+  @Override
+  public ChannelLedgerFailureKind ledgerFailureKind() {
+    return switch (failure) {
+      case IDEMPOTENCY_CONFLICT -> ChannelLedgerFailureKind.IDEMPOTENCY_CONFLICT;
+      case CAPACITY_EXCEEDED -> ChannelLedgerFailureKind.CAPACITY_EXCEEDED;
+      case STALE_WRITE -> ChannelLedgerFailureKind.STALE_WRITE;
+      case DATABASE_UNAVAILABLE, SCHEMA_INCOMPATIBLE, BACKUP_FAILED, OPERATION_FAILED ->
+          ChannelLedgerFailureKind.UNAVAILABLE;
+    };
   }
 
   static ChannelLedgerRepositoryException databaseUnavailable(Throwable cause) {
