@@ -1,7 +1,7 @@
 # R6.4 渠道可靠投递、幂等与恢复工作计划
 
 - 状态：已批准，连续 TDD 实施中
-- 当前任务：F3 持久 Event、Cursor 与冲突
+- 当前任务：F4 Turn Claim、启动边界与恢复
 - 日期：2026-07-16
 - 分支：`agent/r6-reliable-delivery`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`
@@ -154,7 +154,7 @@ Trigger 拒绝。最终同一聚焦命令执行 12 个测试全部通过，源 V
 
 ## 6. Task F3：持久 Event、Cursor 与冲突
 
-状态：进行中。
+状态：已完成。
 
 先写 `JdbcChannelLedgerInboxTest`：
 
@@ -177,9 +177,18 @@ RED/GREEN：
 
 预计提交：`feat: 原子记录渠道事件与游标`
 
+RED/GREEN 证据（2026-07-16）：聚焦命令首次在测试编译阶段因 `JdbcChannelLedger` 和可控
+Fault Point 缺失而失败；实现 `BEGIN IMMEDIATE` 事务骨架、Event/Sequence 双键查询、Cursor
+CAS 推进和只读 Snapshot 后，同一命令执行 6 个测试全部通过。测试证明 Ignore/Control 决策与
+Cursor 同事务提交，首个 Cursor Revision 为 0、后续单调增加，匹配重放不增加行或 Revision；
+相同 Event ID 的不同指纹、同 Sequence 的不同 Event ID、低于 Cursor 的未记录事件和
+`Long.MAX_VALUE` 均 Fail Closed。两个真实 SQLite 连接同时争抢同一 Sequence 时恰有一个 Winner；
+提交前注入 SQLException 后 Event/Cursor 都为零行，异常只暴露稳定 `OPERATION_FAILED`，不泄漏
+底层消息。
+
 ## 7. Task F4：Turn Claim、启动边界与恢复
 
-状态：未开始。
+状态：进行中。
 
 先写 `JdbcChannelTurnClaimTest`，覆盖：
 
