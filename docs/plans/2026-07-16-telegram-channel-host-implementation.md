@@ -75,7 +75,7 @@ Telegram Fake Bot API / later real Bot API
 
 ## 4. Task E1：通用 Channel Host 生命周期
 
-状态：待 E0 批准。
+状态：已完成。
 
 先写 `ChannelHostTest`，固定：
 
@@ -103,6 +103,8 @@ RED/GREEN：
 自审重点：不引用 Spring 生命周期接口；异常正文不进入快照；关闭所有 Adapter 即使前一个失败。
 
 预计提交：`feat: 建立有界 Channel Host 生命周期`
+
+RED/GREEN 证据（2026-07-16）：聚焦命令首次在 Bootstrap 测试编译阶段因 `ChannelAdapter`、`ChannelState`、`ChannelStatusSnapshot` 和 `ChannelHost` 缺失而失败；最小实现后，同一命令执行 6 个测试并全部通过。测试证明注册顺序启动、启动失败立即清理且不阻断后续 Adapter、停止入站与反向关闭顺序、关闭故障隔离、重复启动/关闭和空 Host；失败快照只包含 `START_FAILED` 等稳定码，不包含原始异常正文。
 
 ## 5. Task E2：Telegram Fixture、配置值与可信 Mapper
 
