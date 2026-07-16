@@ -36,7 +36,9 @@ class ChannelDeliveryWorkerTest {
   @Test
   void failedAndUnknownDeliveriesDoNotBlockLaterWork() throws Exception {
     var delivered = new CountDownLatch(1);
+    var emptyScanned = new CountDownLatch(1);
     var processor = new ScriptedProcessor(delivered);
+    processor.beforeFirstEmpty = emptyScanned;
     processor.add(ChannelDeliveryStep.failed());
     processor.add(ChannelDeliveryStep.unknown());
     processor.add(ChannelDeliveryStep.delivered());
@@ -46,6 +48,7 @@ class ChannelDeliveryWorkerTest {
     worker.start();
 
     assertThat(delivered.await(2, TimeUnit.SECONDS)).isTrue();
+    assertThat(emptyScanned.await(2, TimeUnit.SECONDS)).isTrue();
     assertThat(processor.calls).hasValue(4);
     worker.close();
   }
