@@ -68,6 +68,7 @@ class TelegramReliableDeliveryIT {
 
       first.start();
       await(() -> "DELIVERED".equals(value(rig.ledger(), "channel_deliveries", "state")), "终态送达");
+      await(() -> first.adapter().nextOffset() == 101, "适配器观察持久 Cursor");
 
       assertThat(model.calls()).isEqualTo(1);
       assertThat(first.sessions().load(SESSION_ID).messages())
