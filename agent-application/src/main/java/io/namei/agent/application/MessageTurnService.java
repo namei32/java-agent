@@ -26,7 +26,10 @@ public final class MessageTurnService {
         throw new TurnCancelledException("当前 Turn 已取消");
       }
       ChatResult result =
-          chat.chat(new ChatCommand(inbound.sessionId(), inbound.content()), cancellation);
+          chat.chat(
+              new ChatCommand(inbound.sessionId(), inbound.content()),
+              cancellation,
+              delta -> sink.publish(sequence.delta(delta)));
       if (result == null || !inbound.sessionId().equals(result.sessionId())) {
         throw new IllegalStateException("Chat Result 与入站 Session 不一致");
       }

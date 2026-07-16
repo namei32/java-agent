@@ -1,8 +1,11 @@
 package io.namei.agent.adapter.springai;
 
+import io.namei.agent.kernel.channel.MessageContract;
+import io.namei.agent.kernel.concurrent.CancellationSignal;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
 import io.namei.agent.kernel.error.ModelInvocationException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
+import io.namei.agent.kernel.error.TurnCancelledException;
 import io.namei.agent.kernel.model.AssistantToolCallMessage;
 import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.ChatModelRequest;
@@ -10,17 +13,23 @@ import io.namei.agent.kernel.model.ChatModelResponse;
 import io.namei.agent.kernel.model.ModelMessage;
 import io.namei.agent.kernel.model.ToolResultMessage;
 import io.namei.agent.kernel.port.ChatModelPort;
+import io.namei.agent.kernel.port.ChatModelStreamObserver;
 import io.namei.agent.kernel.tool.ToolCall;
 import io.namei.agent.kernel.tool.ToolDefinition;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -29,24 +38,49 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
+import reactor.core.publisher.BaseSubscriber;
+import reactor.core.publisher.Flux;
 import tools.jackson.databind.ObjectMapper;
 
 public final class SpringAiChatModelAdapter implements ChatModelPort {
   private static final ObjectMapper JSON = new ObjectMapper();
+  private static final Duration DEFAULT_STREAM_IDLE_TIMEOUT = Duration.ofSeconds(30);
+  private static final int MAX_STREAM_TOOL_CALLS = 128;
   private final ChatModel chatModel;
   private final int maxArgumentBytes;
+  private final Duration streamIdleTimeout;
+  private final OpenAiStreamCancellationRegistry streamCancellationRegistry;
 
   public SpringAiChatModelAdapter(ChatModel chatModel) {
-    this(chatModel, 16_384);
+    this(chatModel, 16_384, DEFAULT_STREAM_IDLE_TIMEOUT);
   }
 
   public SpringAiChatModelAdapter(ChatModel chatModel, int maxArgumentBytes) {
+    this(chatModel, maxArgumentBytes, DEFAULT_STREAM_IDLE_TIMEOUT);
+  }
+
+  public SpringAiChatModelAdapter(
+      ChatModel chatModel, int maxArgumentBytes, Duration streamIdleTimeout) {
+    this(chatModel, maxArgumentBytes, streamIdleTimeout, null);
+  }
+
+  SpringAiChatModelAdapter(
+      ChatModel chatModel,
+      int maxArgumentBytes,
+      Duration streamIdleTimeout,
+      OpenAiStreamCancellationRegistry streamCancellationRegistry) {
     this.chatModel = Objects.requireNonNull(chatModel, "chatModel");
     if (maxArgumentBytes < 1) {
       throw new IllegalArgumentException("Tool Arguments 字节上限必须大于零");
     }
     this.maxArgumentBytes = maxArgumentBytes;
+    if (streamIdleTimeout == null || streamIdleTimeout.isZero() || streamIdleTimeout.isNegative()) {
+      throw new IllegalArgumentException("模型流空闲超时必须为正数");
+    }
+    this.streamIdleTimeout = streamIdleTimeout;
+    this.streamCancellationRegistry = streamCancellationRegistry;
   }
 
   @Override
@@ -78,17 +112,82 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     }
   }
 
+  @Override
+  public ChatModelResponse generate(
+      ChatModelRequest request, ChatModelStreamObserver observer, CancellationSignal cancellation) {
+    Objects.requireNonNull(request, "request");
+    Objects.requireNonNull(observer, "observer");
+    Objects.requireNonNull(cancellation, "cancellation");
+    cancellation.throwIfCancellationRequested();
+
+    List<Message> instructions = request.messages().stream().map(this::toSpringMessage).toList();
+    var transport =
+        streamCancellationRegistry == null
+            ? OpenAiStreamCancellationRegistry.Registration.NONE
+            : streamCancellationRegistry.open(chatModel);
+    var bridge = new StreamingBridge(observer, transport::cancel);
+    try (transport;
+        var registration = cancellation.onCancellation(bridge::cancelFromSignal)) {
+      if (bridge.isDone()) {
+        return bridge.await();
+      }
+
+      Flux<org.springframework.ai.chat.model.ChatResponse> stream;
+      try {
+        stream =
+            chatModel.stream(prompt(instructions, request.tools(), transport.requestHeaders()));
+      } catch (RuntimeException exception) {
+        throw mapStreamingFailure(exception);
+      }
+      if (stream == null) {
+        throw new InvalidModelResponseException("模型流响应不能为空");
+      }
+      if (bridge.isDone()) {
+        return bridge.await();
+      }
+
+      try {
+        stream.timeout(streamIdleTimeout).limitRate(1).subscribe(bridge);
+      } catch (RuntimeException exception) {
+        if (!bridge.isDone()) {
+          transport.cancel();
+          throw mapStreamingFailure(exception);
+        }
+      }
+      return bridge.await();
+    }
+  }
+
   private Prompt prompt(List<Message> instructions, List<ToolDefinition> definitions) {
+    return prompt(instructions, definitions, Map.of());
+  }
+
+  private Prompt prompt(
+      List<Message> instructions,
+      List<ToolDefinition> definitions,
+      Map<String, String> transportHeaders) {
     if (definitions.isEmpty()) {
-      return new Prompt(instructions);
+      if (transportHeaders.isEmpty()) {
+        return new Prompt(instructions);
+      }
     }
     List<ToolCallback> callbacks =
         definitions.stream().<ToolCallback>map(SchemaOnlyToolCallback::new).toList();
     var configuredOptions = chatModel.getOptions();
-    var options =
-        configuredOptions instanceof ToolCallingChatOptions toolOptions
-            ? toolOptions.mutate().toolCallbacks(callbacks).build()
-            : ToolCallingChatOptions.builder().toolCallbacks(callbacks).build();
+    ToolCallingChatOptions options;
+    if (configuredOptions instanceof OpenAiChatOptions openAiOptions) {
+      var headers = new LinkedHashMap<String, String>();
+      if (openAiOptions.getCustomHeaders() != null) {
+        headers.putAll(openAiOptions.getCustomHeaders());
+      }
+      headers.putAll(transportHeaders);
+      options = openAiOptions.mutate().customHeaders(headers).toolCallbacks(callbacks).build();
+    } else {
+      options =
+          configuredOptions instanceof ToolCallingChatOptions toolOptions
+              ? toolOptions.mutate().toolCallbacks(callbacks).build()
+              : ToolCallingChatOptions.builder().toolCallbacks(callbacks).build();
+    }
     return new Prompt(instructions, options);
   }
 
@@ -184,5 +283,178 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
       }
     }
     return false;
+  }
+
+  private RuntimeException mapStreamingFailure(Throwable failure) {
+    if (failure instanceof InvalidModelResponseException invalid) {
+      return invalid;
+    }
+    if (failure instanceof TurnCancelledException cancelled) {
+      return cancelled;
+    }
+    if (failure instanceof ModelTimeoutException timeout) {
+      return timeout;
+    }
+    if (failure instanceof ModelInvocationException invocation) {
+      return invocation;
+    }
+    if (hasTimeoutCause(failure)) {
+      return new ModelTimeoutException("模型流空闲超时", failure);
+    }
+    return new ModelInvocationException("模型流调用失败", failure);
+  }
+
+  private final class StreamingBridge
+      extends BaseSubscriber<org.springframework.ai.chat.model.ChatResponse> {
+    private final Object lock = new Object();
+    private final ChatModelStreamObserver observer;
+    private final StringBuilder content = new StringBuilder();
+    private final LinkedHashMap<String, ToolCall> toolCalls = new LinkedHashMap<>();
+    private final CompletableFuture<ChatModelResponse> completion = new CompletableFuture<>();
+    private final AtomicBoolean done = new AtomicBoolean();
+    private final AtomicReference<RuntimeException> projectFailure = new AtomicReference<>();
+    private int contentCodePoints;
+
+    private final Runnable transportCancel;
+
+    private StreamingBridge(ChatModelStreamObserver observer, Runnable transportCancel) {
+      this.observer = observer;
+      this.transportCancel = transportCancel;
+    }
+
+    @Override
+    protected void hookOnSubscribe(org.reactivestreams.Subscription subscription) {
+      if (done.get()) {
+        cancel();
+        return;
+      }
+      request(1);
+    }
+
+    @Override
+    protected void hookOnNext(org.springframework.ai.chat.model.ChatResponse response) {
+      try {
+        synchronized (lock) {
+          if (done.get()) {
+            return;
+          }
+          accept(response);
+        }
+      } catch (RuntimeException exception) {
+        failProject(exception);
+        return;
+      }
+      if (!done.get()) {
+        request(1);
+      }
+    }
+
+    @Override
+    protected void hookOnComplete() {
+      try {
+        ChatModelResponse response;
+        synchronized (lock) {
+          if (done.get()) {
+            return;
+          }
+          String finalContent = content.toString().strip();
+          if (finalContent.isBlank() && toolCalls.isEmpty()) {
+            throw new InvalidModelResponseException("模型返回了空响应");
+          }
+          response = new ChatModelResponse(finalContent, List.copyOf(toolCalls.values()));
+          if (!done.compareAndSet(false, true)) {
+            return;
+          }
+        }
+        completion.complete(response);
+      } catch (RuntimeException exception) {
+        failProject(exception);
+      }
+    }
+
+    @Override
+    protected void hookOnError(Throwable failure) {
+      synchronized (lock) {
+        if (!done.compareAndSet(false, true)) {
+          return;
+        }
+      }
+      completion.completeExceptionally(failure);
+      transportCancel.run();
+    }
+
+    private void accept(org.springframework.ai.chat.model.ChatResponse response) {
+      if (response == null) {
+        throw new InvalidModelResponseException("模型流响应不能为空");
+      }
+      if (response.getResults() == null || response.getResults().isEmpty()) {
+        return;
+      }
+      var generation = response.getResult();
+      if (generation == null || generation.getOutput() == null) {
+        throw new InvalidModelResponseException("模型流响应缺少 Generation");
+      }
+      var output = generation.getOutput();
+      String delta = output.getText();
+      if (delta != null && !delta.isEmpty()) {
+        observer.onContentDelta(delta);
+        int deltaCodePoints = delta.codePointCount(0, delta.length());
+        if ((long) contentCodePoints + deltaCodePoints > MessageContract.MAX_CONTENT_CHARACTERS) {
+          throw new InvalidModelResponseException("模型流文本超过聚合上限");
+        }
+        content.append(delta);
+        contentCodePoints += deltaCodePoints;
+      }
+      List<AssistantMessage.ToolCall> rawToolCalls = output.getToolCalls();
+      int incomingToolCalls = rawToolCalls == null ? 0 : rawToolCalls.size();
+      if ((long) toolCalls.size() + incomingToolCalls > MAX_STREAM_TOOL_CALLS) {
+        throw new InvalidModelResponseException("模型流 Tool Call 超过聚合上限");
+      }
+      for (ToolCall call : parseToolCalls(rawToolCalls)) {
+        if (toolCalls.putIfAbsent(call.id(), call) != null) {
+          throw new InvalidModelResponseException("模型流包含重复 Tool Call");
+        }
+      }
+    }
+
+    private void cancelFromSignal() {
+      var cancelled = new TurnCancelledException("当前模型流已取消");
+      failProject(cancelled);
+    }
+
+    private boolean failProject(RuntimeException failure) {
+      synchronized (lock) {
+        if (!done.compareAndSet(false, true)) {
+          return false;
+        }
+        projectFailure.set(failure);
+      }
+      cancel();
+      transportCancel.run();
+      completion.completeExceptionally(failure);
+      return true;
+    }
+
+    private boolean isDone() {
+      return done.get();
+    }
+
+    private ChatModelResponse await() {
+      try {
+        return completion.get();
+      } catch (InterruptedException interrupted) {
+        Thread.currentThread().interrupt();
+        var cancelled = new TurnCancelledException("模型流等待被中断");
+        failProject(cancelled);
+        throw cancelled;
+      } catch (ExecutionException execution) {
+        Throwable failure = execution.getCause();
+        RuntimeException project = projectFailure.get();
+        if (project != null && failure == project) {
+          throw project;
+        }
+        throw mapStreamingFailure(failure);
+      }
+    }
   }
 }

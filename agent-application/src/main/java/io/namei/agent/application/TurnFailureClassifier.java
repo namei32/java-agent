@@ -25,7 +25,8 @@ final class TurnFailureClassifier {
       return TurnFailureCode.INVALID_MODEL_RESPONSE;
     }
     if (failure instanceof ToolCallLimitExceededException
-        || failure instanceof ToolLoopLimitExceededException) {
+        || failure instanceof ToolLoopLimitExceededException
+        || failure instanceof ModelStreamLimitExceededException) {
       return TurnFailureCode.TURN_LIMIT_EXCEEDED;
     }
     if (failure instanceof MemoryContextUnavailableException) {

@@ -1,6 +1,7 @@
 package io.namei.agent.bootstrap.observability;
 
 import io.namei.agent.application.ChatCommand;
+import io.namei.agent.application.ChatProgressListener;
 import io.namei.agent.application.ChatResult;
 import io.namei.agent.application.ChatUseCase;
 import io.namei.agent.application.TurnCancellation;
@@ -12,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.Objects;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,12 +35,25 @@ public final class SafeChatUseCase implements ChatUseCase {
 
   @Override
   public ChatResult chat(ChatCommand command, TurnCancellation cancellation) {
+    return observe(command, cancellation, () -> delegate.chat(command, cancellation));
+  }
+
+  @Override
+  public ChatResult chat(
+      ChatCommand command, TurnCancellation cancellation, ChatProgressListener progressListener) {
+    Objects.requireNonNull(progressListener, "progressListener");
+    return observe(
+        command, cancellation, () -> delegate.chat(command, cancellation, progressListener));
+  }
+
+  private ChatResult observe(
+      ChatCommand command, TurnCancellation cancellation, Supplier<ChatResult> invocation) {
     Objects.requireNonNull(command, "command");
     Objects.requireNonNull(cancellation, "cancellation");
     Instant started = clock.instant();
     String sessionHash = hash(command.sessionId());
     try {
-      ChatResult result = delegate.chat(command, cancellation);
+      ChatResult result = invocation.get();
       log("success", "none", sessionHash, started);
       return result;
     } catch (RuntimeException exception) {

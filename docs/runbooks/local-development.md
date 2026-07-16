@@ -32,6 +32,14 @@ AKASHIC_WORKSPACE=./workspace
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_API_KEY=replace-me
 OPENAI_MODEL=gpt-4o-mini
+AGENT_MODEL_STREAM_IDLE_TIMEOUT=30s
+AGENT_MODEL_MAX_DELTA_EVENTS=2048
+AGENT_MODEL_MAX_DELTA_CODE_POINTS=32000
+AGENT_CLI_SESSION_ID=cli:local
+AGENT_CLI_CONVERSATION_ID=local
+AGENT_CLI_BUFFER_CAPACITY=32
+AGENT_CLI_PUBLISH_TIMEOUT=2s
+AGENT_CLI_POLL_TIMEOUT=100ms
 AGENT_MEMORY_MODE=DISABLED
 AGENT_MEMORY_MAX_FILE_BYTES=65536
 AGENT_MEMORY_MAX_CONTEXT_CHARACTERS=100000
@@ -68,6 +76,10 @@ AGENT_TOOL_APPROVAL_TIMEOUT=5m
 ```
 
 `OPENAI_BASE_URL` 是 OpenAI-compatible API 根路径。OpenAI 官方地址需要包含 `/v1`。`.env` 已被 Git 忽略，禁止提交真实密钥。
+
+模型流式边界默认允许每 Turn 最多 `2048` 个 Delta 和累计 `32000` 个 Unicode Code Point，Provider 连续 `30s` 没有新 Chunk 会触发空闲超时。三个值都在启动时严格校验；它们限制预览流，不改变最终完整回答作为 SQLite 提交权威快照的语义。
+
+`AGENT_CLI_SESSION_ID` 与 `AGENT_CLI_CONVERSATION_ID` 是受信本地路由，普通输入正文不能覆盖。CLI Buffer 容量必须在 `1..1024`，发布和轮询期限必须大于零且不超过 `30s`。默认值面向单用户本地终端，不表示允许多个终端共享同一 Session 并发写入。
 
 `AGENT_MEMORY_MODE` 默认 `DISABLED`；`READ_ONLY` 只读取固定的三个 Markdown Profile 文件，Retrieval 为空，不启用记忆写入或 Embedding。`JAVA_NATIVE` 不读取旧 Markdown/Python 记忆，而是在 `${AKASHIC_WORKSPACE}/memory/agent-memory.db` 启用显式 Memory API 和语义检索；它只允许 Loopback 监听，并会在写入或当前 Scope 非空检索时调用与 `OPENAI_*` 相同 Provider 配置下的 Embedding 模型。未获得网络、费用和部署授权时必须保持 `DISABLED`。
 
@@ -220,6 +232,29 @@ set -a && source .env && set +a
 
 应用默认监听 `127.0.0.1:8080`。不要通过配置把它改为 `0.0.0.0`；MVP 没有远程认证和 TLS。
 
+### 3.1 启动本地 CLI
+
+使用同一套 Provider、Java 专用 Workspace、Memory、Tool 和 MCP 配置，以显式 `--cli` 启动：
+
+```bash
+(
+  cd "$(git rev-parse --show-toplevel)" || exit 1
+  [[ -f .env ]] || { echo "未找到项目根目录下的 .env，请先从 .env.example 创建"; exit 1; }
+  [[ -f agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar ]] || \
+    { echo "未找到可执行 JAR，请先运行 ./mvnw clean verify"; exit 1; }
+  set -a
+  source .env || exit 1
+  set +a
+  java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar --cli
+)
+```
+
+CLI 模式使用 `WebApplicationType.NONE`，不会监听 HTTP 端口；默认 Web 启动命令保持不变。stdin 按严格、有界 UTF-8 行读取，空白行忽略，一次只执行一个 Turn。Delta 直接预览；若最终权威快照与预览不同，会另起一行输出完整结果。失败和取消只输出稳定码，不输出 Provider 原始正文。
+
+输入 EOF 会在当前 Turn 完成后正常退出。按 `Ctrl+C` 时 Spring/JVM Shutdown 会以 `SHUTDOWN` 取消活动 Turn；stdout 关闭会以 `CHANNEL_DISCONNECTED` 取消，并且不会提交半截回答。CLI 仍会调用真实 Provider 并写入 Java `sessions.db`，所以必须继续遵守网络/费用授权和 Workspace 隔离要求；`--cli` 不是只读配置检查模式。
+
+若同时传入 `--agent.config-check --cli`，配置检查优先，进程不会创建 Spring Context、CLI Runner、Workspace、SQLite 或 Provider Client。
+
 ## 4. 本地检查
 
 健康检查只验证应用和 SQLite，不调用模型：
@@ -284,7 +319,7 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pfailure verify
 ```
 
-`failure` 独立覆盖审批错配与过期、批准后取消、Ledger 持久化故障、并发一次性消费、`UNKNOWN` 停机，Memory Embedding 零写入、幂等冲突、数据库不可用、Profile/检索/预算和安全 HTTP 映射，以及 MCP 损坏 JSON、stdout 噪声、错误 Response ID、突然退出、Stale、Catalog 变化和关闭/重连竞态。MCP 故障测试只启动仓库编译的 Java Reference Server，不执行真实外部变更。
+`failure` 独立覆盖审批错配与过期、批准后取消、Ledger 持久化故障、并发一次性消费、`UNKNOWN` 停机，Memory Embedding 零写入、幂等冲突、数据库不可用、Profile/检索/预算和安全 HTTP 映射，MCP 损坏 JSON、stdout 噪声、错误 Response ID、突然退出、Stale、Catalog 变化和关闭/重连竞态，以及 Provider 流空闲超时/损坏、目标连接取消、背压/断开唤醒、CLI 输出/启动/关闭故障和 SQLite 半轮次隔离。MCP 故障测试只启动仓库编译的 Java Reference Server，不执行真实外部变更。
 
 Python/Java Golden 与 Schema 固定样本兼容性：
 
@@ -293,13 +328,15 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pcompat verify
 ```
 
-`compat` 直接读取仓库内的 `testdata/golden/`，包括只读 Context/Memory、Approval/Side Effect Golden，以及 Java-owned `memory/java-native-memory.json`、`mcp/java-mcp-client.json` 和 `message-bus/versioned-channel-message.json`。生产 Java 实现会消费这些 Fixture 的 Schema、Codec、Hash、HTTP、排序、Injection、配置、命名、Schema 投影、结果、消息顺序和生命周期 Case；测试不会启动 Python、访问真实模型/MCP Server、执行真实副作用、读取真实 Workspace 或读取 `.env`。
+`compat` 直接读取仓库内的 `testdata/golden/`，包括只读 Context/Memory、Approval/Side Effect Golden，以及 Java-owned `memory/java-native-memory.json`、`mcp/java-mcp-client.json`、`message-bus/versioned-channel-message.json` 和 `message-bus/provider-streaming-cli.json`。生产 Java 实现会消费这些 Fixture 的 Schema、Codec、Hash、HTTP、排序、Injection、配置、命名、Schema 投影、结果、消息顺序、流预算和 CLI 生命周期 Case；测试不会启动 Python、访问真实模型/MCP Server、执行真实副作用、读取真实 Workspace 或读取 `.env`。
 
 R5.1 于 2026-07-15 完成离线基线：默认 Profile 共 284 个测试（270 个单元、14 个集成），`failure` 共 63 个（62 个单元、1 个集成），`compat` 共 323 个（308 个单元、15 个集成），均为 0 Failure、0 Error、0 Skipped。MCP Integration 使用受控 Java stdio 子进程并验证结束后零孤儿进程；该结果不包含真实 Provider、真实 MCP Server、真实 Secret、真实 Workspace 或部署启用验证。
 
 R6.1 于 2026-07-15 完成最新离线基线：默认 Profile 共 321 个测试（307 个单元、14 个集成），`failure` 共 63 个（62 个单元、1 个集成），`compat` 共 360 个（345 个单元、15 个集成），均为 0 Failure、0 Error、0 Skipped。该阶段只新增库内 Message Contract Runtime 和确定性测试，没有 CLI 启动命令、真实 Provider Delta、真实渠道、网络、消息中间件或新数据库；不能把通过这组门禁解释为流式渠道已经可部署。
 
-`memory/java-native-memory.json`、`mcp/java-mcp-client.json` 与 `message-bus/versioned-channel-message.json` 不由 Python 生成器维护，只能在对应 Java Contract 获得新批准后人工更新并同步 Manifest。其他 Python 基准夹具只有在对应 Python 行为或已批准 Contract 变化时才重新生成：
+R6.2 于 2026-07-15 完成最新离线基线：默认 Profile 共 363 个测试（345 个单元、18 个集成），`failure` 共 99 个（96 个单元、3 个集成），`compat` 共 402 个（383 个单元、19 个集成），均为 0 Failure、0 Error、0 Skipped。该阶段只使用本地 OpenAI-compatible HTTP Stub、Java Reference MCP Server 和临时 SQLite，验证了真实 SSE 传输形态和目标连接取消，但没有访问真实外部 Provider/渠道、Secret、付费服务或用户工作区；通过门禁不代表真实渠道可部署。
+
+`memory/java-native-memory.json`、`mcp/java-mcp-client.json`、`message-bus/versioned-channel-message.json` 与 `message-bus/provider-streaming-cli.json` 不由 Python 生成器维护，只能在对应 Java Contract 获得新批准后人工更新并同步 Manifest。其他 Python 基准夹具只有在对应 Python 行为或已批准 Contract 变化时才重新生成：
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -310,6 +347,8 @@ cd "$(git rev-parse --show-toplevel)"
   --output testdata/golden
 ./mvnw -Pcompat verify
 ```
+
+当前 Python 生成器只重建其管理的 10 个夹具和人工错误夹具的 Manifest 部分，不拥有 4 个 `java-contract` 夹具。运行后必须审查 `manifest.json`，保留 Java Memory、MCP 和两个 Message Bus 条目并按实际文件重算 SHA-256；最终 Manifest 应有 15 个条目。不得仅因生成器重写 Manifest 而删除 Java-owned Contract。
 
 不要把测试失败当成重新录制 Golden 的理由。提交夹具变化前，必须按 [Golden Test 夹具规范](../contracts/golden-test-fixtures.md)记录语义差异和审批证据。
 

@@ -27,7 +27,7 @@
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
 | R4 | 上下文与记忆 | R4.1、R4.2 已完成 | Java 原生显式记忆管理与语义检索闭环已通过最终门禁；自动写回/Optimizer 仍冻结 |
 | R5 | MCP 与外部工具 | R5.1 已完成 | 静态 stdio 只读 Client、工具发现/投影、取消、隔离和进程回收已验收；远程与副作用范围未开始 |
-| R6 | 渠道与控制面 | R6.1 已完成 | 版本化 Message Contract Runtime 已验收；CLI、真实流式、真实渠道与 Dashboard 待后续切片 |
+| R6 | 渠道与控制面 | R6.1、R6.2 已完成 | 版本化 Message Runtime、本地 CLI 与 Provider Streaming 已验收；真实渠道、可靠投递与 Dashboard 待后续切片 |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
 | R8 | 主动运行时 | 未开始 | Scheduler、Proactive、Drift、Subagent |
 | R9 | 生产切换 | 未开始 | 真实工作区演练、灰度、回退和 Python 退役 |
@@ -88,9 +88,9 @@
 
 能力对齐缺口：
 
-- Python Message Bus/Chat Lane 入口、CLI/Telegram 入口尚未迁移。
-- 流式 Delta、生命周期事件和完整 Prompt 组装尚未迁移。
-- 当前 HTTP 契约是 Java MVP 契约，不等同于 Python 全部被动聊天能力。
+- 本地 CLI、版本化 Message Runtime 和 Provider 文本流已在 R6.1/R6.2 迁移；统一 Channel Host、Telegram 等真实外部渠道仍未迁移。
+- 完整 Prompt Block/Persona/Token 预算、跨进程投递恢复和完整 Python Chat Lane 行为仍未迁移。
+- 当前 HTTP 契约和 CLI 契约是已批准的 Java 纵向切片，不等同于 Python 全部被动聊天能力。
 
 退出门禁：Minor 清单、默认、`failure`、`compat` 与被动聊天 Golden 基线已完成；真实模型 Smoke 由人工提供凭证后执行；完整 Python 被动能力仍按后续 Contract 分批对齐。
 
@@ -181,7 +181,7 @@ R5.1 最终门禁通过：默认 284 个测试（270 单元、14 集成）、`fa
 
 ## R6：渠道、消息总线与控制面
 
-状态：R6.1 已实现并验证；R6 整体仍在进行中。
+状态：R6.1、R6.2 已实现并验证；R6.3 是下一子阶段；R6 整体仍在进行中。
 
 R6.1 至 R6.6 的实施顺序见 [R6 渠道、消息总线与控制面总体工作计划](../plans/2026-07-15-r6-channel-message-control-plane-master-plan.md)。总体计划已批准并进入实施，后续子阶段仍须先分别冻结 Contract、Spec、ADR 和实施计划。
 
@@ -194,13 +194,22 @@ R6.1 已交付：
 - 现有非流式 Chat 成功、取消和失败到安全渠道终态的投影；完成消息携带权威完整文本，错误只暴露稳定码。
 - 默认 321 个、`failure` 63 个、`compat` 360 个测试以及格式、依赖、Secret、敏感文件、禁止运行时和孤儿进程审计全部通过。
 
-R6.1 只建立可复用的运行时边界，没有新增启动入口、真实 Delta 来源或渠道部署。下一纵向切片 R6.2 应在不重定义消息格式的前提下先接本地 CLI，再接真实 Provider Streaming，并把断开与背压取消传回同一个 Turn Token。
+R6.2 已交付：
+
+- Java-owned `message-bus/provider-streaming-cli.json`，按 Kernel/Application/CLI 分组固定 6/9/6 共 21 个 Case。
+- 纯 JDK 流式 Observer、取消协议、Delta 预算、Tool Loop 传播与权威完成快照；Kernel/Application 不依赖 Reactor 或 Spring AI。
+- Spring AI `ChatModel.stream` 到项目协议的桥接、本地 OpenAI-compatible SSE 文本/Tool/Options 验收，以及请求级传输取消与提交隔离。
+- 显式 `--cli` Non-Web 启动、有界严格 UTF-8 输入、受信 Route、顺序输出、断开/背压/关闭取消和单 Turn 生命周期。
+- 成功只原子提交完整 `user/assistant` 轮次；取消、损坏完成或输出失败即使已发布 Delta，也不会写入 SQLite。
+- 默认 363 个测试（345 单元、18 集成）、`failure` 99 个（96 单元、3 集成）、`compat` 402 个（383 单元、19 集成）全部通过；Kernel 生产依赖、Secret、敏感文件、队列/线程/订阅、进程和工作树审计通过。
+
+R6.2 只验证本地 CLI、受控 HTTP Stub、Java Reference MCP Server 和临时 SQLite。它没有访问真实外部 Provider/渠道、Secret、付费服务或用户工作区，也不授权生产部署。
 
 范围：
 
-- 建立 Java `InboundMessage`、`OutboundMessage` 和生命周期事件总线。
-- 迁移 CLI，再迁移 Telegram 等渠道；保持渠道层无业务编排。
-- 增加流式响应、取消、背压和乱序保护。
+- 复用已完成的 Java `InboundMessage`、`OutboundMessage`、本地 CLI 与流式生命周期协议。
+- 下一步冻结 R6.3 Channel Host/首个真实渠道 Contract；渠道选择、SDK、身份、网络、Secret 和数据范围须单独批准。
+- 后续再按证据决定 R6.4 持久 Inbox/Outbox 与恢复，不预先承诺自动重放或 Exactly Once。
 - Dashboard 先复用现有前端契约，再决定是否调整前端。
 
 退出门禁：CLI 与至少一个真实渠道的 Golden 会话通过；流式事件顺序和断线语义明确；Dashboard 核心路径兼容。

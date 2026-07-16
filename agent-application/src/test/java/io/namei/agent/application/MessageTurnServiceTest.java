@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -68,6 +69,7 @@ class MessageTurnServiceTest {
   }
 
   @ParameterizedTest(name = "{0}")
+  @Tag("failure")
   @MethodSource("failureCases")
   void mapsRuntimeFailuresToOneSafeTerminal(
       String name, RuntimeException failure, TurnFailureCode expected) {
@@ -89,6 +91,7 @@ class MessageTurnServiceTest {
   }
 
   @Test
+  @Tag("failure")
   void propagatesTerminalSinkFailureWithoutAttemptingAnotherTerminal() {
     var chat = RecordingChat.success("完整回答");
     var sink = new FailingSink(2, OutboundDeliveryException.Reason.BACKPRESSURE_EXCEEDED);
@@ -104,6 +107,7 @@ class MessageTurnServiceTest {
   }
 
   @Test
+  @Tag("failure")
   void doesNotStartBusinessWorkWhenInitialSinkPublicationFails() {
     var chat = RecordingChat.success("不应执行");
     var sink = new FailingSink(1, OutboundDeliveryException.Reason.CHANNEL_DISCONNECTED);

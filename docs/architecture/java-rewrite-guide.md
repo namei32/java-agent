@@ -54,7 +54,7 @@ HTTP ChatController
   -> HTTP ChatResponse
 ```
 
-它已经支持同步非流式被动聊天、SQLite 会话恢复、OpenAI-compatible 模型、有界只读 Tool Loop、只读 Markdown Profile、Java 原生显式语义记忆/临时 Context Frame、静态 stdio MCP 只读客户端和原子轮次提交。R6.1 另建立了尚未装配到入口的版本化 Channel Message Runtime：严格事件序号、唯一终态、取消原因、有界背压和安全 Chat 终态投影。Memory 与 MCP 默认均为 `DISABLED`；Java 仍不包含 CLI、真实 Provider Streaming、真实渠道、自动 Memory 写回、远程/副作用 MCP 和主动能力。
+它已经支持同步 HTTP 被动聊天、SQLite 会话恢复、OpenAI-compatible 同步/流式模型、有界只读 Tool Loop、只读 Markdown Profile、Java 原生显式语义记忆/临时 Context Frame、静态 stdio MCP 只读客户端和原子轮次提交。R6.1/R6.2 已把版本化 Channel Message Runtime 装配到显式本地 CLI：严格事件序号、唯一终态、取消原因、有界背压、Provider Delta、权威完成快照和安全失败投影复用同一 Application 入口。Memory 与 MCP 默认均为 `DISABLED`；Java 仍不包含真实外部渠道、持久投递、自动 Memory 写回、远程/副作用 MCP 和主动能力，真实 Provider 网络 Smoke 也未在默认门禁中执行。
 
 ## 3. 固定技术基线
 
@@ -184,9 +184,10 @@ testdata/golden/
   memory/java-native-memory.json
   mcp/java-mcp-client.json
   message-bus/versioned-channel-message.json
+  message-bus/provider-streaming-cli.json
 ```
 
-每个夹具包含输入、Python 基准输出、可忽略的非确定字段和 Java 实际输出。时间、UUID、模型自由文本等非确定值要注入或规范化，不能用删除所有字段的方式让测试失去意义。
+Python-reference 夹具包含输入、Python 基准投影、显式规范化规则和 Java 实际输出；Java-owned 夹具则固定已批准 Contract 的输入与预期结果。时间、UUID、模型自由文本等非确定值要注入或最小化规范化，不能用删除所有字段的方式让测试失去意义。
 
 优先固定：
 
@@ -195,7 +196,7 @@ testdata/golden/
 3. 工具调用轨迹和失败；
 4. 会话数据库及回滚；
 5. Memory 解析、检索和写回；
-6. 已固定的渠道消息顺序、取消与断线，以及下一步真实 Provider Delta/Adapter 投影。
+6. 已固定的渠道消息顺序、取消与断线，以及 Provider Delta、权威完成快照和 CLI Adapter 投影。
 
 完整格式、非确定字段和审批要求见 [Python/Java Golden Test 夹具规范](../contracts/golden-test-fixtures.md)。Golden 更新必须说明是批准的契约变化还是缺陷修复，不能通过批量重录隐藏回归。
 
@@ -250,12 +251,12 @@ testdata/golden/
 
 ## 12. 当前下一步
 
-R4.1、R4.2、R5.1 与 R6.1 已完成，Memory/MCP 默认仍为 `DISABLED`，自动写回、Optimizer、真实 MCP Server 和副作用能力继续冻结。下一主线是 R6.2 的本地 CLI 与真实 Provider Streaming 最小纵向切片：
+R4.1、R4.2、R5.1、R6.1 与 R6.2 已完成，Memory/MCP 默认仍为 `DISABLED`，自动写回、Optimizer、真实 MCP Server 和副作用能力继续冻结。下一主线是 R6.3 的 Channel Host 与首个真实渠道，但开始实现前必须先单独批准渠道选择、SDK、身份/Route、网络生命周期、Secret 来源、数据范围和本地 Fake/录制协议：
 
-1. 复用 R6.1 的版本 1 `InboundMessage`、`OutboundMessage` 和唯一终态，不建立 CLI 私有消息格式；
-2. 先接本地 CLI Adapter，只负责可信身份/Route 规范化、输入读取和事件渲染，不取得业务编排权；
-3. 在 Spring AI Adapter 边界引入真实 Provider Delta，Application 继续以完成快照作为权威结果；
-4. 把 CLI 断开、用户取消和缓冲背压传播到同一个 `TurnCancellation`，并验证模型、Tool/MCP 和会话提交边界；
-5. 暂不引入 Telegram、SSE/WebSocket、持久队列、新数据库或消息中间件；R5.2 远程 MCP 也保持独立批准。
+1. 复用现有版本 1 `InboundMessage`、`OutboundMessage`、取消和唯一终态，不建立平台私有业务循环；
+2. Channel Adapter 只做身份/Route、平台入站和安全出站投影，不取得 Chat、Tool、Memory、MCP 或审批控制权；
+3. 默认配置保持零真实渠道网络，先用 Fake Server 或脱敏录制样本完成 TDD；
+4. 在幂等/恢复 Contract 冻结前，不增加自动重放、持久 Inbox/Outbox、新数据库表或消息中间件；
+5. R5.2 远程 MCP、真实副作用和 Dashboard 继续按独立 Contract 推进，不与首个渠道混合实施。
 
-R5.1 的完成边界与验证证据见 [MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)，R6.1 的完成证据见[版本化渠道消息 Contract Runtime 工作计划](../plans/2026-07-15-versioned-channel-message-runtime-implementation.md)。R6.2 仍须先形成独立 Spec 和 Plan，再进入生产实现。
+R5.1 的完成边界与验证证据见 [MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)，R6.1 的完成证据见[版本化渠道消息 Contract Runtime 工作计划](../plans/2026-07-15-versioned-channel-message-runtime-implementation.md)，R6.2 的完成证据见 [Provider Streaming 与本地 CLI 工作计划](../plans/2026-07-15-provider-streaming-cli-implementation.md)。

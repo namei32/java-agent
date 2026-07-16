@@ -25,6 +25,7 @@ final class ToolLoop {
   private final int maxIterations;
   private final ToolRuntimeSettings settings;
   private final SideEffectBatchCoordinator coordinator;
+  private final ModelStreamingSettings streamingSettings;
 
   ToolLoop(
       ChatModelPort model, ToolRegistry tools, LifecyclePublisher lifecycle, int maxIterations) {
@@ -61,6 +62,24 @@ final class ToolLoop {
       int maxIterations,
       ToolRuntimeSettings settings,
       SideEffectBatchCoordinator coordinator) {
+    this(
+        model,
+        tools,
+        lifecycle,
+        maxIterations,
+        settings,
+        coordinator,
+        ModelStreamingSettings.defaults());
+  }
+
+  ToolLoop(
+      ChatModelPort model,
+      ToolRegistry tools,
+      LifecyclePublisher lifecycle,
+      int maxIterations,
+      ToolRuntimeSettings settings,
+      SideEffectBatchCoordinator coordinator,
+      ModelStreamingSettings streamingSettings) {
     this.model = Objects.requireNonNull(model, "model");
     this.tools = Objects.requireNonNull(tools, "tools");
     this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle");
@@ -70,6 +89,7 @@ final class ToolLoop {
     this.maxIterations = maxIterations;
     this.settings = Objects.requireNonNull(settings, "settings");
     this.coordinator = Objects.requireNonNull(coordinator, "coordinator");
+    this.streamingSettings = Objects.requireNonNull(streamingSettings, "streamingSettings");
   }
 
   String complete(List<? extends ModelMessage> initialMessages) {
@@ -88,14 +108,46 @@ final class ToolLoop {
       List<? extends ModelMessage> initialMessages,
       TurnCancellation cancellation,
       SideEffectBatchCoordinator.Context context) {
+    return complete(initialMessages, cancellation, context, null);
+  }
+
+  String completeStreaming(
+      List<? extends ModelMessage> initialMessages,
+      TurnCancellation cancellation,
+      SideEffectBatchCoordinator.Context context,
+      ChatProgressListener progressListener) {
+    return complete(
+        initialMessages,
+        cancellation,
+        context,
+        Objects.requireNonNull(progressListener, "progressListener"));
+  }
+
+  private String complete(
+      List<? extends ModelMessage> initialMessages,
+      TurnCancellation cancellation,
+      SideEffectBatchCoordinator.Context context,
+      ChatProgressListener progressListener) {
     Objects.requireNonNull(cancellation, "cancellation");
     Objects.requireNonNull(context, "context");
     var messages = new ArrayList<ModelMessage>(initialMessages);
+    var streamingBudget = progressListener == null ? null : new StreamingBudget(streamingSettings);
     int totalCalls = 0;
     for (int iteration = 1; iteration <= maxIterations; iteration++) {
       checkCancellation(cancellation);
       lifecycle.emit(TurnLifecycleEvent.modelRequested(iteration));
-      var response = model.generate(new ChatModelRequest(messages, tools.definitions()));
+      var request = new ChatModelRequest(messages, tools.definitions());
+      var response =
+          progressListener == null
+              ? model.generate(request)
+              : model.generate(
+                  request,
+                  delta -> {
+                    checkCancellation(cancellation);
+                    streamingBudget.accept(delta);
+                    progressListener.onContentDelta(delta);
+                  },
+                  cancellation);
       checkCancellation(cancellation);
       if (response == null) {
         lifecycle.emit(TurnLifecycleEvent.modelCompleted(iteration, "INVALID"));
