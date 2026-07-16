@@ -1,7 +1,7 @@
 # R6.4 渠道可靠投递、幂等与恢复工作计划
 
 - 状态：已批准，连续 TDD 实施中
-- 当前任务：F11 Loopback 重启纵向集成
+- 当前任务：F12 故障矩阵、Compat 与回退演练
 - 日期：2026-07-16
 - 分支：`agent/r6-reliable-delivery`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`
@@ -500,7 +500,7 @@ JUnit 临时目录和 Fake/Loopback 边界；未访问真实 Workspace、Telegra
 
 ## 14. Task F11：Loopback 重启纵向集成
 
-状态：未开始。
+状态：已完成。
 
 新增 `TelegramReliableDeliveryIT`，使用真实：
 
@@ -528,6 +528,20 @@ JUnit 临时目录和 Fake/Loopback 边界；未访问真实 Workspace、Telegra
 ```
 
 预计提交：`test: 验收 Telegram 可靠投递纵向切片`
+
+验收证据（2026-07-16）：本 Task 只新增纵向集成 Fixture，不为制造 RED 改坏已完成的生产实现。
+首次聚焦命令中的 6 个行为场景即全部通过，命令最终只因新测试尚未经过 Spotless 而失败；格式化并
+增加 Worker 释放断言后，同一命令完整通过。测试使用真实 `JdkTelegramBotApi`、Loopback
+`HttpServer`、`JdbcSessionRepository`、`JdbcChannelLedger` 路径和 `MessageTurnService`，所有
+`sessions.db` 与 `channel-ledger.db` 均位于 JUnit `@TempDir`。
+
+六个场景证明：普通 Turn 只提交一轮会话、唯一终态、远端 Receipt 与持久 Cursor，Token 轮换后
+首次 Poll 从该 Cursor 恢复且不再次调用 Agent；两个同时释放的相同 Update 只跨越一次 Agent
+执行边界；Outbox Commit 后、Delivery Worker 启动前的重启只恢复发送；429 的绝对 Due Time 与
+同一 Part Payload 跨重启保留；多分片第一片成功、第二片 Unknown 后停止且重启不重发；不同 Bot
+ID 在同一数据库中的 Cursor、Claim 和 Delivery 完全隔离。每个场景结束均验证 Poll、Turn、
+Delivery 和 Loopback Worker 已释放；HTTP 仅访问 `127.0.0.1`，使用固定假 Token/ID/正文，没有
+读取真实 Workspace、Secret、用户数据或外网。
 
 ## 15. Task F12：故障矩阵、Compat、Runbook 演练
 
