@@ -60,7 +60,7 @@
 | 能力 | Python 基准位置 | Java 位置 | 状态 | 主要差距/下一步 | 数据风险 |
 | --- | --- | --- | --- | --- | --- |
 | CLI/渠道宿主 | `bootstrap/channel_host.py`、`bootstrap/channels.py` | `agent-bootstrap/.../cli`、`channel`、`telegram` | 部分 | 显式 Non-Web CLI 与通用 Host/Telegram 私聊纵向切片已离线验证；多渠道、持久恢复和主动宿主未迁移 | 中 |
-| Telegram 等渠道 | 渠道模块与 Bootstrap | `agent-bootstrap/.../channel`、`telegram` | 部分 | 私聊数值 Allowlist、Long Polling、进程内去重、定向取消、终态合并与网络关闭已离线验证；真实 Smoke 待授权，可靠投递后置 R6.4 | 高 |
+| Telegram 等渠道 | 渠道模块与 Bootstrap | `agent-bootstrap/.../channel`、`telegram` | 部分 | 私聊数值 Allowlist、Long Polling、进程内去重、定向取消、终态合并与网络关闭已离线验证；R6.4 可靠投递草案待审批，真实 Smoke 待授权 | 高 |
 | 流式输出 | Bus/Channel 生命周期事件 | Kernel Channel Contract、`BoundedOutboundBuffer`、`MessageTurnService`、Spring AI Streaming Adapter、`LocalCliRunner`、`TelegramTerminalRenderer` | 部分 | Provider Delta、Tool Loop 预览、权威完成、唯一终态、断开/背压、CLI 实时渲染和 Telegram 终态投影已完成；缺持久投递和恢复 | 中 |
 | Dashboard API | `bootstrap/dashboard_api.py` | 仅 Actuator/Chat API | 部分 | 保留现有 React/Vite，逐接口兼容 | 中 |
 | Scheduler | `agent/scheduler.py` | 无 | 未开始 | 需持久化、重启恢复、时区和幂等 | 高 |
@@ -85,4 +85,4 @@
 2. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
-5. R6.4 先冻结持久 Inbox/Delivery、幂等与恢复 Contract；R5.2 远程 MCP、插件和主动能力仍按独立 Contract 推进，不把 R6.3 离线授权扩张为真实渠道或副作用授权。
+5. R6.4 持久 Inbox/Delivery、幂等与恢复 Contract/Spec/ADR/计划草案已形成，等待明确批准后再从 Fixture RED 开始；R5.2 远程 MCP、插件和主动能力仍按独立 Contract 推进，不把 R6.3 离线授权扩张为真实渠道或副作用授权。
