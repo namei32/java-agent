@@ -1,0 +1,337 @@
+{
+  "formatVersion": 1,
+  "suite": "channel-reliable-delivery-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-16",
+    "adr": "docs/adr/0010-use-dedicated-sqlite-channel-ledger.md",
+    "contract": "docs/contracts/channel-reliable-delivery.md",
+    "spec": "docs/specs/2026-07-16-channel-reliable-delivery-design.md"
+  },
+  "normalization": [
+    "全部指纹使用 uint32 big-endian UTF-8 字节长度前缀与 lowercase SHA-256",
+    "渠道实例绑定可信 channel 与稳定实例键，不包含完整 Secret",
+    "入站请求指纹不包含随机 Turn ID",
+    "投递指纹绑定目标、来源、关联 ID、终态语义、分片算法与有序分片",
+    "状态未知不能回到可自动执行或发送状态"
+  ],
+  "defaults": {
+    "channel": "telegram",
+    "trustedInstanceKey": "123456789",
+    "externalEventId": "500",
+    "externalSequence": 500,
+    "eventKind": "TURN",
+    "decisionCode": "",
+    "schemaVersion": 1,
+    "messageId": "telegram:10001:42",
+    "turnId": "turn-fixture",
+    "sessionId": "telegram:10001",
+    "conversationId": "10001",
+    "senderId": "10001",
+    "content": "你好，可靠投递",
+    "occurredAt": "2026-07-16T00:00:00Z",
+    "targetId": "10001",
+    "sourceKind": "TURN_TERMINAL",
+    "correlationId": "turn-fixture",
+    "messageType": "TURN_COMPLETED",
+    "code": "",
+    "retryable": false,
+    "chunkAlgorithm": "telegram-text-chunks-v1",
+    "parts": ["最终回答"]
+  },
+  "cases": [
+    {
+      "id": "instance-id-is-stable",
+      "component": "instance",
+      "input": {},
+      "expected": {
+        "accepted": true,
+        "value": "09a9f28c7eeb645aff33632b70e8f1f89ade23ce4d5da65ceff0fd9d1a8f4e5c"
+      }
+    },
+    {
+      "id": "different-instance-key-is-isolated",
+      "component": "instance",
+      "input": {"trustedInstanceKey": "987654321"},
+      "expected": {
+        "accepted": true,
+        "value": "958dcb55f53a86135e97717bbbe2bd70ebb2e1882b4a6d1e36284754d46161be"
+      }
+    },
+    {
+      "id": "channel-name-is-domain-separated",
+      "component": "instance",
+      "input": {"channel": "slack"},
+      "expected": {
+        "accepted": true,
+        "value": "c098965b297435b0455b8385f4bfa889f6bc0dd8ff62d4a18f2a0295deccb260"
+      }
+    },
+    {
+      "id": "uppercase-channel-is-rejected",
+      "component": "instance",
+      "input": {"channel": "Telegram"},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "blank-instance-key-is-rejected",
+      "component": "instance",
+      "input": {"trustedInstanceKey": " "},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "secret-shaped-instance-key-is-rejected",
+      "component": "instance",
+      "input": {"trustedInstanceKey": "123456789:secret-must-not-enter"},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "request-fingerprint-v1",
+      "component": "request-fingerprint",
+      "input": {},
+      "expected": {
+        "accepted": true,
+        "value": "47d21884361576a83b6fcfae1a166ffa67bdebbc5e84578634863db5df6421b2"
+      }
+    },
+    {
+      "id": "request-fingerprint-ignores-random-turn-id",
+      "component": "request-fingerprint",
+      "input": {"turnId": "another-runtime-turn"},
+      "expected": {
+        "accepted": true,
+        "value": "47d21884361576a83b6fcfae1a166ffa67bdebbc5e84578634863db5df6421b2"
+      }
+    },
+    {
+      "id": "request-fingerprint-binds-content",
+      "component": "request-fingerprint",
+      "input": {"content": "你好，可靠投递！"},
+      "expected": {
+        "accepted": true,
+        "value": "09d9614572a09960abd8bdb788d35201f460a1009fe9e3d0c3e478d9618ac3a4"
+      }
+    },
+    {
+      "id": "turn-event-fingerprint-v1",
+      "component": "event-fingerprint",
+      "input": {},
+      "expected": {
+        "accepted": true,
+        "value": "f57e4594eb788bb83f44d7ab12b134aee987ce39a40318c54774166ac95e5a7c"
+      }
+    },
+    {
+      "id": "ignored-event-fingerprint-v1",
+      "component": "event-fingerprint",
+      "input": {
+        "eventKind": "IGNORED",
+        "decisionCode": "NOT_ALLOWED",
+        "includeRequestFingerprint": false
+      },
+      "expected": {
+        "accepted": true,
+        "value": "1c79a8b4156a4d34b642826cab3f4734a7e32498d2e99bd5361e21b3fb785678"
+      }
+    },
+    {
+      "id": "event-fingerprint-binds-decision",
+      "component": "event-fingerprint",
+      "input": {
+        "eventKind": "CONTROL",
+        "decisionCode": "CANCEL",
+        "includeRequestFingerprint": false
+      },
+      "expected": {
+        "accepted": true,
+        "value": "5f6f947d92664f509e17fd6c874fecdd3d282304d76a0e21684c55d864e70d82"
+      }
+    },
+    {
+      "id": "delivery-fingerprint-v1",
+      "component": "delivery-fingerprint",
+      "input": {},
+      "expected": {
+        "accepted": true,
+        "value": "7508f6a09961ecf1a525249c0f26f54998cb8da63fef5eeeb29d6967fe1d5dfb"
+      }
+    },
+    {
+      "id": "delivery-fingerprint-binds-part-order",
+      "component": "delivery-fingerprint",
+      "input": {"parts": ["后", "先"]},
+      "expected": {
+        "accepted": true,
+        "value": "61fdd62c619e487b5b47be0413bfbc2616dd268090728c32c9f658e7f80f3a51"
+      }
+    },
+    {
+      "id": "delivery-fingerprint-binds-terminal-code",
+      "component": "delivery-fingerprint",
+      "input": {
+        "messageType": "TURN_FAILED",
+        "code": "MODEL_TIMEOUT",
+        "retryable": true,
+        "parts": ["请求失败（MODEL_TIMEOUT），请重新发送。"]
+      },
+      "expected": {
+        "accepted": true,
+        "value": "834da5a8a01a3a91c4075eb01e4e7d9e4d228e7fadeb5027b576ae56c4bd6b51"
+      }
+    },
+    {
+      "id": "claim-reserved-to-running",
+      "component": "transition",
+      "input": {"machine": "CLAIM", "from": "RESERVED", "to": "RUNNING"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "claim-reserved-to-start-retryable",
+      "component": "transition",
+      "input": {"machine": "CLAIM", "from": "RESERVED", "to": "START_RETRYABLE"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "claim-start-retryable-to-reserved",
+      "component": "transition",
+      "input": {"machine": "CLAIM", "from": "START_RETRYABLE", "to": "RESERVED"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "claim-start-retryable-to-unknown",
+      "component": "transition",
+      "input": {
+        "machine": "CLAIM",
+        "from": "START_RETRYABLE",
+        "to": "EXECUTION_UNKNOWN"
+      },
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "claim-running-to-terminal",
+      "component": "transition",
+      "input": {"machine": "CLAIM", "from": "RUNNING", "to": "TERMINAL_RECORDED"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "claim-running-to-unknown",
+      "component": "transition",
+      "input": {"machine": "CLAIM", "from": "RUNNING", "to": "EXECUTION_UNKNOWN"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "claim-reserved-cannot-skip-to-terminal",
+      "component": "transition",
+      "input": {"machine": "CLAIM", "from": "RESERVED", "to": "TERMINAL_RECORDED"},
+      "expected": {"allowed": false}
+    },
+    {
+      "id": "claim-running-cannot-return-to-reserved",
+      "component": "transition",
+      "input": {"machine": "CLAIM", "from": "RUNNING", "to": "RESERVED"},
+      "expected": {"allowed": false}
+    },
+    {
+      "id": "terminal-claim-cannot-run-again",
+      "component": "transition",
+      "input": {"machine": "CLAIM", "from": "TERMINAL_RECORDED", "to": "RUNNING"},
+      "expected": {"allowed": false}
+    },
+    {
+      "id": "unknown-claim-cannot-run-again",
+      "component": "transition",
+      "input": {"machine": "CLAIM", "from": "EXECUTION_UNKNOWN", "to": "RUNNING"},
+      "expected": {"allowed": false}
+    },
+    {
+      "id": "delivery-pending-to-delivering",
+      "component": "transition",
+      "input": {"machine": "DELIVERY", "from": "PENDING", "to": "DELIVERING"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "delivery-delivering-to-pending",
+      "component": "transition",
+      "input": {"machine": "DELIVERY", "from": "DELIVERING", "to": "PENDING"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "delivery-delivering-to-delivered",
+      "component": "transition",
+      "input": {"machine": "DELIVERY", "from": "DELIVERING", "to": "DELIVERED"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "delivery-delivering-to-failed",
+      "component": "transition",
+      "input": {"machine": "DELIVERY", "from": "DELIVERING", "to": "FAILED"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "delivery-delivering-to-unknown",
+      "component": "transition",
+      "input": {"machine": "DELIVERY", "from": "DELIVERING", "to": "UNKNOWN"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "delivered-delivery-cannot-send-again",
+      "component": "transition",
+      "input": {"machine": "DELIVERY", "from": "DELIVERED", "to": "DELIVERING"},
+      "expected": {"allowed": false}
+    },
+    {
+      "id": "part-pending-to-in-flight",
+      "component": "transition",
+      "input": {"machine": "PART", "from": "PENDING", "to": "IN_FLIGHT"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "part-retry-wait-to-in-flight",
+      "component": "transition",
+      "input": {"machine": "PART", "from": "RETRY_WAIT", "to": "IN_FLIGHT"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "part-in-flight-to-delivered",
+      "component": "transition",
+      "input": {"machine": "PART", "from": "IN_FLIGHT", "to": "DELIVERED"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "part-in-flight-to-retry-wait",
+      "component": "transition",
+      "input": {"machine": "PART", "from": "IN_FLIGHT", "to": "RETRY_WAIT"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "part-in-flight-to-failed",
+      "component": "transition",
+      "input": {"machine": "PART", "from": "IN_FLIGHT", "to": "FAILED"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "part-in-flight-to-unknown",
+      "component": "transition",
+      "input": {"machine": "PART", "from": "IN_FLIGHT", "to": "UNKNOWN"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "delivered-part-cannot-send-again",
+      "component": "transition",
+      "input": {"machine": "PART", "from": "DELIVERED", "to": "IN_FLIGHT"},
+      "expected": {"allowed": false}
+    },
+    {
+      "id": "attempt-started-to-succeeded",
+      "component": "transition",
+      "input": {"machine": "ATTEMPT", "from": "STARTED", "to": "SUCCEEDED"},
+      "expected": {"allowed": true}
+    },
+    {
+      "id": "completed-attempt-cannot-start-again",
+      "component": "transition",
+      "input": {"machine": "ATTEMPT", "from": "SUCCEEDED", "to": "STARTED"},
+      "expected": {"allowed": false}
+    }
+  ]
+}

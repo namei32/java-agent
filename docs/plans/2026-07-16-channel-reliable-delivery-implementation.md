@@ -1,7 +1,7 @@
 # R6.4 渠道可靠投递、幂等与恢复工作计划
 
 - 状态：已批准，连续 TDD 实施中
-- 当前任务：F1 Java-owned Fixture 与 Kernel Contract
+- 当前任务：F2 SQLite Schema V1、严格校验与 Backup
 - 日期：2026-07-16
 - 分支：`agent/r6-reliable-delivery`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`
@@ -77,7 +77,7 @@ git diff --check
 
 ## 4. Task F1：Java-owned Fixture 与 Kernel Contract
 
-状态：进行中。
+状态：已完成。
 
 先创建：
 
@@ -103,9 +103,17 @@ RED/GREEN：
 
 预计提交：`feat: 冻结渠道可靠投递 Kernel Contract`
 
+RED/GREEN 证据（2026-07-16）：聚焦命令首次在 Kernel 测试编译阶段因
+`ChannelInstanceId`、`ChannelFingerprint`、状态枚举、`DeliveryEnvelope` 和
+`ChannelLedgerPort` 缺失而失败；实现后同一命令执行 8 个测试全部通过。Fixture 的 40 个
+Java-owned Case 固定了渠道实例域隔离、请求/Event/Delivery 指纹和四套状态转换；测试同时证明
+Turn ID 不参与请求指纹、完整 Token 形态不能作为实例键、Payload/稳定标识安全脱敏，以及 Port
+只暴露八个无 JDBC/Spring/Telegram 类型的窄操作。首次 GREEN 尝试发现碰撞测试使用了不合法的
+小写决策码，改为语义等价的合法大写样例后复跑全绿；Spotless 与 `git diff --check` 通过。
+
 ## 5. Task F2：SQLite Schema V1、严格校验与 Backup
 
-状态：未开始。
+状态：进行中。
 
 先写：
 
