@@ -1,6 +1,6 @@
 # Telegram Channel Host 工作计划
 
-- 状态：Task E0–E9 已完成并通过本地离线门禁；待提交、远程 CI 与合并，真实 Smoke 待授权
+- 状态：Task E0–E9 已完成并通过本地与 PR #6 远程离线门禁；真实 Smoke 待授权
 - 日期：2026-07-16
 - 阶段：R6.3
 - 分支：`agent/r6-telegram-channel`
@@ -417,7 +417,7 @@ Token；所有网络测试只访问 Loopback，关闭后的活动 Turn、Semapho
 
 ## 13. PR、远程 CI 与合并
 
-状态：本地 E9 验收已完成；提交、PR、远程 CI 与合并待执行。
+状态：PR #6 已创建，本地与远程三套门禁已通过；真实 Smoke 待授权。
 
 E9 全绿并自审无 Critical/Important 后：
 
@@ -427,6 +427,12 @@ E9 全绿并自审无 Critical/Important 后：
 4. 等待默认、`failure`、`compat` 远程 CI。
 5. 修复 CI 必须先复现和定位根因；生产语义变化重新取得批准。
 6. Review/CI 全绿后合入 `main`。
+
+远程证据（2026-07-16）：PR #6 的首次 Run `29480901994` 中默认与 `failure` 通过，`compat`
+暴露测试把问题与 `/cancel` 放在同一 Poll 响应造成的 Virtual Thread 调度竞态。修复只把取消与
+Poll 失败放到受闩锁控制的下一次响应，确保 Turn 已进入 Chat 后再释放故障，不修改生产语义。
+两个聚焦场景连续执行 5 轮全部通过，本地默认、`failure`、`compat` 再次全绿；提交 `957e824`
+对应的远程 Run `29482013381` 三项均为 `SUCCESS`。
 
 真实 Telegram Smoke 不阻塞离线代码 PR 合并，但合并后阶段状态只能写为“R6.3 离线实现已验证，真实 Smoke 待授权”，部署始终保持 `DISABLED`。Smoke 必须在单独任务中取得 Token、网络、专用测试 Chat/User、消息内容和撤销/清理授权；通过后才能声明 R6.3 真实渠道验收完成。
 

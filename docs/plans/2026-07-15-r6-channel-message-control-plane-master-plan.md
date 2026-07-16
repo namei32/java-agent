@@ -1,6 +1,6 @@
 # R6 渠道、消息总线与控制面总体工作计划
 
-- 状态：已批准；R6.1–R6.2 已合入 `main`，R6.3 已通过本地离线门禁并待远程 CI
+- 状态：已批准；R6.1–R6.2 已合入 `main`，R6.3 已通过本地与 PR #6 远程离线门禁
 - 日期：2026-07-15
 - 阶段：R6
 - 批准记录：用户要求完整实现本计划；各子阶段仍须先冻结对应 Contract、Spec、ADR 和实施计划，真实网络、Secret 与付费 Smoke 保留独立授权门禁
@@ -65,7 +65,7 @@ R6 完成不等于 Python 全部渠道、插件或主动能力已经迁移。Sch
 | --- | --- | --- | --- |
 | R6.1 | 版本化 Message Contract Runtime | 已完成并合入 `main` | Java-owned Fixture、消息值、唯一终态、取消原因、有界背压、安全终态投影 |
 | R6.2 | 本地 CLI 与 Provider Streaming | 已完成并通过 PR #5 合入 `main` | 供应商无关流式 Port、Spring AI Adapter、本地 CLI、取消与提交隔离 |
-| R6.3 | Channel Host 与首个真实渠道 | 本地离线实现已验证，待远程 CI；真实 Smoke 待授权 | 统一宿主、身份路由、Telegram 私聊文本、网络生命周期 |
+| R6.3 | Channel Host 与首个真实渠道 | 本地与 PR #6 远程离线门禁已验证；真实 Smoke 待授权 | 统一宿主、身份路由、Telegram 私聊文本、网络生命周期 |
 | R6.4 | 渠道幂等、可靠投递与恢复 | 条件范围已批准，待持久化 Contract | 入站去重、投递状态、崩溃恢复和有界重试 |
 | R6.5 | Dashboard 与最小控制面 | 总体范围已批准，待子阶段 Contract | 安全状态、事件流和活动 Turn 取消 |
 | R6.6 | 阶段总验收与灰度 | 待前序完成 | Golden、故障/压力、安全审计、Runbook 和回退 |
@@ -413,6 +413,6 @@ R6 总退出条件：
 
 1. R6.1 已完成 PR、远程三套 CI 并合入 `main`。
 2. R6.2 已完成 Contract、ADR、Fixture、连续 TDD、本地/远程三套门禁，并通过 PR #5 合入 `main`。
-3. R6.3 Channel Host/Telegram 离线纵向切片已完成连续 TDD，并通过本地默认、`failure`、`compat` 门禁；下一步提交 PR 并等待远程 CI。
+3. R6.3 Channel Host/Telegram 离线纵向切片已完成连续 TDD，并通过本地与 PR #6 默认、`failure`、`compat` 远程门禁。
 4. 真实 Token、网络、费用和数据范围仍未获授权，因此真实 Telegram Smoke 必须保持禁用。
-5. R6.3 远程验收完成后冻结 R6.4 可靠投递 Contract；在 Contract 获批前不实现持久 Inbox/Outbox、自动重放或 Exactly Once，Dashboard 仍按后续独立子阶段推进。
+5. 下一功能切片冻结 R6.4 可靠投递 Contract；在 Contract 获批前不实现持久 Inbox/Outbox、自动重放或 Exactly Once，Dashboard 仍按后续独立子阶段推进。

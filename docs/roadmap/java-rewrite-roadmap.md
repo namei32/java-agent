@@ -181,7 +181,7 @@ R5.1 最终门禁通过：默认 284 个测试（270 单元、14 集成）、`fa
 
 ## R6：渠道、消息总线与控制面
 
-状态：R6.1、R6.2 已实现、验证并合入 `main`；R6.3 Telegram 已通过本地离线门禁并待远程 CI，真实 Smoke 待授权；R6 整体仍在进行中。
+状态：R6.1、R6.2 已实现、验证并合入 `main`；R6.3 Telegram 已通过本地与 PR #6 远程离线门禁，真实 Smoke 待授权；R6 整体仍在进行中。
 
 R6.1 至 R6.6 的实施顺序见 [R6 渠道、消息总线与控制面总体工作计划](../plans/2026-07-15-r6-channel-message-control-plane-master-plan.md)。总体计划已批准并进入实施，后续子阶段仍须先分别冻结 Contract、Spec、ADR 和实施计划。
 
@@ -218,7 +218,7 @@ R6.3 没有读取真实 Token、连接 Telegram、处理真实用户数据或启
 范围：
 
 - 复用已完成的 Java `InboundMessage`、`OutboundMessage`、本地 CLI 与流式生命周期协议。
-- R6.3 Telegram Channel Host 离线实现已验证，先完成 PR/远程 CI；真实网络/数据继续独立授权。
+- R6.3 Telegram Channel Host 离线实现已在本地与 PR #6 远程门禁验证；真实网络/数据继续独立授权。
 - 后续再按证据决定 R6.4 持久 Inbox/Outbox 与恢复，不预先承诺自动重放或 Exactly Once。
 - Dashboard 先复用现有前端契约，再决定是否调整前端。
 

@@ -16,7 +16,7 @@
 - 已完成：R5.1 默认关闭、静态配置、stdio-only 的 MCP 只读客户端，包含官方 SDK 隔离、自有有界 Transport、分页发现、稳定命名、安全 Schema 投影、Wire Cancellation、Stale/单次重连、Chat 闭环、Bootstrap 装配和 Java Reference Server 验收；生产与模板仍为 `DISABLED`。
 - 已完成：R6.1 版本化渠道消息 Contract Runtime，包含 Java-owned Fixture、`InboundMessage`/`OutboundMessage`、严格序号与唯一终态、取消原因透传、有界背压、稳定安全错误和现有 Chat 终态投影。
 - 已完成：R6.2 Provider Streaming 与本地 CLI，包含纯 JDK 流式 Port、Application Delta/Tool Loop、Spring AI OpenAI-compatible SSE Adapter、有界 CLI、传输取消、提交隔离以及默认、`failure`、`compat` 最终门禁。
-- 已完成本地离线验收：R6.3 Telegram Channel Host、JDK Bot API 长轮询、数值 Allowlist、终态合并、定向取消、有界网络/关闭和默认零网络装配；真实 Smoke 与部署仍未授权，远程 CI 待执行。
+- 已完成离线验收：R6.3 Telegram Channel Host、JDK Bot API 长轮询、数值 Allowlist、终态合并、定向取消、有界网络/关闭和默认零网络装配已通过本地与 PR #6 远程三套门禁；真实 Smoke 与部署仍未授权。
 - 尚未覆盖：自动 Memory 写回/Optimizer、真实 Embedding/真实 Workspace 启用、可用的人类审批渠道、生产 Durable Ledger、真实副作用工具、真实 Telegram Smoke、经单独授权的真实 Provider 流式 Smoke、真实 MCP Server/Streamable HTTP、插件、主动任务、Drift 和 Subagent。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。

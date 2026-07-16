@@ -81,7 +81,7 @@
 
 ## 当前优先级
 
-1. R6.1/R6.2 已完成并通过三套远程门禁；R6.3 Telegram 本地离线实现与三套门禁已通过，下一步完成 PR/远程 CI，真实 Smoke 继续等待独立授权。
+1. R6.1/R6.2 已完成并通过三套远程门禁；R6.3 Telegram 离线实现已在本地与 PR #6 通过三套门禁，真实 Smoke 继续等待独立授权。
 2. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
