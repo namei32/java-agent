@@ -1,11 +1,12 @@
 # Telegram Channel Host 契约
 
-- 状态：草案（待批准）
+- 状态：已批准，实施中
 - 契约版本：1
 - 日期：2026-07-16
 - 阶段：R6.3
-- 已批准范围：用户已选择 Telegram 作为首个真实渠道
-- 待批准范围：传输/SDK、身份路由、网络生命周期、Secret 读取、离线实现边界和真实 Smoke 数据范围
+- 批准记录：用户于 2026-07-16 明确批准本 Contract、Spec、ADR 和实施计划，并要求开始连续 TDD
+- 批准范围：JDK HTTP 长轮询、数值身份路由、Secret 延迟读取和纯离线 Fake Server 实现
+- 未授权范围：真实 Token、真实 Telegram 网络、真实用户数据和真实 Smoke
 - 前置契约：[版本化渠道消息与流式运行时契约](versioned-channel-message-runtime.md)
 - 关联 ADR：[ADR-0009：Telegram 首渠道使用 JDK HttpClient 与 Bot API 长轮询](../adr/0009-use-jdk-httpclient-for-telegram-long-polling.md)
 - 关联设计：[Telegram Channel Host 设计](../specs/2026-07-16-telegram-channel-host-design.md)

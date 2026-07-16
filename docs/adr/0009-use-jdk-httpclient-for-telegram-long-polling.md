@@ -1,10 +1,10 @@
 # ADR-0009：Telegram 首渠道使用 JDK HttpClient 与 Bot API 长轮询
 
-- 状态：提议（待批准）
+- 状态：已接受
 - 日期：2026-07-16
 - 阶段：R6.3
-- 已批准范围：Telegram 作为首个真实渠道
-- 待批准范围：本 ADR 的 HTTP Client、长轮询和模块边界决策
+- 批准记录：用户于 2026-07-16 明确批准本 ADR 并要求开始实现
+- 未授权范围：真实 Token、真实 Telegram 网络和真实用户数据
 - 关联 Contract：[Telegram Channel Host 契约](../contracts/telegram-channel-host.md)
 - 关联 Spec：[Telegram Channel Host 设计](../specs/2026-07-16-telegram-channel-host-design.md)
 - 官方参考：[Telegram Bot API](https://core.telegram.org/bots/api)

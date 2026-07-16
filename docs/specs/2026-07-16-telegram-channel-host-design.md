@@ -1,10 +1,11 @@
 # Telegram Channel Host 设计
 
-- 状态：草案（待批准）
+- 状态：已批准，实施中
 - 日期：2026-07-16
 - 阶段：R6.3
-- 已批准范围：Telegram 作为首个真实渠道
-- 待批准范围：本设计中的 JDK HTTP 长轮询、数值身份、终态合并、Secret 和离线实现边界
+- 批准记录：用户于 2026-07-16 明确批准本设计并要求开始连续 TDD
+- 批准范围：JDK HTTP 长轮询、数值身份、终态合并、Secret 延迟读取和纯离线实现
+- 未授权范围：真实 Token、真实 Telegram 网络和真实用户数据
 - Contract：[Telegram Channel Host 契约](../contracts/telegram-channel-host.md)
 - ADR：[ADR-0009：Telegram 首渠道使用 JDK HttpClient 与 Bot API 长轮询](../adr/0009-use-jdk-httpclient-for-telegram-long-polling.md)
 - 实施计划：[Telegram Channel Host 工作计划](../plans/2026-07-16-telegram-channel-host-implementation.md)

@@ -1,13 +1,14 @@
 # Telegram Channel Host 工作计划
 
-- 状态：草案（待批准，不得开始生产代码）
+- 状态：实施中
 - 日期：2026-07-16
 - 阶段：R6.3
 - 分支：`agent/r6-telegram-channel`
 - 工作树：`/Users/namei/idea/agent/java-agent-r6-telegram`
 - 基线：PR #5 已以 `7e73712` 合入 `main`
-- 已批准范围：Telegram 作为首个真实渠道
-- 待批准范围：Contract、Spec、ADR、SDK/传输、身份、Secret 和离线实现边界
+- 批准记录：用户于 2026-07-16 明确批准 Contract、Spec、ADR 和本计划，并要求开始连续 TDD
+- 批准范围：JDK HTTP 长轮询、数值身份、Secret 延迟读取和纯离线 Fake Server 实现
+- 未授权范围：真实 Token、真实 Telegram 网络和真实用户数据
 - Contract：[Telegram Channel Host 契约](../contracts/telegram-channel-host.md)
 - Spec：[Telegram Channel Host 设计](../specs/2026-07-16-telegram-channel-host-design.md)
 - ADR：[ADR-0009：Telegram 首渠道使用 JDK HttpClient 与 Bot API 长轮询](../adr/0009-use-jdk-httpclient-for-telegram-long-polling.md)
@@ -50,7 +51,7 @@ Telegram Fake Bot API / later real Bot API
 
 ## 3. Task E0：冻结 Contract、Spec、ADR 和计划
 
-状态：草案已形成，等待用户批准。
+状态：已完成并批准。
 
 交付：
 
