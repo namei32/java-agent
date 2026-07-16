@@ -178,7 +178,7 @@ RED/GREEN：
 
 远程 CI 补充证据（PR #5）：首轮远程 `failure` Job 在 `cancellationClosesOnlyTheTargetSseConnection` 等待首个并发 Delta 的固定 2 秒处失败，而默认与 `compat` Job 通过；日志显示生产取消断言尚未执行，属于受限 Runner 调度放大的连接启动竞态。第一轮修复让 Stub Server 等待两条 SSE 连接均到达，并用有界 Awaitility 代替固定 2 秒等待。
 
-第二轮远程 CI 中 `compat` 通过，但默认 Job 的 `cancellationDisposesSubscriptionAndRejectsLateCompletion` 和 `failure` Job 的并发 SSE 取消场景分别暴露两个更深问题：单元测试在 `Flux.concat` 尚未订阅不可结束上游时就发起取消；生产 `failProject` 则在取消 Subscription 和 Transport 之前先完成失败 Future，使调用者可能观察到终态后仍收到迟到 Delta。最终修复把终态发布调整为“先标记取消并完成 Subscription/Transport 清理，再 `completeExceptionally`”，单元测试用可控清理闸门证明清理阻塞期间 Future 不得完成；并发 SSE Stub 在首个事件后显式阻塞剩余事件，取消目标连接后才释放存活连接，彻底移除依赖墙钟延时的断言。两个聚焦场景组合连续执行 3 轮均通过；随后默认 363 个、`failure` 99 个、`compat` 402 个测试全部通过，0 Failure、0 Error、0 Skipped，等待推送后的远程复验。
+第二轮远程 CI 中 `compat` 通过，但默认 Job 的 `cancellationDisposesSubscriptionAndRejectsLateCompletion` 和 `failure` Job 的并发 SSE 取消场景分别暴露两个更深问题：单元测试在 `Flux.concat` 尚未订阅不可结束上游时就发起取消；生产 `failProject` 则在取消 Subscription 和 Transport 之前先完成失败 Future，使调用者可能观察到终态后仍收到迟到 Delta。最终修复把终态发布调整为“先标记取消并完成 Subscription/Transport 清理，再 `completeExceptionally`”，单元测试用可控清理闸门证明清理阻塞期间 Future 不得完成；并发 SSE Stub 在首个事件后显式阻塞剩余事件，取消目标连接后才释放存活连接，彻底移除依赖墙钟延时的断言。两个聚焦场景组合连续执行 3 轮均通过；随后默认 363 个、`failure` 99 个、`compat` 402 个测试全部通过，0 Failure、0 Error、0 Skipped。修复提交 `0b69c82` 推送后，PR #5 的远程默认、`failure`、`compat` Job 分别在 1 分 43 秒、1 分 14 秒、1 分 48 秒通过。
 
 ## 3. 提交策略
 
