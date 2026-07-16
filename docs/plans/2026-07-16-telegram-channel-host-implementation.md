@@ -1,6 +1,6 @@
 # Telegram Channel Host 工作计划
 
-- 状态：实施中
+- 状态：Task E0–E9 已完成并通过本地离线门禁；待提交、远程 CI 与合并，真实 Smoke 待授权
 - 日期：2026-07-16
 - 阶段：R6.3
 - 分支：`agent/r6-telegram-channel`
@@ -352,7 +352,7 @@ Telegram 网络、用户数据和 Smoke 继续保持未授权。
 
 ## 12. Task E9：Golden、集成、阶段门禁与文档收口
 
-状态：待 E8。
+状态：已完成。
 
 ### 12.1 Fixture-only 验收
 
@@ -376,6 +376,12 @@ Telegram 网络、用户数据和 Smoke 继续保持未授权。
 
 场景至少包含普通回答、多 Delta 权威纠正、目标取消、另一 Chat 存活、429、Poll 断开和关闭。
 
+验证证据（2026-07-16）：`TelegramChannelIT` 使用生产 `JdkTelegramBotApi`、真实 Loopback
+`HttpServer`、生产 `MessageTurnService` 和受控 Fake Chat 执行 4 个场景并全部通过。HTTP 请求
+覆盖普通入站、多 Delta/Tool 风格预览不外发、最终权威纠正、429 明确拒绝后的单次重试、定向
+`/cancel`、另一 Chat 继续完成、相同 offset 的 Poll 重试耗尽以及关闭时中断 Long Poll、取消 Turn
+并 Join 全部 Worker。测试 Server 使用有界脚本队列、有界执行器并等待终止。
+
 ### 12.3 阶段门禁
 
 ```bash
@@ -396,9 +402,22 @@ Telegram 网络、用户数据和 Smoke 继续保持未授权。
 
 文档同步：Contract/Spec/ADR 状态、R6 总计划、Roadmap、能力矩阵、文档导航和 Runbook。记录实际测试数，不预填数字。
 
+Fixture-only 证据（2026-07-16）：`telegram-channel-v1.json` 完成 24 个 Java-owned Case 并加入
+Manifest，生产 Mapper、Chunker、Renderer、`BoundedOutboundBuffer` Lifecycle 和配置绑定共同
+消费；聚焦命令执行 25 个测试并全部通过，Manifest Hash 校验同步通过。
+
+阶段门禁证据（2026-07-16）：Spotless 通过；默认 `clean verify` 通过 455 个测试（413 单元、
+42 集成）；`failure` 通过 119 个（113 单元、6 集成）；`compat` 通过 519 个（476 单元、43 集成）。
+Kernel 依赖树只有测试依赖；Kernel/Application 生产源码无 Telegram、HTTP、Jackson、Spring 或
+渠道 SDK 引用，生产源码无无界 Queue/Executor。Secret 扫描只发现环境变量名、空模板和固定假
+Token；所有网络测试只访问 Loopback，关闭后的活动 Turn、Semaphore、Worker 和 Fake Server 均为
+零。原始脏工作树未被本工作树修改。结论为“R6.3 离线实现已验证，真实 Smoke 待授权”。
+
 预计提交：`test: 验收 Telegram Channel 纵向切片`
 
 ## 13. PR、远程 CI 与合并
+
+状态：本地 E9 验收已完成；提交、PR、远程 CI 与合并待执行。
 
 E9 全绿并自审无 Critical/Important 后：
 

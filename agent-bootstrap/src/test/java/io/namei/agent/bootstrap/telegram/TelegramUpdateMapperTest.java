@@ -26,6 +26,9 @@ class TelegramUpdateMapperTest {
     var tests = new ArrayList<DynamicTest>();
 
     for (JsonNode testCase : fixture.path("cases")) {
+      if (!testCase.path("component").asString("mapper").equals("mapper")) {
+        continue;
+      }
       tests.add(
           DynamicTest.dynamicTest(
               testCase.path("id").asString(),

@@ -1,6 +1,6 @@
 # Telegram Channel Host 设计
 
-- 状态：已批准，实施中
+- 状态：已实现并通过本地离线门禁；远程 CI 待执行，真实 Smoke 待授权
 - 日期：2026-07-16
 - 阶段：R6.3
 - 批准记录：用户于 2026-07-16 明确批准本设计并要求开始连续 TDD
@@ -332,3 +332,13 @@ Turn 完成/取消、Poll 失败和 Shutdown 通过原子状态与 Buffer Cancel
 - R6.4 冻结前不持久化 Update Offset、Inbox 或 Delivery。
 - Webhook 需要公网 TLS、来源认证和重放防护，必须新 ADR。
 - 真实 Smoke 需要专用 Bot、测试 User/Chat Allowlist、Token 注入/撤销和数据删除说明；不属于本设计的默认实施授权。
+
+## 14. 实现验证
+
+2026-07-16，设计中的 Channel Host、Bot API Client、可信 Mapper、终态 Renderer、Adapter 生命周期、
+默认关闭装配和 Java-owned Fixture 已全部落地。聚焦 Fixture 验收 25 个、Loopback 纵向集成 4 个；
+最终默认、`failure`、`compat` 分别通过 455、119、519 个测试。依赖与安全审计确认
+Kernel/Application 没有 Telegram、HTTP、Jackson 或 Spring 生产依赖，Disabled/CLI/配置检查不读取
+Token、不创建 Telegram 网络或 Worker，关闭后无活动 Turn、许可、线程和测试 Server 残留。
+
+这些证据只完成离线设计验收。部署继续保持 `DISABLED`，真实 Telegram Smoke 仍受独立授权门禁约束。

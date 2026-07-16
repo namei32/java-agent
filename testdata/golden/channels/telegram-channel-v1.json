@@ -108,6 +108,88 @@
       "id": "stop-is-control-not-prompt",
       "input": {"text": "/stop"},
       "expected": {"kind": "CONTROL", "control": "CANCEL"}
+    },
+    {
+      "id": "chunker-keeps-exact-4000-unit-text",
+      "component": "chunker",
+      "input": {"repeatText": "x", "repeatCount": 4000},
+      "expected": {"chunkUtf16Lengths": [4000], "lossless": true}
+    },
+    {
+      "id": "chunker-preserves-surrogate-at-boundary",
+      "component": "chunker",
+      "input": {"prefixText": "a", "prefixCount": 3999, "emoji": "😊", "suffix": "b"},
+      "expected": {"chunkUtf16Lengths": [3999, 3], "lossless": true}
+    },
+    {
+      "id": "renderer-sends-only-authoritative-completion",
+      "component": "renderer",
+      "input": {
+        "events": [
+          {"type": "TURN_STARTED"},
+          {"type": "CONTENT_DELTA", "content": "preview-must-not-send"},
+          {"type": "CONTENT_DELTA", "content": "{\"tool_arguments\":\"must-not-send\"}"},
+          {"type": "TURN_COMPLETED", "content": "权威最终回答"}
+        ]
+      },
+      "expected": {"deliveries": ["权威最终回答"], "terminal": true}
+    },
+    {
+      "id": "renderer-projects-requested-cancellation",
+      "component": "renderer",
+      "input": {
+        "events": [
+          {"type": "TURN_STARTED"},
+          {"type": "TURN_CANCELLED", "code": "REQUESTED"}
+        ]
+      },
+      "expected": {"deliveries": ["请求已取消（REQUESTED）"], "terminal": true}
+    },
+    {
+      "id": "renderer-projects-retryable-failure",
+      "component": "renderer",
+      "input": {
+        "events": [
+          {"type": "TURN_STARTED"},
+          {"type": "TURN_FAILED", "code": "MODEL_TIMEOUT"}
+        ]
+      },
+      "expected": {"deliveries": ["请求失败（MODEL_TIMEOUT），请重新发送。"], "terminal": true}
+    },
+    {
+      "id": "renderer-projects-permanent-failure",
+      "component": "renderer",
+      "input": {
+        "events": [
+          {"type": "TURN_STARTED"},
+          {"type": "TURN_FAILED", "code": "INTERNAL_ERROR"}
+        ]
+      },
+      "expected": {"deliveries": ["请求失败（INTERNAL_ERROR）"], "terminal": true}
+    },
+    {
+      "id": "lifecycle-requested-cancellation-wins",
+      "component": "lifecycle",
+      "input": {"actions": ["REQUEST_CANCEL", "DISCONNECT", "SHUTDOWN"]},
+      "expected": {"cancellationCode": "REQUESTED", "bufferSize": 0}
+    },
+    {
+      "id": "lifecycle-disconnect-clears-preview",
+      "component": "lifecycle",
+      "input": {"actions": ["PUBLISH_STARTED", "DISCONNECT"]},
+      "expected": {"cancellationCode": "CHANNEL_DISCONNECTED", "bufferSize": 0}
+    },
+    {
+      "id": "lifecycle-rejects-second-terminal",
+      "component": "lifecycle",
+      "input": {"actions": ["PUBLISH_STARTED", "PUBLISH_COMPLETED", "PUBLISH_COMPLETED"]},
+      "expected": {"deliveryReason": "INVALID_MESSAGE", "bufferSize": 2}
+    },
+    {
+      "id": "configuration-default-is-disabled",
+      "component": "configuration",
+      "input": {},
+      "expected": {"enabled": false, "allowedUserIds": []}
     }
   ]
 }

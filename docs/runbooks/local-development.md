@@ -150,7 +150,19 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -pl agent-bootstrap -am \
   -Dtest=TelegramBootstrapTest,TelegramChannelAdapterTest,TelegramChannelFailureTest \
   -Dsurefire.failIfNoSpecifiedTests=false test
+
+./mvnw -pl agent-bootstrap -am -Pcompat \
+  -Dtest=TelegramGoldenFixtureTest \
+  -Dsurefire.failIfNoSpecifiedTests=false test
+
+./mvnw -pl agent-bootstrap -am \
+  -Dit.test=TelegramChannelIT \
+  -Dfailsafe.failIfNoSpecifiedTests=false verify
 ```
+
+2026-07-16 的本地离线验收结果为：Golden 聚焦 25 个测试、Loopback Channel 纵向集成 4 个；
+最终默认 455 个（413 单元、42 集成）、`failure` 119 个（113 单元、6 集成）、`compat` 519 个
+（476 单元、43 集成）全部通过。运行这些命令不需要真实 Token，也不得临时设置真实 Token。
 
 启用配置要求 `AGENT_TELEGRAM_ALLOW_FROM` 是逗号分隔的正十进制 User ID，Token 只能由
 `AGENT_TELEGRAM_BOT_TOKEN` 提供；两个值都不得写入 Git、日志、异常或工单。并发、Buffer、

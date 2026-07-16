@@ -1,6 +1,6 @@
 # Telegram Channel Host 契约
 
-- 状态：已批准，实施中
+- 状态：已实现并通过本地离线门禁；远程 CI 待执行，真实 Smoke 待授权
 - 契约版本：1
 - 日期：2026-07-16
 - 阶段：R6.3
@@ -266,3 +266,16 @@ Java-owned Fixture 位于 `testdata/golden/channels/telegram-channel-v1.json`，
 - 使用真实 Telegram User/Chat/Message ID 或真实消息正文。
 - 扩大 Allowlist、启用群聊、附件、主动消息、Webhook 或公网端口。
 - 新增持久 Inbox/Outbox、自动重放或任何 Exactly Once 声明。
+
+## 14. 离线验证证据
+
+2026-07-16 已完成批准范围内的本地离线实现：Manifest 管理的 Java-owned Fixture 包含 24 个
+Mapper、Chunker、Renderer、Lifecycle 和默认配置 Case，聚焦生产消费验收执行 25 个测试；真实
+`JdkTelegramBotApi`、Loopback `HttpServer` 和 `MessageTurnService` 组成的纵向集成执行 4 个测试，
+覆盖权威终态纠正、429 单次重试、目标取消、另一会话存活、Poll 重试耗尽和有界关闭。
+
+阶段门禁结果为：默认 455 个测试（413 单元、42 集成）、`failure` 119 个（113 单元、6 集成）、
+`compat` 519 个（476 单元、43 集成），全部零失败。Spotless、Manifest Hash、Kernel 依赖、Secret、
+无界并发、线程/Socket、许可和工作树审计通过。所有 HTTP 都只访问 Loopback Fake Server；没有读取
+真实 Token、访问 Telegram、处理真实 ID/正文或启用部署。因此阶段结论严格保持为：
+**R6.3 离线实现已验证，真实 Smoke 待授权。**
