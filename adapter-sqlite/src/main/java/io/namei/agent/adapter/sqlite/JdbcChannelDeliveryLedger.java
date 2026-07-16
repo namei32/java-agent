@@ -84,6 +84,184 @@ final class JdbcChannelDeliveryLedger {
     return countDeliveries(connection, instance, "state = 'UNKNOWN'");
   }
 
+  long countActiveCapacity(Connection connection, ChannelInstanceId instance) throws SQLException {
+    return countDeliveries(
+        connection, instance, "(payload_pruned = 0 OR state NOT IN ('DELIVERED', 'FAILED'))");
+  }
+
+  RecoverySlice recover(Connection connection, ChannelLedgerCommand.Recover command, int limit)
+      throws SQLException {
+    List<DeliveryRecoveryCandidate> candidates =
+        findDeliveryRecoveryCandidates(connection, command, limit);
+    int processed = Math.min(candidates.size(), limit);
+    for (int index = 0; index < processed; index++) {
+      recoverDelivery(connection, candidates.get(index), command.recoveredAt());
+    }
+    return new RecoverySlice(processed, candidates.size() > limit);
+  }
+
+  int cleanupResolved(Connection connection, ChannelLedgerCommand.Cleanup command, int limit)
+      throws SQLException {
+    var deliveryIds = new ArrayList<String>();
+    try (var statement =
+        connection.prepareStatement(
+            """
+            SELECT delivery_id
+            FROM channel_deliveries
+            WHERE channel = ? AND instance_id = ?
+              AND state IN ('DELIVERED', 'FAILED')
+              AND payload_pruned = 0 AND updated_at < ?
+            ORDER BY updated_at ASC, delivery_id ASC
+            LIMIT ?
+            """)) {
+      statement.setString(1, command.instance().channel());
+      statement.setString(2, command.instance().value());
+      statement.setString(3, command.cutoff().toString());
+      statement.setInt(4, limit);
+      try (var rows = statement.executeQuery()) {
+        while (rows.next()) {
+          deliveryIds.add(rows.getString("delivery_id"));
+        }
+      }
+    }
+    for (String deliveryId : deliveryIds) {
+      try (var delete =
+          connection.prepareStatement("DELETE FROM channel_delivery_parts WHERE delivery_id = ?")) {
+        delete.setString(1, deliveryId);
+        if (delete.executeUpdate() < 1) {
+          throw ChannelLedgerRepositoryException.staleWrite();
+        }
+      }
+      try (var update =
+          connection.prepareStatement(
+              """
+              UPDATE channel_deliveries
+              SET payload_pruned = 1, revision = revision + 1, updated_at = ?
+              WHERE delivery_id = ? AND state IN ('DELIVERED', 'FAILED')
+                AND payload_pruned = 0 AND updated_at < ?
+              """)) {
+        update.setString(1, command.cleanedAt().toString());
+        update.setString(2, deliveryId);
+        update.setString(3, command.cutoff().toString());
+        if (update.executeUpdate() != 1) {
+          throw ChannelLedgerRepositoryException.staleWrite();
+        }
+      }
+    }
+    return deliveryIds.size();
+  }
+
+  private static List<DeliveryRecoveryCandidate> findDeliveryRecoveryCandidates(
+      Connection connection, ChannelLedgerCommand.Recover command, int limit) throws SQLException {
+    var candidates = new ArrayList<DeliveryRecoveryCandidate>();
+    try (var statement =
+        connection.prepareStatement(
+            """
+            SELECT d.delivery_id, d.next_part_index, d.revision,
+              p.attempt_count, p.state AS part_state,
+              a.outcome AS attempt_outcome
+            FROM channel_deliveries d
+            LEFT JOIN channel_delivery_parts p
+              ON p.delivery_id = d.delivery_id AND p.part_index = d.next_part_index
+            LEFT JOIN channel_delivery_attempts a
+              ON a.delivery_id = p.delivery_id AND a.part_index = p.part_index
+                AND a.attempt_number = p.attempt_count
+            WHERE d.channel = ? AND d.instance_id = ?
+              AND d.state = 'DELIVERING' AND d.owner_id <> ?
+            ORDER BY d.updated_at ASC, d.delivery_id ASC
+            LIMIT ?
+            """)) {
+      statement.setString(1, command.instance().channel());
+      statement.setString(2, command.instance().value());
+      statement.setString(3, command.newOwnerId());
+      statement.setInt(4, Math.addExact(limit, 1));
+      try (var rows = statement.executeQuery()) {
+        while (rows.next()) {
+          DeliveryPartState partState =
+              rows.getString("part_state") == null
+                  ? null
+                  : DeliveryPartState.valueOf(rows.getString("part_state"));
+          DeliveryAttemptOutcome attemptOutcome =
+              rows.getString("attempt_outcome") == null
+                  ? null
+                  : DeliveryAttemptOutcome.valueOf(rows.getString("attempt_outcome"));
+          candidates.add(
+              new DeliveryRecoveryCandidate(
+                  rows.getString("delivery_id"),
+                  exactNonNegativeInt(rows, "next_part_index"),
+                  exactNonNegativeLong(rows, "revision"),
+                  rows.getString("part_state") == null
+                      ? 0
+                      : exactNonNegativeInt(rows, "attempt_count"),
+                  partState,
+                  attemptOutcome));
+        }
+      } catch (IllegalArgumentException | NullPointerException exception) {
+        throw new SQLException("invalid delivery recovery state", exception);
+      }
+    }
+    return List.copyOf(candidates);
+  }
+
+  private static void recoverDelivery(
+      Connection connection, DeliveryRecoveryCandidate candidate, Instant recoveredAt)
+      throws SQLException {
+    if (candidate.attemptOutcome() == DeliveryAttemptOutcome.STARTED) {
+      try (var statement =
+          connection.prepareStatement(
+              """
+              UPDATE channel_delivery_attempts
+              SET completed_at = ?, outcome = 'UNKNOWN', error_code = 'RECOVERY_OUTCOME_UNKNOWN'
+              WHERE delivery_id = ? AND part_index = ? AND attempt_number = ?
+                AND outcome = 'STARTED' AND completed_at IS NULL
+              """)) {
+        statement.setString(1, recoveredAt.toString());
+        statement.setString(2, candidate.deliveryId());
+        statement.setInt(3, candidate.partIndex());
+        statement.setInt(4, candidate.attemptCount());
+        if (statement.executeUpdate() != 1) {
+          throw ChannelLedgerRepositoryException.staleWrite();
+        }
+      }
+    }
+    if (candidate.partState() == DeliveryPartState.IN_FLIGHT) {
+      try (var statement =
+          connection.prepareStatement(
+              """
+              UPDATE channel_delivery_parts
+              SET state = 'UNKNOWN', next_attempt_at = NULL, remote_message_id = NULL,
+                last_error_code = 'RECOVERY_OUTCOME_UNKNOWN', updated_at = ?
+              WHERE delivery_id = ? AND part_index = ? AND state = 'IN_FLIGHT'
+                AND attempt_count = ?
+              """)) {
+        statement.setString(1, recoveredAt.toString());
+        statement.setString(2, candidate.deliveryId());
+        statement.setInt(3, candidate.partIndex());
+        statement.setInt(4, candidate.attemptCount());
+        if (statement.executeUpdate() != 1) {
+          throw ChannelLedgerRepositoryException.staleWrite();
+        }
+      }
+    }
+    try (var statement =
+        connection.prepareStatement(
+            """
+            UPDATE channel_deliveries
+            SET state = 'UNKNOWN', owner_id = NULL, lease_expires_at = NULL,
+              last_error_code = 'RECOVERY_OUTCOME_UNKNOWN',
+              revision = ?, updated_at = ?
+            WHERE delivery_id = ? AND state = 'DELIVERING' AND revision = ?
+            """)) {
+      statement.setLong(1, increment(candidate.revision()));
+      statement.setString(2, recoveredAt.toString());
+      statement.setString(3, candidate.deliveryId());
+      statement.setLong(4, candidate.revision());
+      if (statement.executeUpdate() != 1) {
+        throw ChannelLedgerRepositoryException.staleWrite();
+      }
+    }
+  }
+
   private ChannelLedgerResult.Terminal recordTerminalInTransaction(
       Connection connection, ChannelLedgerCommand.RecordTerminal command) throws SQLException {
     DeliveryEnvelope envelope = command.delivery();
@@ -208,7 +386,7 @@ final class JdbcChannelDeliveryLedger {
         connection.prepareStatement(
             """
             SELECT delivery_id, channel, instance_id, target_id, source_kind, correlation_id,
-              message_type, payload_fingerprint, state, part_count, next_part_index,
+              message_type, payload_fingerprint, state, part_count, next_part_index, payload_pruned,
               owner_id, lease_expires_at, last_error_code, revision
             FROM channel_deliveries
             WHERE delivery_id = ? OR (
@@ -245,6 +423,9 @@ final class JdbcChannelDeliveryLedger {
         || stored.partCount() != envelope.parts().size()) {
       throw ChannelLedgerRepositoryException.idempotencyConflict();
     }
+    if (stored.payloadPruned()) {
+      return;
+    }
     List<StoredPart> parts = findParts(connection, stored.deliveryId());
     if (parts.size() != envelope.parts().size()) {
       throw ChannelLedgerRepositoryException.idempotencyConflict();
@@ -267,9 +448,8 @@ final class JdbcChannelDeliveryLedger {
             """
             INSERT INTO channel_deliveries (
               delivery_id, channel, instance_id, target_id, source_kind, correlation_id,
-              message_type, payload_fingerprint, state, part_count, next_part_index,
-              payload_pruned, owner_id, lease_expires_at, last_error_code,
-              revision, created_at, updated_at
+              message_type, payload_fingerprint, state, part_count, next_part_index, payload_pruned,
+              owner_id, lease_expires_at, last_error_code, revision, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, 0, 0, NULL, NULL, NULL, 0, ?, ?)
             """)) {
       statement.setString(1, envelope.deliveryId());
@@ -669,7 +849,7 @@ final class JdbcChannelDeliveryLedger {
         connection.prepareStatement(
             """
             SELECT delivery_id, channel, instance_id, target_id, source_kind, correlation_id,
-              message_type, payload_fingerprint, state, part_count, next_part_index,
+              message_type, payload_fingerprint, state, part_count, next_part_index, payload_pruned,
               owner_id, lease_expires_at, last_error_code, revision
             FROM channel_deliveries WHERE delivery_id = ?
             """)) {
@@ -700,6 +880,7 @@ final class JdbcChannelDeliveryLedger {
           DeliveryState.valueOf(rows.getString("state")),
           exactNonNegativeInt(rows, "part_count"),
           exactNonNegativeInt(rows, "next_part_index"),
+          rows.getInt("payload_pruned") == 1,
           rows.getString("owner_id"),
           rows.getString("lease_expires_at"),
           rows.getString("last_error_code"),
@@ -1035,6 +1216,7 @@ final class JdbcChannelDeliveryLedger {
       DeliveryState state,
       int partCount,
       int nextPartIndex,
+      boolean payloadPruned,
       String ownerId,
       String leaseExpiresAt,
       String lastErrorCode,
@@ -1052,6 +1234,7 @@ final class JdbcChannelDeliveryLedger {
           newState,
           partCount,
           newNextPartIndex,
+          payloadPruned,
           null,
           null,
           newError,
@@ -1093,6 +1276,16 @@ final class JdbcChannelDeliveryLedger {
       Instant nextAttemptAt,
       String remoteMessageId,
       String errorCode) {}
+
+  record RecoverySlice(int processed, boolean remaining) {}
+
+  private record DeliveryRecoveryCandidate(
+      String deliveryId,
+      int partIndex,
+      long revision,
+      int attemptCount,
+      DeliveryPartState partState,
+      DeliveryAttemptOutcome attemptOutcome) {}
 
   private record Cursor(long nextSequence, long revision, boolean persisted) {
     private static Cursor empty() {

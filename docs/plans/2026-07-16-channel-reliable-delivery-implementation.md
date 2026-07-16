@@ -1,7 +1,7 @@
 # R6.4 渠道可靠投递、幂等与恢复工作计划
 
 - 状态：已批准，连续 TDD 实施中
-- 当前任务：F6 恢复、清理、容量与 SQLite 阶段门禁
+- 当前任务：F7 Application 入站协调器
 - 日期：2026-07-16
 - 分支：`agent/r6-reliable-delivery`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`
@@ -256,7 +256,7 @@ Delivery；Owner 不匹配和远端成功后的 SQLite Commit Fault 均不能伪
 
 ## 9. Task F6：恢复、清理、容量与 SQLite 阶段门禁
 
-状态：进行中。
+状态：已完成。
 
 先写带 `@Tag("failure")` 的 `ChannelLedgerRecoveryFailureTest`：
 
@@ -288,6 +288,23 @@ Task F6 阶段门禁：
 记录实际测试数、Profile 选择和临时数据库范围；不得预填数字。
 
 预计提交：`feat: 完成渠道账本恢复与容量门禁`
+
+RED/GREEN 证据（2026-07-16）：聚焦 failure 测试先固定五类恢复、清理、容量和事务故障场景；
+未实现时 Delivery 恢复数量、清理结果和 Fault Point 断言失败。最小实现把 Claim 与 Delivery 的旧
+Owner 恢复放在同一有界事务中：未跨发送边界的 Pending/Due Retry 保留，`DELIVERING +
+IN_FLIGHT + STARTED` 只转为 `UNKNOWN`，不做隐式重试；已解决 Delivery 只收缩 Payload/Part/
+Attempt，保留 Header、Claim Tombstone 和 Unknown。清理只删除 Cursor 以下、无 Claim 关联且早于
+Cutoff 的 Event，容量只统计未收缩或未解决的 Delivery。恢复和清理提交前 Fault 均证明整笔回滚。
+
+首次 GREEN 过程中，新增 `payload_pruned` 读取路径暴露两处 SQL 列清单不同步，定向测试分别以
+“值数量不匹配”和“结果集缺列”稳定复现后修复；自审又增加“终态 Payload 已收缩仍可凭 Header
+指纹和 Claim Tombstone 幂等重放”的保护场景。最终聚焦 failure 命令执行 6 个测试全部通过；F2–
+F5 默认 Profile 联合回归 36 个测试、F6 failure Profile 6 个测试均通过。
+
+阶段门禁证据（2026-07-16）：`spotless:check` 对八模块通过；`-pl adapter-sqlite -am verify`
+执行 Kernel 51 个、SQLite 76 个测试全部通过；全 Reactor `clean verify` 执行 505 个测试全部通过；
+全 Reactor `-Pfailure verify` 执行 125 个故障场景全部通过。默认与 failure Profile 均已显式执行，
+所有新增 SQLite 文件均位于 JUnit `@TempDir`，没有访问真实 Workspace、Telegram、Secret 或外网。
 
 ## 10. Task F7：Application 入站协调器
 

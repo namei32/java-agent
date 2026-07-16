@@ -87,7 +87,14 @@ public final class JdbcChannelLedger implements ChannelLedgerPort {
 
   @Override
   public ChannelLedgerResult.Cleanup cleanup(ChannelLedgerCommand.Cleanup command) {
-    throw ChannelLedgerRepositoryException.operationFailed(null);
+    Objects.requireNonNull(command, "command");
+    try (var connection = schema.openConnection()) {
+      return transaction(connection, () -> cleanupInTransaction(connection, command));
+    } catch (ChannelLedgerRepositoryException exception) {
+      throw exception;
+    } catch (SQLException | RuntimeException exception) {
+      throw ChannelLedgerRepositoryException.operationFailed(exception);
+    }
   }
 
   @Override
@@ -158,14 +165,33 @@ public final class JdbcChannelLedger implements ChannelLedgerPort {
 
   private ChannelLedgerResult.Recovery recoverInTransaction(
       Connection connection, ChannelLedgerCommand.Recover command) throws SQLException {
-    List<RecoveryCandidate> candidates = findRecoveryCandidates(connection, command);
+    List<RecoveryCandidate> candidates =
+        findRecoveryCandidates(connection, command, command.batchSize());
     boolean remaining = candidates.size() > command.batchSize();
     int processed = Math.min(candidates.size(), command.batchSize());
     for (int index = 0; index < processed; index++) {
       recoverClaim(connection, candidates.get(index), command.recoveredAt().toString());
     }
+    if (!remaining) {
+      JdbcChannelDeliveryLedger.RecoverySlice deliveryRecovery =
+          deliveries.recover(connection, command, command.batchSize() - processed);
+      processed += deliveryRecovery.processed();
+      remaining = deliveryRecovery.remaining();
+    }
     faults.hit(ChannelLedgerFaultPoint.RECOVERY_BEFORE_COMMIT);
     return new ChannelLedgerResult.Recovery(processed, remaining);
+  }
+
+  private ChannelLedgerResult.Cleanup cleanupInTransaction(
+      Connection connection, ChannelLedgerCommand.Cleanup command) throws SQLException {
+    int processed = deliveries.cleanupResolved(connection, command, command.batchSize());
+    int remainingBudget = command.batchSize() - processed;
+    if (remainingBudget > 0) {
+      processed += cleanupEvents(connection, command, remainingBudget);
+    }
+    boolean capacityAvailable = capacityAvailable(connection, command);
+    faults.hit(ChannelLedgerFaultPoint.CLEANUP_BEFORE_COMMIT);
+    return new ChannelLedgerResult.Cleanup(processed, capacityAvailable);
   }
 
   private static Optional<StoredEvent> findEventById(
@@ -599,7 +625,7 @@ public final class JdbcChannelLedger implements ChannelLedgerPort {
   }
 
   private static List<RecoveryCandidate> findRecoveryCandidates(
-      Connection connection, ChannelLedgerCommand.Recover command) throws SQLException {
+      Connection connection, ChannelLedgerCommand.Recover command, int limit) throws SQLException {
     var candidates = new ArrayList<RecoveryCandidate>();
     try (var statement =
         connection.prepareStatement(
@@ -614,7 +640,7 @@ public final class JdbcChannelLedger implements ChannelLedgerPort {
       statement.setString(1, command.instance().channel());
       statement.setString(2, command.instance().value());
       statement.setString(3, command.newOwnerId());
-      statement.setInt(4, Math.addExact(command.batchSize(), 1));
+      statement.setInt(4, Math.addExact(limit, 1));
       try (var rows = statement.executeQuery()) {
         while (rows.next()) {
           try {
@@ -687,6 +713,90 @@ public final class JdbcChannelLedger implements ChannelLedgerPort {
         long count = exactNonNegativeLong(rows, 1);
         if (rows.next()) {
           throw new SQLException("duplicate channel unknown execution count");
+        }
+        return count;
+      }
+    }
+  }
+
+  private static int cleanupEvents(
+      Connection connection, ChannelLedgerCommand.Cleanup command, int limit) throws SQLException {
+    var events = new ArrayList<EventKey>();
+    try (var statement =
+        connection.prepareStatement(
+            """
+            SELECT e.external_event_id
+            FROM channel_inbox_events e
+            JOIN channel_cursors c
+              ON c.channel = e.channel AND c.instance_id = e.instance_id
+            WHERE e.channel = ? AND e.instance_id = ?
+              AND e.turn_id IS NULL
+              AND e.external_sequence < c.next_sequence
+              AND e.created_at < ?
+            ORDER BY e.external_sequence ASC, e.external_event_id ASC
+            LIMIT ?
+            """)) {
+      statement.setString(1, command.instance().channel());
+      statement.setString(2, command.instance().value());
+      statement.setString(3, command.cutoff().toString());
+      statement.setInt(4, limit);
+      try (var rows = statement.executeQuery()) {
+        while (rows.next()) {
+          events.add(new EventKey(rows.getString("external_event_id")));
+        }
+      }
+    }
+    for (EventKey event : events) {
+      try (var statement =
+          connection.prepareStatement(
+              """
+              DELETE FROM channel_inbox_events
+              WHERE channel = ? AND instance_id = ? AND external_event_id = ?
+                AND turn_id IS NULL AND created_at < ?
+              """)) {
+        statement.setString(1, command.instance().channel());
+        statement.setString(2, command.instance().value());
+        statement.setString(3, event.externalEventId());
+        statement.setString(4, command.cutoff().toString());
+        if (statement.executeUpdate() != 1) {
+          throw ChannelLedgerRepositoryException.staleWrite();
+        }
+      }
+    }
+    return events.size();
+  }
+
+  private boolean capacityAvailable(Connection connection, ChannelLedgerCommand.Cleanup command)
+      throws SQLException {
+    long inboxRecords = countInboxCapacity(connection, command.instance());
+    long deliveryRecords = deliveries.countActiveCapacity(connection, command.instance());
+    return inboxRecords < command.maxInboxRecords()
+        && deliveryRecords < command.maxDeliveryRecords();
+  }
+
+  private static long countInboxCapacity(Connection connection, ChannelInstanceId instance)
+      throws SQLException {
+    try (var statement =
+        connection.prepareStatement(
+            """
+            SELECT
+              (SELECT COUNT(*) FROM channel_inbox_events
+                WHERE channel = ? AND instance_id = ?)
+              +
+              (SELECT COUNT(*) FROM channel_turn_claims
+                WHERE channel = ? AND instance_id = ?)
+            """)) {
+      statement.setString(1, instance.channel());
+      statement.setString(2, instance.value());
+      statement.setString(3, instance.channel());
+      statement.setString(4, instance.value());
+      try (var rows = statement.executeQuery()) {
+        if (!rows.next()) {
+          throw new SQLException("inbox capacity count missing");
+        }
+        long count = exactNonNegativeLong(rows, 1);
+        if (rows.next()) {
+          throw new SQLException("duplicate inbox capacity count");
         }
         return count;
       }
@@ -955,6 +1065,8 @@ public final class JdbcChannelLedger implements ChannelLedgerPort {
       TurnClaimState state,
       int startAttempts,
       long revision) {}
+
+  private record EventKey(String externalEventId) {}
 
   @FunctionalInterface
   private interface SqlWork<T> {
