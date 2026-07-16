@@ -17,6 +17,7 @@ import java.util.Optional;
 public final class JdbcChannelLedger implements ChannelLedgerPort {
   private final ChannelLedgerSchemaInitializer schema;
   private final ChannelLedgerFaultInjector faults;
+  private final JdbcChannelDeliveryLedger deliveries;
 
   public JdbcChannelLedger(ChannelLedgerSchemaInitializer schema) {
     this(schema, ignored -> {});
@@ -25,11 +26,15 @@ public final class JdbcChannelLedger implements ChannelLedgerPort {
   JdbcChannelLedger(ChannelLedgerSchemaInitializer schema, ChannelLedgerFaultInjector faults) {
     this.schema = Objects.requireNonNull(schema, "schema");
     this.faults = Objects.requireNonNull(faults, "faults");
+    this.deliveries = new JdbcChannelDeliveryLedger(schema, faults);
   }
 
   @Override
   public ChannelLedgerResult.Event recordEvent(ChannelLedgerCommand.RecordEvent command) {
     Objects.requireNonNull(command, "command");
+    if (command.kind() == InboxEventKind.FEEDBACK) {
+      return deliveries.recordFeedback(command);
+    }
     try (var connection = schema.openConnection()) {
       return transaction(connection, () -> recordEventInTransaction(connection, command));
     } catch (ChannelLedgerRepositoryException exception) {
@@ -53,19 +58,19 @@ public final class JdbcChannelLedger implements ChannelLedgerPort {
 
   @Override
   public ChannelLedgerResult.Terminal recordTerminal(ChannelLedgerCommand.RecordTerminal command) {
-    throw ChannelLedgerRepositoryException.operationFailed(null);
+    return deliveries.recordTerminal(command);
   }
 
   @Override
   public Optional<ChannelLedgerResult.DeliveryWork> claimNextDelivery(
       ChannelLedgerCommand.ClaimDelivery command) {
-    throw ChannelLedgerRepositoryException.operationFailed(null);
+    return deliveries.claimNext(command);
   }
 
   @Override
   public ChannelLedgerResult.DeliveryUpdate recordDeliveryOutcome(
       ChannelLedgerCommand.RecordDeliveryOutcome command) {
-    throw ChannelLedgerRepositoryException.operationFailed(null);
+    return deliveries.recordOutcome(command);
   }
 
   @Override
@@ -91,7 +96,11 @@ public final class JdbcChannelLedger implements ChannelLedgerPort {
     try (var connection = schema.openConnection()) {
       CursorState cursor = findCursor(connection, instance).orElse(CursorState.empty());
       return new ChannelLedgerResult.Snapshot(
-          cursor.nextSequence(), 0, countUnknownExecutions(connection, instance), 0, "");
+          cursor.nextSequence(),
+          deliveries.countPending(connection, instance),
+          countUnknownExecutions(connection, instance),
+          deliveries.countUnknown(connection, instance),
+          "");
     } catch (ChannelLedgerRepositoryException exception) {
       throw exception;
     } catch (SQLException | RuntimeException exception) {

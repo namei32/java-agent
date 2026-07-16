@@ -1,7 +1,7 @@
 # R6.4 渠道可靠投递、幂等与恢复工作计划
 
 - 状态：已批准，连续 TDD 实施中
-- 当前任务：F5 Delivery、Part 与 Attempt Ledger
+- 当前任务：F6 恢复、清理、容量与 SQLite 阶段门禁
 - 日期：2026-07-16
 - 分支：`agent/r6-reliable-delivery`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`
@@ -222,7 +222,7 @@ Agent 边界，旧 `RUNNING` 只恢复为 Unknown。
 
 ## 8. Task F5：Delivery、Part 与 Attempt Ledger
 
-状态：进行中。
+状态：已完成。
 
 先写 `JdbcChannelDeliveryTest`：
 
@@ -244,9 +244,19 @@ RED/GREEN：
 
 预计提交：`feat: 实现渠道终态事务 Outbox`
 
+RED/GREEN 证据（2026-07-16）：聚焦命令首次执行 8 个测试时，除占位异常恰好满足的回滚断言外，
+其余场景均因 Feedback、Terminal、Claim 和 Outcome 尚未实现而失败；随后把 Delivery JDBC 逻辑从
+Inbox/Claim 骨架中分离，补齐 Header/连续 Part、关联键与指纹重放、`DELIVERING + IN_FLIGHT +
+STARTED` 原子领取，以及四类结果提交。自审为两个 Commit Fault 增加实际 Fault Point 命中计数，
+避免占位异常造成假 GREEN；并增加同 Feedback Event 不同 Payload 的冲突证据。最终 8 个聚焦测试
+全部通过：两 Worker 只有一个领取成功，成功分片严格串行且 Receipt 重放幂等，429 只在持久 Due
+Time 后进行第二次总尝试，第二次 429 转 `RETRY_BUDGET_EXCEEDED`，Permanent/Unknown 只终止各自
+Delivery；Owner 不匹配和远端成功后的 SQLite Commit Fault 均不能伪造 Receipt，Attempt 保持
+`STARTED` 等待恢复。
+
 ## 9. Task F6：恢复、清理、容量与 SQLite 阶段门禁
 
-状态：未开始。
+状态：进行中。
 
 先写带 `@Tag("failure")` 的 `ChannelLedgerRecoveryFailureTest`：
 
