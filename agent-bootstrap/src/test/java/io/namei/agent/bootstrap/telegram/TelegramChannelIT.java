@@ -77,13 +77,10 @@ class TelegramChannelIT {
   void cancelTargetsOneConversationWhileAnotherRealHttpTurnStaysAlive() throws Exception {
     try (var server = server()) {
       var holdNextPoll = new CountDownLatch(1);
+      var releaseCancellation = new CountDownLatch(1);
       server.respondToPollWhen(holdNextPoll, 200, EMPTY_UPDATES);
-      server.enqueuePoll(
-          200,
-          updates(
-              update(200, 10001, 1, "第一问"),
-              update(201, 10002, 1, "第二问"),
-              update(202, 10001, 2, "/cancel")));
+      server.enqueuePoll(200, updates(update(200, 10001, 1, "第一问"), update(201, 10002, 1, "第二问")));
+      server.enqueuePollWhen(releaseCancellation, 200, updates(update(202, 10001, 2, "/cancel")));
       var chat = new BlockingChat("telegram:10001", "telegram:10002");
       var threads = new RecordingThreadStarter();
       var adapter = adapter(server, chat, new RecordingSleeper(), threads, 2);
@@ -92,6 +89,7 @@ class TelegramChannelIT {
         adapter.start();
         assertThat(chat.awaitStarted("telegram:10001")).isTrue();
         assertThat(chat.awaitStarted("telegram:10002")).isTrue();
+        releaseCancellation.countDown();
         await(() -> sendTexts(server).contains("请求已取消（REQUESTED）"), "目标会话取消终态");
 
         assertThat(chat.cancelledReasons)

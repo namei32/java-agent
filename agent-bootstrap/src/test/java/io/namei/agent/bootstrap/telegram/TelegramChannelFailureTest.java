@@ -112,8 +112,9 @@ class TelegramChannelFailureTest {
     var api = new ScriptedApi();
     var sleeper = new RecordingSleeper();
     var chat = new CancellableChat();
+    var releaseFailures = new CountDownLatch(1);
     api.succeed(List.of(update(70, "问题")));
-    api.fail(TelegramApiException.Reason.TIMEOUT);
+    api.failWhen(releaseFailures, TelegramApiException.Reason.TIMEOUT);
     api.fail(TelegramApiException.Reason.UNAVAILABLE);
     api.fail(TelegramApiException.Reason.TIMEOUT);
     var threads = new RecordingThreadStarter();
@@ -122,6 +123,7 @@ class TelegramChannelFailureTest {
     try {
       adapter.start();
       assertThat(chat.started.await(2, SECONDS)).isTrue();
+      releaseFailures.countDown();
       await(() -> adapter.snapshot().state() == ChannelState.FAILED, "重试耗尽");
       assertThat(chat.cancelled.await(2, SECONDS)).isTrue();
       await(() -> adapter.snapshot().activeTurns() == 0, "断开 Turn 清理");
@@ -336,6 +338,20 @@ class TelegramChannelFailureTest {
       actions.add(
           () -> {
             throw failure;
+          });
+    }
+
+    private void failWhen(CountDownLatch release, TelegramApiException.Reason reason) {
+      actions.add(
+          () -> {
+            try {
+              release.await();
+            } catch (InterruptedException interrupted) {
+              pollInterruptions.incrementAndGet();
+              Thread.currentThread().interrupt();
+              throw new TelegramApiException(TelegramApiException.Reason.INTERRUPTED);
+            }
+            throw new TelegramApiException(reason);
           });
     }
 
