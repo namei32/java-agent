@@ -302,8 +302,9 @@ class TelegramChannelAdapterTest {
     }
 
     @Override
-    public void sendMessage(long chatId, String text) {
+    public TelegramSendReceipt sendMessage(long chatId, String text) {
       sends.add(new Send(chatId, text));
+      return new TelegramSendReceipt(sends.size());
     }
   }
 

@@ -182,6 +182,8 @@ public final class LocalCliRunner {
         case INVALID_MESSAGE -> {
           throw new CliRunnerException("CLI Turn 产生了无效消息");
         }
+        case DURABLE_COMMIT_FAILED, TERMINAL_CONFLICT ->
+            throw new CliRunnerException("CLI Turn 出站投递失败");
       }
     }
     if (failure == null && buffer.cancellation().isCancellationRequested()) {

@@ -7,6 +7,7 @@ import java.util.Optional;
 public final class TelegramApiException extends RuntimeException {
   public enum Reason {
     UNAUTHORIZED,
+    PERMANENT_REJECTION,
     RATE_LIMITED,
     TIMEOUT,
     UNAVAILABLE,
@@ -41,6 +42,7 @@ public final class TelegramApiException extends RuntimeException {
   private static String message(Reason reason) {
     return switch (reason) {
       case UNAUTHORIZED -> "Telegram API 认证失败";
+      case PERMANENT_REJECTION -> "Telegram API 永久拒绝请求";
       case RATE_LIMITED -> "Telegram API 请求被限流";
       case TIMEOUT -> "Telegram API 请求超时";
       case UNAVAILABLE -> "Telegram API 暂时不可用";

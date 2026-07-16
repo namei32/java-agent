@@ -4,7 +4,12 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 public record ChannelStatusSnapshot(
-    String name, ChannelState state, String code, int activeTurns, int consecutiveFailures) {
+    String name,
+    ChannelState state,
+    String code,
+    int activeTurns,
+    int consecutiveFailures,
+    ChannelReliabilityStatus reliability) {
   private static final Pattern NAME = Pattern.compile("[a-z][a-z0-9_-]{0,31}");
   private static final Pattern CODE = Pattern.compile("(?:|[A-Z][A-Z0-9_]{0,63})");
 
@@ -22,6 +27,12 @@ public record ChannelStatusSnapshot(
     if (consecutiveFailures < 0) {
       throw new IllegalArgumentException("Channel 连续失败数不能为负数");
     }
+    reliability = Objects.requireNonNull(reliability, "reliability");
+  }
+
+  public ChannelStatusSnapshot(
+      String name, ChannelState state, String code, int activeTurns, int consecutiveFailures) {
+    this(name, state, code, activeTurns, consecutiveFailures, ChannelReliabilityStatus.disabled());
   }
 
   public static ChannelStatusSnapshot failed(String name, String code) {

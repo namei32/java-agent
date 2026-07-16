@@ -39,6 +39,13 @@ agent:
     publish-timeout: ${AGENT_CLI_PUBLISH_TIMEOUT:2s}
     poll-timeout: ${AGENT_CLI_POLL_TIMEOUT:100ms}
   channels:
+    reliability:
+      mode: ${AGENT_CHANNEL_RELIABILITY_MODE:DISABLED}
+      recovery-batch-size: ${AGENT_CHANNEL_RELIABILITY_RECOVERY_BATCH_SIZE:100}
+      cleanup-batch-size: ${AGENT_CHANNEL_RELIABILITY_CLEANUP_BATCH_SIZE:100}
+      retention: ${AGENT_CHANNEL_RELIABILITY_RETENTION:30d}
+      max-inbox-records: ${AGENT_CHANNEL_RELIABILITY_MAX_INBOX_RECORDS:100000}
+      max-delivery-records: ${AGENT_CHANNEL_RELIABILITY_MAX_DELIVERY_RECORDS:10000}
     telegram:
       enabled: ${AGENT_TELEGRAM_ENABLED:false}
       allow-from: ${AGENT_TELEGRAM_ALLOW_FROM:}

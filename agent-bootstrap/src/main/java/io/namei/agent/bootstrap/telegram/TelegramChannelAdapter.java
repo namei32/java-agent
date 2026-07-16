@@ -6,6 +6,7 @@ import io.namei.agent.bootstrap.channel.ChannelAdapter;
 import io.namei.agent.bootstrap.channel.ChannelState;
 import io.namei.agent.bootstrap.channel.ChannelStatusSnapshot;
 import io.namei.agent.kernel.channel.InboundMessage;
+import io.namei.agent.kernel.channel.OutboundSequenceValidator;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.HashSet;
@@ -35,7 +36,6 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
   private final TelegramProperties properties;
   private final ChannelThreadStarter threadStarter;
   private final ChannelSleeper sleeper;
-  private final TelegramDeliveryPolicy delivery;
   private final TelegramTextChunker chunker = new TelegramTextChunker();
   private final Semaphore turnPermits;
   private final ConcurrentHashMap<String, ActiveTelegramTurn> activeTurns =
@@ -65,7 +65,6 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
     this.properties = Objects.requireNonNull(properties, "properties");
     this.threadStarter = Objects.requireNonNull(threadStarter, "threadStarter");
     this.sleeper = Objects.requireNonNull(sleeper, "sleeper");
-    this.delivery = new TelegramDeliveryPolicy(api, this.sleeper, properties.maxRetryAfter());
     this.turnPermits = new Semaphore(properties.maxConcurrentTurns(), true);
   }
 
@@ -356,13 +355,19 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
   }
 
   private void consume(ActiveTelegramTurn active) {
-    var renderer =
-        new TelegramTerminalRenderer(active.inbound(), active.chatId(), chunker, delivery);
+    var renderer = new TelegramTerminalRenderer(chunker);
+    var validator = new OutboundSequenceValidator(active.inbound());
     try {
-      while (!renderer.isTerminal()) {
+      while (!validator.isTerminal()) {
         var next = active.buffer().poll(properties.pollTimeout());
         if (next.isPresent()) {
-          renderer.accept(next.orElseThrow());
+          var message = next.orElseThrow();
+          validator.accept(message);
+          if (message.type().isTerminal()) {
+            for (String part : renderer.project(message)) {
+              api.sendMessage(active.chatId(), part);
+            }
+          }
           continue;
         }
         if (active.producerIsDone() && active.buffer().size() == 0) {
@@ -386,7 +391,7 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
 
   private void sendFixed(long chatId, String text) {
     try {
-      delivery.send(chatId, text);
+      api.sendMessage(chatId, text);
     } catch (Throwable failure) {
       code.compareAndSet("", "DELIVERY_FAILED");
     }
@@ -451,7 +456,7 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
   private static String permanentPollCode(TelegramApiException.Reason reason) {
     return switch (reason) {
       case UNAUTHORIZED -> "POLL_UNAUTHORIZED";
-      case INVALID_RESPONSE -> "POLL_INVALID_RESPONSE";
+      case PERMANENT_REJECTION, INVALID_RESPONSE -> "POLL_INVALID_RESPONSE";
       case INTERRUPTED -> "POLL_INTERRUPTED";
       case RATE_LIMITED, TIMEOUT, UNAVAILABLE -> "POLL_RETRY_EXHAUSTED";
     };

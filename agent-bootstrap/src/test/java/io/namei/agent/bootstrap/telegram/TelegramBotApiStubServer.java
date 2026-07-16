@@ -69,6 +69,14 @@ final class TelegramBotApiStubServer implements AutoCloseable {
     sendResponse = Response.immediate(status, body);
   }
 
+  void respondToSendAfter(Duration delay, int status, String body) {
+    sendResponse = new Response(status, body, delay, Duration.ZERO, null);
+  }
+
+  void respondToSendWithoutResponse() {
+    sendResponse = Response.immediate(-1, "");
+  }
+
   void enqueuePoll(int status, String body) {
     pollResponses.add(Response.immediate(status, body));
   }
@@ -125,6 +133,9 @@ final class TelegramBotApiStubServer implements AutoCloseable {
         selected.release().await();
       }
       Thread.sleep(selected.headerDelay());
+      if (selected.status() < 0) {
+        return;
+      }
       byte[] responseBody = selected.body().getBytes(StandardCharsets.UTF_8);
       exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
       exchange.sendResponseHeaders(selected.status(), responseBody.length);

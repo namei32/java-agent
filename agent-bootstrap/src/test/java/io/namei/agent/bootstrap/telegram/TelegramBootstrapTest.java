@@ -277,7 +277,7 @@ class TelegramBootstrapTest {
     }
 
     @Override
-    public void sendMessage(long chatId, String text) {
+    public TelegramSendReceipt sendMessage(long chatId, String text) {
       throw new AssertionError("Bootstrap 测试不应发送消息");
     }
   }

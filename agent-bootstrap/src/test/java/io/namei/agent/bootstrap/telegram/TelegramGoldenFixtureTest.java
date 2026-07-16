@@ -7,7 +7,9 @@ import io.namei.agent.application.BoundedOutboundBuffer;
 import io.namei.agent.application.OutboundDeliveryException;
 import io.namei.agent.kernel.channel.InboundMessage;
 import io.namei.agent.kernel.channel.MessageRoute;
+import io.namei.agent.kernel.channel.OutboundMessage;
 import io.namei.agent.kernel.channel.OutboundMessageSequence;
+import io.namei.agent.kernel.channel.OutboundSequenceValidator;
 import io.namei.agent.kernel.channel.TurnCancellationCode;
 import io.namei.agent.kernel.channel.TurnFailureCode;
 import java.nio.file.Path;
@@ -127,35 +129,33 @@ class TelegramGoldenFixtureTest {
   }
 
   private static void verifyRenderer(JsonNode testCase) {
-    var api = new RecordingApi();
     var inbound = inbound();
-    var renderer =
-        new TelegramTerminalRenderer(
-            inbound,
-            10001,
-            new TelegramTextChunker(),
-            new TelegramDeliveryPolicy(api, duration -> {}, Duration.ofSeconds(5)));
+    var renderer = new TelegramTerminalRenderer(new TelegramTextChunker());
+    var validator = new OutboundSequenceValidator(inbound);
     var sequence = new OutboundMessageSequence(inbound);
+    var deliveries = new ArrayList<String>();
 
     for (JsonNode event : testCase.path("input").path("events")) {
-      switch (event.path("type").asString()) {
-        case "TURN_STARTED" -> renderer.accept(sequence.started());
-        case "CONTENT_DELTA" -> renderer.accept(sequence.delta(event.path("content").asString()));
-        case "TURN_COMPLETED" ->
-            renderer.accept(sequence.completed(event.path("content").asString()));
-        case "TURN_CANCELLED" ->
-            renderer.accept(
-                sequence.cancelled(TurnCancellationCode.valueOf(event.path("code").asString())));
-        case "TURN_FAILED" ->
-            renderer.accept(
-                sequence.failed(TurnFailureCode.valueOf(event.path("code").asString())));
-        default -> throw new AssertionError("未知 Telegram Fixture event");
+      OutboundMessage message =
+          switch (event.path("type").asString()) {
+            case "TURN_STARTED" -> sequence.started();
+            case "CONTENT_DELTA" -> sequence.delta(event.path("content").asString());
+            case "TURN_COMPLETED" -> sequence.completed(event.path("content").asString());
+            case "TURN_CANCELLED" ->
+                sequence.cancelled(TurnCancellationCode.valueOf(event.path("code").asString()));
+            case "TURN_FAILED" ->
+                sequence.failed(TurnFailureCode.valueOf(event.path("code").asString()));
+            default -> throw new AssertionError("未知 Telegram Fixture event");
+          };
+      validator.accept(message);
+      if (message.type().isTerminal()) {
+        deliveries.addAll(renderer.project(message));
       }
     }
 
     JsonNode expected = testCase.path("expected");
-    assertThat(api.texts()).containsExactlyElementsOf(texts(expected.path("deliveries")));
-    assertThat(renderer.isTerminal()).isEqualTo(expected.path("terminal").asBoolean());
+    assertThat(deliveries).containsExactlyElementsOf(texts(expected.path("deliveries")));
+    assertThat(validator.isTerminal()).isEqualTo(expected.path("terminal").asBoolean());
   }
 
   private static void verifyLifecycle(JsonNode testCase) {
@@ -288,25 +288,5 @@ class TelegramGoldenFixtureTest {
 
   private static Path goldenRoot() {
     return Path.of(System.getProperty("golden.root")).toAbsolutePath().normalize();
-  }
-
-  private record Send(long chatId, String text) {}
-
-  private static final class RecordingApi implements TelegramBotApi {
-    private final List<Send> sends = new ArrayList<>();
-
-    @Override
-    public List<TelegramUpdate> getUpdates(long offset, Duration longPollTimeout) {
-      throw new UnsupportedOperationException("Fixture 不使用 Poll");
-    }
-
-    @Override
-    public void sendMessage(long chatId, String text) {
-      sends.add(new Send(chatId, text));
-    }
-
-    private List<String> texts() {
-      return sends.stream().map(Send::text).toList();
-    }
   }
 }

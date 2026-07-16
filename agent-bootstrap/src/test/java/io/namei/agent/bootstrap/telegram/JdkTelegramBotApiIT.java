@@ -102,8 +102,10 @@ class JdkTelegramBotApiIT {
     SERVER.respondToSend(
         200, "{\"ok\":true,\"result\":{\"message_id\":43},\"unknown\":\"ignored\"}");
 
-    client().sendMessage(10001, "纯文本 <b>不解析</b> 😊");
+    TelegramSendReceipt receipt = client().sendMessage(10001, "纯文本 <b>不解析</b> 😊");
 
+    assertThat(receipt.messageId()).isEqualTo(43);
+    assertThat(receipt.toString()).isEqualTo("TelegramSendReceipt[messageId=<redacted>]");
     assertThat(SERVER.requests()).hasSize(1);
     TelegramBotApiStubServer.Request request = SERVER.requests().getFirst();
     assertThat(request.method()).isEqualTo("POST");
@@ -114,6 +116,92 @@ class JdkTelegramBotApiIT {
     assertThat(body.has("parse_mode")).isFalse();
     assertThat(body.has("entities")).isFalse();
     assertThat(body.has("link_preview_options")).isFalse();
+  }
+
+  @Test
+  void requiresAPositiveIntegralMessageIdForSendConfirmation() {
+    for (String invalid :
+        List.of(
+            "{\"ok\":true,\"result\":{}}",
+            "{\"ok\":true,\"result\":{\"message_id\":0}}",
+            "{\"ok\":true,\"result\":{\"message_id\":-1}}",
+            "{\"ok\":true,\"result\":{\"message_id\":1.5}}",
+            "{\"ok\":true,\"result\":{\"message_id\":\"43\"}}")) {
+      SERVER.respondToSend(200, invalid);
+
+      assertFailure(
+          () -> client().sendMessage(10001, "必须有 Receipt"),
+          TelegramApiException.Reason.INVALID_RESPONSE);
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("otherClientStatuses")
+  void classifiesProvablyRejectedSendRequestsAsPermanent(int status) {
+    SERVER.respondToSend(
+        status,
+        "{\"ok\":false,\"error_code\":" + status + ",\"description\":\"" + REMOTE_SECRET + "\"}");
+
+    assertFailure(
+        () -> client().sendMessage(10001, "不会被接受"),
+        TelegramApiException.Reason.PERMANENT_REJECTION);
+  }
+
+  @Test
+  void mapsSendServerFailureAndTimeoutToUncertainOutcomes() {
+    SERVER.respondToSend(503, REMOTE_SECRET + " not-json");
+    assertFailure(
+        () -> client().sendMessage(10001, "服务器失败"), TelegramApiException.Reason.UNAVAILABLE);
+
+    SERVER.reset();
+    SERVER.respondToSendAfter(
+        Duration.ofSeconds(2), 200, "{\"ok\":true,\"result\":{\"message_id\":43}}");
+    assertFailure(
+        () ->
+            client(Duration.ofSeconds(1), Duration.ofSeconds(2), Duration.ofMillis(100))
+                .sendMessage(10001, "发送超时"),
+        TelegramApiException.Reason.TIMEOUT);
+  }
+
+  @Test
+  @Tag("failure")
+  void mapsSendIoFailureToUnavailableWithoutRetainingCause() {
+    SERVER.respondToSendWithoutResponse();
+
+    assertFailure(
+        () -> client().sendMessage(10001, "连接中断"), TelegramApiException.Reason.UNAVAILABLE);
+  }
+
+  @Test
+  @Tag("failure")
+  void restoresInterruptForAnInFlightSend() throws Exception {
+    SERVER.respondToSendAfter(
+        Duration.ofSeconds(5), 200, "{\"ok\":true,\"result\":{\"message_id\":43}}");
+    var failure = new AtomicReference<TelegramApiException>();
+    var interruptRestored = new AtomicBoolean();
+    Thread caller =
+        Thread.ofPlatform()
+            .unstarted(
+                () -> {
+                  try {
+                    client(Duration.ofSeconds(1), Duration.ofSeconds(2), Duration.ofSeconds(10))
+                        .sendMessage(10001, "中断发送");
+                  } catch (TelegramApiException exception) {
+                    failure.set(exception);
+                    interruptRestored.set(Thread.currentThread().isInterrupted());
+                  }
+                });
+
+    caller.start();
+    assertThat(SERVER.awaitRequest(Duration.ofSeconds(1))).isTrue();
+    caller.interrupt();
+    caller.join(Duration.ofSeconds(2));
+
+    assertThat(caller.isAlive()).isFalse();
+    assertThat(failure.get()).isNotNull();
+    assertThat(failure.get().reason()).isEqualTo(TelegramApiException.Reason.INTERRUPTED);
+    assertThat(failure.get()).hasNoCause();
+    assertThat(interruptRestored).isTrue();
   }
 
   @ParameterizedTest
@@ -311,6 +399,10 @@ class JdkTelegramBotApiIT {
 
   private static Stream<Integer> unavailableStatuses() {
     return Stream.of(500, 502, 503);
+  }
+
+  private static Stream<Integer> otherClientStatuses() {
+    return Stream.of(400, 409, 422);
   }
 
   private static Stream<Arguments> apiFailures() {

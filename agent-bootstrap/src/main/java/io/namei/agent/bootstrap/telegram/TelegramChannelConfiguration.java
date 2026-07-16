@@ -3,8 +3,13 @@ package io.namei.agent.bootstrap.telegram;
 import io.namei.agent.application.MessageTurnService;
 import io.namei.agent.bootstrap.channel.ChannelAdapter;
 import io.namei.agent.bootstrap.channel.ChannelHost;
+import io.namei.agent.bootstrap.channel.reliability.ChannelReliabilityProperties;
+import io.namei.agent.bootstrap.channel.reliability.ChannelReliabilityRuntime;
+import java.nio.file.Path;
+import java.time.Clock;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -14,7 +19,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@EnableConfigurationProperties(TelegramProperties.class)
+@EnableConfigurationProperties({TelegramProperties.class, ChannelReliabilityProperties.class})
 public class TelegramChannelConfiguration {
   private static final String ENABLED_PREFIX = "agent.channels.telegram";
   private static final String TOKEN_ENVIRONMENT_VARIABLE = "AGENT_TELEGRAM_BOT_TOKEN";
@@ -39,6 +44,28 @@ public class TelegramChannelConfiguration {
       throw new IllegalStateException("Telegram 配置状态不一致");
     }
     return new TelegramBotToken(source.readToken());
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = ENABLED_PREFIX, name = "enabled", havingValue = "true")
+  @ConditionalOnProperty(
+      prefix = "agent.channels.reliability",
+      name = "mode",
+      havingValue = "SQLITE")
+  TelegramChannelInstance telegramChannelInstance(TelegramBotToken token) {
+    return TelegramChannelInstance.from(token);
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = ENABLED_PREFIX, name = "enabled", havingValue = "true")
+  @ConditionalOnProperty(
+      prefix = "agent.channels.reliability",
+      name = "mode",
+      havingValue = "SQLITE")
+  ChannelReliabilityRuntime channelReliabilityRuntime(
+      @Value("${agent.workspace:./workspace}") String workspace,
+      ChannelReliabilityProperties properties) {
+    return new ChannelReliabilityRuntime(Path.of(workspace), properties, Clock.systemUTC());
   }
 
   @Bean
@@ -78,6 +105,11 @@ public class TelegramChannelConfiguration {
 
   @Bean
   @ConditionalOnProperty(prefix = ENABLED_PREFIX, name = "enabled", havingValue = "true")
+  @ConditionalOnProperty(
+      prefix = "agent.channels.reliability",
+      name = "mode",
+      havingValue = "DISABLED",
+      matchIfMissing = true)
   TelegramChannelAdapter telegramChannelAdapter(
       TelegramBotApi api,
       TelegramUpdateMapper mapper,
@@ -86,5 +118,24 @@ public class TelegramChannelConfiguration {
       ChannelThreadStarter threadStarter,
       ChannelSleeper sleeper) {
     return new TelegramChannelAdapter(api, mapper, turns, properties, threadStarter, sleeper);
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = ENABLED_PREFIX, name = "enabled", havingValue = "true")
+  @ConditionalOnProperty(
+      prefix = "agent.channels.reliability",
+      name = "mode",
+      havingValue = "SQLITE")
+  TelegramReliableChannelAdapter telegramReliableChannelAdapter(
+      TelegramBotApi api,
+      TelegramUpdateMapper mapper,
+      MessageTurnService turns,
+      TelegramProperties properties,
+      TelegramChannelInstance instance,
+      ChannelReliabilityRuntime runtime,
+      ChannelThreadStarter threadStarter,
+      ChannelSleeper sleeper) {
+    return new TelegramReliableChannelAdapter(
+        api, mapper, turns, properties, instance, runtime, threadStarter, sleeper);
   }
 }
