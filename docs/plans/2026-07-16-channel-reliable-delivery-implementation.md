@@ -1,7 +1,7 @@
 # R6.4 渠道可靠投递、幂等与恢复工作计划
 
-- 状态：F1–F13 本地离线实现与验收已完成；Draft PR、远程 CI 待执行
-- 当前任务：推送 Draft PR，并等待默认、`failure`、`compat` 远程 CI
+- 状态：F1–F13 离线实现、本地验收与 PR #7 远程三套门禁已完成；Review/合并待执行
+- 当前任务：保持 Draft PR，等待 Review 与合并决策
 - 日期：2026-07-16
 - 分支：`agent/r6-reliable-delivery`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`
@@ -602,7 +602,7 @@ Fixture 的 40 个场景，并增加 Telegram Instance/Token 轮换、Terminal R
 
 ## 16. Task F13：最终门禁、文档、PR 与合并准备
 
-状态：本地阶段已完成；Draft PR、远程 CI 与 Review 待执行。
+状态：本地阶段与 PR #7 远程三套门禁已完成；Review/合并待执行。
 
 先更新 Contract/Spec/ADR/计划状态、Fixture Manifest Hash、文档导航、R6 总计划、Roadmap、重写指南、能力矩阵、配置模板和 Runbook。记录实际证据，不预填测试数。
 
@@ -656,8 +656,17 @@ git diff --check
 - 原始脏工作树 `/Users/namei/idea/agent/java-agent` 未被本计划修改；所有数据库和 HTTP 验证继续
   位于 JUnit 临时目录与 `127.0.0.1` Loopback 范围。
 
-当前结论仅为“R6.4 本地离线实现已验证”。真实 Telegram Token、网络 Smoke、用户数据与部署仍
-未获授权；Draft PR、远程 CI 和 Review 尚未完成，因此本阶段不声明已合并或已上线。
+远程验收证据（2026-07-16）：PR #7 首轮的 `failure` 与 `compat` 通过；默认 Job 在
+`ChannelDeliveryWorkerTest.failedAndUnknownDeliveriesDoNotBlockLaterWork` 暴露测试观察竞态：
+`DELIVERED` Latch 在第 3 次调用内释放，断言线程可能早于 Worker 的第 4 次 EMPTY 扫描读取调用数。
+经用户明确批准，只为测试增加“EMPTY 已扫描”的确定性 Latch，没有修改生产 Worker、状态机或重试
+语义。聚焦测试 4 项、本地默认 559 项、`failure` 133 项和 `compat` 665 项重新全绿；修复提交
+`5eac80a` 触发的远程 Run `29503828149` 中，“默认构建”“失败路径”“Python/Java 兼容”三项均
+通过。
+
+当前结论仅为“R6.4 离线实现已通过本地与远程自动化验证”。真实 Telegram Token、网络 Smoke、
+用户数据与部署仍未获授权；PR #7 继续保持 Draft，Review 与合并尚未完成，因此本阶段不声明已合并
+或已上线。
 
 ## 17. 暂停条件
 
