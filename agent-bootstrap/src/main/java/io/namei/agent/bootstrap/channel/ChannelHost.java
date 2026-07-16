@@ -35,7 +35,7 @@ public final class ChannelHost implements AutoCloseable {
         registration.adapter.start();
         registration.started = true;
       } catch (RuntimeException failure) {
-        registration.override = ChannelStatusSnapshot.failed(registration.name, "START_FAILED");
+        registration.override = failedStartSnapshot(registration);
         safeCleanupFailedStart(registration);
       }
     }
@@ -92,6 +92,19 @@ public final class ChannelHost implements AutoCloseable {
       registration.override =
           ChannelStatusSnapshot.failed(registration.name, "START_CLEANUP_FAILED");
     }
+  }
+
+  private static ChannelStatusSnapshot failedStartSnapshot(Registration registration) {
+    try {
+      ChannelStatusSnapshot snapshot =
+          Objects.requireNonNull(registration.adapter.snapshot(), "snapshot");
+      if (registration.name.equals(snapshot.name()) && snapshot.state() == ChannelState.FAILED) {
+        return snapshot;
+      }
+    } catch (RuntimeException ignored) {
+      // The host still exposes its generic stable start failure when the adapter has no safe state.
+    }
+    return ChannelStatusSnapshot.failed(registration.name, "START_FAILED");
   }
 
   private ChannelStatusSnapshot safeSnapshot(Registration registration) {

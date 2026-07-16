@@ -1,7 +1,7 @@
 # R6.4 渠道可靠投递、幂等与恢复工作计划
 
 - 状态：已批准，连续 TDD 实施中
-- 当前任务：F8 Durable Terminal 与 Delivery Coordinator
+- 当前任务：F11 Loopback 重启纵向集成
 - 日期：2026-07-16
 - 分支：`agent/r6-reliable-delivery`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`
@@ -437,7 +437,7 @@ Loopback Stub，没有访问真实 Telegram、Token、Workspace 或外网。
 
 ## 13. Task F10：Telegram 持久纵向装配与第二阶段门禁
 
-状态：进行中。
+状态：已完成。
 
 先写：
 
@@ -475,6 +475,28 @@ Task F10 阶段门禁：
 审计 Kernel/Application 无 JDBC/Telegram/Spring 逆向依赖，默认 Context 无新副作用。
 
 预计提交：`feat: 装配 Telegram SQLite 可靠投递`
+
+RED/GREEN 证据（2026-07-16）：三个聚焦测试首次在 Bootstrap 测试编译阶段以 29 个缺失符号
+错误失败，证明可靠 Adapter、运行时、配置、Instance 派生和健康投影尚未存在。最小实现后，同一
+聚焦命令执行 13 个测试全部通过：Instance 只使用 Bot ID 派生，Token 轮换保持分区、不同 Bot
+隔离；Schema 初始化、完整恢复和持久 offset 均先于 Delivery Worker 与首次 Poll；Accepted、Busy、
+Ignored、Control 先写账本，再越过执行、反馈或取消边界；权威终态先进入事务 Outbox，Attempt
+`STARTED` 先于 Loopback/Fake 网络调用。显式 `SQLITE` 只装配一个可靠 Adapter 与一个 Delivery
+Worker；默认 `DISABLED`、Telegram Disabled 和 CLI 路径不创建目录、数据库、Worker 或网络副作用。
+
+自审补齐了启动失败健康保真和统一关闭预算：`ChannelHost` 仅在 Adapter 已给出合法 `FAILED`
+快照时保留其稳定账本状态，否则继续使用通用 `START_FAILED`；Poll、活动 Turn 和 Delivery Worker
+分别使用总关闭期限的 1/4、1/2、1/4。可靠入站协调器停止后拒绝新事件，取消并 Join 已登记 Turn，
+启动前取消的任务不会跨越 `RUNNING + Cursor` 执行边界，Permit 与活动映射最终释放。SQLite 初始化
+失败只使 Telegram 暴露 `CHANNEL_LEDGER_UNAVAILABLE`，Servlet Context 仍健康且零网络访问。
+
+阶段门禁证据（2026-07-16）：`spotless:check` 对八模块通过；`-pl agent-bootstrap -am verify` 和
+全 Reactor `clean verify` 均执行 544 个测试全部通过，其中 Kernel 51、Application 153、Workspace
+4、SQLite 76、Spring AI 35、MCP 32、Bootstrap 160 个单元测试与 33 个集成测试。Kernel
+`dependency:tree` 只含 JUnit、AssertJ、Byte Buddy 和 Jackson 测试依赖；源码审计未发现
+Kernel/Application 对 JDBC、Spring 或 Telegram 的反向依赖。所有新增 SQLite 与网络测试只使用
+JUnit 临时目录和 Fake/Loopback 边界；未访问真实 Workspace、Telegram、Secret、用户数据或外网，
+仓库中无 DB/WAL/SHM/Backup 产物。
 
 ## 14. Task F11：Loopback 重启纵向集成
 

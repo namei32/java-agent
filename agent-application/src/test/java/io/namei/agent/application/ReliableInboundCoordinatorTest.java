@@ -330,6 +330,29 @@ class ReliableInboundCoordinatorTest {
         .isEqualTo(ReliableChannelFailure.LEDGER_UNAVAILABLE);
   }
 
+  @Test
+  void shutdownCancelsAndReleasesATurnThatHasNotCrossedTheExecutionBoundary() {
+    var ledger = new FakeLedger(new ArrayList<>());
+    var starter = new CapturingStarter(new ArrayList<>());
+    var calls = new AtomicInteger();
+    var coordinator =
+        coordinator(ledger, starter, (ignored, cancellation) -> calls.incrementAndGet());
+
+    coordinator.handle(accepted("update-close", 0, "message-close", "session-close"));
+
+    assertThat(coordinator.shutdown(Duration.ofMillis(50))).isTrue();
+    assertThat(coordinator.activeTurnCount()).isZero();
+    assertThat(coordinator.availableTurnPermits()).isEqualTo(2);
+    starter.runNext();
+    assertThat(calls).hasValue(0);
+    assertThat(ledger.starts).isEmpty();
+    assertThatThrownBy(
+            () ->
+                coordinator.handle(
+                    accepted("update-after-close", 1, "message-after-close", "session-close")))
+        .isInstanceOf(IllegalStateException.class);
+  }
+
   private static ReliableInboundCoordinator coordinator(
       FakeLedger ledger, CapturingStarter starter, ReliableTurnProcessor processor) {
     return coordinator(ledger, starter, processor, SETTINGS);

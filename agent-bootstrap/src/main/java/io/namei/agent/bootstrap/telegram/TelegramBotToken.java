@@ -18,6 +18,10 @@ public final class TelegramBotToken {
     return value;
   }
 
+  String botId() {
+    return value.substring(0, value.indexOf(':'));
+  }
+
   @Override
   public String toString() {
     return "TelegramBotToken[value=<redacted>]";

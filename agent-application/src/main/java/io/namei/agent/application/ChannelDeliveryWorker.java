@@ -152,7 +152,7 @@ public final class ChannelDeliveryWorker implements ChannelDeliveryWakeSignal, A
     }
   }
 
-  boolean isRunning() {
+  public boolean isRunning() {
     Thread running = thread;
     return running != null && running.isAlive();
   }

@@ -1,6 +1,7 @@
 package io.namei.agent.application;
 
 import io.namei.agent.kernel.channel.InboundMessage;
+import io.namei.agent.kernel.channel.TurnCancellationCode;
 import io.namei.agent.kernel.channel.reliability.ChannelFingerprint;
 import io.namei.agent.kernel.channel.reliability.ChannelInstanceId;
 import io.namei.agent.kernel.channel.reliability.ChannelLedgerCommand;
@@ -13,7 +14,9 @@ import io.namei.agent.kernel.channel.reliability.DeliverySourceKind;
 import io.namei.agent.kernel.channel.reliability.InboxEventKind;
 import io.namei.agent.kernel.port.ChannelLedgerPort;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
@@ -34,6 +37,7 @@ public final class ReliableInboundCoordinator {
   private final Semaphore permits;
   private final ConcurrentHashMap<ActiveKey, ActiveTurn> activeTurns = new ConcurrentHashMap<>();
   private final Object registrations = new Object();
+  private final AtomicBoolean accepting = new AtomicBoolean(true);
 
   public ReliableInboundCoordinator(
       ChannelLedgerPort ledger,
@@ -56,6 +60,9 @@ public final class ReliableInboundCoordinator {
 
   public ReliableInboundResult handle(ReliableInboundEvent event) {
     Objects.requireNonNull(event, "event");
+    if (!accepting.get()) {
+      throw new IllegalStateException("可靠渠道入站协调器已经停止");
+    }
     return switch (event) {
       case ReliableInboundEvent.Accepted accepted -> handleAccepted(accepted);
       case ReliableInboundEvent.Ignored ignored -> handleIgnored(ignored);
@@ -87,6 +94,10 @@ public final class ReliableInboundCoordinator {
     var active = new ActiveTurn(event, candidateInbound);
     ActiveTurn raced;
     synchronized (registrations) {
+      if (!accepting.get()) {
+        cleanup(active);
+        throw new IllegalStateException("可靠渠道入站协调器已经停止");
+      }
       raced = activeTurns.putIfAbsent(key, active);
     }
     if (raced != null) {
@@ -309,6 +320,9 @@ public final class ReliableInboundCoordinator {
 
   private void runTurn(ActiveTurn active) {
     try {
+      if (!accepting.get() || active.cancellation().token().isCancellationRequested()) {
+        return;
+      }
       Instant startedAt = clock.instant();
       ChannelLedgerResult.TurnStart started =
           startTurn(
@@ -413,12 +427,45 @@ public final class ReliableInboundCoordinator {
     permits.release();
   }
 
-  int activeTurnCount() {
+  public int activeTurnCount() {
     return activeTurns.size();
   }
 
-  int availableTurnPermits() {
+  public int availableTurnPermits() {
     return permits.availablePermits();
+  }
+
+  public boolean shutdown(Duration timeout) {
+    Objects.requireNonNull(timeout, "timeout");
+    if (timeout.isZero() || timeout.isNegative()) {
+      throw new IllegalArgumentException("可靠渠道关闭期限必须为正数");
+    }
+    accepting.set(false);
+    List<ActiveTurn> closing;
+    synchronized (registrations) {
+      closing = List.copyOf(activeTurns.values());
+    }
+    closing.forEach(turn -> turn.cancellation().cancel(TurnCancellationCode.SHUTDOWN));
+
+    long now = System.nanoTime();
+    long total = timeout.toNanos();
+    long gracefulDeadline = saturatedAdd(now, total / 2);
+    long finalDeadline = saturatedAdd(now, total);
+    boolean stopped = joinAll(closing, gracefulDeadline);
+    if (!stopped) {
+      closing.stream()
+          .map(ActiveTurn::thread)
+          .filter(Objects::nonNull)
+          .filter(thread -> thread != Thread.currentThread() && thread.isAlive())
+          .forEach(Thread::interrupt);
+      stopped = joinAll(closing, finalDeadline);
+    }
+    closing.stream()
+        .filter(turn -> turn.thread() == null || !turn.thread().isAlive())
+        .forEach(this::cleanup);
+    return stopped
+        && activeTurns.isEmpty()
+        && permits.availablePermits() == settings.maxConcurrentTurns();
   }
 
   boolean cancellationRequested(String sessionId) {
@@ -426,6 +473,35 @@ public final class ReliableInboundCoordinator {
         .filter(entry -> entry.getKey().sessionId().equals(sessionId))
         .map(java.util.Map.Entry::getValue)
         .anyMatch(active -> active.cancellation().token().isCancellationRequested());
+  }
+
+  private static boolean joinAll(List<ActiveTurn> turns, long deadlineNanos) {
+    boolean stopped = true;
+    for (ActiveTurn turn : turns) {
+      Thread running = turn.thread();
+      if (running == null || running == Thread.currentThread() || !running.isAlive()) {
+        continue;
+      }
+      long remaining = deadlineNanos - System.nanoTime();
+      if (remaining <= 0) {
+        return false;
+      }
+      try {
+        stopped &= running.join(Duration.ofNanos(remaining));
+      } catch (InterruptedException interrupted) {
+        Thread.currentThread().interrupt();
+        return false;
+      }
+    }
+    return stopped;
+  }
+
+  private static long saturatedAdd(long left, long right) {
+    try {
+      return Math.addExact(left, right);
+    } catch (ArithmeticException overflow) {
+      return Long.MAX_VALUE;
+    }
   }
 
   private record ActiveKey(ChannelInstanceId instance, String sessionId) {
@@ -455,6 +531,10 @@ public final class ReliableInboundCoordinator {
 
     private void thread(Thread startedThread) {
       thread = Objects.requireNonNull(startedThread, "startedThread");
+    }
+
+    private Thread thread() {
+      return thread;
     }
 
     private String externalMessageId() {
