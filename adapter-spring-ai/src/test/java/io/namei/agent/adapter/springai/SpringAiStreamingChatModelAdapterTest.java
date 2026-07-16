@@ -3,6 +3,7 @@ package io.namei.agent.adapter.springai;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import io.namei.agent.kernel.channel.MessageContract;
 import io.namei.agent.kernel.concurrent.CancellationSignal;
@@ -97,10 +98,20 @@ class SpringAiStreamingChatModelAdapterTest {
   void cancellationDisposesSubscriptionAndRejectsLateCompletion() throws Exception {
     var disposed = new AtomicBoolean();
     var firstDelta = new CountDownLatch(1);
+    var upstreamSubscribed = new CountDownLatch(1);
+    var cleanupStarted = new CountDownLatch(1);
+    var releaseCleanup = new CountDownLatch(1);
     Flux<ChatResponse> stream =
         Flux.concat(
             Flux.just(response("部分")),
-            Flux.<ChatResponse>never().doOnCancel(() -> disposed.set(true)));
+            Flux.<ChatResponse>never()
+                .doOnSubscribe(ignored -> upstreamSubscribed.countDown())
+                .doOnCancel(
+                    () -> {
+                      cleanupStarted.countDown();
+                      awaitCleanupRelease(releaseCleanup);
+                      disposed.set(true);
+                    }));
     var chatModel = new StreamingStubChatModel(null, ignored -> stream);
     var cancellation = new TestCancellation();
     var deltas = new CopyOnWriteArrayList<String>();
@@ -117,11 +128,20 @@ class SpringAiStreamingChatModelAdapterTest {
                             firstDelta.countDown();
                           },
                           cancellation));
-      assertThat(firstDelta.await(1, SECONDS)).isTrue();
+      await()
+          .atMost(Duration.ofSeconds(5))
+          .until(() -> firstDelta.getCount() == 0 && upstreamSubscribed.getCount() == 0);
 
-      cancellation.cancel();
+      Future<?> cancellationFuture = executor.submit(cancellation::cancel);
+      try {
+        await().atMost(Duration.ofSeconds(5)).until(() -> cleanupStarted.getCount() == 0);
+        assertThat(future.isDone()).isFalse();
+      } finally {
+        releaseCleanup.countDown();
+      }
 
-      assertThatThrownBy(() -> await(future))
+      cancellationFuture.get(2, SECONDS);
+      assertThatThrownBy(() -> awaitResult(future))
           .isInstanceOf(TurnCancelledException.class)
           .hasMessageNotContaining("provider");
     }
@@ -264,7 +284,7 @@ class SpringAiStreamingChatModelAdapterTest {
     return new ChatResponse(List.of(new Generation(output)));
   }
 
-  private static ChatModelResponse await(Future<ChatModelResponse> future) {
+  private static ChatModelResponse awaitResult(Future<ChatModelResponse> future) {
     try {
       return future.get(2, SECONDS);
     } catch (ExecutionException exception) {
@@ -277,6 +297,17 @@ class SpringAiStreamingChatModelAdapterTest {
       throw new AssertionError(exception);
     } catch (TimeoutException exception) {
       throw new AssertionError("等待流式结果超时", exception);
+    }
+  }
+
+  private static void awaitCleanupRelease(CountDownLatch latch) {
+    try {
+      if (!latch.await(5, SECONDS)) {
+        throw new AssertionError("Timed out waiting for controlled stream cleanup");
+      }
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw new AssertionError(exception);
     }
   }
 

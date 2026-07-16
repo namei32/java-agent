@@ -429,9 +429,9 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
         }
         projectFailure.set(failure);
       }
-      completion.completeExceptionally(failure);
       cancel();
       transportCancel.run();
+      completion.completeExceptionally(failure);
       return true;
     }
 

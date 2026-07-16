@@ -189,20 +189,22 @@ class OpenAiCompatibleStreamingAdapterIT {
   @Test
   @Tag("failure")
   void cancellationClosesOnlyTheTargetSseConnection() throws Exception {
-    SERVER.respondConcurrentSse(
-        2,
-        Duration.ofMillis(250),
-        List.of(
-            OpenAiStubServer.textDelta("首段"),
-            OpenAiStubServer.textDelta("尾段"),
-            OpenAiStubServer.finished("stop")));
+    var streamControl =
+        SERVER.respondConcurrentSse(
+            2,
+            Duration.ZERO,
+            List.of(
+                OpenAiStubServer.textDelta("首段"),
+                OpenAiStubServer.textDelta("尾段"),
+                OpenAiStubServer.finished("stop")));
     var firstCancellation = new TestCancellation();
     var firstDeltas = new CopyOnWriteArrayList<String>();
     var secondDeltas = new CopyOnWriteArrayList<String>();
     var firstStarted = new CountDownLatch(1);
     var secondStarted = new CountDownLatch(1);
 
-    try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+    try (var executor = Executors.newVirtualThreadPerTaskExecutor();
+        streamControl) {
       Future<ChatModelResponse> cancelled =
           executor.submit(
               () ->
@@ -230,6 +232,7 @@ class OpenAiCompatibleStreamingAdapterIT {
       firstCancellation.cancel();
 
       assertThatThrownBy(() -> awaitResult(cancelled)).isInstanceOf(TurnCancelledException.class);
+      streamControl.releaseRemainingEvents();
       assertThat(awaitResult(surviving).content()).isEqualTo("首段尾段");
     }
 

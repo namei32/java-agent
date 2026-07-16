@@ -49,8 +49,11 @@ final class OpenAiStubServer implements AutoCloseable {
     response = Response.sse(events, eventDelay);
   }
 
-  void respondConcurrentSse(int expectedConnections, Duration eventDelay, List<String> events) {
-    response = Response.concurrentSse(expectedConnections, events, eventDelay);
+  SseControl respondConcurrentSse(
+      int expectedConnections, Duration eventDelay, List<String> events) {
+    var control = SseControl.concurrent(expectedConnections);
+    response = Response.concurrentSse(events, eventDelay, control);
+    return control;
   }
 
   void reset() {
@@ -145,8 +148,11 @@ final class OpenAiStubServer implements AutoCloseable {
       } else {
         exchange.sendResponseHeaders(selected.status(), 0);
         selected.awaitConnections();
-        for (String event : selected.events()) {
-          writeEvent(exchange, event);
+        for (int index = 0; index < selected.events().size(); index++) {
+          writeEvent(exchange, selected.events().get(index));
+          if (index == 0) {
+            selected.awaitRemainingEvents();
+          }
           Thread.sleep(selected.eventDelay());
         }
         writeEvent(exchange, "[DONE]");
@@ -181,34 +187,53 @@ final class OpenAiStubServer implements AutoCloseable {
       String contentType,
       List<String> events,
       Duration eventDelay,
-      CountDownLatch connectionsReady) {
+      SseControl control) {
     private Response {
       events = List.copyOf(events);
     }
 
     private static Response json(int status, String body, Duration delay) {
       return new Response(
-          status, body, delay, "application/json", List.of(), Duration.ZERO, new CountDownLatch(0));
+          status, body, delay, "application/json", List.of(), Duration.ZERO, SseControl.open());
     }
 
     private static Response sse(List<String> events, Duration eventDelay) {
       return new Response(
-          200, "", Duration.ZERO, "text/event-stream", events, eventDelay, new CountDownLatch(0));
+          200, "", Duration.ZERO, "text/event-stream", events, eventDelay, SseControl.open());
     }
 
     private static Response concurrentSse(
-        int expectedConnections, List<String> events, Duration eventDelay) {
+        List<String> events, Duration eventDelay, SseControl control) {
+      return new Response(200, "", Duration.ZERO, "text/event-stream", events, eventDelay, control);
+    }
+
+    private void awaitConnections() throws IOException, InterruptedException {
+      control.awaitConnections();
+    }
+
+    private void awaitRemainingEvents() throws IOException, InterruptedException {
+      control.awaitRemainingEvents();
+    }
+  }
+
+  static final class SseControl implements AutoCloseable {
+    private final CountDownLatch connectionsReady;
+    private final CountDownLatch remainingEvents;
+
+    private SseControl(int expectedConnections, boolean holdRemainingEvents) {
+      connectionsReady = new CountDownLatch(expectedConnections);
+      remainingEvents = new CountDownLatch(holdRemainingEvents ? 1 : 0);
+    }
+
+    private static SseControl open() {
+      return new SseControl(0, false);
+    }
+
+    private static SseControl concurrent(int expectedConnections) {
       if (expectedConnections < 2) {
         throw new IllegalArgumentException("expectedConnections must be at least 2");
       }
-      return new Response(
-          200,
-          "",
-          Duration.ZERO,
-          "text/event-stream",
-          events,
-          eventDelay,
-          new CountDownLatch(expectedConnections));
+      return new SseControl(expectedConnections, true);
     }
 
     private void awaitConnections() throws IOException, InterruptedException {
@@ -216,6 +241,24 @@ final class OpenAiStubServer implements AutoCloseable {
       if (!connectionsReady.await(10, TimeUnit.SECONDS)) {
         throw new IOException("Timed out waiting for concurrent SSE connections");
       }
+    }
+
+    private void awaitRemainingEvents() throws IOException, InterruptedException {
+      if (!remainingEvents.await(10, TimeUnit.SECONDS)) {
+        throw new IOException("Timed out waiting to release remaining SSE events");
+      }
+    }
+
+    void releaseRemainingEvents() {
+      remainingEvents.countDown();
+    }
+
+    @Override
+    public void close() {
+      while (connectionsReady.getCount() > 0) {
+        connectionsReady.countDown();
+      }
+      releaseRemainingEvents();
     }
   }
 }
