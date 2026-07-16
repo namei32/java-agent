@@ -27,7 +27,7 @@
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
 | R4 | 上下文与记忆 | R4.1、R4.2 已完成 | Java 原生显式记忆管理与语义检索闭环已通过最终门禁；自动写回/Optimizer 仍冻结 |
 | R5 | MCP 与外部工具 | R5.1 已完成 | 静态 stdio 只读 Client、工具发现/投影、取消、隔离和进程回收已验收；远程与副作用范围未开始 |
-| R6 | 渠道与控制面 | R6.1、R6.2 已合入；R6.3 离线已验证；R6.4 实施中 | 版本化 Message Runtime、本地 CLI、Provider Streaming 与 Telegram Channel 已离线验收；可靠投递已批准并从 F1 开始，真实 Smoke 与 Dashboard 仍待后续切片 |
+| R6 | 渠道与控制面 | R6.1、R6.2 已合入；R6.3 已远程验证；R6.4 本地离线已完成 | 版本化 Message Runtime、本地 CLI、Provider Streaming、Telegram Channel 与可靠投递已离线验收；R6.4 远程 CI、真实 Smoke 和 Dashboard 仍待后续步骤 |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
 | R8 | 主动运行时 | 未开始 | Scheduler、Proactive、Drift、Subagent |
 | R9 | 生产切换 | 未开始 | 真实工作区演练、灰度、回退和 Python 退役 |
@@ -88,8 +88,8 @@
 
 能力对齐缺口：
 
-- 本地 CLI、版本化 Message Runtime 和 Provider 文本流已在 R6.1/R6.2 迁移；Channel Host/Telegram 离线纵向切片已在 R6.3 迁移，真实 Telegram Smoke 与可靠投递仍未完成。
-- R6.4 独立 Java SQLite 渠道账本、Inbox/Claim、事务 Outbox、`UNKNOWN` 与回退方案已获批准，正从 Fixture/Kernel Contract 开始实施。
+- 本地 CLI、版本化 Message Runtime 和 Provider 文本流已在 R6.1/R6.2 迁移；Channel Host/Telegram 已在 R6.3 迁移，R6.4 又完成该渠道的持久可靠投递与恢复；真实 Telegram Smoke 仍未授权。
+- R6.4 独立 Java SQLite 渠道账本、Inbox/Claim、事务 Outbox、`UNKNOWN`、容量门禁与回退演练已通过本地离线门禁，远程 CI 待执行。
 - 完整 Prompt Block/Persona/Token 预算、跨进程投递恢复和完整 Python Chat Lane 行为仍未迁移。
 - 当前 HTTP 契约和 CLI 契约是已批准的 Java 纵向切片，不等同于 Python 全部被动聊天能力。
 
@@ -220,7 +220,7 @@ R6.3 没有读取真实 Token、连接 Telegram、处理真实用户数据或启
 
 - 复用已完成的 Java `InboundMessage`、`OutboundMessage`、本地 CLI 与流式生命周期协议。
 - R6.3 Telegram Channel Host 离线实现已在本地与 PR #6 远程门禁验证；真实网络/数据继续独立授权。
-- R6.4 持久 Inbox/Outbox 与恢复已获批准并进入连续 TDD；不承诺自动重放或 Exactly Once。
+- R6.4 持久 Inbox/Outbox、Receipt、恢复和回退已完成本地离线验收；不承诺自动重放或 Exactly Once，远程 CI 与真实 Smoke 仍是独立门禁。
 - Dashboard 先复用现有前端契约，再决定是否调整前端。
 
 退出门禁：CLI 与至少一个真实渠道的 Golden 会话通过；流式事件顺序和断线语义明确；Dashboard 核心路径兼容。

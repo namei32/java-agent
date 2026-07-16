@@ -3,6 +3,7 @@
 - 状态：已接受
 - 日期：2026-07-16
 - 阶段：R6.4
+- 实施状态：离线实现与本地门禁已完成；远程 CI 与真实 Smoke 待完成/授权
 - 批准记录：用户于 2026-07-16 明确接受本决策，并授权从 F1 开始连续 TDD
 - 关联 Contract：[渠道可靠投递、幂等与恢复契约](../contracts/channel-reliable-delivery.md)
 - 关联设计：[渠道可靠投递、幂等与恢复设计](../specs/2026-07-16-channel-reliable-delivery-design.md)

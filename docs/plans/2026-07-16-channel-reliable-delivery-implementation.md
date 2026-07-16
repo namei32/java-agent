@@ -1,7 +1,7 @@
 # R6.4 渠道可靠投递、幂等与恢复工作计划
 
-- 状态：已批准，连续 TDD 实施中
-- 当前任务：F13 最终门禁、文档与 PR
+- 状态：F1–F13 本地离线实现与验收已完成；Draft PR、远程 CI 待执行
+- 当前任务：推送 Draft PR，并等待默认、`failure`、`compat` 远程 CI
 - 日期：2026-07-16
 - 分支：`agent/r6-reliable-delivery`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`
@@ -602,7 +602,7 @@ Fixture 的 40 个场景，并增加 Telegram Instance/Token 轮换、Terminal R
 
 ## 16. Task F13：最终门禁、文档、PR 与合并准备
 
-状态：进行中。
+状态：本地阶段已完成；Draft PR、远程 CI 与 Review 待执行。
 
 先更新 Contract/Spec/ADR/计划状态、Fixture Manifest Hash、文档导航、R6 总计划、Roadmap、重写指南、能力矩阵、配置模板和 Runbook。记录实际证据，不预填测试数。
 
@@ -635,6 +635,29 @@ git diff --check
 5. Review/CI 全绿后再请求/执行合并。
 
 预计提交：`docs: 完成 R6.4 离线验收`
+
+本地验收证据（2026-07-16）：
+
+- `spotless:check` 对八模块 Reactor 全绿。
+- 首次执行完整 `clean verify` 时，`TelegramReliableDeliveryIT` 在持久 Cursor 已提交、Poll Worker
+  尚未刷新适配器内存快照的短窗口内立即读取 `nextOffset`，暴露纯测试观察竞态。测试改为有界等待
+  适配器观察到持久 Cursor；聚焦 `TelegramReliableDeliveryIT` 6 项全绿，随后原样重跑
+  `clean verify`，默认 Profile 共 559 项全绿。生产状态机、事务边界和重试语义均未改变。
+- `-Pfailure verify` 共 133 项全绿；`-Pcompat verify` 共 665 项全绿，无失败、错误或跳过。
+  其中 `ChannelReliableDeliveryGoldenTest` 完整执行 42 项，覆盖 V1 Fixture 的 40 个 Java-owned
+  场景与 2 个跨层约束。
+- `agent-kernel dependency:tree` 全绿；Kernel 只有 JUnit、AssertJ、Byte Buddy 和 Jackson 测试
+  依赖，Kernel/Application 生产源码中没有 JDBC、Spring 或 Telegram 反向依赖。
+- `git diff --check` 通过；默认配置仍为 Reliability `DISABLED`、Telegram `false`。仓库未跟踪
+  DB/WAL/SHM/Backup；分支新增的 Token 形态字符串均是测试中的显式 Fake Token 或“Secret 不得
+  进入实例键”拒绝样例，没有真实凭据、用户正文或非 Loopback Endpoint。
+- `channel-reliable-delivery-v1.json` SHA-256 为
+  `f21efc2426c18af880239bb41e81deb142c0eab070d8eb89b034237ce7071399`，与 Manifest 一致。
+- 原始脏工作树 `/Users/namei/idea/agent/java-agent` 未被本计划修改；所有数据库和 HTTP 验证继续
+  位于 JUnit 临时目录与 `127.0.0.1` Loopback 范围。
+
+当前结论仅为“R6.4 本地离线实现已验证”。真实 Telegram Token、网络 Smoke、用户数据与部署仍
+未获授权；Draft PR、远程 CI 和 Review 尚未完成，因此本阶段不声明已合并或已上线。
 
 ## 17. 暂停条件
 
