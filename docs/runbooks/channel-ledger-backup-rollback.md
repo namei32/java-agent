@@ -1,12 +1,12 @@
 # 渠道账本备份、恢复与回退手册
 
-- 状态：草案，待 R6.4 Contract 批准与临时数据库演练
+- 状态：已批准实施边界，待临时数据库演练
 - 日期：2026-07-16
 - 适用数据库：`<workspace>/channels/channel-ledger.db`
 - Contract：[渠道可靠投递、幂等与恢复契约](../contracts/channel-reliable-delivery.md)
 - ADR：[ADR-0010：使用独立 Java SQLite 渠道账本与事务 Outbox](../adr/0010-use-dedicated-sqlite-channel-ledger.md)
 
-> 当前文档不能授权操作真实 Workspace。R6.4 实施与 CI 只在 JUnit 临时目录演练。真实数据库的备份、恢复、删除、迁移或部署必须另行批准。
+> 本文只授权 R6.4 实施与 CI 在 JUnit 临时目录演练，不能授权操作真实 Workspace。真实数据库的备份、恢复、删除、迁移或部署必须另行批准。
 
 ## 1. 适用场景
 

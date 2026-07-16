@@ -255,8 +255,8 @@ R4.1、R4.2、R5.1、R6.1 与 R6.2 已完成，R6.3 Telegram Channel Host 已通
 
 1. R6.3 离线实现已在 PR #6 通过默认、`failure`、`compat` 远程 CI；保持真实渠道部署为 `DISABLED`；
 2. 真实 Telegram Smoke 仅在独立任务批准专用 Bot、测试会话、网络、无敏感内容和 Token 撤销后执行，不阻塞离线 PR；
-3. R6.4 的 Inbox/Delivery Schema、幂等键、`UNKNOWN`、恢复、备份与回退 Contract/Spec/ADR/计划草案已形成，当前等待明确批准；
-4. 草案批准前不增加自动重放、持久 Inbox/Outbox、新数据库表或消息中间件；批准后从 Java-owned Fixture 的 RED 开始；
+3. R6.4 的 Inbox/Delivery Schema、幂等键、`UNKNOWN`、恢复、备份与回退 Contract/Spec/ADR/计划已获批准，当前从 Java-owned Fixture 的 RED 开始连续 TDD；
+4. 实现只限批准的独立 SQLite Ledger，不增加自动重放、消息中间件或 Exactly Once；
 5. R5.2 远程 MCP、真实副作用和 Dashboard 继续按独立 Contract 推进，不与 R6.4 混合实施。
 
 R5.1 的完成边界与验证证据见 [MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)，R6.1 的完成证据见[版本化渠道消息 Contract Runtime 工作计划](../plans/2026-07-15-versioned-channel-message-runtime-implementation.md)，R6.2 的完成证据见 [Provider Streaming 与本地 CLI 工作计划](../plans/2026-07-15-provider-streaming-cli-implementation.md)，R6.3 的离线完成证据见 [Telegram Channel Host 工作计划](../plans/2026-07-16-telegram-channel-host-implementation.md)。

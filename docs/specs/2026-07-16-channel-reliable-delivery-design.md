@@ -1,9 +1,9 @@
 # 渠道可靠投递、幂等与恢复设计
 
-- 状态：草案，待批准
+- 状态：已批准，待实施
 - 日期：2026-07-16
 - 阶段：R6.4
-- 批准记录：无；不得据此实现生产行为
+- 批准记录：用户于 2026-07-16 明确批准本设计，并授权从 F1 开始连续 TDD
 - Contract：[渠道可靠投递、幂等与恢复契约](../contracts/channel-reliable-delivery.md)
 - ADR：[ADR-0010：使用独立 Java SQLite 渠道账本与事务 Outbox](../adr/0010-use-dedicated-sqlite-channel-ledger.md)
 - 实施计划：[R6.4 渠道可靠投递工作计划](../plans/2026-07-16-channel-reliable-delivery-implementation.md)

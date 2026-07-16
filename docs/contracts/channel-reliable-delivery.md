@@ -1,10 +1,11 @@
 # 渠道可靠投递、幂等与恢复契约
 
-- 状态：草案，待批准
+- 状态：已批准，待实施
 - 契约版本：1
 - 日期：2026-07-16
 - 阶段：R6.4
-- 批准记录：无；本草案不能作为生产实现授权
+- 批准日期：2026-07-16
+- 批准记录：用户明确批准本 Contract、Spec、ADR 和实施计划，并授权从 F1 开始连续 TDD
 - 前置契约：[版本化渠道消息与流式运行时契约](versioned-channel-message-runtime.md)
 - 前置契约：[Telegram Channel Host 契约](telegram-channel-host.md)
 - 关联 ADR：[ADR-0010：使用独立 Java SQLite 渠道账本与事务 Outbox](../adr/0010-use-dedicated-sqlite-channel-ledger.md)
@@ -12,7 +13,7 @@
 - 实施计划：[R6.4 渠道可靠投递工作计划](../plans/2026-07-16-channel-reliable-delivery-implementation.md)
 - 运维草案：[渠道账本备份、恢复与回退手册](../runbooks/channel-ledger-backup-rollback.md)
 
-> 本草案只请求批准离线 Java/SQLite 实现和 Loopback 故障注入。它不授权真实 Telegram Token、网络、用户数据、部署、自动重放整个 Turn、人工修改 UNKNOWN、消息中间件或 Exactly Once 声明。
+> 本次批准只授权离线 Java/SQLite 实现和 Loopback 故障注入。它不授权真实 Telegram Token、网络、用户数据、部署、自动重放整个 Turn、人工修改 UNKNOWN、消息中间件或 Exactly Once 声明。
 
 ## 1. 目的
 

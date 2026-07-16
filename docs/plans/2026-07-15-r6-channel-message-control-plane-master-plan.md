@@ -66,7 +66,7 @@ R6 完成不等于 Python 全部渠道、插件或主动能力已经迁移。Sch
 | R6.1 | 版本化 Message Contract Runtime | 已完成并合入 `main` | Java-owned Fixture、消息值、唯一终态、取消原因、有界背压、安全终态投影 |
 | R6.2 | 本地 CLI 与 Provider Streaming | 已完成并通过 PR #5 合入 `main` | 供应商无关流式 Port、Spring AI Adapter、本地 CLI、取消与提交隔离 |
 | R6.3 | Channel Host 与首个真实渠道 | 本地与 PR #6 远程离线门禁已验证；真实 Smoke 待授权 | 统一宿主、身份路由、Telegram 私聊文本、网络生命周期 |
-| R6.4 | 渠道幂等、可靠投递与恢复 | Contract/Spec/ADR/计划草案待审批 | 入站去重、投递状态、崩溃恢复和有界重试 |
+| R6.4 | 渠道幂等、可靠投递与恢复 | 子阶段已批准，F1 连续 TDD 实施中 | 入站去重、投递状态、崩溃恢复和有界重试 |
 | R6.5 | Dashboard 与最小控制面 | 总体范围已批准，待子阶段 Contract | 安全状态、事件流和活动 Turn 取消 |
 | R6.6 | 阶段总验收与灰度 | 待前序完成 | Golden、故障/压力、安全审计、Runbook 和回退 |
 
@@ -271,7 +271,7 @@ R6.3 离线门禁；真实渠道 Smoke 和部署仍待独立授权。
 
 R6.4 是条件阶段。只有 R6.3 证明进程重启和平台重复投递需要持久状态后才实施；它涉及新 SQLite Schema，必须先批准 Schema、迁移、备份和回退 Contract。
 
-2026-07-16 已形成独立 `workspace/channels/channel-ledger.db`、渠道实例分区、Inbox/Turn Claim、事务 Outbox、Telegram Receipt、`UNKNOWN`、恢复/清理和回退的 [Contract 草案](../contracts/channel-reliable-delivery.md)、[ADR-0010 提议](../adr/0010-use-dedicated-sqlite-channel-ledger.md)、[设计草案](../specs/2026-07-16-channel-reliable-delivery-design.md)与[连续 TDD 计划](2026-07-16-channel-reliable-delivery-implementation.md)。当前仍停在 F0 审批门禁，未创建 Fixture、Schema 或生产实现。
+2026-07-16 用户已批准独立 `workspace/channels/channel-ledger.db`、渠道实例分区、Inbox/Turn Claim、事务 Outbox、Telegram Receipt、`UNKNOWN`、恢复/清理和回退的 [Contract](../contracts/channel-reliable-delivery.md)、[ADR-0010](../adr/0010-use-dedicated-sqlite-channel-ledger.md)、[设计](../specs/2026-07-16-channel-reliable-delivery-design.md)与[连续 TDD 计划](2026-07-16-channel-reliable-delivery-implementation.md)。当前从 F1 Java-owned Fixture 与 Kernel Contract 开始；真实 Telegram 仍未授权。
 
 ### Task F0：冻结幂等和恢复语义
 
@@ -417,4 +417,4 @@ R6 总退出条件：
 2. R6.2 已完成 Contract、ADR、Fixture、连续 TDD、本地/远程三套门禁，并通过 PR #5 合入 `main`。
 3. R6.3 Channel Host/Telegram 离线纵向切片已完成连续 TDD，并通过本地与 PR #6 默认、`failure`、`compat` 远程门禁。
 4. 真实 Token、网络、费用和数据范围仍未获授权，因此真实 Telegram Smoke 必须保持禁用。
-5. R6.4 可靠投递 Contract/Spec/ADR/计划草案已形成并等待明确批准；获批前不实现持久 Inbox/Outbox、自动重放或 Exactly Once，Dashboard 仍按后续独立子阶段推进。
+5. R6.4 可靠投递 Contract/Spec/ADR/计划已获批准，正从 F1 开始连续 TDD；不实现自动重放或 Exactly Once，Dashboard 仍按后续独立子阶段推进。

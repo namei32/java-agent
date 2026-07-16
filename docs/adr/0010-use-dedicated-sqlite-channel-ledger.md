@@ -1,9 +1,9 @@
 # ADR-0010：使用独立 Java SQLite 渠道账本与事务 Outbox
 
-- 状态：提议
+- 状态：已接受
 - 日期：2026-07-16
 - 阶段：R6.4
-- 批准记录：无；待用户明确批准
+- 批准记录：用户于 2026-07-16 明确接受本决策，并授权从 F1 开始连续 TDD
 - 关联 Contract：[渠道可靠投递、幂等与恢复契约](../contracts/channel-reliable-delivery.md)
 - 关联设计：[渠道可靠投递、幂等与恢复设计](../specs/2026-07-16-channel-reliable-delivery-design.md)
 - 前置决策：[ADR-0002：采用 SQLite 兼容优先的渐进迁移](0002-sqlite-compatible-incremental-migration.md)
@@ -88,6 +88,6 @@ Telegram Bot API 不接受项目提供的消息幂等键。即使使用 SQLite O
 - 需要加密字段、外部 KMS 或不同数据驻留策略。
 - 第二个渠道证明共享数据库的故障域不可接受。
 
-## 提议验证
+## 实施验证要求
 
-批准后必须通过临时 SQLite 的 Schema/迁移/Backup/Restore 测试、并发 Claim/Lease 测试、Loopback Telegram 故障注入、默认 Disabled 零副作用，以及默认、`failure`、`compat` 三套门禁。未获批准前不创建生产 Schema 或修改装配。
+实现必须通过临时 SQLite 的 Schema/迁移/Backup/Restore 测试、并发 Claim/Lease 测试、Loopback Telegram 故障注入、默认 Disabled 零副作用，以及默认、`failure`、`compat` 三套门禁。真实 Telegram、Secret、用户数据和部署仍未授权。

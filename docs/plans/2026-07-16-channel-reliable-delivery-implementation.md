@@ -1,7 +1,7 @@
 # R6.4 渠道可靠投递、幂等与恢复工作计划
 
-- 状态：Contract/Spec/ADR/计划草案已形成，等待用户明确批准；生产代码未开始
-- 当前任务：F0 文档冻结与审批门禁
+- 状态：已批准，连续 TDD 实施中
+- 当前任务：F1 Java-owned Fixture 与 Kernel Contract
 - 日期：2026-07-16
 - 分支：`agent/r6-reliable-delivery`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`
@@ -11,7 +11,7 @@
 - ADR：[ADR-0010：使用独立 Java SQLite 渠道账本与事务 Outbox](../adr/0010-use-dedicated-sqlite-channel-ledger.md)
 - 总体计划：[R6 渠道、消息总线与控制面总体工作计划](2026-07-15-r6-channel-message-control-plane-master-plan.md)
 
-> F1–F13 涉及新 SQLite Schema、数据保留、失败语义和并发边界。用户明确批准关联 Contract、Spec、ADR 和本计划前，只允许完成 F0 文档与只读检查，不得创建 Fixture、数据库表或生产代码。
+> 用户已于 2026-07-16 明确批准关联 Contract、Spec、ADR 和本计划。F1–F13 只授权离线实现；真实 Telegram、Secret、用户数据、部署和超出契约的状态/Schema 仍是独立暂停条件。
 
 ## 1. 目标
 
@@ -41,7 +41,7 @@ Telegram Update
 
 ## 3. Task F0：冻结 Contract、Spec、ADR、Runbook 与计划
 
-状态：文档草案与本地校验已完成，等待提交和用户明确批准。
+状态：已完成并批准。
 
 交付：
 
@@ -72,9 +72,12 @@ git diff --check
 验证证据（2026-07-16）：`spotless:check` 对八模块 Reactor 全部通过，`git diff --check`
 通过；只新增/修改文档，没有创建 Fixture、SQLite 文件、生产代码、Worker 或网络访问。
 
+批准证据（2026-07-16）：用户明确回复“批准”，批准本计划关联的 Contract、Spec 和 ADR，
+并授权从 F1 开始连续 TDD；真实网络、Secret、用户数据和部署未包含在批准范围。
+
 ## 4. Task F1：Java-owned Fixture 与 Kernel Contract
 
-状态：未开始，等待批准。
+状态：进行中。
 
 先创建：
 
