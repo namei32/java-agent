@@ -27,12 +27,14 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
   private static final String TURN_WORKER = "telegram-turn-worker";
   private static final String TURN_PRODUCER = "telegram-turn-producer";
   private static final int SEEN_UPDATE_LIMIT = 1024;
+  private static final int MAX_CONSECUTIVE_POLL_FAILURES = 3;
 
   private final TelegramBotApi api;
   private final TelegramUpdateMapper mapper;
   private final MessageTurnService turns;
   private final TelegramProperties properties;
   private final ChannelThreadStarter threadStarter;
+  private final ChannelSleeper sleeper;
   private final TelegramDeliveryPolicy delivery;
   private final TelegramTextChunker chunker = new TelegramTextChunker();
   private final Semaphore turnPermits;
@@ -45,6 +47,7 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
   private final Set<Long> seenUpdates = new HashSet<>();
   private final ArrayDeque<Long> seenOrder = new ArrayDeque<>();
   private final Object lifecycle = new Object();
+  private final Object turnRegistration = new Object();
 
   private volatile long nextOffset;
   private volatile Thread pollThread;
@@ -61,9 +64,8 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
     this.turns = Objects.requireNonNull(turns, "turns");
     this.properties = Objects.requireNonNull(properties, "properties");
     this.threadStarter = Objects.requireNonNull(threadStarter, "threadStarter");
-    this.delivery =
-        new TelegramDeliveryPolicy(
-            api, Objects.requireNonNull(sleeper, "sleeper"), properties.maxRetryAfter());
+    this.sleeper = Objects.requireNonNull(sleeper, "sleeper");
+    this.delivery = new TelegramDeliveryPolicy(api, this.sleeper, properties.maxRetryAfter());
     this.turnPermits = new Semaphore(properties.maxConcurrentTurns(), true);
   }
 
@@ -83,7 +85,7 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
         pollThread =
             Objects.requireNonNull(
                 threadStarter.start(POLL_WORKER, this::pollLoop), "threadStarter 返回了 null");
-      } catch (RuntimeException failure) {
+      } catch (Throwable failure) {
         accepting.set(false);
         code.set("POLL_WORKER_START_FAILED");
         state.set(ChannelState.FAILED);
@@ -133,23 +135,35 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
       if (currentPoll != null && currentPoll != Thread.currentThread()) {
         currentPoll.interrupt();
       }
-      List<ActiveTelegramTurn> closingTurns = List.copyOf(activeTurns.values());
+      List<ActiveTelegramTurn> closingTurns;
+      synchronized (turnRegistration) {
+        closingTurns = List.copyOf(activeTurns.values());
+      }
       closingTurns.forEach(turn -> turn.buffer().shutdown());
 
-      long deadline = System.nanoTime() + properties.shutdownTimeout().toNanos();
-      boolean stopped = joinUntil(currentPoll, deadline);
+      long startedAt = System.nanoTime();
+      long shutdownBudget = properties.shutdownTimeout().toNanos();
+      long gracefulDeadline = startedAt + shutdownBudget / 2;
+      long finalDeadline = startedAt + shutdownBudget;
+      boolean stopped = joinUntil(currentPoll, gracefulDeadline);
       for (ActiveTelegramTurn turn : closingTurns) {
-        stopped &= joinTurn(turn, deadline);
+        stopped &= joinTurn(turn, gracefulDeadline);
       }
       if (!stopped) {
+        if (currentPoll != null && currentPoll != Thread.currentThread()) {
+          currentPoll.interrupt();
+        }
         closingTurns.forEach(ActiveTelegramTurn::interruptWorkers);
+        stopped = joinUntil(currentPoll, finalDeadline);
         for (ActiveTelegramTurn turn : closingTurns) {
-          stopped &= joinTurn(turn, deadline);
+          stopped &= joinTurn(turn, finalDeadline);
         }
       }
-      closingTurns.stream().filter(turn -> !workerAlive(turn)).forEach(this::cleanupTurn);
+      closingTurns.stream().filter(ActiveTelegramTurn::workersStopped).forEach(this::cleanupTurn);
 
-      if (!stopped || !activeTurns.isEmpty()) {
+      if (!stopped
+          || !activeTurns.isEmpty()
+          || turnPermits.availablePermits() != properties.maxConcurrentTurns()) {
         code.set("SHUTDOWN_TIMEOUT");
         state.set(ChannelState.FAILED);
         throw new IllegalStateException("Telegram Channel 未能在期限内停止");
@@ -182,56 +196,75 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
           if (!accepting.get()) {
             return;
           }
-          if (!processUpdate(update)) {
-            fail("TURN_WORKER_START_FAILED");
-            return;
+          switch (processUpdate(update)) {
+            case SAFE -> {
+              // Continue this already bounded response batch.
+            }
+            case STOPPED -> {
+              return;
+            }
+            case TURN_START_FAILED -> {
+              failPermanently("TURN_WORKER_START_FAILED");
+              return;
+            }
+            case INVALID -> {
+              consecutiveFailures.incrementAndGet();
+              failPermanently("POLL_INVALID_RESPONSE");
+              return;
+            }
           }
         }
       } catch (TelegramApiException failure) {
         if (!accepting.get() && failure.reason() == TelegramApiException.Reason.INTERRUPTED) {
           return;
         }
-        fail("POLL_FAILED");
-        return;
-      } catch (RuntimeException failure) {
+        if (!handlePollFailure(failure)) {
+          return;
+        }
+      } catch (Throwable failure) {
         if (!accepting.get()) {
           return;
         }
-        fail("POLL_FAILED");
+        consecutiveFailures.incrementAndGet();
+        failPermanently("POLL_INVALID_RESPONSE");
         return;
       }
     }
   }
 
-  private boolean processUpdate(TelegramUpdate update) {
+  private UpdateResult processUpdate(TelegramUpdate update) {
     if (update == null) {
-      return false;
+      return UpdateResult.INVALID;
     }
     long updateId = update.updateId();
     if (updateId < 0 || updateId == Long.MAX_VALUE) {
-      return false;
+      return UpdateResult.INVALID;
     }
     if (updateId < nextOffset || seenUpdates.contains(updateId)) {
-      return true;
+      return UpdateResult.SAFE;
     }
 
     TelegramInboundDecision decision = mapper.map(update);
     return switch (decision.kind()) {
       case IGNORED -> {
         markSafe(updateId);
-        yield true;
+        yield UpdateResult.SAFE;
       }
       case CONTROL -> {
         handleControl(update.message().chatId());
         markSafe(updateId);
-        yield true;
+        yield UpdateResult.SAFE;
       }
       case ACCEPTED -> {
-        if (!startTurn(update.message().chatId(), decision.inbound())) {
-          yield false;
+        TurnStartResult started = startTurn(update.message().chatId(), decision.inbound());
+        if (started == TurnStartResult.FAILED) {
+          yield UpdateResult.TURN_START_FAILED;
+        }
+        if (started == TurnStartResult.STOPPED) {
+          yield UpdateResult.STOPPED;
         }
         markSafe(updateId);
-        yield true;
+        yield UpdateResult.SAFE;
       }
     };
   }
@@ -243,21 +276,31 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
     }
   }
 
-  private boolean startTurn(long chatId, InboundMessage inbound) {
+  private TurnStartResult startTurn(long chatId, InboundMessage inbound) {
+    if (!accepting.get()) {
+      return TurnStartResult.STOPPED;
+    }
     if (!turnPermits.tryAcquire()) {
       sendFixed(chatId, SESSION_BUSY_TEXT);
-      return true;
+      return TurnStartResult.BUSY;
     }
 
     var buffer =
         new BoundedOutboundBuffer(
             inbound, properties.bufferCapacity(), properties.publishTimeout());
     var active = new ActiveTelegramTurn(chatId, inbound, buffer);
-    ActiveTelegramTurn existing = activeTurns.putIfAbsent(inbound.sessionId(), active);
+    ActiveTelegramTurn existing;
+    synchronized (turnRegistration) {
+      if (!accepting.get()) {
+        turnPermits.release();
+        return TurnStartResult.STOPPED;
+      }
+      existing = activeTurns.putIfAbsent(inbound.sessionId(), active);
+    }
     if (existing != null) {
       turnPermits.release();
       sendFixed(chatId, SESSION_BUSY_TEXT);
-      return true;
+      return TurnStartResult.BUSY;
     }
 
     try {
@@ -265,17 +308,17 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
           Objects.requireNonNull(
               threadStarter.start(TURN_WORKER, () -> runTurn(active)), "threadStarter 返回了 null");
       active.worker(worker);
-    } catch (RuntimeException failure) {
+    } catch (Throwable failure) {
       active.abortStartup();
       cleanupTurn(active);
-      return false;
+      return TurnStartResult.FAILED;
     }
 
     if (!active.awaitStartup(properties.shutdownTimeout())) {
       cleanupTurn(active);
-      return false;
+      return accepting.get() ? TurnStartResult.FAILED : TurnStartResult.STOPPED;
     }
-    return true;
+    return TurnStartResult.STARTED;
   }
 
   private void runTurn(ActiveTelegramTurn active) {
@@ -287,7 +330,7 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
                 threadStarter.start(TURN_PRODUCER, () -> produce(active)),
                 "threadStarter 返回了 null");
         active.producer(producer);
-      } catch (RuntimeException failure) {
+      } catch (Throwable failure) {
         active.startupFailed();
         return;
       }
@@ -304,7 +347,7 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
   private void produce(ActiveTelegramTurn active) {
     try {
       turns.process(active.inbound(), active.buffer(), active.buffer().cancellation());
-    } catch (RuntimeException failure) {
+    } catch (Throwable failure) {
       // Consumer detects an absent terminal and fails closed; exception text is deliberately
       // dropped.
     } finally {
@@ -329,7 +372,7 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
           return;
         }
       }
-    } catch (RuntimeException failure) {
+    } catch (Throwable failure) {
       if (!active.buffer().isTerminal()) {
         active.buffer().disconnect();
       }
@@ -344,7 +387,7 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
   private void sendFixed(long chatId, String text) {
     try {
       delivery.send(chatId, text);
-    } catch (RuntimeException failure) {
+    } catch (Throwable failure) {
       code.compareAndSet("", "DELIVERY_FAILED");
     }
   }
@@ -359,11 +402,36 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
     nextOffset = Math.max(nextOffset, updateId + 1);
   }
 
-  private void fail(String failureCode) {
+  private boolean handlePollFailure(TelegramApiException failure) {
+    int failures = consecutiveFailures.incrementAndGet();
+    if (!retryable(failure.reason())) {
+      failPermanently(permanentPollCode(failure.reason()));
+      return false;
+    }
+    if (failures >= MAX_CONSECUTIVE_POLL_FAILURES) {
+      failPermanently("POLL_RETRY_EXHAUSTED");
+      return false;
+    }
+    code.set("POLL_" + failure.reason().name());
+    state.set(ChannelState.DEGRADED);
+    try {
+      sleeper.sleep(properties.retryBackoff());
+      return accepting.get();
+    } catch (InterruptedException interrupted) {
+      Thread.currentThread().interrupt();
+      if (!accepting.get()) {
+        return false;
+      }
+      failPermanently("POLL_INTERRUPTED");
+      return false;
+    }
+  }
+
+  private void failPermanently(String failureCode) {
     accepting.set(false);
-    consecutiveFailures.incrementAndGet();
     code.set(failureCode);
     state.set(ChannelState.FAILED);
+    activeTurns.values().forEach(turn -> turn.buffer().disconnect());
   }
 
   private void cleanupTurn(ActiveTelegramTurn active) {
@@ -374,13 +442,19 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
     turnPermits.release();
   }
 
-  private static boolean workerAlive(ActiveTelegramTurn turn) {
-    try {
-      return !turn.joinWorkersUntil(System.nanoTime());
-    } catch (InterruptedException interrupted) {
-      Thread.currentThread().interrupt();
-      return true;
-    }
+  private static boolean retryable(TelegramApiException.Reason reason) {
+    return reason == TelegramApiException.Reason.TIMEOUT
+        || reason == TelegramApiException.Reason.UNAVAILABLE
+        || reason == TelegramApiException.Reason.RATE_LIMITED;
+  }
+
+  private static String permanentPollCode(TelegramApiException.Reason reason) {
+    return switch (reason) {
+      case UNAUTHORIZED -> "POLL_UNAUTHORIZED";
+      case INVALID_RESPONSE -> "POLL_INVALID_RESPONSE";
+      case INTERRUPTED -> "POLL_INTERRUPTED";
+      case RATE_LIMITED, TIMEOUT, UNAVAILABLE -> "POLL_RETRY_EXHAUSTED";
+    };
   }
 
   private static boolean joinTurn(ActiveTelegramTurn turn, long deadlineNanos) {
@@ -406,5 +480,19 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
       Thread.currentThread().interrupt();
       return false;
     }
+  }
+
+  private enum UpdateResult {
+    SAFE,
+    STOPPED,
+    TURN_START_FAILED,
+    INVALID
+  }
+
+  private enum TurnStartResult {
+    STARTED,
+    BUSY,
+    STOPPED,
+    FAILED
   }
 }

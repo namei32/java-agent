@@ -275,7 +275,7 @@ Conversation 占用或公平 Semaphore 许可。活动 Turn 的外层 `finally` 
 
 ## 10. Task E7：网络恢复、故障隔离与关闭
 
-状态：待 E6。
+状态：已完成。
 
 先写带 `@Tag("failure")` 的 `TelegramChannelFailureTest`：
 
@@ -297,6 +297,16 @@ RED/GREEN：
 自审重点：没有无限重连、后台 Sleep 或未 Join Worker；First Writer Wins；远端错误不泄漏。
 
 预计提交：`feat: 完成 Telegram 网络与关闭门禁`
+
+RED/GREEN 证据（2026-07-16）：`failure` 聚焦命令在 E6 基线上执行 11 个场景，首次有
+6 个失败：Timeout/Unavailable/429 都在第一次失败后停止、401/损坏响应没有独立稳定码，
+重试耗尽也没有断开活动 Turn；实现恢复状态机后，同一命令 11/11 全部通过。Poll 对
+Timeout、5xx/Unavailable 和 429 在相同 offset 上最多容忍 3 次连续失败，成功即清零健康
+计数；401 和协议损坏立即 Fail Closed，耗尽后以 `CHANNEL_DISCONNECTED` 取消全部活动
+Buffer。关闭路径先阻止注册并中断 Poll，再以 `SHUTDOWN` 取消活动 Turn，在单一总 Deadline
+的优雅/强制两阶段内 Join；门控 Worker 证明 Poll 或 Turn 任务尚未真正执行时关闭不会访问
+API、调用业务或推进 offset，`REQUESTED` 与 Shutdown 竞争仍保持 First Writer Wins。所有
+结束路径均验证活动 Map、线程和公平 Semaphore 许可归零/归还，底层异常正文被异步边界丢弃。
 
 ## 11. Task E8：Spring Bootstrap 与默认零网络
 

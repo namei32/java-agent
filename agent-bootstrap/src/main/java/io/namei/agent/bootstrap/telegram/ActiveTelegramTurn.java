@@ -65,6 +65,7 @@ final class ActiveTelegramTurn {
   void startupFailed() {
     startupState.compareAndSet(StartupState.PENDING, StartupState.FAILED);
     startup.countDown();
+    buffer.shutdown();
   }
 
   boolean awaitStartup(Duration timeout) {
@@ -122,6 +123,13 @@ final class ActiveTelegramTurn {
 
   boolean joinWorkersUntil(long deadlineNanos) throws InterruptedException {
     return joinUntil(producer, deadlineNanos) && joinUntil(worker, deadlineNanos);
+  }
+
+  boolean workersStopped() {
+    Thread producerThread = producer;
+    Thread workerThread = worker;
+    return (producerThread == null || !producerThread.isAlive())
+        && (workerThread == null || !workerThread.isAlive());
   }
 
   private static boolean joinUntil(Thread thread, long deadlineNanos) throws InterruptedException {
