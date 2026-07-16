@@ -1,7 +1,7 @@
 # R6.4 渠道可靠投递、幂等与恢复工作计划
 
 - 状态：已批准，连续 TDD 实施中
-- 当前任务：F2 SQLite Schema V1、严格校验与 Backup
+- 当前任务：F3 持久 Event、Cursor 与冲突
 - 日期：2026-07-16
 - 分支：`agent/r6-reliable-delivery`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`
@@ -113,7 +113,7 @@ Turn ID 不参与请求指纹、完整 Token 形态不能作为实例键、Paylo
 
 ## 5. Task F2：SQLite Schema V1、严格校验与 Backup
 
-状态：进行中。
+状态：已完成。
 
 先写：
 
@@ -142,9 +142,19 @@ RED/GREEN：
 
 预计提交：`feat: 建立版本化渠道账本 Schema`
 
+RED/GREEN 证据（2026-07-16）：聚焦命令首次在测试编译阶段因
+`ChannelLedgerSchemaInitializer`、`ChannelLedgerSchemaV1`、Backup Port 和稳定 Repository
+Failure/Exception 缺失而失败；最小实现后 Empty/V0/V1、七表五索引、Foreign Key/Check、
+WAL/FULL/FK/Busy Timeout、Online Backup、幂等初始化、损坏数据库和漂移拒绝共 10 个测试通过。
+首次 GREEN 尝试同时暴露 Backup Port 不能表达文件 I/O 故障，扩展受检失败边界后，部分备份会被
+删除并稳定映射为 `BACKUP_FAILED`。自审新增 SQLite `INTEGER` 亲和性回归测试，先证明 `0.5`
+会被旧读取逻辑截断并错误进入 Backup，再通过 `typeof(...)` 严格验证修复；同时补齐未知表、列和
+Trigger 拒绝。最终同一聚焦命令执行 12 个测试全部通过，源 V0 在 Backup 前保持 DELETE Journal，
+既有 V1 Journal 漂移不被静默修复，`git diff --check` 与聚焦 Spotless 通过。
+
 ## 6. Task F3：持久 Event、Cursor 与冲突
 
-状态：未开始。
+状态：进行中。
 
 先写 `JdbcChannelLedgerInboxTest`：
 
