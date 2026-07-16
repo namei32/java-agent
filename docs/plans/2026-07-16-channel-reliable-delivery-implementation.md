@@ -1,7 +1,7 @@
 # R6.4 渠道可靠投递、幂等与恢复工作计划
 
 - 状态：已批准，连续 TDD 实施中
-- 当前任务：F4 Turn Claim、启动边界与恢复
+- 当前任务：F5 Delivery、Part 与 Attempt Ledger
 - 日期：2026-07-16
 - 分支：`agent/r6-reliable-delivery`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`
@@ -188,7 +188,7 @@ Cursor 同事务提交，首个 Cursor Revision 为 0、后续单调增加，匹
 
 ## 7. Task F4：Turn Claim、启动边界与恢复
 
-状态：进行中。
+状态：已完成。
 
 先写 `JdbcChannelTurnClaimTest`，覆盖：
 
@@ -210,9 +210,19 @@ RED/GREEN：
 
 预计提交：`feat: 固定渠道 Turn 执行占用边界`
 
+RED/GREEN 证据（2026-07-16）：聚焦命令首次执行 8 个测试全部因 TURN Event 尚未实现而以稳定
+`OPERATION_FAILED` 失败；补齐 Claim/Turn ID 唯一占用、Request Fingerprint 重放、Revision
+CAS、`RESERVED -> RUNNING + Cursor` 单事务和分批恢复后转绿。自审新增“Cursor 已越过 Event”
+回归用例，先证明旧实现会在返回 STALE 前错误提交 `START_RETRYABLE -> RESERVED`，再把所有前置
+校验移到写入前修复。随后用现有八操作 Port 补齐 Starter 失败预算：恢复把未跨界的 `RESERVED`
+记为 `START_RETRYABLE` 并增加尝试，重投复用原 Turn ID 重新占用，第三次失败后转
+`EXECUTION_UNKNOWN` 且 Cursor 仍不推进。最终 10 个聚焦测试全部通过；两个连接并发只产生一个
+Claim/Turn ID，错误 Request/Turn ID、Revision/Owner/Lease 和启动 Commit Fault 都不能跨越
+Agent 边界，旧 `RUNNING` 只恢复为 Unknown。
+
 ## 8. Task F5：Delivery、Part 与 Attempt Ledger
 
-状态：未开始。
+状态：进行中。
 
 先写 `JdbcChannelDeliveryTest`：
 
