@@ -22,6 +22,8 @@ public final class OutboundDeliveryException extends RuntimeException {
       case INTERRUPTED -> "出站投递被中断";
       case INVALID_MESSAGE -> "出站消息违反顺序契约";
       case SHUTDOWN -> "出站渠道正在关闭";
+      case DURABLE_COMMIT_FAILED -> "出站终态持久化失败";
+      case TERMINAL_CONFLICT -> "出站终态与已持久化结果冲突";
     };
   }
 
@@ -30,6 +32,8 @@ public final class OutboundDeliveryException extends RuntimeException {
     BACKPRESSURE_EXCEEDED,
     INTERRUPTED,
     INVALID_MESSAGE,
-    SHUTDOWN
+    SHUTDOWN,
+    DURABLE_COMMIT_FAILED,
+    TERMINAL_CONFLICT
   }
 }

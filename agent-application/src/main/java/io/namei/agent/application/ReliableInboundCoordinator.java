@@ -322,7 +322,13 @@ public final class ReliableInboundCoordinator {
                   startedAt.plus(settings.turnLease()),
                   startedAt));
       if (started.status() == ChannelLedgerResult.TurnStartStatus.STARTED) {
-        turns.process(active.inbound(), active.cancellation().token());
+        turns.process(
+            new ReliableTurnContext(
+                active.event().instance(),
+                active.inbound(),
+                active.event().targetId(),
+                started.revision()),
+            active.cancellation().token());
       }
     } catch (RuntimeException ignored) {
       // 持久边界失败或 Turn 流程失败均由状态恢复/权威终态处理，原始异常不跨渠道边界。

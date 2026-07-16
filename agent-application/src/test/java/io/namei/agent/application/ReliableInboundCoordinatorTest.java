@@ -52,13 +52,15 @@ class ReliableInboundCoordinatorTest {
     var ledger = new FakeLedger(order);
     var starter = new CapturingStarter(order);
     var invocations = new ArrayList<InboundMessage>();
+    var contexts = new ArrayList<ReliableTurnContext>();
     var coordinator =
         coordinator(
             ledger,
             starter,
-            (inbound, ignored) -> {
+            (context, ignored) -> {
               order.add("turn");
-              invocations.add(inbound);
+              contexts.add(context);
+              invocations.add(context.inbound());
             });
 
     ReliableInboundResult result = coordinator.handle(accepted("update-0", 0, "message-0", "s-0"));
@@ -72,6 +74,9 @@ class ReliableInboundCoordinatorTest {
 
     assertThat(order).containsExactly("record-TURN", "thread-start", "start-turn", "turn");
     assertThat(invocations).extracting(InboundMessage::turnId).containsExactly("turn-generated-1");
+    assertThat(contexts.getFirst().instance()).isEqualTo(INSTANCE);
+    assertThat(contexts.getFirst().targetId()).isEqualTo("10001");
+    assertThat(contexts.getFirst().claimRevision()).isOne();
     assertThat(ledger.starts.getFirst().expectedRevision()).isZero();
     assertThat(coordinator.activeTurnCount()).isZero();
     assertThat(coordinator.availableTurnPermits()).isEqualTo(2);
@@ -143,7 +148,8 @@ class ReliableInboundCoordinatorTest {
     var starter = new CapturingStarter(new ArrayList<>());
     starter.failNext = true;
     var turns = new ArrayList<InboundMessage>();
-    var coordinator = coordinator(ledger, starter, (inbound, ignored) -> turns.add(inbound));
+    var coordinator =
+        coordinator(ledger, starter, (context, ignored) -> turns.add(context.inbound()));
     ReliableInboundEvent.Accepted event = accepted("update-0", 0, "message-0", "s-0");
 
     assertThatThrownBy(() -> coordinator.handle(event))
@@ -236,7 +242,8 @@ class ReliableInboundCoordinatorTest {
     var entered = new CountDownLatch(2);
     var release = new CountDownLatch(1);
     ReliableTurnProcessor processor =
-        (inbound, cancellation) -> {
+        (context, cancellation) -> {
+          InboundMessage inbound = context.inbound();
           cancellation.onCancellation(
               () -> cancellationAfterCommit.set(ledger.controlCommitReturned.get()));
           observed.put(inbound.sessionId(), cancellation.isCancellationRequested());
