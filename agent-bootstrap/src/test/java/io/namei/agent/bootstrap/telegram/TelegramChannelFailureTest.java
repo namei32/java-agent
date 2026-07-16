@@ -368,8 +368,9 @@ class TelegramChannelFailureTest {
     }
 
     @Override
-    public void sendMessage(long chatId, String text) {
+    public TelegramSendReceipt sendMessage(long chatId, String text) {
       sends.add(text);
+      return new TelegramSendReceipt(sends.size());
     }
   }
 

@@ -36,15 +36,13 @@ class TelegramChannelIT {
   private static final ObjectMapper JSON = new ObjectMapper();
 
   @Test
-  void carriesRealHttpThroughMessageTurnServiceAndSendsOnlyTheCorrectedTerminalAfter429()
-      throws Exception {
+  void volatilePathSendsOnlyTheCorrectedTerminalOnceAndNeverRetriesA429() throws Exception {
     try (var server = server()) {
       var holdNextPoll = new CountDownLatch(1);
       server.respondToPollWhen(holdNextPoll, 200, EMPTY_UPDATES);
       server.enqueuePoll(200, updates(update(100, 10001, 1, "普通问题")));
       server.enqueueSend(
           429, "{\"ok\":false,\"error_code\":429,\"parameters\":{\"retry_after\":1}}");
-      server.enqueueSend(200, SENT);
       var chat = new CorrectingChat();
       var sleeper = new RecordingSleeper();
       var threads = new RecordingThreadStarter();
@@ -52,17 +50,17 @@ class TelegramChannelIT {
 
       try {
         adapter.start();
-        await(() -> sendRequests(server).size() == 2, "429 后的单次重试");
+        await(() -> sendRequests(server).size() == 1, "终态单次发送");
         await(() -> adapter.snapshot().activeTurns() == 0, "普通 Turn 清理");
 
         assertThat(chat.calls).hasValue(1);
-        assertThat(sendTexts(server)).containsExactly("权威最终回答", "权威最终回答");
+        assertThat(sendTexts(server)).containsExactly("权威最终回答");
         assertThat(sendTexts(server))
             .allSatisfy(
                 text ->
                     assertThat(text)
                         .doesNotContain("preview-must-not-send", "tool_arguments", "tool_result"));
-        assertThat(sleeper.durations).containsExactly(Duration.ofSeconds(1));
+        assertThat(sleeper.durations).isEmpty();
         assertThat(pollOffsets(server)).startsWith(0L, 101L);
         assertThat(adapter.nextOffset()).isEqualTo(101);
       } finally {

@@ -92,7 +92,8 @@ public final class JdkTelegramBotApi implements TelegramBotApi {
                 timeoutSeconds,
                 "allowed_updates",
                 List.of("message")));
-    JsonNode result = invoke("getUpdates", body, pollRequestTimeout, MAX_POLL_RESPONSE_BYTES);
+    JsonNode result =
+        invoke("getUpdates", body, pollRequestTimeout, MAX_POLL_RESPONSE_BYTES, false);
     if (!result.isArray() || result.size() > POLL_LIMIT) {
       throw invalidResponse();
     }
@@ -104,7 +105,7 @@ public final class JdkTelegramBotApi implements TelegramBotApi {
   }
 
   @Override
-  public void sendMessage(long chatId, String text) {
+  public TelegramSendReceipt sendMessage(long chatId, String text) {
     if (chatId <= 0) {
       throw new IllegalArgumentException("Telegram chatId 必须为正数");
     }
@@ -115,13 +116,20 @@ public final class JdkTelegramBotApi implements TelegramBotApi {
       throw new IllegalArgumentException("Telegram text 超过长度上限");
     }
     String body = JSON.writeValueAsString(Map.of("chat_id", chatId, "text", text));
-    JsonNode result = invoke("sendMessage", body, sendRequestTimeout, MAX_SEND_RESPONSE_BYTES);
+    JsonNode result =
+        invoke("sendMessage", body, sendRequestTimeout, MAX_SEND_RESPONSE_BYTES, true);
     if (!result.isObject()) {
       throw invalidResponse();
     }
+    long messageId = requiredLong(result, "message_id");
+    if (messageId <= 0) {
+      throw invalidResponse();
+    }
+    return new TelegramSendReceipt(messageId);
   }
 
-  private JsonNode invoke(String method, String body, Duration timeout, int maxResponseBytes) {
+  private JsonNode invoke(
+      String method, String body, Duration timeout, int maxResponseBytes, boolean send) {
     HttpRequest request =
         HttpRequest.newBuilder(endpoint(method))
             .timeout(timeout)
@@ -149,10 +157,10 @@ public final class JdkTelegramBotApi implements TelegramBotApi {
       throw new TelegramApiException(TelegramApiException.Reason.TIMEOUT);
     }
     byte[] responseBody = readBounded(response.body(), maxResponseBytes, remaining);
-    return requireSuccessfulResult(response.statusCode(), responseBody);
+    return requireSuccessfulResult(response.statusCode(), responseBody, send);
   }
 
-  private JsonNode requireSuccessfulResult(int status, byte[] body) {
+  private JsonNode requireSuccessfulResult(int status, byte[] body, boolean send) {
     if (status == 401 || status == 403 || status == 404) {
       throw new TelegramApiException(TelegramApiException.Reason.UNAUTHORIZED);
     }
@@ -163,6 +171,9 @@ public final class JdkTelegramBotApi implements TelegramBotApi {
       throw new TelegramApiException(TelegramApiException.Reason.UNAVAILABLE);
     }
     if (status < 200 || status >= 300) {
+      if (send && status >= 400 && status <= 499) {
+        throw new TelegramApiException(TelegramApiException.Reason.PERMANENT_REJECTION);
+      }
       throw invalidResponse();
     }
 
@@ -172,7 +183,7 @@ public final class JdkTelegramBotApi implements TelegramBotApi {
       throw invalidResponse();
     }
     if (!ok.asBoolean()) {
-      throw apiFailure(root);
+      throw apiFailure(root, send);
     }
     JsonNode result = root.get("result");
     if (result == null || result.isNull()) {
@@ -181,7 +192,7 @@ public final class JdkTelegramBotApi implements TelegramBotApi {
     return result;
   }
 
-  private static TelegramApiException apiFailure(JsonNode root) {
+  private static TelegramApiException apiFailure(JsonNode root, boolean send) {
     int errorCode = optionalErrorCode(root);
     if (errorCode == 401 || errorCode == 403 || errorCode == 404) {
       return new TelegramApiException(TelegramApiException.Reason.UNAUTHORIZED);
@@ -191,6 +202,9 @@ public final class JdkTelegramBotApi implements TelegramBotApi {
     }
     if (errorCode >= 500 && errorCode <= 599) {
       return new TelegramApiException(TelegramApiException.Reason.UNAVAILABLE);
+    }
+    if (send && errorCode >= 400 && errorCode <= 499) {
+      return new TelegramApiException(TelegramApiException.Reason.PERMANENT_REJECTION);
     }
     return invalidResponse();
   }

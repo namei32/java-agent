@@ -391,7 +391,7 @@ Worker 每次启动先扫描权威账本，使用 Signal Version + Condition 防
 
 ## 12. Task F9：Telegram Receipt 与发送确定性分类
 
-状态：进行中。
+状态：已完成。
 
 先扩展：
 
@@ -420,9 +420,24 @@ RED/GREEN：
 
 预计提交：`feat: 固定 Telegram 投递确认语义`
 
+RED/GREEN 证据（2026-07-16）：聚焦命令首次在 Bootstrap 测试编译阶段以 20 个错误失败，缺失
+`TelegramSendReceipt`、`TelegramDeliveryTransport`、永久拒绝分类和纯 Terminal Projector。
+实现后，Transport/Renderer 9 个单元测试与 JDK Loopback Client 27 个集成测试全部通过：只有
+`ok=true` 且正整数 `message_id` 生成脱敏 Receipt；401/403/404 和明确 4xx 转 Permanent，显式
+429 只返回 Retry-After，不在 Transport 内重试；Timeout、I/O、5xx、中断、响应超限/损坏和缺失
+Receipt 均为 Unknown，异常不保留 Cause、Token、URI、Body 或 Description。
+
+`TelegramTerminalRenderer` 已收缩为确定性的终态文本/分片 Projector，旧
+`TelegramDeliveryPolicy` 被删除。易失兼容路径也只发送一次，429 不再 Sleep/重试，避免与持久
+Coordinator 形成双重预算。Bootstrap Reactor 回归执行上游 Kernel 51、Application 152、SQLite
+76、Spring AI 35、MCP 32 和 Bootstrap 147 个单元测试均通过；首次执行只剩旧
+`TelegramChannelIT` 的“429 后内存重试”预期失败，迁移为单次发送后，JDK Client + Channel IT
+31 个集成测试全部通过。Compat Telegram Golden Fixture 25 个场景也全部通过。所有 HTTP 都使用
+Loopback Stub，没有访问真实 Telegram、Token、Workspace 或外网。
+
 ## 13. Task F10：Telegram 持久纵向装配与第二阶段门禁
 
-状态：未开始。
+状态：进行中。
 
 先写：
 

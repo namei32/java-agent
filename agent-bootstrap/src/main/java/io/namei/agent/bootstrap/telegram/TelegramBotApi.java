@@ -6,5 +6,5 @@ import java.util.List;
 public interface TelegramBotApi {
   List<TelegramUpdate> getUpdates(long offset, Duration longPollTimeout);
 
-  void sendMessage(long chatId, String text);
+  TelegramSendReceipt sendMessage(long chatId, String text);
 }
