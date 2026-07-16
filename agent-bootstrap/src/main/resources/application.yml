@@ -38,6 +38,21 @@ agent:
     buffer-capacity: ${AGENT_CLI_BUFFER_CAPACITY:32}
     publish-timeout: ${AGENT_CLI_PUBLISH_TIMEOUT:2s}
     poll-timeout: ${AGENT_CLI_POLL_TIMEOUT:100ms}
+  channels:
+    telegram:
+      enabled: ${AGENT_TELEGRAM_ENABLED:false}
+      allow-from: ${AGENT_TELEGRAM_ALLOW_FROM:}
+      max-concurrent-turns: ${AGENT_TELEGRAM_MAX_CONCURRENT_TURNS:8}
+      buffer-capacity: ${AGENT_TELEGRAM_BUFFER_CAPACITY:32}
+      publish-timeout: ${AGENT_TELEGRAM_PUBLISH_TIMEOUT:2s}
+      poll-timeout: ${AGENT_TELEGRAM_POLL_TIMEOUT:100ms}
+      connect-timeout: ${AGENT_TELEGRAM_CONNECT_TIMEOUT:5s}
+      long-poll-timeout: ${AGENT_TELEGRAM_LONG_POLL_TIMEOUT:20s}
+      poll-request-timeout: ${AGENT_TELEGRAM_POLL_REQUEST_TIMEOUT:25s}
+      send-request-timeout: ${AGENT_TELEGRAM_SEND_REQUEST_TIMEOUT:5s}
+      shutdown-timeout: ${AGENT_TELEGRAM_SHUTDOWN_TIMEOUT:5s}
+      retry-backoff: ${AGENT_TELEGRAM_RETRY_BACKOFF:250ms}
+      max-retry-after: ${AGENT_TELEGRAM_MAX_RETRY_AFTER:5s}
   mcp:
     mode: ${AGENT_MCP_MODE:DISABLED}
     config-file: ${AGENT_MCP_CONFIG_FILE:}

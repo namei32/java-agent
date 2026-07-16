@@ -310,7 +310,7 @@ API、调用业务或推进 offset，`REQUESTED` 与 Shutdown 竞争仍保持 Fi
 
 ## 11. Task E8：Spring Bootstrap 与默认零网络
 
-状态：待 E7。
+状态：已完成。
 
 先写 `TelegramBootstrapTest`：
 
@@ -336,6 +336,19 @@ RED/GREEN：
 - 本地 Runbook 的 Disabled、Fake/测试和真实 Smoke 暂停说明。
 
 预计提交：`feat: 装配默认关闭的 Telegram Channel`
+
+RED/GREEN 证据（2026-07-16）：聚焦命令首次在 Bootstrap 测试编译阶段因
+`TelegramSecretSource` 和 `TelegramChannelConfiguration` 缺失而失败；最小条件装配、模板和
+Runbook 完成后，`TelegramBootstrapTest,CliBootstrapTest` 共 13 个测试全部通过。Servlet
+默认只创建并启动空 `ChannelHost`，没有 Secret Source、Token、API、Adapter、网络或 Worker；
+CLI Non-Web 即使误设 Enabled 也不绑定 Telegram 配置。Enabled 路径先绑定并验证 Allowlist/
+预算，再延迟读取一次 Token；缺失/非法 Token 不进入异常，注入 Fake API 后 Context Close 会
+中断 Poll 并有界收敛为 `STOPPED`。额外使用真实 Spring Boot Servlet Context 执行
+`PassiveChatEndpointIT`，证明 `application.yml` 的空 Allowlist Disabled 默认可绑定，既有 HTTP/
+SQLite 主线正常且没有 Telegram 网络。另用“读取 Token Entry 即抛错”的受控 Environment
+取得子行为 RED，再让配置检查在复制环境前剔除 `AGENT_TELEGRAM_BOT_TOKEN`；连同既有配置检查
+回归共 16 个测试通过。配置检查仍在 Spring Context 前退出，YAML 不解析 Token；真实 Token、
+Telegram 网络、用户数据和 Smoke 继续保持未授权。
 
 ## 12. Task E9：Golden、集成、阶段门禁与文档收口
 

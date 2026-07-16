@@ -6,12 +6,14 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import tools.jackson.databind.ObjectMapper;
 
 /** 在启动应用前执行只读配置检查。 */
 public final class ConfigurationCheckCommand {
   private static final String CHECK_SWITCH = "--agent.config-check";
   private static final String CONFIG_FILE_PREFIX = "--agent.config-file=";
+  private static final Set<String> RUNTIME_ONLY_SECRETS = Set.of("AGENT_TELEGRAM_BOT_TOKEN");
   private static final ObjectMapper JSON = new ObjectMapper();
 
   private ConfigurationCheckCommand() {}
@@ -35,7 +37,7 @@ public final class ConfigurationCheckCommand {
 
     var inputs =
         new ConfigurationInputs(
-            workingDirectory, commandLineConfigFile(args), Map.copyOf(environment));
+            workingDirectory, commandLineConfigFile(args), configurationEnvironment(environment));
     ConfigurationResolution resolution = new ConfigurationResolver().resolve(inputs);
     boolean valid = resolution.active().isPresent();
 
@@ -52,6 +54,18 @@ public final class ConfigurationCheckCommand {
       }
     }
     return selected;
+  }
+
+  private static Map<String, String> configurationEnvironment(Map<String, String> environment) {
+    var filtered = new LinkedHashMap<String, String>();
+    for (Map.Entry<String, String> entry : environment.entrySet()) {
+      String name = Objects.requireNonNull(entry.getKey(), "environment key");
+      if (RUNTIME_ONLY_SECRETS.contains(name)) {
+        continue;
+      }
+      filtered.put(name, Objects.requireNonNull(entry.getValue(), "environment value"));
+    }
+    return Map.copyOf(filtered);
   }
 
   private static Map<String, Object> report(ConfigurationResolution resolution, boolean valid) {

@@ -10,6 +10,7 @@ import io.namei.agent.application.ModelStreamLimitExceededException;
 import io.namei.agent.application.ToolRuntimeMode;
 import io.namei.agent.application.TurnCancellation;
 import io.namei.agent.bootstrap.NameiAgentApplication;
+import io.namei.agent.bootstrap.channel.ChannelHost;
 import io.namei.agent.bootstrap.cli.CliInputException;
 import io.namei.agent.bootstrap.cli.CliMode;
 import io.namei.agent.bootstrap.cli.CliOutputException;
@@ -17,6 +18,9 @@ import io.namei.agent.bootstrap.cli.CliProperties;
 import io.namei.agent.bootstrap.cli.LocalCliRunner;
 import io.namei.agent.bootstrap.cli.Utf8CliInput;
 import io.namei.agent.bootstrap.cli.Utf8CliOutput;
+import io.namei.agent.bootstrap.telegram.TelegramBotApi;
+import io.namei.agent.bootstrap.telegram.TelegramChannelAdapter;
+import io.namei.agent.bootstrap.telegram.TelegramSecretSource;
 import io.namei.agent.kernel.memory.MemoryRuntimeMode;
 import io.namei.agent.kernel.model.ChatModelResponse;
 import io.namei.agent.kernel.port.ChatModelPort;
@@ -62,6 +66,7 @@ class CliBootstrapTest {
           "--agent.tools.mode=DISABLED",
           "--agent.memory.mode=DISABLED",
           "--agent.mcp.mode=DISABLED",
+          "--agent.channels.telegram.enabled=true",
           "--agent.cli.session-id=cli:test-session",
           "--agent.cli.conversation-id=test-conversation"
         };
@@ -76,6 +81,10 @@ class CliBootstrapTest {
           .isEqualTo("test-conversation");
       assertThat(context.getBeansOfType(org.springframework.boot.web.server.WebServer.class))
           .isEmpty();
+      assertThat(context.getBeansOfType(ChannelHost.class)).isEmpty();
+      assertThat(context.getBeansOfType(TelegramSecretSource.class)).isEmpty();
+      assertThat(context.getBeansOfType(TelegramBotApi.class)).isEmpty();
+      assertThat(context.getBeansOfType(TelegramChannelAdapter.class)).isEmpty();
       assertThat(Files.isRegularFile(workspace.resolve("sessions.db"))).isTrue();
     }
   }
