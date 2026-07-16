@@ -1,6 +1,6 @@
 # 渠道账本备份、恢复与回退手册
 
-- 状态：已批准实施边界，待临时数据库演练
+- 状态：已批准，临时数据库演练已通过
 - 日期：2026-07-16
 - 适用数据库：`<workspace>/channels/channel-ledger.db`
 - Contract：[渠道可靠投递、幂等与恢复契约](../contracts/channel-reliable-delivery.md)
@@ -65,6 +65,22 @@ R6.4 自动化使用 JUnit `@TempDir` 创建虚构 V0 数据库，并证明：
 - `ChannelLedgerSchemaInitializerTest`
 - `ChannelLedgerRollbackIT`
 
+执行命令：
+
+```bash
+./mvnw --batch-mode --no-transfer-progress -pl agent-bootstrap -am -Pfailure \
+  -Dit.test=TelegramReliableDeliveryFailureIT,ChannelLedgerRollbackIT \
+  -Dfailsafe.failIfNoSpecifiedTests=false verify
+```
+
+2026-07-16 的临时目录演练已通过。`ChannelLedgerRollbackIT` 创建虚构 V0，使用生产
+`ChannelLedgerSchemaInitializer` 生成迁移前 Online Backup，并验证源库迁移为 V1、Backup 独立
+打开后仍为 V0。测试随后两次把 Backup 复制到同文件系统 Staging，经 `quick_check` 和对象检查后，
+把现有 `.db/-wal/-shm` 集合原子移入不同 Quarantine，再原子替换主文件；两次恢复后的主库均为健康
+V0，唯一原始 Backup 的 SHA-256 均未变化。最后把恢复库重新迁移为 V1，验证原 Backup 仍未修改且
+生成了新的迁移 Backup。测试结束无 Staging、活跃 Connection 或渠道 Worker；全部路径均在 JUnit
+`@TempDir`，未读取真实 Workspace。
+
 ## 5. 真实环境只读检查模板
 
 以下模板只在另行批准真实 Workspace 后使用。先由操作者显式设置路径，不把路径提交 Git：
@@ -110,6 +126,55 @@ sqlite3 -readonly "$CHANNEL_LEDGER_DB" \
 7. 使用目标旧二进制只读/Disabled 启动检查；未批准前不重新启用 Telegram。
 
 不得覆盖唯一的失败现场或唯一 Backup。原始集合至少保留到恢复验收结束。
+
+### 6.3 获批后的停机恢复命令模板
+
+以下命令仍受本文开头的真实 Workspace 独立批准约束。操作者必须先停止应用，确认 Telegram 与
+Reliability 均为 Disabled，并把三个占位符替换为已批准值。`RESTORE` 必须与目标数据库位于同一
+文件系统；命令不负责停止服务，也不会删除 Quarantine。
+
+```bash
+export AGENT_TELEGRAM_ENABLED=false
+export AGENT_CHANNEL_RELIABILITY_MODE=DISABLED
+export CHANNEL_LEDGER_DIR="<approved-workspace>/channels"
+export BACKUP="$CHANNEL_LEDGER_DIR/channel-ledger.db.v0-to-v1-<approved-backup-id>.bak"
+export RESTORE="$CHANNEL_LEDGER_DIR/.channel-ledger.db.restore"
+export QUARANTINE="$CHANNEL_LEDGER_DIR/quarantine-<approved-rollback-id>"
+export DB="$CHANNEL_LEDGER_DIR/channel-ledger.db"
+
+test -f "$DB"
+test -f "$BACKUP"
+test ! -e "$RESTORE"
+test ! -e "$QUARANTINE"
+if lsof "$DB" "$DB-wal" "$DB-shm" >/dev/null 2>&1; then exit 1; fi
+
+BACKUP_HASH="$(shasum -a 256 "$BACKUP" | awk '{print $1}')"
+test "$(sqlite3 -readonly "$BACKUP" 'PRAGMA quick_check(1);')" = "ok"
+test "$(sqlite3 -readonly "$BACKUP" \
+  'SELECT version FROM channel_schema WHERE singleton = 1;')" = "0"
+test "$(sqlite3 -readonly "$BACKUP" \
+  "SELECT group_concat(name, ',') FROM (SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name);")" = "channel_schema"
+
+cp -p "$BACKUP" "$RESTORE"
+test "$(sqlite3 -readonly "$RESTORE" 'PRAGMA quick_check(1);')" = "ok"
+test "$(sqlite3 -readonly "$RESTORE" \
+  'SELECT version FROM channel_schema WHERE singleton = 1;')" = "0"
+
+mkdir "$QUARANTINE"
+for SOURCE in "$DB" "$DB-wal" "$DB-shm"; do
+  if test -e "$SOURCE"; then mv "$SOURCE" "$QUARANTINE/"; fi
+done
+mv "$RESTORE" "$DB"
+
+test "$(sqlite3 -readonly "$DB" 'PRAGMA quick_check(1);')" = "ok"
+test "$(sqlite3 -readonly "$DB" \
+  'SELECT version FROM channel_schema WHERE singleton = 1;')" = "0"
+test "$BACKUP_HASH" = "$(shasum -a 256 "$BACKUP" | awk '{print $1}')"
+```
+
+预期成功结果是所有 `test` 均返回零、命令本身不打印数据库内容，主文件为健康 V0，原 V1/WAL/SHM
+只存在于 Quarantine，原 Backup Hash 不变。任一命令非零即停止；不要执行剩余步骤、反向移动文件
+或手工修库，由操作者保留 Staging/Quarantine 并升级处理。
 
 ## 7. 恢复后验证
 
