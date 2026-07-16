@@ -1,7 +1,7 @@
 # R6.4 渠道可靠投递、幂等与恢复工作计划
 
-- 状态：F1–F13 离线实现、本地验收与 PR #7 远程三套门禁已完成；Review/合并待执行
-- 当前任务：保持 Draft PR，等待 Review 与合并决策
+- 状态：F1–F13 离线实现与高风险 Review 修复已完成，本地三套门禁全绿；进入 PR 发布门禁
+- 发布顺序：修复提交远程 CI -> PR Ready -> 明确批准 -> 合并与主分支复验
 - 日期：2026-07-16
 - 分支：`agent/r6-reliable-delivery`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`
@@ -602,7 +602,8 @@ Fixture 的 40 个场景，并增加 Telegram Instance/Token 轮换、Terminal R
 
 ## 16. Task F13：最终门禁、文档、PR 与合并准备
 
-状态：本地阶段与 PR #7 远程三套门禁已完成；Review/合并待执行。
+状态：离线实现和高风险 Review 修复已完成；修复提交须重新通过远程三套门禁后才能转为
+Ready，合并仍需明确批准。
 
 先更新 Contract/Spec/ADR/计划状态、Fixture Manifest Hash、文档导航、R6 总计划、Roadmap、重写指南、能力矩阵、配置模板和 Runbook。记录实际证据，不预填测试数。
 
@@ -664,8 +665,27 @@ git diff --check
 `5eac80a` 触发的远程 Run `29503828149` 中，“默认构建”“失败路径”“Python/Java 兼容”三项均
 通过。
 
-当前结论仅为“R6.4 离线实现已通过本地与远程自动化验证”。真实 Telegram Token、网络 Smoke、
-用户数据与部署仍未获授权；PR #7 继续保持 Draft，Review 与合并尚未完成，因此本阶段不声明已合并
+高风险 Review 修复与本地复验证据（2026-07-16）：
+
+- 修复 V0 Backup 目标文件冲突时误删既有文件：初始化器先用原子 `createFile` 占有目标，只清理由
+  本次尝试创建的文件；确定性 RED/GREEN 测试证明既有哨兵文件保持原内容，Backup Port 不会被调用。
+- 修复 SQLite 将不同精度的 ISO-8601 文本按字典序比较造成的同秒时间倒序：Due、Retention 与
+  Recovery 的比较和排序统一使用 SQLite 时间值；测试覆盖整秒与 `+100ms` 的 Retry Claim、投递
+  先后和清理边界。
+- 修复 JDBC `getLong` 将 SQLite `REAL 0.5` 静默截断为合法计数：账本只接受 SQLite 返回的整数
+  Java 类型，严格拒绝小数、文本、空值和负数；`payload_pruned` 进一步限定为 `0/1`。
+- 修复 Worker 关闭超时时提前释放 Runtime Session：只有 Poll、Turn 与 Delivery Worker 全部停止
+  后才释放 Session；测试以不可中断的受控发送证明，同一 Runtime 在旧 Worker 存活时不能重开。
+- 修复后 `spotless:check`、默认 `clean verify` 565 项、`-Pfailure verify` 134 项、
+  `-Pcompat verify` 671 项全部通过，零失败、错误或跳过；Kernel 依赖树、`git diff --check`、默认
+  禁用、敏感信息、数据库产物和反向依赖审计均通过。
+- 40 场景 Fixture 未修改，SHA-256 仍为
+  `f21efc2426c18af880239bb41e81deb142c0eab070d8eb89b034237ce7071399` 并与 Manifest 一致；本轮
+  没有改变已批准的 Schema、状态、重试上限或真实网络边界。
+
+当前结论仅为“R6.4 离线实现和 Review 修复已通过本地自动化验证，修复前 Head 已通过远程
+自动化验证”。Review 修复 Head 仍须重新通过远程门禁，之后才能把 PR #7 转为 Ready；合并仍需
+明确批准。真实 Telegram Token、网络 Smoke、用户数据与部署仍未获授权，因此本阶段不声明已合并
 或已上线。
 
 ## 17. 暂停条件

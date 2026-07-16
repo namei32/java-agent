@@ -156,19 +156,19 @@ public final class ChannelLedgerSchemaInitializer {
 
   private void backupV0(Connection source) {
     Path destination = null;
+    boolean ownsDestination = false;
     try {
       UUID id = Objects.requireNonNull(backupId.get(), "backupId value");
       destination = database.resolveSibling(DATABASE_FILE_NAME + ".v0-to-v1-" + id + ".bak");
-      if (Files.exists(destination)) {
-        throw new IOException("backup destination exists");
-      }
+      Files.createFile(destination);
+      ownsDestination = true;
       backup.backup(source, destination);
       if (!Files.isRegularFile(destination) || Files.size(destination) == 0L) {
         throw new IOException("backup missing");
       }
       validateV0Backup(destination);
     } catch (Exception exception) {
-      if (destination != null) {
+      if (ownsDestination) {
         try {
           Files.deleteIfExists(destination);
         } catch (IOException cleanupFailure) {

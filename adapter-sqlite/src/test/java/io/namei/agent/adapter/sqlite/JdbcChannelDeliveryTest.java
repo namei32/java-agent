@@ -236,6 +236,34 @@ class JdbcChannelDeliveryTest {
   }
 
   @Test
+  void retryDueTimeUsesChronologicalOrderWithinTheSameSecond() {
+    ledger.recordEvent(feedback("update-0", 0, "delivery-1", "payload"));
+    ChannelLedgerResult.DeliveryWork first = claim(OWNER_A, NOW.plusMillis(800)).orElseThrow();
+    Instant completedAt = NOW.plusMillis(900);
+    Instant due = NOW.plusSeconds(1);
+    ledger.recordDeliveryOutcome(
+        outcome(
+            first,
+            DeliveryAttemptOutcome.RETRYABLE_REJECTED,
+            null,
+            due,
+            "RATE_LIMITED",
+            completedAt));
+
+    assertThat(claim(OWNER_A, due.plusMillis(100))).isPresent();
+  }
+
+  @Test
+  void pendingDeliveriesAreClaimedByChronologicalCreationTimeWithinTheSameSecond() {
+    ledger.recordEvent(feedbackAt("update-0", 0, "delivery-first", "first", NOW));
+    ledger.recordEvent(feedbackAt("update-1", 1, "delivery-second", "second", NOW.plusMillis(100)));
+
+    ChannelLedgerResult.DeliveryWork claimed = claim(OWNER_A, NOW.plusSeconds(1)).orElseThrow();
+
+    assertThat(claimed.deliveryId()).isEqualTo("delivery-first");
+  }
+
+  @Test
   void permanentAndUnknownOutcomesStopOnlyTheirDelivery() throws Exception {
     ledger.recordEvent(feedback("update-0", 0, "delivery-a", "first"));
     ledger.recordEvent(feedback("update-1", 1, "delivery-b", "second"));
@@ -330,6 +358,11 @@ class JdbcChannelDeliveryTest {
 
   private ChannelLedgerCommand.RecordEvent feedback(
       String eventId, long sequence, String deliveryId, String payload) {
+    return feedbackAt(eventId, sequence, deliveryId, payload, NOW);
+  }
+
+  private ChannelLedgerCommand.RecordEvent feedbackAt(
+      String eventId, long sequence, String deliveryId, String payload, Instant recordedAt) {
     String fingerprint =
         ChannelFingerprint.event(
             INSTANCE, eventId, sequence, InboxEventKind.FEEDBACK, "SESSION_BUSY", "");
@@ -355,7 +388,7 @@ class JdbcChannelDeliveryTest {
         "",
         null,
         delivery,
-        NOW);
+        recordedAt);
   }
 
   private DeliveryEnvelope terminal(String deliveryId, String turnId, String... parts) {

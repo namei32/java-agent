@@ -138,6 +138,19 @@ class JdbcChannelLedgerInboxTest {
   }
 
   @Test
+  void nonIntegerLedgerCountersFailClosedInsteadOfBeingTruncated() throws Exception {
+    ledger.recordEvent(event("update-0", 0, "UNAUTHORIZED"));
+    try (var connection = schema.openConnection()) {
+      connection.createStatement().executeUpdate("UPDATE channel_cursors SET revision = 0.5");
+    }
+
+    assertThatThrownBy(() -> ledger.snapshot(INSTANCE))
+        .isInstanceOf(ChannelLedgerRepositoryException.class)
+        .extracting(exception -> ((ChannelLedgerRepositoryException) exception).failure())
+        .isEqualTo(ChannelLedgerRepositoryFailure.OPERATION_FAILED);
+  }
+
+  @Test
   void commandRejectsSequenceThatCannotAdvance() {
     assertThatThrownBy(() -> event("overflow", Long.MAX_VALUE, "UNAUTHORIZED"))
         .isInstanceOf(IllegalArgumentException.class);

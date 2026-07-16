@@ -263,7 +263,7 @@ public final class TelegramReliableChannelAdapter implements ChannelAdapter {
         stopped &= !currentWorker.isRunning();
       }
       ChannelReliabilityRuntime.Session currentSession = session;
-      if (currentSession != null) {
+      if (stopped && currentSession != null) {
         currentSession.close();
       }
 
@@ -466,7 +466,7 @@ public final class TelegramReliableChannelAdapter implements ChannelAdapter {
       worker.close();
     }
     ChannelReliabilityRuntime.Session current = session;
-    if (current != null) {
+    if ((worker == null || !worker.isRunning()) && current != null) {
       current.close();
     }
   }

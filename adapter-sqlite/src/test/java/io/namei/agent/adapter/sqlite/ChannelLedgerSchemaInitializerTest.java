@@ -231,6 +231,35 @@ class ChannelLedgerSchemaInitializerTest {
   }
 
   @Test
+  void existingBackupDestinationIsNeverDeletedWhenMigrationRefusesToOverwriteIt() throws Exception {
+    createV0(database());
+    Path destination =
+        database().resolveSibling("channel-ledger.db.v0-to-v1-" + BACKUP_ID + ".bak");
+    byte[] sentinel = "existing-verified-backup".getBytes(StandardCharsets.UTF_8);
+    Files.write(destination, sentinel);
+    var backupCalls = new AtomicInteger();
+    var initializer =
+        new ChannelLedgerSchemaInitializer(
+            database(),
+            5_000,
+            CLOCK,
+            (source, target) -> backupCalls.incrementAndGet(),
+            () -> BACKUP_ID);
+
+    assertThatThrownBy(initializer::initialize)
+        .isInstanceOf(ChannelLedgerRepositoryException.class)
+        .extracting(exception -> ((ChannelLedgerRepositoryException) exception).failure())
+        .isEqualTo(ChannelLedgerRepositoryFailure.BACKUP_FAILED);
+
+    assertThat(backupCalls).hasValue(0);
+    assertThat(Files.readAllBytes(destination)).containsExactly(sentinel);
+    try (var connection = rawConnection(database())) {
+      assertThat(schemaVersion(connection)).isZero();
+      assertThat(pragmaText(connection, "journal_mode")).isEqualToIgnoringCase("delete");
+    }
+  }
+
+  @Test
   void rejectsFutureUnknownAndJournalDriftWithoutRepairingThem() throws Exception {
     var initializer = new ChannelLedgerSchemaInitializer(database(), 5_000);
     initializer.initialize();

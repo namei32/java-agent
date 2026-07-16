@@ -141,6 +141,21 @@ class ChannelLedgerRecoveryFailureTest {
   }
 
   @Test
+  void cleanupUsesChronologicalTimeWithinTheSameSecond() throws Exception {
+    createResolved("update-0", 0, "delivery-a", DeliveryAttemptOutcome.SUCCEEDED);
+    Instant cutoff = NOW.plusSeconds(1).plusMillis(100);
+
+    ChannelLedgerResult.Cleanup cleanup =
+        ledger.cleanup(
+            new ChannelLedgerCommand.Cleanup(
+                INSTANCE, cutoff, cutoff.plusMillis(100), 10, 100, 100));
+
+    assertThat(cleanup.processed()).isEqualTo(2);
+    assertThat(payloadPruned("delivery-a")).isOne();
+    assertThat(eventSequences()).isEmpty();
+  }
+
+  @Test
   void terminalReplaySurvivesResolvedPayloadPruning() throws Exception {
     runningTurn("update-0", 0, "message-0", "turn-0");
     DeliveryEnvelope delivery = terminal("delivery-a", "turn-0", "terminal-payload");

@@ -110,8 +110,8 @@ final class JdbcChannelDeliveryLedger {
             FROM channel_deliveries
             WHERE channel = ? AND instance_id = ?
               AND state IN ('DELIVERED', 'FAILED')
-              AND payload_pruned = 0 AND updated_at < ?
-            ORDER BY updated_at ASC, delivery_id ASC
+              AND payload_pruned = 0 AND julianday(updated_at) < julianday(?)
+            ORDER BY julianday(updated_at) ASC, delivery_id ASC
             LIMIT ?
             """)) {
       statement.setString(1, command.instance().channel());
@@ -138,7 +138,7 @@ final class JdbcChannelDeliveryLedger {
               UPDATE channel_deliveries
               SET payload_pruned = 1, revision = revision + 1, updated_at = ?
               WHERE delivery_id = ? AND state IN ('DELIVERED', 'FAILED')
-                AND payload_pruned = 0 AND updated_at < ?
+                AND payload_pruned = 0 AND julianday(updated_at) < julianday(?)
               """)) {
         update.setString(1, command.cleanedAt().toString());
         update.setString(2, deliveryId);
@@ -168,7 +168,7 @@ final class JdbcChannelDeliveryLedger {
                 AND a.attempt_number = p.attempt_count
             WHERE d.channel = ? AND d.instance_id = ?
               AND d.state = 'DELIVERING' AND d.owner_id <> ?
-            ORDER BY d.updated_at ASC, d.delivery_id ASC
+            ORDER BY julianday(d.updated_at) ASC, d.delivery_id ASC
             LIMIT ?
             """)) {
       statement.setString(1, command.instance().channel());
@@ -635,10 +635,11 @@ final class JdbcChannelDeliveryLedger {
               AND d.payload_pruned = 0 AND p.attempt_count < 2
               AND (
                 p.state = 'PENDING'
-                OR (p.state = 'RETRY_WAIT' AND p.next_attempt_at <= ?)
+                OR (p.state = 'RETRY_WAIT'
+                  AND julianday(p.next_attempt_at) <= julianday(?))
               )
-            ORDER BY COALESCE(p.next_attempt_at, d.created_at) ASC,
-              d.created_at ASC, d.delivery_id ASC
+            ORDER BY COALESCE(julianday(p.next_attempt_at), julianday(d.created_at)) ASC,
+              julianday(d.created_at) ASC, d.delivery_id ASC
             LIMIT 1
             """)) {
       statement.setString(1, command.instance().channel());
@@ -880,7 +881,7 @@ final class JdbcChannelDeliveryLedger {
           DeliveryState.valueOf(rows.getString("state")),
           exactNonNegativeInt(rows, "part_count"),
           exactNonNegativeInt(rows, "next_part_index"),
-          rows.getInt("payload_pruned") == 1,
+          exactBoolean(rows, "payload_pruned"),
           rows.getString("owner_id"),
           rows.getString("lease_expires_at"),
           rows.getString("last_error_code"),
@@ -1138,19 +1139,33 @@ final class JdbcChannelDeliveryLedger {
   }
 
   private static long exactNonNegativeLong(ResultSet rows, String column) throws SQLException {
-    long value = rows.getLong(column);
-    if (rows.wasNull() || value < 0) {
+    return exactNonNegativeLong(rows.getObject(column));
+  }
+
+  private static long exactNonNegativeLong(ResultSet rows, int column) throws SQLException {
+    return exactNonNegativeLong(rows.getObject(column));
+  }
+
+  private static long exactNonNegativeLong(Object stored) throws SQLException {
+    if (!(stored instanceof Byte
+        || stored instanceof Short
+        || stored instanceof Integer
+        || stored instanceof Long)) {
+      throw new SQLException("invalid delivery integer");
+    }
+    long value = ((Number) stored).longValue();
+    if (value < 0) {
       throw new SQLException("invalid delivery integer");
     }
     return value;
   }
 
-  private static long exactNonNegativeLong(ResultSet rows, int column) throws SQLException {
-    long value = rows.getLong(column);
-    if (rows.wasNull() || value < 0) {
-      throw new SQLException("invalid delivery integer");
+  private static boolean exactBoolean(ResultSet rows, String column) throws SQLException {
+    long value = exactNonNegativeLong(rows, column);
+    if (value > 1) {
+      throw new SQLException("invalid delivery boolean");
     }
-    return value;
+    return value == 1;
   }
 
   private static long increment(long value) {

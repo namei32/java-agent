@@ -1,6 +1,7 @@
 package io.namei.agent.bootstrap.telegram;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.namei.agent.adapter.sqlite.ChannelLedgerSchemaInitializer;
 import io.namei.agent.adapter.sqlite.JdbcChannelLedger;
@@ -195,6 +196,61 @@ class TelegramReliableChannelAdapterTest {
     }
   }
 
+  @Test
+  void shutdownDoesNotReleaseRuntimeOwnershipWhileDeliveryWorkerIsStillAlive() throws Exception {
+    Path workspace = temporaryDirectory.resolve("blocked-delivery-workspace");
+    var api = new ScriptedApi();
+    var sendEntered = new CountDownLatch(1);
+    var releaseSend = new CountDownLatch(1);
+    api.beforeSend =
+        () -> {
+          sendEntered.countDown();
+          awaitUninterruptibly(releaseSend);
+        };
+    api.enqueue(List.of(update(40, 4, "blocked delivery")));
+    var reliability =
+        new ChannelReliabilityProperties(
+            ChannelReliabilityMode.SQLITE, 10, 10, Duration.ofDays(30), 1_000, 100);
+    var runtime = new ChannelReliabilityRuntime(workspace, reliability, Clock.systemUTC());
+    var token = new TelegramBotToken("123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZ_1234");
+    var instance = TelegramChannelInstance.from(token);
+    TelegramReliableChannelAdapter adapter =
+        new TelegramReliableChannelAdapter(
+            api,
+            new TelegramUpdateMapper(Set.of(10001L), () -> "blocked-turn"),
+            new MessageTurnService(new AnsweringChat()),
+            telegramProperties(Set.of(10001L), Duration.ofMillis(100)),
+            instance,
+            runtime,
+            ChannelThreadStarter.virtualThreads(),
+            duration -> {});
+
+    adapter.start();
+    try {
+      assertThat(sendEntered.await(2, TimeUnit.SECONDS)).isTrue();
+      assertThatThrownBy(adapter::close)
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessage("Telegram 可靠渠道未能在期限内停止");
+
+      ChannelReliabilityRuntime.Session reopened = null;
+      Throwable restartFailure = null;
+      try {
+        reopened = runtime.start(instance.id());
+      } catch (Throwable failure) {
+        restartFailure = failure;
+      } finally {
+        if (reopened != null) {
+          reopened.close();
+        }
+      }
+      assertThat(restartFailure).isInstanceOf(IllegalStateException.class);
+    } finally {
+      releaseSend.countDown();
+      await(() -> reliableWorkers().isEmpty(), "阻塞投递 Worker 退出");
+      adapter.close();
+    }
+  }
+
   private static TelegramReliableChannelAdapter adapter(Path workspace, ScriptedApi api) {
     return adapter(workspace, api, new AnsweringChat(), Set.of(10001L));
   }
@@ -218,6 +274,11 @@ class TelegramReliableChannelAdapterTest {
   }
 
   private static TelegramProperties telegramProperties(Set<Long> allowed) {
+    return telegramProperties(allowed, Duration.ofSeconds(2));
+  }
+
+  private static TelegramProperties telegramProperties(
+      Set<Long> allowed, Duration shutdownTimeout) {
     return new TelegramProperties(
         true,
         allowed.stream().sorted().map(String::valueOf).toList(),
@@ -229,9 +290,24 @@ class TelegramReliableChannelAdapterTest {
         Duration.ofSeconds(1),
         Duration.ofSeconds(2),
         Duration.ofSeconds(1),
-        Duration.ofSeconds(2),
+        shutdownTimeout,
         Duration.ofMillis(10),
         Duration.ofSeconds(1));
+  }
+
+  private static void awaitUninterruptibly(CountDownLatch latch) {
+    boolean interrupted = false;
+    while (true) {
+      try {
+        latch.await();
+        if (interrupted) {
+          Thread.currentThread().interrupt();
+        }
+        return;
+      } catch (InterruptedException failure) {
+        interrupted = true;
+      }
+    }
   }
 
   private static TelegramUpdate update(long updateId, long messageId, String text) {

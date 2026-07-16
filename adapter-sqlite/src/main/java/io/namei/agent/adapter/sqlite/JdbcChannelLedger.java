@@ -634,7 +634,7 @@ public final class JdbcChannelLedger implements ChannelLedgerPort {
             FROM channel_turn_claims
             WHERE channel = ? AND instance_id = ?
               AND (state = 'RESERVED' OR (state = 'RUNNING' AND owner_id <> ?))
-            ORDER BY updated_at ASC, turn_id ASC
+            ORDER BY julianday(updated_at) ASC, turn_id ASC
             LIMIT ?
             """)) {
       statement.setString(1, command.instance().channel());
@@ -732,7 +732,7 @@ public final class JdbcChannelLedger implements ChannelLedgerPort {
             WHERE e.channel = ? AND e.instance_id = ?
               AND e.turn_id IS NULL
               AND e.external_sequence < c.next_sequence
-              AND e.created_at < ?
+              AND julianday(e.created_at) < julianday(?)
             ORDER BY e.external_sequence ASC, e.external_event_id ASC
             LIMIT ?
             """)) {
@@ -752,7 +752,7 @@ public final class JdbcChannelLedger implements ChannelLedgerPort {
               """
               DELETE FROM channel_inbox_events
               WHERE channel = ? AND instance_id = ? AND external_event_id = ?
-                AND turn_id IS NULL AND created_at < ?
+                AND turn_id IS NULL AND julianday(created_at) < julianday(?)
               """)) {
         statement.setString(1, command.instance().channel());
         statement.setString(2, command.instance().value());
@@ -962,16 +962,22 @@ public final class JdbcChannelLedger implements ChannelLedgerPort {
   }
 
   private static long exactNonNegativeLong(ResultSet rows, String column) throws SQLException {
-    long value = rows.getLong(column);
-    if (rows.wasNull() || value < 0) {
-      throw new SQLException("invalid channel ledger integer");
-    }
-    return value;
+    return exactNonNegativeLong(rows.getObject(column));
   }
 
   private static long exactNonNegativeLong(ResultSet rows, int column) throws SQLException {
-    long value = rows.getLong(column);
-    if (rows.wasNull() || value < 0) {
+    return exactNonNegativeLong(rows.getObject(column));
+  }
+
+  private static long exactNonNegativeLong(Object stored) throws SQLException {
+    if (!(stored instanceof Byte
+        || stored instanceof Short
+        || stored instanceof Integer
+        || stored instanceof Long)) {
+      throw new SQLException("invalid channel ledger integer");
+    }
+    long value = ((Number) stored).longValue();
+    if (value < 0) {
       throw new SQLException("invalid channel ledger integer");
     }
     return value;
