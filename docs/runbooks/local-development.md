@@ -40,6 +40,14 @@ AGENT_CLI_CONVERSATION_ID=local
 AGENT_CLI_BUFFER_CAPACITY=32
 AGENT_CLI_PUBLISH_TIMEOUT=2s
 AGENT_CLI_POLL_TIMEOUT=100ms
+AGENT_TELEGRAM_ENABLED=false
+AGENT_TELEGRAM_ALLOW_FROM=
+AGENT_TELEGRAM_BOT_TOKEN=
+AGENT_TELEGRAM_MAX_CONCURRENT_TURNS=8
+AGENT_TELEGRAM_BUFFER_CAPACITY=32
+AGENT_TELEGRAM_LONG_POLL_TIMEOUT=20s
+AGENT_TELEGRAM_POLL_REQUEST_TIMEOUT=25s
+AGENT_TELEGRAM_SHUTDOWN_TIMEOUT=5s
 AGENT_MEMORY_MODE=DISABLED
 AGENT_MEMORY_MAX_FILE_BYTES=65536
 AGENT_MEMORY_MAX_CONTEXT_CHARACTERS=100000
@@ -128,7 +136,44 @@ AGENT_MCP_CONFIG_FILE=/absolute/path/to/mcp-read-only.json
 
 Runtime 在应用启动时发现工具并形成不可变快照。`tools/list_changed` 会使对应 Wrapper 进入 `STALE` 并拒绝后续调用；断线调用不重放，下一次新调用最多尝试一次有界重连，且 Catalog 指纹必须不变。R5.1 没有动态增删 API、后台无限重试或 MCP 状态 HTTP 端点。SDK 包日志在生产配置中关闭，Server 原始 stdout、stderr、命令、路径和错误正文不得用于排障输出。
 
-### 1.3 TOML 兼容模式（DeepSeek 示例）
+### 1.3 Telegram 渠道（默认关闭）
+
+`AGENT_TELEGRAM_ENABLED` 的模板值固定为 `false`。Disabled 时 Servlet 应用只启动空的
+`ChannelHost`，不会读取 `AGENT_TELEGRAM_BOT_TOKEN`、创建 `HttpClient`、访问 Telegram 或
+启动 Telegram Worker；CLI Non-Web 模式即使误设 Enabled 也完全不装配 Telegram。只读配置
+检查在 Spring Context 之前退出，同样不会读取 Token 或启动渠道。
+
+R6.3 离线测试只使用固定假 Token、注入的 Fake API 和 Loopback `HttpServer`。可以运行：
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+./mvnw -pl agent-bootstrap -am \
+  -Dtest=TelegramBootstrapTest,TelegramChannelAdapterTest,TelegramChannelFailureTest \
+  -Dsurefire.failIfNoSpecifiedTests=false test
+
+./mvnw -pl agent-bootstrap -am -Pcompat \
+  -Dtest=TelegramGoldenFixtureTest \
+  -Dsurefire.failIfNoSpecifiedTests=false test
+
+./mvnw -pl agent-bootstrap -am \
+  -Dit.test=TelegramChannelIT \
+  -Dfailsafe.failIfNoSpecifiedTests=false verify
+```
+
+2026-07-16 的本地离线验收结果为：Golden 聚焦 25 个测试、Loopback Channel 纵向集成 4 个；
+最终默认 455 个（413 单元、42 集成）、`failure` 119 个（113 单元、6 集成）、`compat` 519 个
+（476 单元、43 集成）全部通过。运行这些命令不需要真实 Token，也不得临时设置真实 Token。
+
+启用配置要求 `AGENT_TELEGRAM_ALLOW_FROM` 是逗号分隔的正十进制 User ID，Token 只能由
+`AGENT_TELEGRAM_BOT_TOKEN` 提供；两个值都不得写入 Git、日志、异常或工单。并发、Buffer、
+连接、长轮询、发送、关闭和重试预算均有启动时硬上限，且 Poll Request Timeout 必须大于
+Long Poll Timeout。
+
+当前任务没有授权真实 Token、`api.telegram.org`、真实 Chat/User/Message、真实正文、费用或
+部署启用。因此不要把模板改为 Enabled，也不要执行真实渠道 Smoke。真实验证必须在独立任务中
+先批准专用 Bot、测试用户/会话、网络、数据内容和撤销清理方案；离线门禁通过不表示可部署。
+
+### 1.4 TOML 兼容模式（DeepSeek 示例）
 
 从仓库内的安全模板创建本地配置：
 
@@ -319,7 +364,7 @@ cd "$(git rev-parse --show-toplevel)"
 ./mvnw -Pfailure verify
 ```
 
-`failure` 独立覆盖审批错配与过期、批准后取消、Ledger 持久化故障、并发一次性消费、`UNKNOWN` 停机，Memory Embedding 零写入、幂等冲突、数据库不可用、Profile/检索/预算和安全 HTTP 映射，MCP 损坏 JSON、stdout 噪声、错误 Response ID、突然退出、Stale、Catalog 变化和关闭/重连竞态，以及 Provider 流空闲超时/损坏、目标连接取消、背压/断开唤醒、CLI 输出/启动/关闭故障和 SQLite 半轮次隔离。MCP 故障测试只启动仓库编译的 Java Reference Server，不执行真实外部变更。
+`failure` 独立覆盖审批错配与过期、批准后取消、Ledger 持久化故障、并发一次性消费、`UNKNOWN` 停机，Memory Embedding 零写入、幂等冲突、数据库不可用、Profile/检索/预算和安全 HTTP 映射，MCP 损坏 JSON、stdout 噪声、错误 Response ID、突然退出、Stale、Catalog 变化和关闭/重连竞态，Provider 流空闲超时/损坏、目标连接取消、背压/断开唤醒、CLI 输出/启动/关闭故障和 SQLite 半轮次隔离，以及 Telegram Poll 重试/永久失败、断开、取消与关闭竞态。MCP 故障测试只启动仓库编译的 Java Reference Server；Telegram 故障测试只使用内存 Fake API，二者都不执行真实外部变更。
 
 Python/Java Golden 与 Schema 固定样本兼容性：
 
@@ -398,6 +443,15 @@ TOML 模式先运行 `--agent.config-check`。如果诊断为 `CONFIG_ENV_UNRESO
 先把 `AGENT_MCP_MODE` 恢复为 `DISABLED` 并重启，确认普通聊天不依赖 MCP。静态启用失败时核对全局 Tool Mode、两个超时关系、配置文件是否为绝对路径的非符号链接普通文件，以及 Executable/Working Directory 的 Real Path、权限、Server/Tool 上限和 `READ_ONLY` Allowlist。不要改用 Shell、相对命令、`npx`、全环境继承或放宽 Schema 来绕过门禁。
 
 已发布工具在 `tools/list_changed` 后会安全变为不可用，Catalog 改变的重连也不会热替换；恢复方式是审查新 Catalog、更新 Contract/Allowlist 后重启。公开错误只会说明 MCP 工具不可用、执行失败、类型不支持或通信超限，不会显示 Server 正文。不得为了排障打开 SDK/Server 原始内容日志或把 Secret、命令、路径、stdout/stderr 粘贴到工单。
+
+### Telegram 启用失败
+
+先恢复 `AGENT_TELEGRAM_ENABLED=false` 并重启，确认普通 HTTP/CLI 能力不依赖 Telegram。
+只根据稳定配置字段检查 Allowlist、Token 是否存在、预算范围和两个 Poll Timeout 的大小关系；
+不要输出 Token、Bot API URI、Chat/User/Message ID、Update ID、消息正文或 Telegram 原始响应。
+`POLL_UNAUTHORIZED` 需要撤销并重新配置专用测试 Token，`POLL_INVALID_RESPONSE` 和
+`POLL_RETRY_EXHAUSTED` 不能通过无限重试或放宽正文/Deadline 上限规避。真实网络仍须重新授权，
+默认本地排障只运行 Fake/Loopback 测试。
 
 ### 模型返回 404
 

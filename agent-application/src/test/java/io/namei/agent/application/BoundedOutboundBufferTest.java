@@ -12,6 +12,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -125,6 +127,86 @@ class BoundedOutboundBufferTest {
       assertThat(buffer.cancellation().reason()).isEqualTo(TurnCancellationCode.REQUESTED);
     } finally {
       Thread.interrupted();
+    }
+  }
+
+  @Test
+  void requestedCancellationInvokesCallbacksButKeepsTheBufferPublishable() {
+    var inbound = inbound();
+    var messages = new OutboundMessageSequence(inbound);
+    var buffer = new BoundedOutboundBuffer(inbound, 2, Duration.ofSeconds(1));
+    var callbacks = new AtomicInteger();
+    buffer.cancellation().onCancellation(callbacks::incrementAndGet);
+
+    assertThat(buffer.requestCancellation()).isTrue();
+    assertThat(buffer.requestCancellation()).isFalse();
+
+    assertThat(callbacks).hasValue(1);
+    assertThat(buffer.cancellation().isCancellationRequested()).isTrue();
+    assertThat(buffer.cancellation().reason()).isEqualTo(TurnCancellationCode.REQUESTED);
+    buffer.publish(messages.started());
+    buffer.publish(messages.cancelled(TurnCancellationCode.REQUESTED));
+    assertThat(buffer.poll(Duration.ZERO).orElseThrow().type().name()).isEqualTo("TURN_STARTED");
+    assertThat(buffer.poll(Duration.ZERO).orElseThrow().type().name()).isEqualTo("TURN_CANCELLED");
+    assertThat(buffer.isTerminal()).isTrue();
+  }
+
+  @Test
+  @Tag("failure")
+  void requestCannotOverwriteDisconnectBackpressureOrShutdownReasons() {
+    var disconnected = new BoundedOutboundBuffer(inbound(), 1, Duration.ofSeconds(1));
+    assertThat(disconnected.disconnect()).isTrue();
+    assertThat(disconnected.requestCancellation()).isFalse();
+    assertThat(disconnected.cancellation().reason())
+        .isEqualTo(TurnCancellationCode.CHANNEL_DISCONNECTED);
+
+    var shutdown = new BoundedOutboundBuffer(inbound(), 1, Duration.ofSeconds(1));
+    assertThat(shutdown.shutdown()).isTrue();
+    assertThat(shutdown.requestCancellation()).isFalse();
+    assertThat(shutdown.cancellation().reason()).isEqualTo(TurnCancellationCode.SHUTDOWN);
+
+    var inbound = inbound();
+    var messages = new OutboundMessageSequence(inbound);
+    var backpressured = new BoundedOutboundBuffer(inbound, 1, Duration.ofNanos(1));
+    backpressured.publish(messages.started());
+    assertThatThrownBy(() -> backpressured.publish(messages.delta("超出容量")))
+        .isInstanceOf(OutboundDeliveryException.class);
+    assertThat(backpressured.requestCancellation()).isFalse();
+    assertThat(backpressured.cancellation().reason())
+        .isEqualTo(TurnCancellationCode.BACKPRESSURE_EXCEEDED);
+
+    var requestedFirst = new BoundedOutboundBuffer(inbound(), 1, Duration.ofSeconds(1));
+    assertThat(requestedFirst.requestCancellation()).isTrue();
+    assertThat(requestedFirst.disconnect()).isTrue();
+    assertThat(requestedFirst.cancellation().reason()).isEqualTo(TurnCancellationCode.REQUESTED);
+  }
+
+  @Test
+  void waitingConsumerReceivesTheLaterCancellationTerminalNormally() throws Exception {
+    var inbound = inbound();
+    var messages = new OutboundMessageSequence(inbound);
+    var buffer = new BoundedOutboundBuffer(inbound, 2, Duration.ofSeconds(1));
+    var entered = new CountDownLatch(1);
+
+    try (var executor = Executors.newSingleThreadExecutor()) {
+      var consumed =
+          executor.submit(
+              () -> {
+                entered.countDown();
+                var first = buffer.poll(Duration.ofSeconds(5)).orElseThrow();
+                var second = buffer.poll(Duration.ofSeconds(5)).orElseThrow();
+                return java.util.List.of(first, second);
+              });
+      assertThat(entered.await(1, TimeUnit.SECONDS)).isTrue();
+
+      assertThat(buffer.requestCancellation()).isTrue();
+      assertThat(consumed.isDone()).isFalse();
+      buffer.publish(messages.started());
+      buffer.publish(messages.cancelled(TurnCancellationCode.REQUESTED));
+
+      assertThat(consumed.get(2, TimeUnit.SECONDS))
+          .extracting(message -> message.type().name())
+          .containsExactly("TURN_STARTED", "TURN_CANCELLED");
     }
   }
 

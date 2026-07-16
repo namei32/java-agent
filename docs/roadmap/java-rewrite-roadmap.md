@@ -1,7 +1,7 @@
 # Java 重写 Roadmap
 
 - 状态：实施中
-- 最近更新：2026-07-15
+- 最近更新：2026-07-16
 - 基准：`/Users/namei/idea/agent/akashic-agent`
 - 目标项目：`/Users/namei/idea/agent/java-agent`
 
@@ -27,7 +27,7 @@
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
 | R4 | 上下文与记忆 | R4.1、R4.2 已完成 | Java 原生显式记忆管理与语义检索闭环已通过最终门禁；自动写回/Optimizer 仍冻结 |
 | R5 | MCP 与外部工具 | R5.1 已完成 | 静态 stdio 只读 Client、工具发现/投影、取消、隔离和进程回收已验收；远程与副作用范围未开始 |
-| R6 | 渠道与控制面 | R6.1、R6.2 已完成 | 版本化 Message Runtime、本地 CLI 与 Provider Streaming 已验收；真实渠道、可靠投递与 Dashboard 待后续切片 |
+| R6 | 渠道与控制面 | R6.1、R6.2 已合入；R6.3 本地离线已验证 | 版本化 Message Runtime、本地 CLI、Provider Streaming 与 Telegram Channel 已离线验收；真实 Smoke、可靠投递与 Dashboard 待后续切片 |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
 | R8 | 主动运行时 | 未开始 | Scheduler、Proactive、Drift、Subagent |
 | R9 | 生产切换 | 未开始 | 真实工作区演练、灰度、回退和 Python 退役 |
@@ -88,7 +88,7 @@
 
 能力对齐缺口：
 
-- 本地 CLI、版本化 Message Runtime 和 Provider 文本流已在 R6.1/R6.2 迁移；统一 Channel Host、Telegram 等真实外部渠道仍未迁移。
+- 本地 CLI、版本化 Message Runtime 和 Provider 文本流已在 R6.1/R6.2 迁移；Channel Host/Telegram 离线纵向切片已在 R6.3 迁移，真实 Telegram Smoke 与可靠投递仍未完成。
 - 完整 Prompt Block/Persona/Token 预算、跨进程投递恢复和完整 Python Chat Lane 行为仍未迁移。
 - 当前 HTTP 契约和 CLI 契约是已批准的 Java 纵向切片，不等同于 Python 全部被动聊天能力。
 
@@ -181,7 +181,7 @@ R5.1 最终门禁通过：默认 284 个测试（270 单元、14 集成）、`fa
 
 ## R6：渠道、消息总线与控制面
 
-状态：R6.1、R6.2 已实现并验证；R6.3 是下一子阶段；R6 整体仍在进行中。
+状态：R6.1、R6.2 已实现、验证并合入 `main`；R6.3 Telegram 已通过本地与 PR #6 远程离线门禁，真实 Smoke 待授权；R6 整体仍在进行中。
 
 R6.1 至 R6.6 的实施顺序见 [R6 渠道、消息总线与控制面总体工作计划](../plans/2026-07-15-r6-channel-message-control-plane-master-plan.md)。总体计划已批准并进入实施，后续子阶段仍须先分别冻结 Contract、Spec、ADR 和实施计划。
 
@@ -205,10 +205,20 @@ R6.2 已交付：
 
 R6.2 只验证本地 CLI、受控 HTTP Stub、Java Reference MCP Server 和临时 SQLite。它没有访问真实外部 Provider/渠道、Secret、付费服务或用户工作区，也不授权生产部署。
 
+R6.3 已交付本地离线范围：
+
+- 默认关闭的通用 `ChannelHost` 与 Telegram Servlet 条件装配；Disabled、CLI 和配置检查路径零 Token、零 Telegram 网络、零 Worker。
+- JDK `HttpClient` 的 `getUpdates`/`sendMessage`、有界响应与 Deadline、稳定安全错误、Poll 同 offset 有界重试和明确 429 单次投递重试。
+- 私聊数值 Allowlist、可信 Route/Session/Sender、进程内去重、同会话/全局并发、`/cancel`/`/stop` 和 First Writer Wins。
+- 只发送权威终态的 Renderer、4,000 UTF-16 单位分片、Tool/MCP 风格 Delta 不外发，以及关闭时取消并 Join 全部 Worker。
+- 24 Case Telegram Fixture、4 个 Loopback 纵向集成场景及默认 455、`failure` 119、`compat` 519 个本地测试门禁。
+
+R6.3 没有读取真实 Token、连接 Telegram、处理真实用户数据或启用部署；当前结论仅为“离线实现已验证，真实 Smoke 待授权”。
+
 范围：
 
 - 复用已完成的 Java `InboundMessage`、`OutboundMessage`、本地 CLI 与流式生命周期协议。
-- 下一步冻结 R6.3 Channel Host/首个真实渠道 Contract；渠道选择、SDK、身份、网络、Secret 和数据范围须单独批准。
+- R6.3 Telegram Channel Host 离线实现已在本地与 PR #6 远程门禁验证；真实网络/数据继续独立授权。
 - 后续再按证据决定 R6.4 持久 Inbox/Outbox 与恢复，不预先承诺自动重放或 Exactly Once。
 - Dashboard 先复用现有前端契约，再决定是否调整前端。
 

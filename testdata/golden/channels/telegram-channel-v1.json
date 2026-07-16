@@ -1,0 +1,195 @@
+{
+  "formatVersion": 1,
+  "suite": "telegram-channel-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-16",
+    "adr": "docs/adr/0009-use-jdk-httpclient-for-telegram-long-polling.md",
+    "contract": "docs/contracts/telegram-channel-host.md",
+    "spec": "docs/specs/2026-07-16-telegram-channel-host-design.md"
+  },
+  "normalization": [
+    "只接受 Allowlist 内 sender.id 与 private chat.id 相等的非 Bot 文本",
+    "可信 Route、Session、Sender 和 Message ID 只能由 Telegram 数值 ID 生成",
+    "正文去除首尾空白后受 32000 Code Point 上限约束",
+    "精确 /cancel 与 /stop 是控制命令，不创建 InboundMessage",
+    "未知字段不投影为 Metadata"
+  ],
+  "defaults": {
+    "allowedUserIds": [10001],
+    "update": {
+      "updateId": 500,
+      "messageId": 42,
+      "occurredAt": "2026-07-16T00:00:00Z",
+      "chatId": 10001,
+      "chatType": "private",
+      "senderId": 10001,
+      "senderBot": false,
+      "text": "  你好，Telegram  "
+    }
+  },
+  "cases": [
+    {
+      "id": "private-allowlisted-text-maps-trusted-fields",
+      "input": {"unknownField": {"cannot": "become-metadata"}},
+      "expected": {
+        "kind": "ACCEPTED",
+        "messageId": "telegram:10001:42",
+        "turnId": "turn-fixture",
+        "sessionId": "telegram:10001",
+        "channel": "telegram",
+        "conversationId": "10001",
+        "senderId": "10001",
+        "content": "你好，Telegram",
+        "occurredAt": "2026-07-16T00:00:00Z"
+      }
+    },
+    {
+      "id": "group-is-ignored",
+      "input": {"chatType": "group"},
+      "expected": {"kind": "IGNORED", "reason": "NOT_PRIVATE"}
+    },
+    {
+      "id": "bot-sender-is-ignored",
+      "input": {"senderBot": true},
+      "expected": {"kind": "IGNORED", "reason": "BOT_SENDER"}
+    },
+    {
+      "id": "sender-chat-mismatch-is-ignored",
+      "input": {"senderId": 10002},
+      "expected": {"kind": "IGNORED", "reason": "IDENTITY_MISMATCH"}
+    },
+    {
+      "id": "non-allowlisted-private-user-is-ignored",
+      "input": {"chatId": 10002, "senderId": 10002},
+      "expected": {"kind": "IGNORED", "reason": "NOT_ALLOWED"}
+    },
+    {
+      "id": "attachment-does-not-degrade-to-text",
+      "input": {"text": null},
+      "expected": {"kind": "IGNORED", "reason": "UNSUPPORTED_CONTENT"}
+    },
+    {
+      "id": "blank-text-is-ignored",
+      "input": {"text": " \n\t "},
+      "expected": {"kind": "IGNORED", "reason": "BLANK_TEXT"}
+    },
+    {
+      "id": "overlong-text-is-ignored",
+      "input": {"repeatText": "文", "repeatCount": 32001},
+      "expected": {"kind": "IGNORED", "reason": "CONTENT_TOO_LONG"}
+    },
+    {
+      "id": "edited-or-unknown-update-is-ignored",
+      "input": {"message": null},
+      "expected": {"kind": "IGNORED", "reason": "UNSUPPORTED_UPDATE"}
+    },
+    {
+      "id": "non-positive-chat-id-is-ignored",
+      "input": {"chatId": 0, "senderId": 0},
+      "expected": {"kind": "IGNORED", "reason": "INVALID_ID"}
+    },
+    {
+      "id": "non-positive-message-id-is-ignored",
+      "input": {"messageId": 0},
+      "expected": {"kind": "IGNORED", "reason": "INVALID_ID"}
+    },
+    {
+      "id": "missing-time-is-ignored",
+      "input": {"occurredAt": null},
+      "expected": {"kind": "IGNORED", "reason": "INVALID_TIME"}
+    },
+    {
+      "id": "cancel-is-control-not-prompt",
+      "input": {"text": "  /cancel  "},
+      "expected": {"kind": "CONTROL", "control": "CANCEL"}
+    },
+    {
+      "id": "stop-is-control-not-prompt",
+      "input": {"text": "/stop"},
+      "expected": {"kind": "CONTROL", "control": "CANCEL"}
+    },
+    {
+      "id": "chunker-keeps-exact-4000-unit-text",
+      "component": "chunker",
+      "input": {"repeatText": "x", "repeatCount": 4000},
+      "expected": {"chunkUtf16Lengths": [4000], "lossless": true}
+    },
+    {
+      "id": "chunker-preserves-surrogate-at-boundary",
+      "component": "chunker",
+      "input": {"prefixText": "a", "prefixCount": 3999, "emoji": "😊", "suffix": "b"},
+      "expected": {"chunkUtf16Lengths": [3999, 3], "lossless": true}
+    },
+    {
+      "id": "renderer-sends-only-authoritative-completion",
+      "component": "renderer",
+      "input": {
+        "events": [
+          {"type": "TURN_STARTED"},
+          {"type": "CONTENT_DELTA", "content": "preview-must-not-send"},
+          {"type": "CONTENT_DELTA", "content": "{\"tool_arguments\":\"must-not-send\"}"},
+          {"type": "TURN_COMPLETED", "content": "权威最终回答"}
+        ]
+      },
+      "expected": {"deliveries": ["权威最终回答"], "terminal": true}
+    },
+    {
+      "id": "renderer-projects-requested-cancellation",
+      "component": "renderer",
+      "input": {
+        "events": [
+          {"type": "TURN_STARTED"},
+          {"type": "TURN_CANCELLED", "code": "REQUESTED"}
+        ]
+      },
+      "expected": {"deliveries": ["请求已取消（REQUESTED）"], "terminal": true}
+    },
+    {
+      "id": "renderer-projects-retryable-failure",
+      "component": "renderer",
+      "input": {
+        "events": [
+          {"type": "TURN_STARTED"},
+          {"type": "TURN_FAILED", "code": "MODEL_TIMEOUT"}
+        ]
+      },
+      "expected": {"deliveries": ["请求失败（MODEL_TIMEOUT），请重新发送。"], "terminal": true}
+    },
+    {
+      "id": "renderer-projects-permanent-failure",
+      "component": "renderer",
+      "input": {
+        "events": [
+          {"type": "TURN_STARTED"},
+          {"type": "TURN_FAILED", "code": "INTERNAL_ERROR"}
+        ]
+      },
+      "expected": {"deliveries": ["请求失败（INTERNAL_ERROR）"], "terminal": true}
+    },
+    {
+      "id": "lifecycle-requested-cancellation-wins",
+      "component": "lifecycle",
+      "input": {"actions": ["REQUEST_CANCEL", "DISCONNECT", "SHUTDOWN"]},
+      "expected": {"cancellationCode": "REQUESTED", "bufferSize": 0}
+    },
+    {
+      "id": "lifecycle-disconnect-clears-preview",
+      "component": "lifecycle",
+      "input": {"actions": ["PUBLISH_STARTED", "DISCONNECT"]},
+      "expected": {"cancellationCode": "CHANNEL_DISCONNECTED", "bufferSize": 0}
+    },
+    {
+      "id": "lifecycle-rejects-second-terminal",
+      "component": "lifecycle",
+      "input": {"actions": ["PUBLISH_STARTED", "PUBLISH_COMPLETED", "PUBLISH_COMPLETED"]},
+      "expected": {"deliveryReason": "INVALID_MESSAGE", "bufferSize": 2}
+    },
+    {
+      "id": "configuration-default-is-disabled",
+      "component": "configuration",
+      "input": {},
+      "expected": {"enabled": false, "allowedUserIds": []}
+    }
+  ]
+}

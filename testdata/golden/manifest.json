@@ -43,6 +43,12 @@
       "source": "java-contract"
     },
     {
+      "id": "channels/telegram-channel-v1",
+      "path": "channels/telegram-channel-v1.json",
+      "sha256": "e7d26ada9cbdc37ad429d869e88aa83635c31c1fad1d776ba171f4dab767e85f",
+      "source": "java-contract"
+    },
+    {
       "id": "sqlite/session-store",
       "path": "sqlite/session-store.json",
       "sha256": "84e43ab7d89269c53a63d6909d562588208fd515c8f26f7db289bb58c63f7f10",

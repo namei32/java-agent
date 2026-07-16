@@ -97,6 +97,18 @@ public final class BoundedOutboundBuffer implements OutboundMessageSink {
     return cancellation.token();
   }
 
+  public boolean requestCancellation() {
+    lock.lock();
+    try {
+      if (state != State.OPEN) {
+        return false;
+      }
+      return cancellation.cancel(TurnCancellationCode.REQUESTED);
+    } finally {
+      lock.unlock();
+    }
+  }
+
   public boolean disconnect() {
     lock.lock();
     try {
