@@ -173,7 +173,7 @@ Route、正文或 Thread，所有控制对象的字符串投影均隐藏 `turnRe
 
 ## 6. Task G3：非阻塞 Observer Tap 与有界 Event Hub
 
-状态：待实施。
+状态：已完成。
 
 先写：
 
@@ -208,6 +208,20 @@ RED/GREEN：
 自审：Publisher 只做 `offer`；无每事件 Task、无 Executor、无历史缓存；慢消费者不调用 Turn Cancellation。
 
 预计提交：`feat: 隔离控制面事件订阅背压`
+
+RED/GREEN 证据（2026-07-17）：先加入 `ObservedOutboundMessageSinkTest`、`ControlEventHubTest` 和
+带 `failure` 标签的 `ControlEventHubConcurrencyTest`，聚焦命令在测试编译阶段因 Observer Sink、
+Event Hub、Subscription、Opening、Sequenced Event、Close Reason 和安全异常类型缺失而失败。最小
+实现后同一 G3 命令执行 11 个测试全部通过；随后把 G2/G3 六个测试类合并回归，共 22 个测试全部
+通过，Reactor 用时约 2.4 秒。
+
+Primary Sink 始终先发布，Observer Runtime Failure 只关闭控制 Registration，不改变主渠道结果。
+订阅建立、最后 Message Sequence 快照与发布共用 Registry 锁，竞态下事件必然出现在 opening 或
+新队列之一；Hub 不保存历史。每个 Subscription 使用独立有界队列和从 1 开始的传输序号，Publisher
+只执行非阻塞 `offer`；队列满只移除慢消费者，不请求 Turn 取消。Terminal 保留已入队事件后关闭，
+Client Disconnect、Session Revoke、生命期和 Shutdown 均幂等唤醒并准确释放计数。实现没有
+Executor、每事件 Task、无界容器、网络、Telegram Token 或用户数据；目标 Spotless 和
+`git diff --check` 通过。
 
 ## 7. Task G4：Telegram Volatile/Reliable 纵向接入
 

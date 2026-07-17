@@ -33,6 +33,20 @@ public final class ActiveTurnRegistration implements AutoCloseable {
     }
   }
 
+  public boolean observeSafely(OutboundMessage message) {
+    try {
+      observe(message);
+      return true;
+    } catch (RuntimeException observerFailure) {
+      try {
+        closeWithoutTerminal();
+      } catch (RuntimeException ignored) {
+        // Observer 路径与主 Sink 隔离；关闭失败不能改变主渠道结果。
+      }
+      return false;
+    }
+  }
+
   public void closeWithoutTerminal() {
     if (registry != null) {
       registry.closeWithoutTerminal(turnRef);

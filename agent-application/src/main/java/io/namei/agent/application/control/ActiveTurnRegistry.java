@@ -4,6 +4,7 @@ import io.namei.agent.kernel.channel.OutboundMessage;
 import io.namei.agent.kernel.channel.OutboundMessageType;
 import io.namei.agent.kernel.channel.TurnCancellationCode;
 import io.namei.agent.kernel.control.ControlCancelResult;
+import io.namei.agent.kernel.control.ControlEventProjection;
 import io.namei.agent.kernel.control.ControlStableCode;
 import io.namei.agent.kernel.control.ControlTerminalKind;
 import io.namei.agent.kernel.control.ControlTurnRef;
@@ -14,6 +15,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -32,6 +35,7 @@ public final class ActiveTurnRegistry implements AutoCloseable {
   private final Map<ControlTurnRef, Entry> active = new HashMap<>();
   private final Map<ControlTurnRef, Tombstone> tombstones = new HashMap<>();
   private boolean accepting = true;
+  private ControlEventHub eventHub;
 
   public ActiveTurnRegistry(
       Clock clock,
@@ -153,6 +157,93 @@ public final class ActiveTurnRegistry implements AutoCloseable {
     }
   }
 
+  void attachEventHub(ControlEventHub hub) {
+    Objects.requireNonNull(hub, "hub");
+    lock.lock();
+    try {
+      if (eventHub != null && eventHub != hub) {
+        throw new IllegalStateException("控制面 Registry 只能绑定一个 Event Hub");
+      }
+      eventHub = hub;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  ControlSubscription subscribe(
+      ControlEventHub hub, ControlTurnRef turnRef, String actorRef, Instant subscribedAt) {
+    lock.lock();
+    try {
+      requireEventHub(hub);
+      cleanupExpired(clock.instant());
+      if (hub.isClosedLocked()) {
+        throw new ControlSubscriptionException(ControlSubscriptionException.Reason.SHUTTING_DOWN);
+      }
+      Entry entry = active.get(turnRef);
+      if (entry == null) {
+        throw new ControlSubscriptionException(
+            tombstones.containsKey(turnRef)
+                ? ControlSubscriptionException.Reason.ALREADY_TERMINAL
+                : ControlSubscriptionException.Reason.TURN_NOT_FOUND);
+      }
+      ControlSubscription subscription =
+          hub.createLocked(turnRef, entry.state, entry.lastSequence, actorRef, subscribedAt);
+      entry.subscriptions.add(subscription);
+      return subscription;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  void closeSubscription(
+      ControlEventHub hub,
+      ControlSubscription subscription,
+      ControlSubscriptionCloseReason reason,
+      boolean retainQueued) {
+    Objects.requireNonNull(subscription, "subscription");
+    Objects.requireNonNull(reason, "reason");
+    lock.lock();
+    try {
+      requireEventHub(hub);
+      detachSubscriptionLocked(hub, subscription, reason, retainQueued);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  void closeActorSubscriptions(ControlEventHub hub, String actorRef) {
+    lock.lock();
+    try {
+      requireEventHub(hub);
+      for (ControlSubscription subscription : hub.actorSubscriptionsLocked(actorRef)) {
+        detachSubscriptionLocked(
+            hub, subscription, ControlSubscriptionCloseReason.SESSION_REVOKED, false);
+      }
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  int subscriberCount(ControlEventHub hub) {
+    lock.lock();
+    try {
+      requireEventHub(hub);
+      return hub.subscriberCountLocked();
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  void closeEventHub(ControlEventHub hub) {
+    lock.lock();
+    try {
+      requireEventHub(hub);
+      closeEventHubLocked(hub);
+    } finally {
+      lock.unlock();
+    }
+  }
+
   void observe(ControlTurnRef turnRef, OutboundMessage message) {
     Objects.requireNonNull(message, "message");
     lock.lock();
@@ -162,9 +253,19 @@ public final class ActiveTurnRegistry implements AutoCloseable {
         return;
       }
       validateNext(entry, message);
+      ControlEventProjection projection = ControlEventProjection.from(turnRef, message);
       entry.lastSequence = message.sequence();
+      if (eventHub != null && !eventHub.isClosedLocked()) {
+        for (ControlSubscription subscription : List.copyOf(entry.subscriptions)) {
+          if (subscription.offer(projection) == ControlSubscription.OfferResult.FULL) {
+            detachSubscriptionLocked(
+                eventHub, subscription, ControlSubscriptionCloseReason.SLOW_CONSUMER, false);
+          }
+        }
+      }
       ControlTerminalKind terminalKind = terminalKind(message.type());
       if (terminalKind != null && active.remove(turnRef, entry)) {
+        closeEntrySubscriptionsLocked(entry, ControlSubscriptionCloseReason.TERMINAL, true);
         addTombstone(
             turnRef, terminalKind, message.code(), clock.instant().plus(terminalRetention));
       }
@@ -178,6 +279,7 @@ public final class ActiveTurnRegistry implements AutoCloseable {
     try {
       Entry removed = active.remove(turnRef);
       if (removed != null) {
+        closeEntrySubscriptionsLocked(removed, ControlSubscriptionCloseReason.SOURCE_ENDED, false);
         addTombstone(
             turnRef,
             ControlTerminalKind.SOURCE_ENDED,
@@ -194,10 +296,55 @@ public final class ActiveTurnRegistry implements AutoCloseable {
     lock.lock();
     try {
       accepting = false;
+      if (eventHub != null) {
+        closeEventHubLocked(eventHub);
+      }
       active.clear();
       tombstones.clear();
     } finally {
       lock.unlock();
+    }
+  }
+
+  private void closeEventHubLocked(ControlEventHub hub) {
+    if (hub.isClosedLocked()) {
+      return;
+    }
+    for (ControlSubscription subscription : hub.subscriptionsLocked()) {
+      detachSubscriptionLocked(hub, subscription, ControlSubscriptionCloseReason.SHUTDOWN, false);
+    }
+    hub.markClosedLocked();
+  }
+
+  private void closeEntrySubscriptionsLocked(
+      Entry entry, ControlSubscriptionCloseReason reason, boolean retainQueued) {
+    if (eventHub == null) {
+      return;
+    }
+    for (ControlSubscription subscription : List.copyOf(entry.subscriptions)) {
+      eventHub.detachLocked(subscription);
+      entry.subscriptions.remove(subscription);
+      subscription.closeFromOwner(reason, retainQueued);
+    }
+  }
+
+  private void detachSubscriptionLocked(
+      ControlEventHub hub,
+      ControlSubscription subscription,
+      ControlSubscriptionCloseReason reason,
+      boolean retainQueued) {
+    if (hub.detachLocked(subscription)) {
+      Entry entry = active.get(subscription.opening().turnRef());
+      if (entry != null) {
+        entry.subscriptions.remove(subscription);
+      }
+    }
+    subscription.closeFromOwner(reason, retainQueued);
+  }
+
+  private void requireEventHub(ControlEventHub hub) {
+    if (eventHub != hub) {
+      throw new IllegalArgumentException("控制面 Event Hub 不属于当前 Registry");
     }
   }
 
@@ -257,9 +404,9 @@ public final class ActiveTurnRegistry implements AutoCloseable {
     private final String channel;
     private final ControlCancellationHandle cancellation;
     private final Instant startedAt;
+    private final HashSet<ControlSubscription> subscriptions = new HashSet<>();
     private ControlTurnState state;
     private Long lastSequence;
-    private int subscriberCount;
 
     private Entry(
         ControlTurnRef turnRef,
@@ -276,7 +423,7 @@ public final class ActiveTurnRegistry implements AutoCloseable {
 
     private ActiveTurnSnapshot snapshot() {
       return new ActiveTurnSnapshot(
-          turnRef, channel, state, startedAt, lastSequence, subscriberCount);
+          turnRef, channel, state, startedAt, lastSequence, subscriptions.size());
     }
   }
 
