@@ -121,7 +121,7 @@ Python、真实 Token、网络、线程、数据库或用户数据。
 
 ## 5. Task G2：Active Turn Registry、取消与 Tombstone
 
-状态：待实施。
+状态：已完成。
 
 先写：
 
@@ -157,6 +157,19 @@ RED/GREEN：
 自审：不在锁内调用可重入取消 Callback；First Writer 只由已有取消源决定；一次关闭、Tombstone 和许可释放无泄漏。
 
 预计提交：`feat: 建立活动 Turn 控制注册表`
+
+RED/GREEN 证据（2026-07-17）：先加入 `ActiveTurnRegistryTest`、
+`ActiveTurnCancellationTest` 和带 `failure` 标签的 `ActiveTurnRegistryConcurrencyTest`，聚焦命令
+在 Application 测试编译阶段因 Registry、Registration、Cancellation Handle、Snapshot 和 Outcome
+类型缺失而失败。最小实现后同一命令执行 11 个测试全部通过，覆盖安全 Snapshot、严格 Message
+顺序、Terminal/异常 Close、首次与重复取消、其他取消原因先赢、目标隔离、Tombstone TTL/容量、
+Registry 饱和 No-op，以及双取消和取消/Terminal 的确定性竞态；测试执行时间约 0.11 秒，完整
+Reactor 聚焦命令约 2.2 秒。
+
+取消 Handle 复用现有 `TurnCancellationSource`，调用取消回调前释放 Registry 锁；Terminal 在回调期间
+胜出时只返回 `ALREADY_TERMINAL`，不会复活条目。活动项与 Tombstone 不保存原始 Turn/Session、
+Route、正文或 Thread，所有控制对象的字符串投影均隐藏 `turnRef`。目标 Spotless 与
+`git diff --check` 通过，未使用网络、真实 Telegram、Token、数据库或用户数据。
 
 ## 6. Task G3：非阻塞 Observer Tap 与有界 Event Hub
 
