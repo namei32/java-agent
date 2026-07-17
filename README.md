@@ -111,6 +111,9 @@ curl --fail-with-body http://127.0.0.1:8080/actuator/health
 ./mvnw -Pcompat verify
 ```
 
+三个离线命令现在使用互斥测试集：默认只跑常规回归，`failure` 只跑故障/竞态，`compat` 只跑
+Golden/Schema 契约。完整阶段门禁需要依次执行三条命令；单独 Profile 不再重复默认回归。
+
 默认构建和 `compat` Profile 都不会访问真实模型。`real-model-smoke` 会产生真实网络请求和可能的模型费用，只有在明确授权并配置 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL` 后才可运行：
 
 ```bash
@@ -119,7 +122,7 @@ curl --fail-with-body http://127.0.0.1:8080/actuator/health
 
 2026-07-14 已对 DeepSeek `deepseek-v4-flash` 完成一次真实 Tool Smoke，覆盖 `current_time` Tool Call、Java 执行、Tool Result 回送、最终文本和 SQLite 最终轮次提交。该证据不自动授权启用部署，也不适用于其他 Provider 或模型；当前模板继续使用 `DISABLED`。
 
-R5.1 的 MCP 验收只使用仓库编译的 Java Reference Server 和 stdio，不运行 Python、真实 MCP Server、真实 Secret 或外部网络。默认、`failure`、`compat` 分别通过 284、63、323 项测试；`real-model-smoke` 不包含真实 MCP Smoke。
+R5.1 的 MCP 验收只使用仓库编译的 Java Reference Server 和 stdio，不运行 Python、真实 MCP Server、真实 Secret 或外部网络。默认、`failure`、`compat` 分别通过 284、63、323 项测试；这是 2026-07-17 互斥测试集生效前的历史口径。`real-model-smoke` 不包含真实 MCP Smoke。
 
 ## 数据安全
 

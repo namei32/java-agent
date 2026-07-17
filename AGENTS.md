@@ -74,6 +74,14 @@
 ./mvnw -Pfailure verify
 ```
 
+测试集按 Tag 互斥：默认 Profile 只运行未标记的常规回归，`failure` 只运行
+`@Tag("failure")`，`compat` 只运行 `@Tag("compat")`，`real-model-smoke` 只运行
+`@Tag("real-model")`。最终门禁必须分别执行需要的测试集；单独执行 `compat` 或 `failure`
+不再隐式重复默认回归。历史文档中 Profile 包含全量回归的旧测试数只作为当时证据，不与新口径直接比较。
+
+聚焦命令若通过 `-Dtest`/`-Dit.test` 同时选择常规和 `failure` 场景，可以显式加入
+`-Dexcluded.test.groups=compat,real-model`，在一次 Maven 调用中执行所选类；不得在没有精确类选择器时用该覆盖扩大测试范围。
+
 小任务完成前必须：
 
 - 运行与变更相关的目标测试。
@@ -83,6 +91,10 @@
 - 禁止根据旧的或不完整的测试输出声称成功。
 
 小任务不得例行运行 `./mvnw clean verify`、`./mvnw spotless:apply`、兼容性 Profile、故障注入 Profile 或重复稳定性循环。只有出现真实失败或疑似不稳定时，才运行定位根因所需的额外聚焦命令。
+
+测试设计优先保持低复杂度：同一生产边界和同一失败原因使用参数化 Case；只有 Wiring、事务、
+并发或安全边界不同才允许跨层重复。断言可观察结果和调用次数，不复制生产算法、不依赖墙钟
+`sleep`，也不为单纯提高测试数拆分等价场景。高风险并发、取消、持久化提交和安全失败不得为了缩短时间而删除。
 
 阶段完成前必须按实施计划运行：
 

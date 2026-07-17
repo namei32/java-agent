@@ -350,6 +350,19 @@ PUT 的重试必须复用相同 `requestId` 和完全相同的业务参数；DEL
 
 ## 5. 测试 Profile
 
+从 2026-07-17 起，测试 Profile 使用互斥集合，避免同一用例在默认、`failure` 和 `compat` 中重复执行：
+
+| 命令 | 实际选择 | 是否访问真实外部资源 |
+| --- | --- | --- |
+| `./mvnw clean verify` | 未标记的常规单元/集成测试 | 否 |
+| `./mvnw -Pfailure verify` | 仅 `@Tag("failure")` | 否，只允许 Fake/Stub/临时数据库 |
+| `./mvnw -Pcompat verify` | 仅 `@Tag("compat")` | 否，只读取批准的 Fixture/临时副本 |
+| `./mvnw -Preal-model-smoke verify` | 仅 `@Tag("real-model")` | 是，必须另行授权 |
+
+单独运行 `failure` 或 `compat` 不再隐式运行默认回归。阶段或合并门禁需要完整离线证据时，依次运行前三条命令。
+开发中的聚焦测试应使用一次 Maven 调用选择本 Task 的全部目标类；同一选择器同时包含常规和
+`failure` 方法时，可附加 `-Dexcluded.test.groups=compat,real-model`。不要通过连续运行单个测试类增加 Maven 启动开销。
+
 默认离线验证：
 
 ```bash
@@ -374,6 +387,8 @@ cd "$(git rev-parse --show-toplevel)"
 ```
 
 `compat` 直接读取仓库内的 `testdata/golden/`，包括只读 Context/Memory、Approval/Side Effect Golden，以及 Java-owned `memory/java-native-memory.json`、`mcp/java-mcp-client.json`、`message-bus/versioned-channel-message.json` 和 `message-bus/provider-streaming-cli.json`。生产 Java 实现会消费这些 Fixture 的 Schema、Codec、Hash、HTTP、排序、Injection、配置、命名、Schema 投影、结果、消息顺序、流预算和 CLI 生命周期 Case；测试不会启动 Python、访问真实模型/MCP Server、执行真实副作用、读取真实 Workspace 或读取 `.env`。
+
+以下 R5.1–R6.2 数字产生于互斥 Profile 生效前，`compat` 当时包含常规和故障回归；它们只作为历史验收证据保留，不能与 2026-07-17 之后的互斥测试数直接比较。
 
 R5.1 于 2026-07-15 完成离线基线：默认 Profile 共 284 个测试（270 个单元、14 个集成），`failure` 共 63 个（62 个单元、1 个集成），`compat` 共 323 个（308 个单元、15 个集成），均为 0 Failure、0 Error、0 Skipped。MCP Integration 使用受控 Java stdio 子进程并验证结束后零孤儿进程；该结果不包含真实 Provider、真实 MCP Server、真实 Secret、真实 Workspace 或部署启用验证。
 
