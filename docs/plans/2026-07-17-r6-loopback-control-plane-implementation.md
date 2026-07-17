@@ -77,7 +77,7 @@ git diff --check
 
 ## 4. Task G1：Java-owned Fixture 与 Kernel Contract
 
-状态：待 G0 批准。
+状态：已完成。
 
 先创建：
 
@@ -105,6 +105,19 @@ RED/GREEN：
 自审：Kernel 零 Spring/Servlet/Jackson 生产依赖；`retryable` 只由稳定码派生；`turnRef` 格式和 `toString()` 脱敏；Fixture Actual 由生产 Factory 生成。
 
 预计提交：`feat: 冻结 Loopback 控制面 Kernel Contract`
+
+RED/GREEN 证据（2026-07-17）：聚焦命令首次在 Kernel 测试编译阶段因
+`ControlPlaneContract`、`ControlTurnRef`、状态/结果/稳定码和 `ControlEventProjection` 缺失而
+失败。最小实现后，同一命令执行 5 个测试全部通过：Fixture 精确固定 8/8/8/10/10/4 共 48 Case，
+128-bit Turn Ref 使用无 Padding Base64URL 且安全字符串脱敏，控制错误 `retryable` 只由枚举派生，
+5 个 Kernel-owned SSE Case 由生产投影消费并删除原始 Turn/Session/Route。首次 GREEN 编译暴露
+既有 Message Code Parser 的包可见性，投影改为本包严格枚举解析；随后 Fixture 测试发现
+`MODEL_TIMEOUT` 是 R6.1 Message Code 而非 Control Code，测试只将 `CONTROL_*` 交给控制码 Parser。
+最终聚焦命令全绿，目标 Spotless 与 `git diff --check` 通过。
+
+Fixture SHA-256 为
+`34ac5617ceecef59e6458eaea4fb48ad95a800c0af861a6baf3672981c9ce3f6`，已写入 Manifest；未使用
+Python、真实 Token、网络、线程、数据库或用户数据。
 
 ## 5. Task G2：Active Turn Registry、取消与 Tombstone
 

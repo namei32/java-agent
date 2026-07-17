@@ -1,0 +1,387 @@
+{
+  "formatVersion": 1,
+  "suite": "loopback-control-plane-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-17",
+    "adr": "docs/adr/0011-use-authenticated-sse-for-loopback-control-events.md",
+    "contract": "docs/contracts/loopback-control-plane.md",
+    "spec": "docs/specs/2026-07-17-loopback-control-plane-design.md"
+  },
+  "normalization": [
+    "控制面枚举、HTTP 字段和稳定码大小写严格，不做宽松归一化",
+    "turnRef 使用 128-bit Base64URL 无 Padding 随机引用，不等于原始 Turn ID",
+    "SSE 传输 ID 与 R6.1 Message sequence 相互独立",
+    "事件投影删除原始 Turn、Session、Route 和 Sender，只保留允许的 Assistant 输出",
+    "retryable 只由稳定错误或 R6.1 失败码派生"
+  ],
+  "limits": {
+    "schemaVersion": 1,
+    "turnRefBytes": 16,
+    "sessionTtl": "15m",
+    "maxSessions": 4,
+    "maxActiveTurns": 128,
+    "terminalRetention": "5m",
+    "maxTerminalTombstones": 1024,
+    "maxSubscribers": 8,
+    "subscriberBufferCapacity": 64,
+    "heartbeatInterval": "15s",
+    "streamMaxLifetime": "15m",
+    "shutdownTimeout": "2s"
+  },
+  "defaults": {
+    "turnRef": "AAECAwQFBgcICQoLDA0ODw",
+    "turnId": "raw-turn-secret",
+    "sessionId": "telegram:raw-session-secret",
+    "channel": "telegram",
+    "conversationId": "raw-conversation-secret",
+    "sequence": 1,
+    "type": "CONTENT_DELTA",
+    "content": "回答片段",
+    "code": "",
+    "retryable": false
+  },
+  "cases": [
+    {
+      "id": "mode-default-disabled",
+      "group": "mode-security",
+      "component": "mode",
+      "input": {"configured": null},
+      "expected": {"accepted": true, "mode": "DISABLED", "mapped": false}
+    },
+    {
+      "id": "mode-loopback-binding-accepted",
+      "group": "mode-security",
+      "component": "mode",
+      "input": {"configured": "LOOPBACK", "serverAddress": "127.0.0.1"},
+      "expected": {"accepted": true, "mode": "LOOPBACK", "mapped": true}
+    },
+    {
+      "id": "wildcard-binding-rejected",
+      "group": "mode-security",
+      "component": "binding",
+      "input": {"serverAddress": "0.0.0.0"},
+      "expected": {"accepted": false, "code": "CONTROL_BINDING_INVALID"}
+    },
+    {
+      "id": "remote-address-rejected",
+      "group": "mode-security",
+      "component": "request-guard",
+      "input": {"remoteAddress": "192.0.2.10", "host": "127.0.0.1:8080"},
+      "expected": {"accepted": false, "code": "CONTROL_REMOTE_ACCESS_REJECTED"}
+    },
+    {
+      "id": "foreign-host-rejected",
+      "group": "mode-security",
+      "component": "request-guard",
+      "input": {"remoteAddress": "127.0.0.1", "host": "attacker.example"},
+      "expected": {"accepted": false, "code": "CONTROL_HOST_REJECTED"}
+    },
+    {
+      "id": "cross-origin-rejected",
+      "group": "mode-security",
+      "component": "request-guard",
+      "input": {"remoteAddress": "127.0.0.1", "host": "127.0.0.1:8080", "origin": "https://attacker.example"},
+      "expected": {"accepted": false, "code": "CONTROL_ORIGIN_REJECTED"}
+    },
+    {
+      "id": "forwarded-header-does-not-authorize",
+      "group": "mode-security",
+      "component": "request-guard",
+      "input": {"remoteAddress": "192.0.2.10", "host": "127.0.0.1:8080", "xForwardedFor": "127.0.0.1"},
+      "expected": {"accepted": false, "code": "CONTROL_REMOTE_ACCESS_REJECTED"}
+    },
+    {
+      "id": "cors-preflight-rejected",
+      "group": "mode-security",
+      "component": "request-guard",
+      "input": {"method": "OPTIONS", "remoteAddress": "127.0.0.1", "host": "127.0.0.1:8080"},
+      "expected": {"accepted": false, "code": "CONTROL_REQUEST_INVALID"}
+    },
+
+    {
+      "id": "session-created-with-bearer",
+      "group": "session-auth",
+      "component": "session",
+      "input": {"action": "CREATE"},
+      "expected": {"accepted": true, "tokenType": "Bearer", "httpStatus": 201}
+    },
+    {
+      "id": "session-stores-digest-only",
+      "group": "session-auth",
+      "component": "session",
+      "input": {"action": "INSPECT_STORAGE"},
+      "expected": {"accepted": true, "rawTokenStored": false}
+    },
+    {
+      "id": "valid-bearer-authenticates",
+      "group": "session-auth",
+      "component": "authentication",
+      "input": {"credential": "VALID"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "missing-bearer-uses-uniform-error",
+      "group": "session-auth",
+      "component": "authentication",
+      "input": {"credential": "MISSING"},
+      "expected": {"accepted": false, "code": "CONTROL_AUTHENTICATION_REQUIRED", "httpStatus": 401}
+    },
+    {
+      "id": "expired-bearer-uses-uniform-error",
+      "group": "session-auth",
+      "component": "authentication",
+      "input": {"credential": "EXPIRED"},
+      "expected": {"accepted": false, "code": "CONTROL_AUTHENTICATION_REQUIRED", "httpStatus": 401}
+    },
+    {
+      "id": "revoked-bearer-uses-uniform-error",
+      "group": "session-auth",
+      "component": "authentication",
+      "input": {"credential": "REVOKED"},
+      "expected": {"accepted": false, "code": "CONTROL_AUTHENTICATION_REQUIRED", "httpStatus": 401}
+    },
+    {
+      "id": "session-capacity-fails-closed",
+      "group": "session-auth",
+      "component": "session",
+      "input": {"action": "CREATE_AT_CAPACITY"},
+      "expected": {"accepted": false, "code": "CONTROL_SESSION_CAPACITY_EXCEEDED", "httpStatus": 429}
+    },
+    {
+      "id": "session-safe-string-redacts-token",
+      "group": "session-auth",
+      "component": "session",
+      "input": {"action": "SAFE_STRING"},
+      "expected": {"accepted": true, "containsToken": false}
+    },
+
+    {
+      "id": "status-channels-sorted",
+      "group": "status-turn",
+      "component": "status",
+      "input": {"channels": ["telegram", "cli"]},
+      "expected": {"accepted": true, "channels": ["cli", "telegram"]}
+    },
+    {
+      "id": "status-snapshot-failure-degrades",
+      "group": "status-turn",
+      "component": "status",
+      "input": {"snapshotFailure": true},
+      "expected": {"accepted": true, "state": "DEGRADED", "code": "CONTROL_SNAPSHOT_UNAVAILABLE"}
+    },
+    {
+      "id": "unknown-execution-is-count-only",
+      "group": "status-turn",
+      "component": "status",
+      "input": {"unknownExecutions": 1},
+      "expected": {"accepted": true, "activeTurns": 0, "turnRefPresent": false}
+    },
+    {
+      "id": "active-turn-safe-projection",
+      "group": "status-turn",
+      "component": "turn-snapshot",
+      "input": {"state": "ACTIVE", "lastSequence": 3},
+      "expected": {"accepted": true, "state": "ACTIVE", "lastSequence": 3}
+    },
+    {
+      "id": "active-turn-omits-sensitive-identifiers",
+      "group": "status-turn",
+      "component": "turn-snapshot",
+      "input": {"includeRawIdentifiers": true},
+      "expected": {"accepted": true, "rawIdentifiersPresent": false}
+    },
+    {
+      "id": "terminal-tombstone-not-listed",
+      "group": "status-turn",
+      "component": "turn-snapshot",
+      "input": {"terminalKind": "COMPLETED"},
+      "expected": {"accepted": true, "listed": false}
+    },
+    {
+      "id": "registry-saturation-degrades-only",
+      "group": "status-turn",
+      "component": "turn-snapshot",
+      "input": {"registryAtCapacity": true},
+      "expected": {"accepted": true, "turnContinues": true, "code": "CONTROL_TURN_REGISTRY_SATURATED"}
+    },
+    {
+      "id": "active-turns-use-stable-order",
+      "group": "status-turn",
+      "component": "turn-snapshot",
+      "input": {"order": ["later", "earlier"]},
+      "expected": {"accepted": true, "order": ["earlier", "later"]}
+    },
+
+    {
+      "id": "cancel-first-request-wins",
+      "group": "cancellation",
+      "component": "cancel-rule",
+      "input": {"active": true, "existingReason": null},
+      "expected": {"result": "CANCELLATION_REQUESTED", "state": "CANCELLATION_REQUESTED", "httpStatus": 202}
+    },
+    {
+      "id": "cancel-repeat-request-is-idempotent",
+      "group": "cancellation",
+      "component": "cancel-rule",
+      "input": {"active": true, "existingReason": "REQUESTED"},
+      "expected": {"result": "ALREADY_REQUESTED", "state": "CANCELLATION_REQUESTED", "httpStatus": 200}
+    },
+    {
+      "id": "cancel-does-not-overwrite-disconnect",
+      "group": "cancellation",
+      "component": "cancel-rule",
+      "input": {"active": true, "existingReason": "CHANNEL_DISCONNECTED"},
+      "expected": {"result": "ALREADY_CANCELLED", "httpStatus": 200}
+    },
+    {
+      "id": "cancel-does-not-overwrite-backpressure",
+      "group": "cancellation",
+      "component": "cancel-rule",
+      "input": {"active": true, "existingReason": "BACKPRESSURE_EXCEEDED"},
+      "expected": {"result": "ALREADY_CANCELLED", "httpStatus": 200}
+    },
+    {
+      "id": "cancel-does-not-overwrite-shutdown",
+      "group": "cancellation",
+      "component": "cancel-rule",
+      "input": {"active": true, "existingReason": "SHUTDOWN"},
+      "expected": {"result": "ALREADY_CANCELLED", "httpStatus": 200}
+    },
+    {
+      "id": "cancel-terminal-returns-stable-result",
+      "group": "cancellation",
+      "component": "cancel-rule",
+      "input": {"active": false, "tombstone": "COMPLETED"},
+      "expected": {"result": "ALREADY_TERMINAL", "httpStatus": 200}
+    },
+    {
+      "id": "cancel-expired-reference-is-not-found",
+      "group": "cancellation",
+      "component": "cancel-rule",
+      "input": {"active": false, "tombstone": null},
+      "expected": {"result": "NOT_FOUND", "code": "CONTROL_TURN_NOT_FOUND", "httpStatus": 404}
+    },
+    {
+      "id": "cancel-concurrent-call-has-one-winner",
+      "group": "cancellation",
+      "component": "cancel-rule",
+      "input": {"active": true, "concurrentRequests": 2},
+      "expected": {"firstWriters": 1, "results": ["CANCELLATION_REQUESTED", "ALREADY_REQUESTED"]}
+    },
+    {
+      "id": "cancel-target-is-isolated",
+      "group": "cancellation",
+      "component": "cancel-rule",
+      "input": {"activeTurns": 2, "targetIndex": 0},
+      "expected": {"cancelledTurns": 1, "otherTurnActive": true}
+    },
+    {
+      "id": "cancel-never-mutates-ledger",
+      "group": "cancellation",
+      "component": "cancel-rule",
+      "input": {"reliable": true},
+      "expected": {"ledgerWrites": 0, "result": "CANCELLATION_REQUESTED"}
+    },
+
+    {
+      "id": "stream-opened-is-future-only",
+      "group": "sse",
+      "component": "stream-rule",
+      "input": {"lastSequence": 3},
+      "expected": {"event": "control.stream.opened.v1", "replaySupported": false, "lastSequence": 3}
+    },
+    {
+      "id": "stream-projects-future-started",
+      "group": "sse",
+      "component": "event-projection",
+      "input": {"sequence": 0, "type": "TURN_STARTED", "content": "", "code": "", "retryable": false},
+      "expected": {"sequence": 0, "type": "TURN_STARTED", "content": "", "code": "", "retryable": false}
+    },
+    {
+      "id": "stream-projects-assistant-delta",
+      "group": "sse",
+      "component": "event-projection",
+      "input": {"sequence": 1, "type": "CONTENT_DELTA", "content": "回答片段", "code": "", "retryable": false},
+      "expected": {"sequence": 1, "type": "CONTENT_DELTA", "content": "回答片段", "code": "", "retryable": false}
+    },
+    {
+      "id": "stream-projects-authoritative-completed",
+      "group": "sse",
+      "component": "event-projection",
+      "input": {"sequence": 2, "type": "TURN_COMPLETED", "content": "完整回答", "code": "", "retryable": false},
+      "expected": {"sequence": 2, "type": "TURN_COMPLETED", "content": "完整回答", "code": "", "retryable": false}
+    },
+    {
+      "id": "stream-derives-failure-retryable",
+      "group": "sse",
+      "component": "event-projection",
+      "input": {"sequence": 2, "type": "TURN_FAILED", "content": "", "code": "MODEL_TIMEOUT", "retryable": true},
+      "expected": {"sequence": 2, "type": "TURN_FAILED", "content": "", "code": "MODEL_TIMEOUT", "retryable": true}
+    },
+    {
+      "id": "stream-rejects-last-event-id",
+      "group": "sse",
+      "component": "stream-rule",
+      "input": {"lastEventId": "4"},
+      "expected": {"accepted": false, "code": "CONTROL_EVENT_REPLAY_UNAVAILABLE", "httpStatus": 409}
+    },
+    {
+      "id": "stream-slow-consumer-is-isolated",
+      "group": "sse",
+      "component": "stream-rule",
+      "input": {"subscriberQueueFull": true},
+      "expected": {"turnCancelled": false, "otherSubscribersActive": true, "code": "CONTROL_SLOW_CONSUMER"}
+    },
+    {
+      "id": "stream-disconnect-cleans-subscription",
+      "group": "sse",
+      "component": "stream-rule",
+      "input": {"writerDisconnected": true},
+      "expected": {"subscriptionCount": 0, "turnCancelled": false}
+    },
+    {
+      "id": "stream-lifetime-closes-without-cancel",
+      "group": "sse",
+      "component": "stream-rule",
+      "input": {"lifetimeExceeded": true},
+      "expected": {"closed": true, "turnCancelled": false, "code": "CONTROL_STREAM_LIFETIME_EXCEEDED"}
+    },
+    {
+      "id": "stream-projection-omits-sensitive-identifiers",
+      "group": "sse",
+      "component": "event-projection",
+      "input": {"sequence": 2, "type": "TURN_COMPLETED", "content": "安全回答", "code": "", "retryable": false},
+      "expected": {"rawTurnIdPresent": false, "sessionIdPresent": false, "routePresent": false}
+    },
+
+    {
+      "id": "shutdown-clears-sessions-and-streams",
+      "group": "shutdown-failure",
+      "component": "shutdown",
+      "input": {"sessions": 2, "subscriptions": 2},
+      "expected": {"sessions": 0, "subscriptions": 0, "withinSharedDeadline": true}
+    },
+    {
+      "id": "observer-failure-never-fails-primary",
+      "group": "shutdown-failure",
+      "component": "failure-isolation",
+      "input": {"observerThrows": true},
+      "expected": {"primaryAccepted": true, "turnCancelled": false}
+    },
+    {
+      "id": "audit-failure-never-changes-result",
+      "group": "shutdown-failure",
+      "component": "failure-isolation",
+      "input": {"auditThrows": true},
+      "expected": {"httpResultUnchanged": true, "turnCancelled": false}
+    },
+    {
+      "id": "disabled-mode-has-zero-control-resources",
+      "group": "shutdown-failure",
+      "component": "shutdown",
+      "input": {"mode": "DISABLED"},
+      "expected": {"sessions": 0, "subscriptions": 0, "registrations": 0, "backgroundThreads": 0}
+    }
+  ]
+}
