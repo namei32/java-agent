@@ -1,6 +1,6 @@
 # R6.5 Loopback 控制面、安全状态、SSE 与活动 Turn 取消工作计划
 
-- 状态：G0 文档冻结中，待语义批准后实施
+- 状态：G0 已批准；从 G1 开始连续 TDD
 - 日期：2026-07-17
 - 分支：`agent/r6-control-plane-contract`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-control-plane`
@@ -10,7 +10,7 @@
 - ADR：[ADR-0011：Loopback 控制面事件采用认证 SSE](../adr/0011-use-authenticated-sse-for-loopback-control-events.md)
 - 总体计划：[R6 渠道、消息总线与控制面总体工作计划](2026-07-15-r6-channel-message-control-plane-master-plan.md)
 
-> 当前只有聚焦 CI 稳定性修复得到批准并已合入 `main`。本 G0 先提议控制面语义；在用户明确批准关联 Contract、Spec、ADR 和本计划前，不创建 Fixture、不修改生产代码，也不改前端。
+> 用户已于 2026-07-17 明确批准关联 Contract、Spec、ADR 和本计划，并授权从 G1 开始连续 TDD。远程访问、真实 Telegram、CLI+Web、前端和 Ledger Reconcile 继续冻结。
 
 ## 1. 目标
 
@@ -40,7 +40,7 @@ authenticated local Operator Session
 
 ## 3. Task G0：冻结 Contract、Spec、ADR 与计划
 
-状态：进行中，待批准。
+状态：已完成并批准。
 
 交付：
 
@@ -71,6 +71,9 @@ git diff --check
 文档验证证据（2026-07-17）：`spotless:check` 对八模块 Reactor 全部通过，`git diff --check`
 和本地 Markdown 相对链接检查通过。当前变更只包含 Contract、Spec、ADR、Plan 与阶段状态文档；
 没有创建 48 Case Fixture、Token、Registry、HTTP Mapping、生产代码、线程、数据库或网络访问。
+
+批准证据（2026-07-17）：用户明确回复“批准 R6.5 G0，按计划从 G1 开始连续 TDD”，并再次要求
+继续冻结远程访问、真实 Telegram、CLI+Web 和前端变更。
 
 ## 4. Task G1：Java-owned Fixture 与 Kernel Contract
 

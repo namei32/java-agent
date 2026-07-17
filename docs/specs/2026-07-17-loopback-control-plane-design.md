@@ -1,9 +1,10 @@
 # Loopback 控制面、安全状态、SSE 与活动 Turn 取消设计
 
-- 状态：待批准
+- 状态：已批准，实施中
 - 日期：2026-07-17
 - 阶段：R6.5
-- 批准记录：尚未批准；只可用于评审，不得据此修改生产代码
+- 批准日期：2026-07-17
+- 批准记录：用户明确批准 R6.5 G0，并授权从 G1 开始连续 TDD；远程访问、真实 Telegram、CLI+Web 和前端变更继续冻结
 - Contract：[Loopback 控制面契约](../contracts/loopback-control-plane.md)
 - ADR：[ADR-0011：Loopback 控制面事件采用认证 SSE](../adr/0011-use-authenticated-sse-for-loopback-control-events.md)
 - 实施计划：[R6.5 Loopback 控制面工作计划](../plans/2026-07-17-r6-loopback-control-plane-implementation.md)

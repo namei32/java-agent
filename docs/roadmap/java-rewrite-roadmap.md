@@ -27,7 +27,7 @@
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
 | R4 | 上下文与记忆 | R4.1、R4.2 已完成 | Java 原生显式记忆管理与语义检索闭环已通过最终门禁；自动写回/Optimizer 仍冻结 |
 | R5 | MCP 与外部工具 | R5.1 已完成 | 静态 stdio 只读 Client、工具发现/投影、取消、隔离和进程回收已验收；远程与副作用范围未开始 |
-| R6 | 渠道与控制面 | R6.1–R6.4 已合入；R6.5 G0 待批准 | 版本化 Message Runtime、本地 CLI、Provider Streaming、Telegram 与可靠投递已离线验收；Loopback 控制面契约已提议 |
+| R6 | 渠道与控制面 | R6.1–R6.4 已合入；R6.5 G0 已批准 | 版本化 Message Runtime、本地 CLI、Provider Streaming、Telegram 与可靠投递已离线验收；Loopback 控制面从 G1 实施 |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
 | R8 | 主动运行时 | 未开始 | Scheduler、Proactive、Drift、Subagent |
 | R9 | 生产切换 | 未开始 | 真实工作区演练、灰度、回退和 Python 退役 |
@@ -182,7 +182,7 @@ R5.1 最终门禁通过：默认 284 个测试（270 单元、14 集成）、`fa
 
 ## R6：渠道、消息总线与控制面
 
-状态：R6.1–R6.4 已实现、验证并合入 `main`；R6.4 合并后 CI 稳定性修复也已通过 PR #8 和主分支三套门禁；R6.5 G0 文档待批准，真实 Telegram Smoke 待授权，R6 整体仍在进行中。
+状态：R6.1–R6.4 已实现、验证并合入 `main`；R6.4 合并后 CI 稳定性修复也已通过 PR #8 和主分支三套门禁；R6.5 G0 已批准并从 G1 实施，真实 Telegram Smoke 待授权，R6 整体仍在进行中。
 
 R6.1 至 R6.6 的实施顺序见 [R6 渠道、消息总线与控制面总体工作计划](../plans/2026-07-15-r6-channel-message-control-plane-master-plan.md)。总体计划已批准并进入实施，后续子阶段仍须先分别冻结 Contract、Spec、ADR 和实施计划。
 
@@ -221,7 +221,7 @@ R6.3 没有读取真实 Token、连接 Telegram、处理真实用户数据或启
 - 复用已完成的 Java `InboundMessage`、`OutboundMessage`、本地 CLI 与流式生命周期协议。
 - R6.3 Telegram Channel Host 离线实现已通过 PR #6 合入 `main`；真实网络/数据继续独立授权。
 - R6.4 持久 Inbox/Outbox、Receipt、恢复和回退已通过 PR #7 合入；不承诺自动重放或 Exactly Once，真实 Smoke 仍是独立门禁。
-- R6.5 已提议默认关闭的 Loopback Bearer Session、安全状态、未来事件 SSE 与目标取消 Contract；只管理 Servlet 模式中当前存活的 Telegram Turn，不把 CLI、同步 HTTP 或 `EXECUTION_UNKNOWN` 伪装成可控对象。
+- R6.5 已批准默认关闭的 Loopback Bearer Session、安全状态、未来事件 SSE 与目标取消 Contract，并从 G1 实施；只管理 Servlet 模式中当前存活的 Telegram Turn，不把 CLI、同步 HTTP 或 `EXECUTION_UNKNOWN` 伪装成可控对象。
 - 后端 API 获批并稳定后，再用独立 Contract 决定现有 React/Vite 视觉资产、源码归属和同源托管，不迁移 Python Dashboard 的删除/Proactive/Plugin 权限。
 
 退出门禁：CLI 与至少一个真实渠道的 Golden 会话通过；流式事件顺序和断线语义明确；Dashboard 核心路径兼容。

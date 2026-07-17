@@ -1,6 +1,6 @@
 # R6 渠道、消息总线与控制面总体工作计划
 
-- 状态：已批准；R6.1–R6.4 已合入 `main`，R6.5 G0 契约提议待批准
+- 状态：已批准；R6.1–R6.4 已合入 `main`，R6.5 G0 已批准并从 G1 实施
 - 日期：2026-07-15
 - 阶段：R6
 - 批准记录：用户要求完整实现本计划；各子阶段仍须先冻结对应 Contract、Spec、ADR 和实施计划，真实网络、Secret 与付费 Smoke 保留独立授权门禁
@@ -67,7 +67,7 @@ R6 完成不等于 Python 全部渠道、插件或主动能力已经迁移。Sch
 | R6.2 | 本地 CLI 与 Provider Streaming | 已完成并通过 PR #5 合入 `main` | 供应商无关流式 Port、Spring AI Adapter、本地 CLI、取消与提交隔离 |
 | R6.3 | Channel Host 与首个真实渠道 | 已通过 PR #6 合入 `main`；真实 Smoke 待授权 | 统一宿主、身份路由、Telegram 私聊文本、网络生命周期 |
 | R6.4 | 渠道幂等、可靠投递与恢复 | 已通过 PR #7 合入 `main`；PR #8 修复合并后 CI 观察竞态 | 入站去重、投递状态、崩溃恢复和有界重试 |
-| R6.5 | Dashboard 与最小控制面 | G0 Contract/Spec/ADR/Plan 已提议，待明确批准 | 默认关闭的 Loopback 安全状态、SSE 和活动 Telegram Turn 取消 |
+| R6.5 | Dashboard 与最小控制面 | G0 Contract/Spec/ADR/Plan 已批准，从 G1 连续 TDD | 默认关闭的 Loopback 安全状态、SSE 和活动 Telegram Turn 取消 |
 | R6.6 | 阶段总验收与灰度 | 待前序完成 | Golden、故障/压力、安全审计、Runbook 和回退 |
 
 ## 4. R6.1：版本化 Message Contract Runtime

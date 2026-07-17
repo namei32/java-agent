@@ -62,7 +62,7 @@
 | CLI/渠道宿主 | `bootstrap/channel_host.py`、`bootstrap/channels.py` | `agent-bootstrap/.../cli`、`channel`、`telegram` | 部分 | 显式 Non-Web CLI、通用 Host、Telegram 私聊与该渠道的持久恢复已离线验证；多渠道和主动宿主未迁移 | 中 |
 | Telegram 等渠道 | 渠道模块与 Bootstrap | `agent-bootstrap/.../channel`、`telegram` | 部分 | 数值 Allowlist、Long Polling、持久 Cursor/Claim、事务 Outbox、Receipt、429 有界重试、`UNKNOWN`、恢复与回退已通过 PR #7 合入，PR #8 完成合并后 CI 稳定性修复；真实 Smoke 待授权 | 高 |
 | 流式输出 | Bus/Channel 生命周期事件 | Kernel Channel Contract、`BoundedOutboundBuffer`、`MessageTurnService`、Spring AI Streaming Adapter、`LocalCliRunner`、`TelegramTerminalRenderer` | 部分 | Provider Delta、Tool Loop 预览、权威完成、唯一终态、断开/背压、CLI 实时渲染、Telegram 终态投影与持久投递已完成；其他渠道与真实 Smoke 未覆盖 | 中 |
-| Dashboard/控制面 API | `bootstrap/dashboard_api.py` | 当前仅 Actuator/Chat API；R6.5 G0 文档提议中 | 部分 | 候选 V1 为默认关闭的 Loopback Session、安全状态、未来事件 SSE 和活动 Telegram Turn 取消；CLI、同步 Chat、历史/删除/Proactive/Plugin 不在范围，获批后才实现 | 中 |
+| Dashboard/控制面 API | `bootstrap/dashboard_api.py` | 当前仅 Actuator/Chat API；R6.5 G0 已批准 | 部分 | V1 从 48 Case Fixture 开始实现默认关闭的 Loopback Session、安全状态、未来事件 SSE 和活动 Telegram Turn 取消；CLI、同步 Chat、历史/删除/Proactive/Plugin 不在范围 | 中 |
 | Scheduler | `agent/scheduler.py` | 无 | 未开始 | 需持久化、重启恢复、时区和幂等 | 高 |
 | Proactive | `agent/core/proactive_*`、`bootstrap/proactive.py` | 无 | 未开始 | 需来源、审批、限流和审计 | 极高 |
 | Drift | `agent/core/drift_turn.py`、`_handbook/drift-guide.md` | 无 | 未开始 | 需运行记录、预算、取消和回退 | 极高 |
@@ -75,13 +75,13 @@
 | --- | --- | --- |
 | Java 单元/集成测试 | 已建立默认、`failure`、`compat` Profile | 继续随能力扩展 |
 | Python SQLite 兼容夹具 | `sessions.db` 共同 Schema 已覆盖 | 语义记忆改为 Java 原生，不增加 `memory2.db` 兼容夹具 |
-| 跨语言/Java Contract Fixture | 已建立 Python/Java Golden；R4.2、R5.1、R6.1–R6.4 另由生产 Java 实现消费 Java-owned Memory、MCP、版本化渠道消息、Provider Streaming/CLI、Telegram 与可靠投递 Fixture，不运行 Python | R6.5 已提议 48 Case Java-owned 控制面 Fixture，批准后创建；Optimizer 仍冻结 |
+| 跨语言/Java Contract Fixture | 已建立 Python/Java Golden；R4.2、R5.1、R6.1–R6.4 另由生产 Java 实现消费 Java-owned Memory、MCP、版本化渠道消息、Provider Streaming/CLI、Telegram 与可靠投递 Fixture，不运行 Python | R6.5 已批准创建 48 Case Java-owned 控制面 Fixture；Optimizer 仍冻结 |
 | 真实模型 Smoke | Profile 已有，默认不执行；DeepSeek `deepseek-v4-flash` Tool Smoke 已于 2026-07-14 通过 | 其他 Provider/模型仍需逐组合授权验证；通过不自动启用部署 |
 | 真实工作区演练 | 未执行 | 只能在备份副本上先做只读差异，再做受控写入 |
 
 ## 当前优先级
 
-1. R6.1–R6.4 已合入 `main`；当前先批准 R6.5 G0 的 Loopback 安全、Session、SSE、活动 Turn 和取消语义，再从 Java-owned Fixture 开始连续 TDD。
+1. R6.1–R6.4 已合入 `main`；R6.5 G0 已批准，当前从 48 Case Java-owned Fixture 开始连续 TDD。
 2. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。

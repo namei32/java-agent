@@ -1,9 +1,10 @@
 # ADR-0011：Loopback 控制面事件采用认证 SSE
 
-- 状态：提议
+- 状态：已接受
 - 日期：2026-07-17
 - 阶段：R6.5
-- 批准记录：尚未批准；本 ADR 不能作为生产实现授权
+- 批准日期：2026-07-17
+- 批准记录：用户明确接受本决策，并授权从 G1 开始连续 TDD；远程访问、真实 Telegram、CLI+Web 和前端变更继续冻结
 - 关联 Contract：[Loopback 控制面契约](../contracts/loopback-control-plane.md)
 - 关联设计：[Loopback 控制面设计](../specs/2026-07-17-loopback-control-plane-design.md)
 - 前置决策：[ADR-0007：采用项目自有的有界渠道消息协议](0007-use-project-owned-bounded-channel-message-protocol.md)

@@ -1,10 +1,11 @@
 # Loopback 控制面、安全状态、事件流与活动 Turn 取消契约
 
-- 状态：待批准
+- 状态：已批准，实施中
 - 契约版本：1
 - 日期：2026-07-17
 - 阶段：R6.5
-- 批准记录：尚未批准；本文件只冻结候选语义，不授权生产实现
+- 批准日期：2026-07-17
+- 批准记录：用户明确批准 R6.5 G0，并授权从 G1 开始连续 TDD；远程访问、真实 Telegram、CLI+Web 和前端变更继续冻结
 - 前置契约：[版本化渠道消息与流式运行时契约](versioned-channel-message-runtime.md)
 - 前置契约：[Telegram Channel Host 契约](telegram-channel-host.md)
 - 前置契约：[渠道可靠投递、幂等与恢复契约](channel-reliable-delivery.md)
