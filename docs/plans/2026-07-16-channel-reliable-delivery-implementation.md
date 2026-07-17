@@ -1,10 +1,10 @@
 # R6.4 渠道可靠投递、幂等与恢复工作计划
 
-- 状态：F1–F13 离线实现与高风险 Review 修复已完成，本地三套门禁全绿；进入 PR 发布门禁
-- 发布顺序：修复提交远程 CI -> PR Ready -> 明确批准 -> 合并与主分支复验
+- 状态：已完成；PR #7 合入 `main`，PR #8 完成合并后 CI 稳定性修复与主分支复验
+- 发布结果：PR #7 merge `023ee028`；PR #8 merge `67f16a589061975adc4870a580b1a2f70df57973`
 - 日期：2026-07-16
-- 分支：`agent/r6-reliable-delivery`
-- Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`
+- 分支：`agent/r6-reliable-delivery`（合并后已清理）
+- Worktree：`/Users/namei/idea/agent/java-agent-r6-reliable-delivery`（合并后已清理）
 - 基线：`origin/main@0bd41770a6a043c84d4e30bb5dbe0e6307b29f83`
 - Contract：[渠道可靠投递、幂等与恢复契约](../contracts/channel-reliable-delivery.md)
 - Spec：[渠道可靠投递、幂等与恢复设计](../specs/2026-07-16-channel-reliable-delivery-design.md)
@@ -683,10 +683,16 @@ git diff --check
   `f21efc2426c18af880239bb41e81deb142c0eab070d8eb89b034237ce7071399` 并与 Manifest 一致；本轮
   没有改变已批准的 Schema、状态、重试上限或真实网络边界。
 
-当前结论仅为“R6.4 离线实现和 Review 修复已通过本地自动化验证，修复前 Head 已通过远程
-自动化验证”。Review 修复 Head 仍须重新通过远程门禁，之后才能把 PR #7 转为 Ready；合并仍需
-明确批准。真实 Telegram Token、网络 Smoke、用户数据与部署仍未获授权，因此本阶段不声明已合并
-或已上线。
+发布与合并证据（2026-07-17）：高风险 Review 修复 Head 重新通过 PR #7 的默认、`failure`、
+`compat` 三套远程门禁并获明确批准，以 `023ee028` 合入 `main`。合并后 Compat 暴露
+`TelegramReliableChannelAdapterTest` 通过 `Thread.getAllStackTraces()` 等待 Virtual Thread 的测试
+观察缺陷；Java 21 不在该枚举中返回 Virtual Thread。聚焦 PR #8 只让测试 Starter 保存并等待实际
+Thread，未修改生产代码。聚焦测试连续 20 次、本地默认 565、`failure` 134、`compat` 671 项，
+PR #8 远程三套门禁及 merge `67f16a5` 对应的主分支三套门禁均通过。发布分支和独立 Worktree 已
+清理，原始脏工作树未变化。
+
+当前结论是“R6.4 默认关闭的离线实现已合入并通过主分支自动化验证”。真实 Telegram Token、网络
+Smoke、用户数据与部署仍未获授权，因此不声明已上线或完成真实渠道验收。
 
 ## 17. 暂停条件
 

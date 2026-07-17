@@ -1,6 +1,6 @@
 # Telegram Channel Host 工作计划
 
-- 状态：Task E0–E9 已完成并通过本地与 PR #6 远程离线门禁；真实 Smoke 待授权
+- 状态：Task E0–E9 已完成并通过 PR #6 合入 `main`；真实 Smoke 待授权
 - 日期：2026-07-16
 - 阶段：R6.3
 - 分支：`agent/r6-telegram-channel`
