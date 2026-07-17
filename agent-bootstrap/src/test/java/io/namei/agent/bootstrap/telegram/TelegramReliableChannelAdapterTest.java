@@ -214,6 +214,7 @@ class TelegramReliableChannelAdapterTest {
     var runtime = new ChannelReliabilityRuntime(workspace, reliability, Clock.systemUTC());
     var token = new TelegramBotToken("123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZ_1234");
     var instance = TelegramChannelInstance.from(token);
+    var threads = new TrackingThreadStarter();
     TelegramReliableChannelAdapter adapter =
         new TelegramReliableChannelAdapter(
             api,
@@ -222,7 +223,7 @@ class TelegramReliableChannelAdapterTest {
             telegramProperties(Set.of(10001L), Duration.ofMillis(100)),
             instance,
             runtime,
-            ChannelThreadStarter.virtualThreads(),
+            threads,
             duration -> {});
 
     adapter.start();
@@ -246,7 +247,7 @@ class TelegramReliableChannelAdapterTest {
       assertThat(restartFailure).isInstanceOf(IllegalStateException.class);
     } finally {
       releaseSend.countDown();
-      await(() -> reliableWorkers().isEmpty(), "阻塞投递 Worker 退出");
+      await(threads::allStopped, "阻塞投递 Worker 退出");
       adapter.close();
     }
   }
@@ -415,6 +416,21 @@ class TelegramReliableChannelAdapterTest {
       beforeSend.run();
       sends.add(new Send(chatId, text));
       return new TelegramSendReceipt(sends.size());
+    }
+  }
+
+  private static final class TrackingThreadStarter implements ChannelThreadStarter {
+    private final List<Thread> threads = new CopyOnWriteArrayList<>();
+
+    @Override
+    public Thread start(String name, Runnable task) {
+      Thread thread = Thread.ofVirtual().name(name).start(task);
+      threads.add(thread);
+      return thread;
+    }
+
+    private boolean allStopped() {
+      return threads.stream().noneMatch(Thread::isAlive);
     }
   }
 
