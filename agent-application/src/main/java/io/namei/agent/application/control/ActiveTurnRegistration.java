@@ -19,6 +19,10 @@ public final class ActiveTurnRegistration implements AutoCloseable {
     return NO_OP;
   }
 
+  public static ActiveTurnRegistration disabled() {
+    return NO_OP;
+  }
+
   public boolean registered() {
     return registry != null;
   }

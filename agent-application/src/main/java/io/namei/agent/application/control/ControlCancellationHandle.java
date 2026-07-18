@@ -1,5 +1,6 @@
 package io.namei.agent.application.control;
 
+import io.namei.agent.application.BoundedOutboundBuffer;
 import io.namei.agent.application.TurnCancellationSource;
 import io.namei.agent.kernel.channel.TurnCancellationCode;
 import java.util.Objects;
@@ -27,6 +28,26 @@ public interface ControlCancellationHandle {
       @Override
       public TurnCancellationCode reason() {
         return source.token().reason();
+      }
+    };
+  }
+
+  static ControlCancellationHandle from(BoundedOutboundBuffer buffer) {
+    Objects.requireNonNull(buffer, "buffer");
+    return new ControlCancellationHandle() {
+      @Override
+      public boolean requestCancellation() {
+        return buffer.requestCancellation();
+      }
+
+      @Override
+      public boolean isCancellationRequested() {
+        return buffer.cancellation().isCancellationRequested();
+      }
+
+      @Override
+      public TurnCancellationCode reason() {
+        return buffer.cancellation().reason();
       }
     };
   }

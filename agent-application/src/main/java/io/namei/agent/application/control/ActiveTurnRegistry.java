@@ -23,7 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
-public final class ActiveTurnRegistry implements AutoCloseable {
+public final class ActiveTurnRegistry implements ActiveTurnObserver, AutoCloseable {
   private static final Pattern CHANNEL = Pattern.compile("[a-z][a-z0-9_-]{0,31}");
 
   private final Clock clock;
@@ -59,6 +59,7 @@ public final class ActiveTurnRegistry implements AutoCloseable {
     this.maxTerminalTombstones = maxTerminalTombstones;
   }
 
+  @Override
   public ActiveTurnRegistration register(
       String channel, ControlCancellationHandle cancellation, Instant startedAt) {
     requireChannel(channel);

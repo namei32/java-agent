@@ -9,12 +9,20 @@ import io.namei.agent.application.ChatResult;
 import io.namei.agent.application.ChatUseCase;
 import io.namei.agent.application.MessageTurnService;
 import io.namei.agent.application.TurnCancellation;
+import io.namei.agent.application.TurnCancellationSource;
+import io.namei.agent.application.control.ActiveTurnObserver;
+import io.namei.agent.application.control.ActiveTurnRegistry;
+import io.namei.agent.application.control.ControlCancellationHandle;
 import io.namei.agent.bootstrap.channel.ChannelState;
+import io.namei.agent.kernel.control.ControlCancelResult;
+import io.namei.agent.kernel.control.ControlTerminalKind;
 import io.namei.agent.kernel.error.TurnCancelledException;
 import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.MessageRole;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -154,6 +162,62 @@ class TelegramChannelAdapterTest {
   }
 
   @Test
+  void dashboardCancellationUsesTheSameVolatileBufferSource() throws Exception {
+    var api = new ScriptedApi();
+    var chat = new BlockingChat("telegram:10001");
+    var reference = controlRef(1);
+    var clock = Clock.fixed(Instant.parse("2026-07-16T00:00:00Z"), ZoneOffset.UTC);
+    var registry = new ActiveTurnRegistry(clock, () -> reference, 1, Duration.ofMinutes(5), 1);
+    api.enqueue(List.of(update(41, 10001, 1, "等待控制面取消")));
+    var adapter =
+        adapter(api, chat, properties(1), ChannelThreadStarter.virtualThreads(), clock, registry);
+
+    try {
+      adapter.start();
+      assertThat(chat.awaitStarted("telegram:10001")).isTrue();
+      await(() -> registry.snapshot().activeTurns().size() == 1, "控制面注册");
+
+      assertThat(registry.cancel(reference).result())
+          .isEqualTo(ControlCancelResult.CANCELLATION_REQUESTED);
+
+      await(() -> api.sends.contains(new Send(10001, "请求已取消（REQUESTED）")), "控制取消终态");
+      await(() -> registry.snapshot().activeTurns().isEmpty(), "控制面终态移除");
+      assertThat(chat.cancelledSessions).containsExactly("telegram:10001");
+      assertThat(registry.terminalKind(reference)).contains(ControlTerminalKind.CANCELLED);
+    } finally {
+      adapter.close();
+      registry.close();
+    }
+  }
+
+  @Test
+  void saturatedControlRegistryNeverChangesTheVolatileTurnResult() {
+    var api = new ScriptedApi();
+    var chat = new SuccessfulChat();
+    var clock = Clock.fixed(Instant.parse("2026-07-16T00:00:00Z"), ZoneOffset.UTC);
+    var registry = new ActiveTurnRegistry(clock, () -> controlRef(1), 1, Duration.ofMinutes(5), 1);
+    var existingCancellation = new TurnCancellationSource();
+    var existing =
+        registry.register(
+            "telegram", ControlCancellationHandle.from(existingCancellation), clock.instant());
+    api.enqueue(List.of(update(42, 10001, 1, "Registry 已满仍应完成")));
+    var adapter =
+        adapter(api, chat, properties(1), ChannelThreadStarter.virtualThreads(), clock, registry);
+
+    try {
+      adapter.start();
+      await(() -> api.sends.contains(new Send(10001, "answer-telegram:10001")), "饱和时正常完成");
+      assertThat(chat.calls).hasValue(1);
+      assertThat(registry.snapshot().activeTurns()).hasSize(1);
+      assertThat(existingCancellation.token().isCancellationRequested()).isFalse();
+    } finally {
+      adapter.close();
+      existing.closeWithoutTerminal();
+      registry.close();
+    }
+  }
+
+  @Test
   void unsupportedAndUnauthorizedUpdatesNeverReachBusinessWorkOrDelivery() {
     var api = new ScriptedApi();
     var chat = new SuccessfulChat();
@@ -186,9 +250,12 @@ class TelegramChannelAdapterTest {
       String name, String failingWorker) {
     var api = new ScriptedApi();
     var chat = new SuccessfulChat();
+    var reference = controlRef(1);
+    var clock = Clock.fixed(Instant.parse("2026-07-16T00:00:00Z"), ZoneOffset.UTC);
+    var registry = new ActiveTurnRegistry(clock, () -> reference, 1, Duration.ofMinutes(5), 1);
     api.enqueue(List.of(update(60, 10001, 1, "不能开始")));
     var threads = new FailingThreadStarter(failingWorker);
-    var adapter = adapter(api, chat, properties(1), threads);
+    var adapter = adapter(api, chat, properties(1), threads, clock, registry);
 
     try {
       adapter.start();
@@ -201,8 +268,13 @@ class TelegramChannelAdapterTest {
       assertThat(chat.calls).hasValue(0);
       assertThat(api.sends).isEmpty();
       assertThat(adapter.snapshot().code()).isEqualTo("TURN_WORKER_START_FAILED");
+      assertThat(registry.snapshot().activeTurns()).isEmpty();
+      assertThat(registry.terminalKind(reference))
+          .as("启动失败发生在 Application 执行边界前，不得创建控制面 Tombstone")
+          .isEmpty();
     } finally {
       adapter.close();
+      registry.close();
     }
   }
 
@@ -226,6 +298,32 @@ class TelegramChannelAdapterTest {
         properties,
         threads,
         duration -> {});
+  }
+
+  private static TelegramChannelAdapter adapter(
+      ScriptedApi api,
+      ChatUseCase chat,
+      TelegramProperties properties,
+      ChannelThreadStarter threads,
+      Clock clock,
+      ActiveTurnObserver observer) {
+    var ids = new AtomicLong();
+    return new TelegramChannelAdapter(
+        api,
+        new TelegramUpdateMapper(
+            Set.of(10001L, 10002L), () -> "turn-test-" + ids.incrementAndGet()),
+        new MessageTurnService(chat),
+        properties,
+        threads,
+        duration -> {},
+        clock,
+        observer);
+  }
+
+  private static io.namei.agent.kernel.control.ControlTurnRef controlRef(int lastByte) {
+    byte[] bytes = new byte[16];
+    bytes[15] = (byte) lastByte;
+    return io.namei.agent.kernel.control.ControlTurnRef.fromBytes(bytes);
   }
 
   private static TelegramProperties properties(int maxConcurrentTurns) {

@@ -1,5 +1,8 @@
 package io.namei.agent.application;
 
+import io.namei.agent.application.control.ActiveTurnObserver;
+import io.namei.agent.application.control.ActiveTurnRegistration;
+import io.namei.agent.application.control.ControlCancellationHandle;
 import io.namei.agent.kernel.channel.InboundMessage;
 import io.namei.agent.kernel.channel.TurnCancellationCode;
 import io.namei.agent.kernel.channel.reliability.ChannelFingerprint;
@@ -34,6 +37,7 @@ public final class ReliableInboundCoordinator {
   private final String ownerId;
   private final ReliableTurnIdGenerator ids;
   private final ReliableInboundSettings settings;
+  private final ActiveTurnObserver activeTurnObserver;
   private final Semaphore permits;
   private final ConcurrentHashMap<ActiveKey, ActiveTurn> activeTurns = new ConcurrentHashMap<>();
   private final Object registrations = new Object();
@@ -47,6 +51,18 @@ public final class ReliableInboundCoordinator {
       ReliableOwnerProvider owner,
       ReliableTurnIdGenerator ids,
       ReliableInboundSettings settings) {
+    this(ledger, turns, starter, clock, owner, ids, settings, ActiveTurnObserver.disabled());
+  }
+
+  public ReliableInboundCoordinator(
+      ChannelLedgerPort ledger,
+      ReliableTurnProcessor turns,
+      ReliableTurnStarter starter,
+      Clock clock,
+      ReliableOwnerProvider owner,
+      ReliableTurnIdGenerator ids,
+      ReliableInboundSettings settings,
+      ActiveTurnObserver activeTurnObserver) {
     this.ledger = Objects.requireNonNull(ledger, "ledger");
     this.turns = Objects.requireNonNull(turns, "turns");
     this.starter = Objects.requireNonNull(starter, "starter");
@@ -55,6 +71,7 @@ public final class ReliableInboundCoordinator {
         Objects.requireNonNull(Objects.requireNonNull(owner, "owner").ownerId(), "ownerId");
     this.ids = Objects.requireNonNull(ids, "ids");
     this.settings = Objects.requireNonNull(settings, "settings");
+    this.activeTurnObserver = Objects.requireNonNull(activeTurnObserver, "activeTurnObserver");
     this.permits = new Semaphore(settings.maxConcurrentTurns(), true);
   }
 
@@ -336,18 +353,35 @@ public final class ReliableInboundCoordinator {
                   startedAt.plus(settings.turnLease()),
                   startedAt));
       if (started.status() == ChannelLedgerResult.TurnStartStatus.STARTED) {
+        ActiveTurnRegistration registration =
+            registerControl(active.event().instance().channel(), active.cancellation(), startedAt);
+        active.controlRegistration(registration);
         turns.process(
             new ReliableTurnContext(
                 active.event().instance(),
                 active.inbound(),
                 active.event().targetId(),
-                started.revision()),
+                started.revision(),
+                registration),
             active.cancellation().token());
       }
     } catch (RuntimeException ignored) {
       // 持久边界失败或 Turn 流程失败均由状态恢复/权威终态处理，原始异常不跨渠道边界。
     } finally {
+      active.closeControlRegistration();
       cleanup(active);
+    }
+  }
+
+  private ActiveTurnRegistration registerControl(
+      String channel, TurnCancellationSource cancellation, Instant startedAt) {
+    try {
+      ActiveTurnRegistration registration =
+          activeTurnObserver.register(
+              channel, ControlCancellationHandle.from(cancellation), startedAt);
+      return registration == null ? ActiveTurnRegistration.disabled() : registration;
+    } catch (RuntimeException observerFailure) {
+      return ActiveTurnRegistration.disabled();
     }
   }
 
@@ -515,6 +549,7 @@ public final class ReliableInboundCoordinator {
     private final ReliableInboundEvent.Accepted event;
     private final TurnCancellationSource cancellation = new TurnCancellationSource();
     private final AtomicBoolean cleaned = new AtomicBoolean();
+    private volatile ActiveTurnRegistration controlRegistration = ActiveTurnRegistration.disabled();
     private volatile InboundMessage inbound;
     private volatile long revision;
     private volatile Thread thread;
@@ -559,6 +594,18 @@ public final class ReliableInboundCoordinator {
 
     private TurnCancellationSource cancellation() {
       return cancellation;
+    }
+
+    private void controlRegistration(ActiveTurnRegistration registration) {
+      controlRegistration = Objects.requireNonNull(registration, "registration");
+    }
+
+    private void closeControlRegistration() {
+      try {
+        controlRegistration.closeWithoutTerminal();
+      } catch (RuntimeException ignored) {
+        // 控制观察失败不能改变可靠渠道 Claim、终态或许可释放。
+      }
     }
 
     private AtomicBoolean cleaned() {

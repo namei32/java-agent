@@ -5,6 +5,7 @@ import io.namei.agent.application.ChannelDeliveryWakeSignal;
 import io.namei.agent.application.DurableTerminalCoordinator;
 import io.namei.agent.application.OutboundMessageSink;
 import io.namei.agent.application.ReliableTurnContext;
+import io.namei.agent.application.control.ObservedOutboundMessageSink;
 import io.namei.agent.kernel.channel.OutboundMessage;
 import io.namei.agent.kernel.port.ChannelLedgerPort;
 import java.time.Clock;
@@ -31,7 +32,7 @@ public final class ReliableTelegramOutboundSink implements OutboundMessageSink {
             context,
             chunkAlgorithm,
             Objects.requireNonNull(projector, "projector"),
-            this::publishLocal,
+            new ObservedOutboundMessageSink(this::publishLocal, context.controlRegistration()),
             wake,
             clock);
   }
