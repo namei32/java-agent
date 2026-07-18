@@ -33,7 +33,7 @@
 | R9 | 生产切换 | 已实现并验证（仅离线演练） | sandbox 演练、备份、差异、回退门禁与独立生产授权 |
 | R10 | Prompt 编排与 Persona | 已实现并验证 | Java-owned Section/Fixture、context frame、注入时间/会话、固定预算裁剪、默认 `MINIMAL` 与 `AKASHIC_CORE` 接线；三套阶段门禁通过 |
 | R11 | Tool Catalog 与审批恢复安全基础 | 实施中（无执行） | Catalog、审批 Inbox、Pending Operation/Reservation/Ledger/Anchor Contract 已验证；生产恢复路由、Capability 与真实执行仍冻结 |
-| R12 | Skills、MCP 扩展与 Plugin 生命周期 | S1–S4 已实现并验证 | 默认关闭的只读 Skill Catalog、MCP Resources/Prompts 元数据目录、预算、失败隔离与 Stale、API v2 精确只读 Lifecycle Tap，以及 deferred `read_skill`；Skill 执行、远程 MCP 与可变生命周期仍未开始 |
+| R12 | Skills、MCP 扩展与 Plugin 生命周期 | S1–S4 已实现并验证 | 默认关闭的只读 Skill Catalog、API v2 精确只读 Lifecycle Tap 与 deferred `read_skill` 已缩小 Python 差距；MCP Resources/Prompts 元数据目录、预算、失败隔离与 Stale 亦已完成，但它是 Java-owned 扩展。Skill 执行、远程 MCP 与可变生命周期仍未开始 |
 
 ## R0：治理、契约与跨语言基线
 
@@ -292,7 +292,8 @@ Capability 门禁。
 R12-S1 对齐 Python `agent/skills.py` 的发现、Workspace 覆盖、依赖可用性和 always Prompt 子集。默认
 `DISABLED`，只在显式 `READ_ONLY` 下读取 Java Skill Roots；它不执行 Skill、脚本、CLI、MCP、Tool 或网络，也不
 向模型公开物理路径。R12-S2 已补只读 MCP Resources/Prompts 的目录元数据发现：默认关闭、仅本地 stdio、无正文、
-无 Prompt 注入、每类 32 项上限及 Stale。R12-S3 再以 API v2 `LIFECYCLE_TAP` 精确投影受支持的 Java Phase；它保持
+无 Prompt 注入、每类 32 项上限及 Stale；Python 基线并不实现该 Assets 表面，因此它只作为 Java-owned 安全治理扩展。
+R12-S3 再以 API v2 `LIFECYCLE_TAP` 精确投影受支持的 Java Phase；它保持
 API v1 Wire 不变、默认零 I/O，外部 stdio 条目必须显式 `api-version: 2`。R12-S4 以 `read_skill` 通过当前 Turn
 `tool_search` 按名回送已审计、可用且无 frontmatter 的正文，不暴露路径或执行 Skill。Skill 执行、Streamable HTTP 和
 可变 Plugin 生命周期仍属于后续 R12 切片，均需新的 Fixture 与 Contract。

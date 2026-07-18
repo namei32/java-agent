@@ -9,8 +9,10 @@
 
 ## 1. 目标与非目标
 
-本切片补足 R5.1 未覆盖的 MCP `resources/list` 与 `prompts/list` **目录发现**。它只使用既有、静态配置、stdio
-且本地受控的 Server；将符合预算的元数据投影为 Java-owned descriptor，以供未来受审计的能力选择器使用。
+本切片补足 Java R5.1 自身未覆盖的 MCP `resources/list` 与 `prompts/list` **目录发现**。已提交的 Akashic
+Python 基线只协商 `tools`、调用 `tools/list` 与 `tools/call`，并不实现此 Assets 表面；因此本切片是 Java-owned
+安全治理扩展，不能计作缩小 Python 行为差距的证据。它只使用既有、静态配置、stdio 且本地受控的 Server；将符合
+预算的元数据投影为 Java-owned descriptor，以供未来受审计的能力选择器使用。
 
 它不读取 Resource、不会调用 `resources/subscribe`、不会调用 `prompts/get`，不支持 Sampling、Roots、Elicitation、
 Tasks、Apps、Streamable HTTP、SSE、OAuth、远程 Server 或动态增删 Server。目录内容、Prompt 文本及其参数绝不

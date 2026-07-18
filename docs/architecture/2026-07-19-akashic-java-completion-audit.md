@@ -29,7 +29,7 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 | Skills 目录、frontmatter、工作区覆盖、依赖可用性、always 注入 | `agent/skills.py`、`agent/core/prompt_block.py`、`skills/*/SKILL.md` | R12-S1 Catalog/always 注入与 S4 deferred `read_skill` 已有 Kernel Port、受限只读 Adapter、严格 Properties 和 Tool Loop 回送；默认关闭 | Skill 执行、动态下载与 Python import 仍须单独 Contract |
 | 文件、Shell、Web、消息、记忆、调度、Spawn、Peer、MCP 管理等 Tool | `agent/tools/*.py`、`agent/mcp/*`、`agent/peer_agent/*` | `current_time`、静态只读 MCP，及 R11-B3 默认关闭、独立 Root 的 `read_file`/`list_dir` | B3 已有路径/链接、严格 UTF-8、预算、Deferred Schema 与纵向失败测试；其余仍按 Tool 逐一建立 Capability、Sandbox、Ledger、`UNKNOWN` 与 Smoke Contract |
 | Provider 适配策略与 thinking/cache 细节 | `agent/provider.py`、`bootstrap/providers.py` | 一个 OpenAI-compatible Spring AI 适配器 | 逐 Provider 建立 Options/Message/Streaming Fixture；真实 Provider Smoke 仍独立批准 |
-| Resources/Prompts/Streamable HTTP MCP 与动态管理 | `agent/mcp/*.py`、`bootstrap/toolsets/mcp.py` | 静态 stdio、只读 `tools/list`/`tools/call`；R12-S2 已实现默认关闭的 `resources/list`/`prompts/list` 元数据目录与 Stale | 远程认证、正文读取/注入、Streamable HTTP、取消与隔离仍需后续 Contract |
+| MCP Tool Client | `agent/mcp/client.py`、`bootstrap/toolsets/mcp.py` | 静态 stdio、只读 `tools/list`/`tools/call`；R12-S2 另有默认关闭的 `resources/list`/`prompts/list` 元数据目录与 Stale | Python 基线并不实现 Resources/Prompts；S2 是 Java-owned 安全扩展，不是对齐证据。远程认证、正文读取/注入、Streamable HTTP、取消与隔离须先证明必要性，再另立 Contract |
 | Python Plugin 全生命周期、配置与 Tool Hook | `agent/plugins/*`、`agent/lifecycle/*` | Java ServiceLoader/stdio 观察型 Tap，含 API v2 Lifecycle Phase 映射 | R12-S3 已实现默认关闭的只读映射；可变 Hook/动态 Python import 需要独立授权 |
 | QQ/Feishu/IPC、完整 Channel Host | `infra/channels/*`、`plugins/qqbot`、`plugins/feishu` | CLI/Telegram 纵向切片 | R13 按渠道分别冻结身份、投递、恢复、真实 Smoke 与回退 |
 | Dashboard 会话/消息/记忆管理与前端 | `bootstrap/dashboard_api.py`、`frontend/` | 后端 Loopback 状态/取消，零前端 | R13 先固定 API Fixture，再实现安全前端/历史操作 |
@@ -46,8 +46,9 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
    或写入 Workspace；Fixture 和完整三套 Maven 门禁已通过，仍不授权执行、动态下载或 Python import。
 3. **R11-B3 只读文件浏览已完成并验证。** 它只允许独立显式 Root 的受预算文本读取和一层目录投影，默认关闭且不使用
    `${agent.workspace}`；它不解决 B2c 恢复，也不授权写入、Shell、网络或真实 Workspace。
-4. R12-S2 的目录发现、R12-S3 API v2 只读生命周期 Tap 与 R12-S4 deferred Skill 正文读取均已完成并通过三套门禁；
-   R13 多渠道/控制面、R14 主动/Peer/自动记忆、R15 生产切换严格按顺序。
+4. R12-S3 API v2 只读生命周期 Tap 与 R12-S4 deferred Skill 正文读取均已完成并通过三套门禁；R12-S2 的
+   Assets 目录也已完成，但它是 Java-owned 扩展而非 Python MCP 对齐。实际主线仍是获得首个副作用 Capability
+   的逐工具 Contract 后完成 R11-B2c，随后才进入 R13 多渠道/控制面、R14 主动/Peer/自动记忆和 R15 生产切换。
 
 “与 Akashic 一样完善”的完成条件是：本表每个条目都已由当前源码、版本化 Contract Fixture、对应失败路径
 测试和阶段门禁证实，或有用户批准的替代方案；真实网络、密钥、用户数据、生产写入和 Python 退役还必须额外
