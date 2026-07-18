@@ -1,6 +1,6 @@
 # R6.5 Loopback 控制面、安全状态、SSE 与活动 Turn 取消工作计划
 
-- 状态：G0–G5 已完成；下一步 G6
+- 状态：G0–G6 已完成；下一步 G7
 - 日期：2026-07-17
 - 分支：`agent/r6-control-plane-contract`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-control-plane`
@@ -326,7 +326,7 @@ Telegram 普通/可靠 Spring Bean 都从容器获得该 Observer，Disabled 时
 
 ## 9. Task G6：Loopback Guard、Operator Session 与安全审计
 
-状态：待实施。
+状态：已完成。
 
 先写：
 
@@ -356,6 +356,18 @@ RED/GREEN：
 ```
 
 预计提交：`feat: 保护本地 Operator Session`
+
+RED/GREEN 证据（2026-07-18）：先加入 Guard、Session Store、Security Filter、Audit 与 Failure
+五类测试，聚焦命令在测试编译阶段因全部安全生产类型缺失而失败。最小实现后同一命令执行
+13 项全部通过：原始 RemoteAddr、严格 Host/Origin、无 CORS、空 Body 和固定 Route 先于认证
+Fail Closed；除 Session 创建外统一校验单个 Bearer Header，调用方 Request ID 不被信任。
+
+Session 使用 256-bit Token 和独立 128-bit Actor Ref，只保存 SHA-256 摘要并以常量时间比较；
+硬到期、容量、主动注销与关闭均清理摘要和 Actor Subscription。HTTP 纵向切片已固定一次返回的
+`201` Envelope、首次注销 `204` 和后续统一 `401`。控制错误的 `retryable` 只由稳定码派生，
+审计只保存引用哈希，Sink 失败被隔离。Bracketed IPv6 有/无端口均覆盖；普通 Chat 的两层
+Filter 回归 9 项、G5 配置回归 9 项也全部通过。阶段只执行 G6 聚焦门禁与 Spotless，严格全门禁
+按计划留到 G9 后统一执行；没有访问真实 Telegram、网络、Token、用户工作区或前端。
 
 ## 10. Task G7：Status、Turns 与 Cancel HTTP API
 
