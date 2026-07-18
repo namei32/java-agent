@@ -1,6 +1,6 @@
 # ADR-0019：在恢复前冻结 Pending Operation 的 Session Anchor
 
-- 状态：已采纳，待实施
+- 状态：已采纳，部分实施；Anchor 持久化与无执行条件提交已完成，恢复编排仍冻结
 - 日期：2026-07-19
 - 决策：R11 B2b / O6 Recovery Capability
 

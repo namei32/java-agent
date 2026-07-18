@@ -43,6 +43,11 @@ public record PendingTurnAnchor(
     if (resumeNextSequence != requiredResumeSequence) {
       throw new IllegalArgumentException("Anchor 恢复序号必须紧随安全 Pending Turn");
     }
+    try {
+      Math.addExact(resumeNextSequence, 1);
+    } catch (ArithmeticException exception) {
+      throw new IllegalArgumentException("Anchor 恢复序号没有可用完成位置", exception);
+    }
     state = Objects.requireNonNull(state, "state");
     projectionVersion = required(projectionVersion, "投影版本");
     if (!PROJECTION_VERSION.matcher(projectionVersion).matches()) {

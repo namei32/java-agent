@@ -4,6 +4,7 @@ import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.MessageRole;
 import io.namei.agent.kernel.model.PendingTurnAnchor;
 import io.namei.agent.kernel.model.PendingTurnAnchorState;
+import io.namei.agent.kernel.model.PendingTurnResolution;
 import io.namei.agent.kernel.model.PersistedTurn;
 import io.namei.agent.kernel.model.SessionSnapshot;
 import io.namei.agent.kernel.port.SessionRepository;
@@ -186,36 +187,59 @@ public final class JdbcSessionRepository implements SessionRepository {
   @Override
   public Optional<PendingTurnAnchor> findPendingTurnAnchor(String operationReference) {
     Objects.requireNonNull(operationReference, "operationReference");
-    try (var connection = schema.openConnection();
-        var statement =
-            connection.prepareStatement(
-                """
-                SELECT anchor_version, operation_ref, session_key, created_next_sequence,
-                       resume_next_sequence, state, projection_version
-                FROM pending_turn_anchors
-                WHERE operation_ref = ?
-                """)) {
-      statement.setString(1, operationReference);
-      try (var rows = statement.executeQuery()) {
-        if (!rows.next()) {
-          return Optional.empty();
-        }
-        PendingTurnAnchor anchor =
-            new PendingTurnAnchor(
-                rows.getInt("anchor_version"),
-                rows.getString("operation_ref"),
-                rows.getString("session_key"),
-                rows.getLong("created_next_sequence"),
-                rows.getLong("resume_next_sequence"),
-                PendingTurnAnchorState.valueOf(rows.getString("state")),
-                rows.getString("projection_version"));
-        if (rows.next()) {
-          throw new SqliteRepositoryException("Pending Turn Anchor 不是唯一记录");
-        }
-        return Optional.of(anchor);
-      }
+    try (var connection = schema.openConnection()) {
+      return readPendingTurnAnchor(connection, operationReference);
     } catch (SQLException | RuntimeException exception) {
       throw new SqliteRepositoryException("读取 Pending Turn Anchor 失败", exception);
+    }
+  }
+
+  @Override
+  public boolean appendPendingResolutionIfAnchorMatches(
+      PendingTurnAnchor anchor, PendingTurnResolution resolution) {
+    Objects.requireNonNull(anchor, "anchor");
+    Objects.requireNonNull(resolution, "resolution");
+    if (!anchor.projectionVersion().equals(resolution.projectionVersion())) {
+      throw new IllegalArgumentException("Pending Turn Resolution 投影版本与 Anchor 不匹配");
+    }
+    try (var connection = schema.openConnection()) {
+      connection.setAutoCommit(false);
+      try {
+        Optional<PendingTurnAnchor> stored =
+            readPendingTurnAnchor(connection, anchor.operationReference());
+        if (stored.isEmpty()
+            || !stored.orElseThrow().equals(anchor)
+            || anchor.state() != PendingTurnAnchorState.PENDING_APPROVAL) {
+          connection.rollback();
+          return false;
+        }
+
+        if (readNextSequence(connection, anchor.sessionId()) != anchor.resumeNextSequence()
+            || !advanceSessionForPendingResolution(
+                connection,
+                anchor.sessionId(),
+                anchor.resumeNextSequence(),
+                Math.addExact(anchor.resumeNextSequence(), 1),
+                timestamp(resolution.resolvedAt()))) {
+          transitionPendingTurnAnchor(connection, anchor, PendingTurnAnchorState.STALE_SESSION);
+          connection.commit();
+          return false;
+        }
+        insertMessage(
+            connection,
+            anchor.sessionId(),
+            anchor.resumeNextSequence(),
+            resolution.safeAssistantProjection(),
+            timestamp(resolution.resolvedAt()));
+        transitionPendingTurnAnchor(connection, anchor, PendingTurnAnchorState.COMMITTED);
+        connection.commit();
+        return true;
+      } catch (SQLException | RuntimeException exception) {
+        rollbackPreservingFailure(connection, exception);
+        throw exception;
+      }
+    } catch (SQLException | RuntimeException exception) {
+      throw new SqliteRepositoryException("条件写入 Pending Turn Resolution 失败", exception);
     }
   }
 
@@ -366,6 +390,32 @@ public final class JdbcSessionRepository implements SessionRepository {
     }
   }
 
+  private static boolean advanceSessionForPendingResolution(
+      Connection connection,
+      String sessionId,
+      long expectedNextSequence,
+      long followingSequence,
+      String resolutionTimestamp)
+      throws SQLException {
+    try (var update =
+        connection.prepareStatement(
+            """
+            UPDATE sessions
+            SET next_seq = ?, updated_at = ?
+            WHERE key = ? AND next_seq = ?
+            """)) {
+      update.setLong(1, followingSequence);
+      update.setString(2, resolutionTimestamp);
+      update.setString(3, sessionId);
+      update.setLong(4, expectedNextSequence);
+      int updated = update.executeUpdate();
+      if (updated < 0 || updated > 1) {
+        throw new SQLException("Session Pending Resolution 条件更新行数无效: " + sessionId);
+      }
+      return updated == 1;
+    }
+  }
+
   private static void insertPendingTurnAnchor(Connection connection, PendingTurnAnchor anchor)
       throws SQLException {
     try (var statement =
@@ -385,6 +435,70 @@ public final class JdbcSessionRepository implements SessionRepository {
       statement.setString(7, anchor.projectionVersion());
       if (statement.executeUpdate() != 1) {
         throw new SQLException("Pending Turn Anchor 写入行数不是 1");
+      }
+    }
+  }
+
+  private static Optional<PendingTurnAnchor> readPendingTurnAnchor(
+      Connection connection, String operationReference) throws SQLException {
+    try (var statement =
+        connection.prepareStatement(
+            """
+            SELECT anchor_version, operation_ref, session_key, created_next_sequence,
+                   resume_next_sequence, state, projection_version
+            FROM pending_turn_anchors
+            WHERE operation_ref = ?
+            """)) {
+      statement.setString(1, operationReference);
+      try (var rows = statement.executeQuery()) {
+        if (!rows.next()) {
+          return Optional.empty();
+        }
+        PendingTurnAnchor anchor =
+            new PendingTurnAnchor(
+                rows.getInt("anchor_version"),
+                rows.getString("operation_ref"),
+                rows.getString("session_key"),
+                rows.getLong("created_next_sequence"),
+                rows.getLong("resume_next_sequence"),
+                PendingTurnAnchorState.valueOf(rows.getString("state")),
+                rows.getString("projection_version"));
+        if (rows.next()) {
+          throw new SqliteRepositoryException("Pending Turn Anchor 不是唯一记录");
+        }
+        return Optional.of(anchor);
+      }
+    }
+  }
+
+  private static void transitionPendingTurnAnchor(
+      Connection connection, PendingTurnAnchor anchor, PendingTurnAnchorState next)
+      throws SQLException {
+    if (!next.isTerminal()) {
+      throw new IllegalArgumentException("Pending Turn Anchor 只能转换至终态");
+    }
+    try (var update =
+        connection.prepareStatement(
+            """
+            UPDATE pending_turn_anchors
+            SET state = ?
+            WHERE operation_ref = ?
+              AND session_key = ?
+              AND anchor_version = ?
+              AND created_next_sequence = ?
+              AND resume_next_sequence = ?
+              AND state = 'PENDING_APPROVAL'
+              AND projection_version = ?
+            """)) {
+      update.setString(1, next.name());
+      update.setString(2, anchor.operationReference());
+      update.setString(3, anchor.sessionId());
+      update.setInt(4, anchor.anchorVersion());
+      update.setLong(5, anchor.createdNextSequence());
+      update.setLong(6, anchor.resumeNextSequence());
+      update.setString(7, anchor.projectionVersion());
+      if (update.executeUpdate() != 1) {
+        throw new SQLException("Pending Turn Anchor 条件状态更新行数不是 1");
       }
     }
   }

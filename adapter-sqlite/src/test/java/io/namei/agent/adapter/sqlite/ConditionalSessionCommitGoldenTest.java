@@ -25,7 +25,7 @@ class ConditionalSessionCommitGoldenTest {
   void executesEveryVersionedConditionalSessionFixtureCase() throws Exception {
     JsonNode fixture =
         JSON.readTree(goldenRoot().resolve("tools/pending-operation-v1.json").toFile());
-    assertThat(fixture.path("cases").size()).isEqualTo(44);
+    assertThat(fixture.path("cases").size()).isEqualTo(50);
     for (JsonNode testCase : fixture.path("cases")) {
       String id = testCase.path("id").asText();
       if (id.startsWith("session-conditional-")) {

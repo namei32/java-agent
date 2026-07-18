@@ -1,6 +1,7 @@
 package io.namei.agent.bootstrap.observability;
 
 import io.namei.agent.kernel.model.PendingTurnAnchor;
+import io.namei.agent.kernel.model.PendingTurnResolution;
 import io.namei.agent.kernel.model.PersistedTurn;
 import io.namei.agent.kernel.model.SessionSnapshot;
 import io.namei.agent.kernel.port.SessionRepository;
@@ -49,6 +50,12 @@ public final class ObservedSessionRepository implements SessionRepository {
   @Override
   public Optional<PendingTurnAnchor> findPendingTurnAnchor(String operationReference) {
     return observe(() -> delegate.findPendingTurnAnchor(operationReference));
+  }
+
+  @Override
+  public boolean appendPendingResolutionIfAnchorMatches(
+      PendingTurnAnchor anchor, PendingTurnResolution resolution) {
+    return observe(() -> delegate.appendPendingResolutionIfAnchorMatches(anchor, resolution));
   }
 
   private <T> T observe(Supplier<T> action) {

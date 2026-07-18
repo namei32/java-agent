@@ -18,10 +18,12 @@ class PendingTurnAnchorGoldenTest {
   void executesEveryVersionedSessionAnchorFixtureCase() throws Exception {
     JsonNode fixture =
         JSON.readTree(goldenRoot().resolve("tools/pending-operation-v1.json").toFile());
-    assertThat(fixture.path("cases").size()).isEqualTo(44);
+    assertThat(fixture.path("cases").size()).isEqualTo(50);
     for (JsonNode testCase : fixture.path("cases")) {
       String id = testCase.path("id").asText();
-      if (id.startsWith("anchor-") && !id.startsWith("anchor-store-")) {
+      if (id.startsWith("anchor-")
+          && !id.startsWith("anchor-store-")
+          && !id.startsWith("anchor-recovery-")) {
         verify(id);
       }
     }
@@ -61,6 +63,15 @@ class PendingTurnAnchorGoldenTest {
                           4,
                           5,
                           PendingTurnAnchorState.PENDING_APPROVAL,
+                          "pending-projection-v1"));
+      case "anchor-rejects-unresolvable-cursor" ->
+          assertThatIllegalArgumentException()
+              .isThrownBy(
+                  () ->
+                      PendingTurnAnchor.pending(
+                          "AAAAAAAAAAAAAAAAAAAAAA",
+                          "session-1",
+                          Long.MAX_VALUE - 2,
                           "pending-projection-v1"));
       case "anchor-cancelled-is-terminal" -> {
         PendingTurnAnchor cancelled = pending.transitionTo(PendingTurnAnchorState.CANCELLED);

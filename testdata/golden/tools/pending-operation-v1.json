@@ -49,11 +49,17 @@
     {"id":"anchor-rejects-unknown-version","input":{},"expected":"rejected"},
     {"id":"anchor-rejects-nonopaque-operation-reference","input":{},"expected":"rejected"},
     {"id":"anchor-requires-following-resume-sequence","input":{},"expected":"rejected"},
+    {"id":"anchor-rejects-unresolvable-cursor","input":{},"expected":"rejected"},
     {"id":"anchor-cancelled-is-terminal","input":{},"expected":"CANCELLED"},
     {"id":"anchor-stale-is-terminal","input":{},"expected":"STALE_SESSION"},
     {"id":"anchor-to-string-redacts-bindings","input":{},"expected":"redacted"},
     {"id":"anchor-store-persists-atomically","input":{},"expected":"committed"},
     {"id":"anchor-store-rejects-stale-cursor","input":{},"expected":"not-committed"},
-    {"id":"anchor-store-rolls-back-anchor-insert-failure","input":{},"expected":"fail-closed"}
+    {"id":"anchor-store-rolls-back-anchor-insert-failure","input":{},"expected":"fail-closed"},
+    {"id":"anchor-recovery-commits-exact-cursor","input":{},"expected":"COMMITTED"},
+    {"id":"anchor-recovery-stales-on-newer-turn","input":{},"expected":"STALE_SESSION"},
+    {"id":"anchor-recovery-rejects-cancelled-anchor","input":{},"expected":"not-committed"},
+    {"id":"anchor-recovery-rolls-back-commit-failure","input":{},"expected":"fail-closed"},
+    {"id":"anchor-recovery-rejects-projection-version","input":{},"expected":"rejected"}
   ]
 }

@@ -1,6 +1,7 @@
 package io.namei.agent.kernel.port;
 
 import io.namei.agent.kernel.model.PendingTurnAnchor;
+import io.namei.agent.kernel.model.PendingTurnResolution;
 import io.namei.agent.kernel.model.PersistedTurn;
 import io.namei.agent.kernel.model.SessionSnapshot;
 import java.util.Objects;
@@ -45,5 +46,19 @@ public interface SessionRepository {
   default Optional<PendingTurnAnchor> findPendingTurnAnchor(String operationReference) {
     Objects.requireNonNull(operationReference, "operationReference");
     throw new UnsupportedOperationException("Session Repository 不支持 Pending Turn Anchor");
+  }
+
+  /**
+   * Atomically appends one safe Assistant resolution only if the stored pending Anchor and Session
+   * cursor still exactly match.
+   *
+   * <p>The default fails closed. Implementations must never invoke a Tool, write a User message, or
+   * compose this operation from separate Session and Anchor commits.
+   */
+  default boolean appendPendingResolutionIfAnchorMatches(
+      PendingTurnAnchor anchor, PendingTurnResolution resolution) {
+    Objects.requireNonNull(anchor, "anchor");
+    Objects.requireNonNull(resolution, "resolution");
+    throw new UnsupportedOperationException("Session Repository 不支持 Pending Turn Resolution");
   }
 }
