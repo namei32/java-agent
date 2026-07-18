@@ -73,6 +73,33 @@ class MarkdownSkillCatalogAdapterTest {
     assertThat(snapshot.activeContents())
         .extracting(content -> content.name(), content -> content.body())
         .containsExactly(org.assertj.core.groups.Tuple.tuple("daily-rules", "Use Chinese."));
+    assertThat(adapter.readAvailable("alpha"))
+        .hasValueSatisfying(content -> assertThat(content.body()).isEqualTo("Alpha body"));
+    assertThat(adapter.readAvailable("calendar")).isEmpty();
+    assertThat(adapter.readAvailable("../calendar")).isEmpty();
+  }
+
+  @Test
+  void readsTheAvailableWorkspaceOverrideWithoutExposingFrontmatterOrKeepingStaleContent()
+      throws Exception {
+    Path builtin = temporaryDirectory.resolve("builtin");
+    Path workspace = temporaryDirectory.resolve("workspace");
+    skill(builtin, "daily-rules", "Builtin rules", "{\"akashic\":{}}", "Builtin body");
+    skill(workspace, "daily-rules", "Workspace rules", "{\"akashic\":{}}", "Workspace body");
+    Path workspaceSkill = workspace.resolve("daily-rules/SKILL.md");
+    var adapter = adapter(builtin, workspace, requirements(Map.of(), Map.of()), 8, 8_192);
+
+    assertThat(adapter.readAvailable("daily-rules"))
+        .hasValueSatisfying(
+            content -> {
+              assertThat(content.body()).isEqualTo("Workspace body");
+              assertThat(content.body()).doesNotContain("metadata:", "---", "Workspace rules");
+            });
+
+    Files.write(workspaceSkill, new byte[] {(byte) 0xc3, (byte) 0x28});
+
+    assertThat(adapter.readAvailable("daily-rules"))
+        .hasValueSatisfying(content -> assertThat(content.body()).isEqualTo("Builtin body"));
   }
 
   @Test

@@ -1,0 +1,84 @@
+{
+  "formatVersion": 1,
+  "suite": "skills/read-only-skill-content-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0024-expose-audited-skill-content-through-a-deferred-read-only-tool.md",
+    "contract": "docs/contracts/read-only-skill-content-tool.md",
+    "spec": "docs/specs/2026-07-19-r12-read-only-skill-content-tool-design.md"
+  },
+  "normalization": [
+    "read_skill receives a validated Skill name rather than a filesystem path",
+    "only available, R12-S1-audited Skill bodies can be returned",
+    "all failures project to stable codes without root, path, metadata, environment or exception details",
+    "the Tool is deferred and must be unlocked by the current Turn tool_search session"
+  ],
+  "cases": [
+    {
+      "id": "schema-is-a-strict-name-only-read-only-tool",
+      "group": "definition",
+      "input": {},
+      "expected": {
+        "accepted": true,
+        "name": "read_skill",
+        "risk": "READ_ONLY",
+        "version": "skill-read-only-v1"
+      }
+    },
+    {
+      "id": "available-skill-returns-normalized-body-only",
+      "group": "execute",
+      "input": {"behavior": "available", "name": "daily-rules", "maxReadCodePoints": 100},
+      "expected": {"status": "SUCCESS", "content": "Use Chinese."}
+    },
+    {
+      "id": "frontmatter-is-never-returned",
+      "group": "execute",
+      "input": {"behavior": "available", "name": "daily-rules", "maxReadCodePoints": 100},
+      "expected": {"status": "SUCCESS", "content": "Use Chinese."}
+    },
+    {
+      "id": "path-like-name-is-rejected",
+      "group": "execute",
+      "input": {"behavior": "available", "name": "../secret", "maxReadCodePoints": 100},
+      "expected": {"status": "ERROR", "content": "SKILL_CONTENT_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "extra-argument-is-rejected",
+      "group": "execute",
+      "input": {"behavior": "available", "name": "daily-rules", "extra": true, "maxReadCodePoints": 100},
+      "expected": {"status": "ERROR", "content": "SKILL_CONTENT_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "missing-skill-is-unavailable-without-path",
+      "group": "execute",
+      "input": {"behavior": "missing", "name": "daily-rules", "maxReadCodePoints": 100},
+      "expected": {"status": "ERROR", "content": "SKILL_CONTENT_UNAVAILABLE"}
+    },
+    {
+      "id": "mismatched-port-content-is-unavailable",
+      "group": "execute",
+      "input": {"behavior": "mismatch", "name": "daily-rules", "maxReadCodePoints": 100},
+      "expected": {"status": "ERROR", "content": "SKILL_CONTENT_UNAVAILABLE"}
+    },
+    {
+      "id": "disabled-catalog-is-unavailable",
+      "group": "execute",
+      "input": {"behavior": "disabled", "name": "daily-rules", "maxReadCodePoints": 100},
+      "expected": {"status": "ERROR", "content": "SKILL_CONTENT_UNAVAILABLE"}
+    },
+    {
+      "id": "body-over-read-budget-is-rejected-without-truncation",
+      "group": "execute",
+      "input": {"behavior": "available", "name": "daily-rules", "maxReadCodePoints": 3},
+      "expected": {"status": "ERROR", "content": "SKILL_CONTENT_BUDGET_EXCEEDED"}
+    },
+    {
+      "id": "catalog-failure-is-unavailable",
+      "group": "execute",
+      "input": {"behavior": "failure", "name": "daily-rules", "maxReadCodePoints": 100},
+      "expected": {"status": "ERROR", "content": "SKILL_CONTENT_UNAVAILABLE"}
+    }
+  ]
+}

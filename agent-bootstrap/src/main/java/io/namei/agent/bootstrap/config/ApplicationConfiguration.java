@@ -63,6 +63,7 @@ import io.namei.agent.bootstrap.plugin.PluginRuntime;
 import io.namei.agent.bootstrap.proactive.ProactiveProperties;
 import io.namei.agent.bootstrap.proactive.ProactiveRuntime;
 import io.namei.agent.bootstrap.tool.CurrentTimeTool;
+import io.namei.agent.bootstrap.tool.ReadSkillTool;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
 import io.namei.agent.kernel.port.ChatModelPort;
@@ -366,13 +367,17 @@ public class ApplicationConfiguration {
       MemoryContextService memoryContext,
       McpRuntime mcpRuntime,
       WorkspaceReadOnlyToolset workspaceTools,
+      SkillCatalogPort skillCatalog,
+      SkillProperties skillProperties,
       AgentProperties properties,
       @Value("${spring.ai.openai.chat.model}") String modelName,
       @Value("${agent.compatibility.system-prompt-base64:}") String compatibilityPrompt,
       @Value("classpath:/prompts/system.md") Resource systemPrompt)
       throws IOException {
     String prompt = systemPrompt(compatibilityPrompt, systemPrompt);
-    ToolCatalog tools = configuredToolCatalog(properties, mcpRuntime, workspaceTools);
+    ToolCatalog tools =
+        configuredToolCatalog(
+            properties, mcpRuntime, workspaceTools, skillCatalog, skillProperties);
     var toolSettings =
         new ToolRuntimeSettings(
             properties.tools().mode(),
@@ -403,6 +408,37 @@ public class ApplicationConfiguration {
             new ModelStreamingSettings(
                 properties.model().maxDeltaEvents(), properties.model().maxDeltaCodePoints()));
     return new SafeChatUseCase(service, Clock.systemUTC());
+  }
+
+  ChatUseCase chatUseCase(
+      SessionRepository sessions,
+      ChatModelPort model,
+      SessionExecutionGate gate,
+      TurnLifecycleObserver lifecycleObserver,
+      ApprovalPort approvalPort,
+      MemoryContextService memoryContext,
+      McpRuntime mcpRuntime,
+      WorkspaceReadOnlyToolset workspaceTools,
+      AgentProperties properties,
+      String modelName,
+      String compatibilityPrompt,
+      Resource systemPrompt)
+      throws IOException {
+    return chatUseCase(
+        sessions,
+        model,
+        gate,
+        lifecycleObserver,
+        approvalPort,
+        memoryContext,
+        mcpRuntime,
+        workspaceTools,
+        SkillCatalogPort.disabled(),
+        defaultSkillProperties(),
+        properties,
+        modelName,
+        compatibilityPrompt,
+        systemPrompt);
   }
 
   ChatUseCase chatUseCase(
@@ -481,14 +517,36 @@ public class ApplicationConfiguration {
   }
 
   ToolCatalog configuredToolCatalog(AgentProperties properties, McpRuntime mcpRuntime) {
-    return configuredToolCatalog(properties, mcpRuntime, WorkspaceReadOnlyToolset.disabled());
+    return configuredToolCatalog(
+        properties,
+        mcpRuntime,
+        WorkspaceReadOnlyToolset.disabled(),
+        SkillCatalogPort.disabled(),
+        defaultSkillProperties());
   }
 
   ToolCatalog configuredToolCatalog(
       AgentProperties properties, McpRuntime mcpRuntime, WorkspaceReadOnlyToolset workspaceTools) {
+    return configuredToolCatalog(
+        properties,
+        mcpRuntime,
+        workspaceTools,
+        SkillCatalogPort.disabled(),
+        defaultSkillProperties());
+  }
+
+  ToolCatalog configuredToolCatalog(
+      AgentProperties properties,
+      McpRuntime mcpRuntime,
+      WorkspaceReadOnlyToolset workspaceTools,
+      SkillCatalogPort skillCatalog,
+      SkillProperties skillProperties) {
     Objects.requireNonNull(properties, "properties");
     Objects.requireNonNull(mcpRuntime, "mcpRuntime");
     Objects.requireNonNull(workspaceTools, "workspaceTools");
+    Objects.requireNonNull(skillCatalog, "skillCatalog");
+    Objects.requireNonNull(skillProperties, "skillProperties");
+    Tool skillTool = readSkillTool(properties, skillCatalog, skillProperties);
     if (properties.tools().mode() == ToolRuntimeMode.DISABLED) {
       return new ToolCatalog(List.of());
     }
@@ -500,6 +558,15 @@ public class ApplicationConfiguration {
             ToolCatalogSource.BUILTIN,
             "",
             List.of("当前时间", "UTC")));
+    if (skillTool != null) {
+      tools.add(
+          new ToolCatalogEntry(
+              skillTool,
+              ToolCatalogVisibility.DEFERRED,
+              ToolCatalogSource.BUILTIN,
+              "",
+              List.of("skill", "技能", "instruction")));
+    }
     for (Tool tool : workspaceTools.tools()) {
       if (tool.definition().risk() != ToolRisk.READ_ONLY) {
         throw new IllegalStateException("Workspace Runtime 暴露了非只读工具");
@@ -525,6 +592,25 @@ public class ApplicationConfiguration {
               List.of()));
     }
     return new ToolCatalog(tools);
+  }
+
+  private static Tool readSkillTool(
+      AgentProperties properties, SkillCatalogPort skillCatalog, SkillProperties skillProperties) {
+    if (skillProperties.mode() == SkillCatalogMode.DISABLED) {
+      return null;
+    }
+    if (properties.tools().mode() != ToolRuntimeMode.READ_ONLY) {
+      return null;
+    }
+    if (skillProperties.maxReadCodePoints() > properties.tools().maxResultCharacters()) {
+      throw new IllegalStateException(
+          "agent.skills.max-read-code-points 不能大于 agent.tools.max-result-characters");
+    }
+    return new ReadSkillTool(skillCatalog, skillProperties.maxReadCodePoints());
+  }
+
+  private static SkillProperties defaultSkillProperties() {
+    return new SkillProperties("DISABLED", "", 64, 65_536, 32_768, 32_768, 20_000);
   }
 
   List<Tool> configuredTools(AgentProperties properties, McpRuntime mcpRuntime) {

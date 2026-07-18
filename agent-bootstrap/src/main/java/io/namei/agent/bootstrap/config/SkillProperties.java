@@ -20,6 +20,24 @@ public final class SkillProperties {
   private final int maxFileBytes;
   private final int maxCatalogCodePoints;
   private final int maxActiveCodePoints;
+  private final int maxReadCodePoints;
+
+  public SkillProperties(
+      String mode,
+      String builtinRoot,
+      int maxSkills,
+      int maxFileBytes,
+      int maxCatalogCodePoints,
+      int maxActiveCodePoints) {
+    this(
+        mode,
+        builtinRoot,
+        maxSkills,
+        maxFileBytes,
+        maxCatalogCodePoints,
+        maxActiveCodePoints,
+        20_000);
+  }
 
   @ConstructorBinding
   public SkillProperties(
@@ -28,20 +46,24 @@ public final class SkillProperties {
       @DefaultValue("64") int maxSkills,
       @DefaultValue("65536") int maxFileBytes,
       @DefaultValue("32768") int maxCatalogCodePoints,
-      @DefaultValue("32768") int maxActiveCodePoints) {
+      @DefaultValue("32768") int maxActiveCodePoints,
+      @DefaultValue("20000") int maxReadCodePoints) {
     this.mode = SkillCatalogMode.parse(mode);
     this.builtinRoot = parseOptionalRoot(builtinRoot);
     new SkillCatalogLimits(maxSkills, maxFileBytes);
     if (maxCatalogCodePoints < 1
         || maxCatalogCodePoints > MAX_PROMPT_CODE_POINTS
         || maxActiveCodePoints < 1
-        || maxActiveCodePoints > MAX_PROMPT_CODE_POINTS) {
+        || maxActiveCodePoints > MAX_PROMPT_CODE_POINTS
+        || maxReadCodePoints < 1
+        || maxReadCodePoints > 65_536) {
       throw new IllegalArgumentException("Skill Prompt 预算无效");
     }
     this.maxSkills = maxSkills;
     this.maxFileBytes = maxFileBytes;
     this.maxCatalogCodePoints = maxCatalogCodePoints;
     this.maxActiveCodePoints = maxActiveCodePoints;
+    this.maxReadCodePoints = maxReadCodePoints;
   }
 
   public SkillCatalogMode mode() {
@@ -66,6 +88,10 @@ public final class SkillProperties {
 
   public int maxActiveCodePoints() {
     return maxActiveCodePoints;
+  }
+
+  public int maxReadCodePoints() {
+    return maxReadCodePoints;
   }
 
   @Override

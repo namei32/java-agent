@@ -39,6 +39,7 @@ agent:
     max-file-bytes: ${AGENT_SKILLS_MAX_FILE_BYTES:65536}
     max-catalog-code-points: ${AGENT_SKILLS_MAX_CATALOG_CODE_POINTS:32768}
     max-active-code-points: ${AGENT_SKILLS_MAX_ACTIVE_CODE_POINTS:32768}
+    max-read-code-points: ${AGENT_SKILLS_MAX_READ_CODE_POINTS:20000}
   workspace-tools:
     mode: ${AGENT_WORKSPACE_TOOLS_MODE:DISABLED}
     root: ${AGENT_WORKSPACE_TOOLS_ROOT:}

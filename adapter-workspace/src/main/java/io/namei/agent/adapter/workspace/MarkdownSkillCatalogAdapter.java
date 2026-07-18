@@ -49,17 +49,32 @@ public final class MarkdownSkillCatalogAdapter implements SkillCatalogPort {
 
   @Override
   public SkillCatalogSnapshot snapshot() {
+    List<LoadedSkill> merged = mergedSkills();
+    return new SkillCatalogSnapshot(
+        merged.stream().map(LoadedSkill::descriptor).toList(),
+        merged.stream()
+            .filter(skill -> skill.descriptor().available() && skill.descriptor().always())
+            .map(skill -> new SkillContent(skill.name(), skill.body()))
+            .toList());
+  }
+
+  @Override
+  public Optional<SkillContent> readAvailable(String name) {
+    if (!SkillDescriptor.isValidName(name)) {
+      return Optional.empty();
+    }
+    return mergedSkills().stream()
+        .filter(skill -> skill.name().equals(name) && skill.descriptor().available())
+        .findFirst()
+        .map(skill -> new SkillContent(skill.name(), skill.body()));
+  }
+
+  private List<LoadedSkill> mergedSkills() {
     Map<String, LoadedSkill> merged = new LinkedHashMap<>();
     readRoot(builtinRoot, SkillSource.BUILTIN).forEach(skill -> merged.put(skill.name(), skill));
     readRoot(workspaceRoot, SkillSource.WORKSPACE)
         .forEach(skill -> merged.put(skill.name(), skill));
-
-    return new SkillCatalogSnapshot(
-        merged.values().stream().map(LoadedSkill::descriptor).toList(),
-        merged.values().stream()
-            .filter(skill -> skill.descriptor().available() && skill.descriptor().always())
-            .map(skill -> new SkillContent(skill.name(), skill.body()))
-            .toList());
+    return List.copyOf(merged.values());
   }
 
   private List<LoadedSkill> readRoot(Path configuredRoot, SkillSource source) {

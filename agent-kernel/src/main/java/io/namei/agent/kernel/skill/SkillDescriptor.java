@@ -25,8 +25,12 @@ public record SkillDescriptor(
   }
 
   static void validateName(String value) {
-    if (value == null || !NAME.matcher(value).matches()) {
+    if (!isValidName(value)) {
       throw SkillContract.violation();
     }
+  }
+
+  public static boolean isValidName(String value) {
+    return value != null && NAME.matcher(value).matches();
   }
 }

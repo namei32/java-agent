@@ -61,6 +61,12 @@
       "source": "java-contract"
     },
     {
+      "id": "skills/read-only-skill-content-v1",
+      "path": "skills/read-only-skill-content-v1.json",
+      "sha256": "16f820b1206d8b150c05d3104989852f39c2e98bb9af260d3bf1267c51496ae0",
+      "source": "java-contract"
+    },
+    {
       "id": "proactive/proactive-runtime-v1",
       "path": "proactive/proactive-runtime-v1.json",
       "sha256": "f3a111636457444ccd8f6e741a325e751cffa347cc2bd63a323c0b04cabd7a5a",
