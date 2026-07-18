@@ -37,6 +37,17 @@ class SqliteSchemaInitializerTest {
       assertThat(columns(connection, "messages"))
           .containsExactlyInAnyOrder(
               "id", "session_key", "seq", "role", "content", "tool_chain", "extra", "ts");
+      assertThat(columns(connection, "pending_turn_anchors"))
+          .containsExactlyInAnyOrder(
+              "operation_ref",
+              "session_key",
+              "anchor_version",
+              "created_next_sequence",
+              "resume_next_sequence",
+              "state",
+              "projection_version");
+      assertThat(columns(connection, "pending_turn_anchor_schema"))
+          .containsExactlyInAnyOrder("singleton", "version");
       assertThat(pragmaInt(connection, "busy_timeout")).isEqualTo(5_000);
     }
   }
@@ -145,6 +156,24 @@ class SqliteSchemaInitializerTest {
           .isInstanceOf(SQLException.class)
           .hasMessageContaining("NOT NULL constraint failed");
     }
+  }
+
+  @Test
+  void rejectsAnUnknownPendingTurnAnchorSchemaVersion() throws Exception {
+    Path database = tempDir.resolve("anchor-version.db");
+    var initializer = new SqliteSchemaInitializer(database, 5_000);
+    initializer.initialize();
+    try (var connection = initializer.openConnection();
+        var statement = connection.createStatement()) {
+      statement.execute("DROP TABLE pending_turn_anchor_schema");
+      statement.execute(
+          "CREATE TABLE pending_turn_anchor_schema (singleton INTEGER PRIMARY KEY, version INTEGER NOT NULL)");
+      statement.execute("INSERT INTO pending_turn_anchor_schema(singleton, version) VALUES (1, 2)");
+    }
+
+    assertThatThrownBy(initializer::initialize)
+        .isInstanceOf(SqliteRepositoryException.class)
+        .hasMessageContaining("Anchor Schema 版本不兼容");
   }
 
   private static Set<String> columns(Connection connection, String table) throws Exception {

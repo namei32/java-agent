@@ -7,7 +7,7 @@
 
 ## 切片
 
-1. **O1 Contract Fixture（RED → GREEN，第三段）。** Java-owned `tools/pending-operation-v1.json` 现有 41 个 Case：原有不透明 Ref、状态优先级、AES-GCM、v1→v2、原子 Store 与篡改失败关闭外，新增已批准的一次性消费、未批准拒绝、到期优先、重复/并发 Reservation 非执行权、Reservation 失败回滚、五项 Ledger 状态、两项 Session 条件提交和 O6 的七项纯 Anchor Model Case。仍未冻结重启、Anchor SQLite 或实际 Tool Invocation Case。
+1. **O1 Contract Fixture（RED → GREEN，第三段）。** Java-owned `tools/pending-operation-v1.json` 现有 44 个 Case：原有不透明 Ref、状态优先级、AES-GCM、v1→v2、原子 Store 与篡改失败关闭外，新增已批准的一次性消费、未批准拒绝、到期优先、重复/并发 Reservation 非执行权、Reservation 失败回滚、五项 Ledger 状态、两项 Session 条件提交和 O6 的 Anchor Model/初始 SQLite 原子写入 Case。仍未冻结重启、Anchor 恢复提交或实际 Tool Invocation Case。
 2. **O2 Application State Machine（GREEN，第一段）。** 已新增不可变 `PendingOperation`、随机 `operationRef`、有界状态转换、脱敏 `toString` 与绑定精确 Approval 的 `PendingOperationCapsule`；不接 `ChatService`、`ApprovalPort` 或任何 Invoker。
 3. **O3 SQLite Schema v2（GREEN，第二段）。** `AES/GCM/NoPadding` Adapter 每次加密使用随机 96-bit nonce，AAD 绑定 Ref/Fingerprint/Capsule Version/Tool Version，认证失败统一关闭。`approval-inbox.db` 已从 v1 迁移到 v2，保留 Inbox 历史，并在一个事务写 Inbox、密文 Capsule。已实现已批准 Approval 的 CAS `CONSUMED`、Operation `CONSUMING` 和唯一 Ledger `RESERVED`：未批准、到期、重复或写入失败不产生第二个 Reservation，更不调用 Tool。
 4. **O4 Session 条件提交（GREEN）。** 已扩展 `SessionRepository` 为 `appendTurnIfNextSequence`，SQLite 使用 Cursor Compare-And-Set 原子追加完整 Turn；旧 Revision 和不存在的非零 Revision 不写入数据或空 Session。此 Port 尚未接 Chat 或 Tool。

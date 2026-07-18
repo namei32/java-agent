@@ -51,6 +51,9 @@
     {"id":"anchor-requires-following-resume-sequence","input":{},"expected":"rejected"},
     {"id":"anchor-cancelled-is-terminal","input":{},"expected":"CANCELLED"},
     {"id":"anchor-stale-is-terminal","input":{},"expected":"STALE_SESSION"},
-    {"id":"anchor-to-string-redacts-bindings","input":{},"expected":"redacted"}
+    {"id":"anchor-to-string-redacts-bindings","input":{},"expected":"redacted"},
+    {"id":"anchor-store-persists-atomically","input":{},"expected":"committed"},
+    {"id":"anchor-store-rejects-stale-cursor","input":{},"expected":"not-committed"},
+    {"id":"anchor-store-rolls-back-anchor-insert-failure","input":{},"expected":"fail-closed"}
   ]
 }

@@ -2,6 +2,8 @@ package io.namei.agent.adapter.sqlite;
 
 import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.MessageRole;
+import io.namei.agent.kernel.model.PendingTurnAnchor;
+import io.namei.agent.kernel.model.PendingTurnAnchorState;
 import io.namei.agent.kernel.model.PersistedTurn;
 import io.namei.agent.kernel.model.SessionSnapshot;
 import io.namei.agent.kernel.port.SessionRepository;
@@ -15,6 +17,7 @@ import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 
 public final class JdbcSessionRepository implements SessionRepository {
   private static final DateTimeFormatter STORAGE_TIMESTAMP =
@@ -128,6 +131,91 @@ public final class JdbcSessionRepository implements SessionRepository {
       }
     } catch (SQLException | RuntimeException exception) {
       throw new SqliteRepositoryException("条件写入完整对话轮次失败", exception);
+    }
+  }
+
+  @Override
+  public boolean appendPendingTurnIfNextSequence(
+      PersistedTurn pendingTurn, PendingTurnAnchor anchor) {
+    Objects.requireNonNull(pendingTurn, "pendingTurn");
+    Objects.requireNonNull(anchor, "anchor");
+    if (anchor.state() != PendingTurnAnchorState.PENDING_APPROVAL) {
+      throw new IllegalArgumentException("只能写入待审批 Pending Turn Anchor");
+    }
+    try (var connection = schema.openConnection()) {
+      connection.setAutoCommit(false);
+      try {
+        long actualSequence =
+            ensureSessionAndReadNext(
+                connection, anchor.sessionId(), timestamp(pendingTurn.userAt()));
+        if (actualSequence != anchor.createdNextSequence()
+            || !advanceSessionIfExpected(
+                connection,
+                anchor.sessionId(),
+                anchor.createdNextSequence(),
+                anchor.resumeNextSequence(),
+                timestamp(pendingTurn.userAt()),
+                timestamp(pendingTurn.assistantAt()))) {
+          connection.rollback();
+          return false;
+        }
+        insertMessage(
+            connection,
+            anchor.sessionId(),
+            anchor.createdNextSequence(),
+            pendingTurn.user(),
+            timestamp(pendingTurn.userAt()));
+        insertMessage(
+            connection,
+            anchor.sessionId(),
+            Math.addExact(anchor.createdNextSequence(), 1),
+            pendingTurn.assistant(),
+            timestamp(pendingTurn.assistantAt()));
+        insertPendingTurnAnchor(connection, anchor);
+        connection.commit();
+        return true;
+      } catch (SQLException | RuntimeException exception) {
+        rollbackPreservingFailure(connection, exception);
+        throw exception;
+      }
+    } catch (SQLException | RuntimeException exception) {
+      throw new SqliteRepositoryException("写入 Pending Turn 与 Anchor 失败", exception);
+    }
+  }
+
+  @Override
+  public Optional<PendingTurnAnchor> findPendingTurnAnchor(String operationReference) {
+    Objects.requireNonNull(operationReference, "operationReference");
+    try (var connection = schema.openConnection();
+        var statement =
+            connection.prepareStatement(
+                """
+                SELECT anchor_version, operation_ref, session_key, created_next_sequence,
+                       resume_next_sequence, state, projection_version
+                FROM pending_turn_anchors
+                WHERE operation_ref = ?
+                """)) {
+      statement.setString(1, operationReference);
+      try (var rows = statement.executeQuery()) {
+        if (!rows.next()) {
+          return Optional.empty();
+        }
+        PendingTurnAnchor anchor =
+            new PendingTurnAnchor(
+                rows.getInt("anchor_version"),
+                rows.getString("operation_ref"),
+                rows.getString("session_key"),
+                rows.getLong("created_next_sequence"),
+                rows.getLong("resume_next_sequence"),
+                PendingTurnAnchorState.valueOf(rows.getString("state")),
+                rows.getString("projection_version"));
+        if (rows.next()) {
+          throw new SqliteRepositoryException("Pending Turn Anchor 不是唯一记录");
+        }
+        return Optional.of(anchor);
+      }
+    } catch (SQLException | RuntimeException exception) {
+      throw new SqliteRepositoryException("读取 Pending Turn Anchor 失败", exception);
     }
   }
 
@@ -275,6 +363,29 @@ public final class JdbcSessionRepository implements SessionRepository {
         throw new SQLException("Session 条件更新行数无效: " + sessionId);
       }
       return updated == 1;
+    }
+  }
+
+  private static void insertPendingTurnAnchor(Connection connection, PendingTurnAnchor anchor)
+      throws SQLException {
+    try (var statement =
+        connection.prepareStatement(
+            """
+            INSERT INTO pending_turn_anchors (
+              operation_ref, session_key, anchor_version, created_next_sequence,
+              resume_next_sequence, state, projection_version
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """)) {
+      statement.setString(1, anchor.operationReference());
+      statement.setString(2, anchor.sessionId());
+      statement.setInt(3, anchor.anchorVersion());
+      statement.setLong(4, anchor.createdNextSequence());
+      statement.setLong(5, anchor.resumeNextSequence());
+      statement.setString(6, anchor.state().name());
+      statement.setString(7, anchor.projectionVersion());
+      if (statement.executeUpdate() != 1) {
+        throw new SQLException("Pending Turn Anchor 写入行数不是 1");
+      }
     }
   }
 

@@ -1,8 +1,10 @@
 package io.namei.agent.kernel.port;
 
+import io.namei.agent.kernel.model.PendingTurnAnchor;
 import io.namei.agent.kernel.model.PersistedTurn;
 import io.namei.agent.kernel.model.SessionSnapshot;
 import java.util.Objects;
+import java.util.Optional;
 
 public interface SessionRepository {
   SessionSnapshot load(String sessionId);
@@ -24,5 +26,24 @@ public interface SessionRepository {
     }
     Objects.requireNonNull(turn, "turn");
     throw new UnsupportedOperationException("Session Repository 不支持条件追加");
+  }
+
+  /**
+   * Atomically persists one complete initial pending turn and its internal Session Anchor.
+   *
+   * <p>The default fails closed. It must not be implemented by composing the ordinary append
+   * operation with a later Anchor write.
+   */
+  default boolean appendPendingTurnIfNextSequence(
+      PersistedTurn pendingTurn, PendingTurnAnchor anchor) {
+    Objects.requireNonNull(pendingTurn, "pendingTurn");
+    Objects.requireNonNull(anchor, "anchor");
+    throw new UnsupportedOperationException("Session Repository 不支持 Pending Turn Anchor");
+  }
+
+  /** Returns an internal Anchor only to a future authenticated recovery coordinator. */
+  default Optional<PendingTurnAnchor> findPendingTurnAnchor(String operationReference) {
+    Objects.requireNonNull(operationReference, "operationReference");
+    throw new UnsupportedOperationException("Session Repository 不支持 Pending Turn Anchor");
   }
 }

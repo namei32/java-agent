@@ -1,9 +1,11 @@
 package io.namei.agent.bootstrap.observability;
 
+import io.namei.agent.kernel.model.PendingTurnAnchor;
 import io.namei.agent.kernel.model.PersistedTurn;
 import io.namei.agent.kernel.model.SessionSnapshot;
 import io.namei.agent.kernel.port.SessionRepository;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -36,6 +38,17 @@ public final class ObservedSessionRepository implements SessionRepository {
   public boolean appendTurnIfNextSequence(
       String sessionId, long expectedNextSequence, PersistedTurn turn) {
     return observe(() -> delegate.appendTurnIfNextSequence(sessionId, expectedNextSequence, turn));
+  }
+
+  @Override
+  public boolean appendPendingTurnIfNextSequence(
+      PersistedTurn pendingTurn, PendingTurnAnchor anchor) {
+    return observe(() -> delegate.appendPendingTurnIfNextSequence(pendingTurn, anchor));
+  }
+
+  @Override
+  public Optional<PendingTurnAnchor> findPendingTurnAnchor(String operationReference) {
+    return observe(() -> delegate.findPendingTurnAnchor(operationReference));
   }
 
   private <T> T observe(Supplier<T> action) {

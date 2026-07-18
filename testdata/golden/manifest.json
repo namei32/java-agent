@@ -141,7 +141,7 @@
     {
       "id": "tools/pending-operation-v1",
       "path": "tools/pending-operation-v1.json",
-      "sha256": "9f718838b895a0cb9a0fb650bf8d15d05b870c3d445e5b2970519ec05b1148ca",
+      "sha256": "de2f3bf54587591a55697339982fc544a821e8393e1da163897b9fdc5e7e49c0",
       "source": "java-contract"
     },
     {
