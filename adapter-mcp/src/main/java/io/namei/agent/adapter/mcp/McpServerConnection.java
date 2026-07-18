@@ -1,6 +1,8 @@
 package io.namei.agent.adapter.mcp;
 
 import io.modelcontextprotocol.spec.McpSchema;
+import io.namei.agent.kernel.mcp.McpAssetCatalog;
+import io.namei.agent.kernel.mcp.McpAssetCatalogMode;
 import io.namei.agent.kernel.port.Tool;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,22 +15,33 @@ import java.util.concurrent.locks.ReentrantLock;
 final class McpServerConnection implements McpToolInvoker, AutoCloseable {
   private final McpServerDefinition definition;
   private final McpSettings settings;
+  private final McpAssetCatalogMode assetsMode;
   private final McpToolProjector projector;
   private final AtomicReference<State> state = new AtomicReference<>(State.STARTING);
   private final AtomicReference<McpStdioClient> client = new AtomicReference<>();
   private final ReentrantLock reconnectLock = new ReentrantLock(true);
   private final String catalogFingerprint;
+  private final AtomicReference<McpAssetCatalog> assets =
+      new AtomicReference<>(McpAssetCatalog.empty());
   private final List<Tool> tools;
 
   McpServerConnection(McpServerDefinition definition, McpSettings settings) {
+    this(definition, settings, McpAssetCatalogMode.DISABLED);
+  }
+
+  McpServerConnection(
+      McpServerDefinition definition, McpSettings settings, McpAssetCatalogMode assetsMode) {
     this.definition = Objects.requireNonNull(definition, "definition");
     this.settings = Objects.requireNonNull(settings, "settings");
+    this.assetsMode = Objects.requireNonNull(assetsMode, "assetsMode");
     this.projector = new McpToolProjector(settings.maxSchemaBytes());
     McpStdioClient created = newClient();
     try {
-      List<McpProjectedTool> projected = discover(created);
+      McpConnectionCatalog discovered = discover(created);
+      List<McpProjectedTool> projected = discovered.tools();
       this.catalogFingerprint = McpCatalogFingerprint.of(projected);
       this.tools = projected.stream().map(tool -> (Tool) new McpToolAdapter(tool, this)).toList();
+      this.assets.set(discovered.assets());
       client.set(created);
       state.compareAndSet(State.STARTING, State.READY);
     } catch (RuntimeException exception) {
@@ -40,6 +53,10 @@ final class McpServerConnection implements McpToolInvoker, AutoCloseable {
 
   List<Tool> tools() {
     return tools;
+  }
+
+  McpAssetCatalog assets() {
+    return state.get() == State.READY ? assets.get() : McpAssetCatalog.empty();
   }
 
   State state() {
@@ -106,8 +123,9 @@ final class McpServerConnection implements McpToolInvoker, AutoCloseable {
         return false;
       }
       replacement = newClient();
-      List<McpProjectedTool> projected = discover(replacement);
-      if (!catalogFingerprint.equals(McpCatalogFingerprint.of(projected))) {
+      McpConnectionCatalog discovered = discover(replacement);
+      if (!catalogFingerprint.equals(McpCatalogFingerprint.of(discovered.tools()))
+          || !assets.get().equals(discovered.assets())) {
         state.compareAndSet(State.RECONNECTING, State.STALE);
         replacement.close();
         return false;
@@ -118,6 +136,7 @@ final class McpServerConnection implements McpToolInvoker, AutoCloseable {
         replacement.close();
         return false;
       }
+      assets.set(discovered.assets());
       replacement = null;
       if (previous != null) {
         previous.close();
@@ -143,17 +162,21 @@ final class McpServerConnection implements McpToolInvoker, AutoCloseable {
     return new McpStdioClient(definition, settings, this::observe);
   }
 
-  private List<McpProjectedTool> discover(McpStdioClient candidate) {
+  private McpConnectionCatalog discover(McpStdioClient candidate) {
     List<McpProjectedTool> projected = new ArrayList<>();
-    for (McpRemoteTool remote : candidate.initializeAndDiscover()) {
+    McpStartupCatalog catalog = candidate.initializeAndDiscover(assetsMode, definition.id());
+    for (McpRemoteTool remote : catalog.tools()) {
       projector.project(definition, remote).ifPresent(projected::add);
     }
-    return List.copyOf(projected);
+    return new McpConnectionCatalog(List.copyOf(projected), catalog.assets());
   }
 
   private void observe(McpSchema.JSONRPCMessage message) {
     if (message instanceof McpSchema.JSONRPCNotification notification
-        && McpSchema.METHOD_NOTIFICATION_TOOLS_LIST_CHANGED.equals(notification.method())) {
+        && (McpSchema.METHOD_NOTIFICATION_TOOLS_LIST_CHANGED.equals(notification.method())
+            || (assetsMode == McpAssetCatalogMode.CATALOG_ONLY
+                && ("notifications/resources/list_changed".equals(notification.method())
+                    || "notifications/prompts/list_changed".equals(notification.method()))))) {
       state.getAndUpdate(
           current ->
               current == State.STARTING || current == State.READY || current == State.RECONNECTING

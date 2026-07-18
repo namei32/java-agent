@@ -64,6 +64,9 @@ R10 的[版本化 Prompt 编排、Persona 与预算契约](contracts/prompt-orch
 Block、Persona、时间和裁剪语义为基准，但不执行 Skill、真实 Tool 或真实渠道。
 R11 已完成 B1 的[Tool Catalog 与 Capability 治理契约](contracts/tool-catalog-capability-governance.md)和 B2a 的[本地审批收件箱契约](contracts/tool-approval-inbox.md)、[ADR-0017](adr/0017-isolate-durable-approval-inbox.md)、[设计](specs/2026-07-18-r11-approval-inbox-design.md)及[实施计划](plans/2026-07-18-r11-approval-inbox-implementation.md)。B2b 已实现无执行的[Pending Operation 契约](contracts/pending-tool-operation.md)、[ADR-0018](adr/0018-use-single-transaction-pending-operation-store.md)、[设计](specs/2026-07-18-r11-pending-operation-design.md)及[实施计划](plans/2026-07-18-r11-pending-operation-implementation.md)的 O1–O5；[Session Anchor/Recovery Capability 契约](contracts/pending-operation-recovery-capability.md)、[ADR-0019](adr/0019-freeze-pending-operation-session-anchor-before-resume.md)及[实施计划](plans/2026-07-19-r11-pending-recovery-capability-implementation.md)的 A1–A7 已完成并通过三套完整 Reactor 门禁。Catalog 只在一个 Turn 内减少 Schema 暴露；Inbox/Reservation 都不提供恢复或副作用执行权限。
 R12-S1 的[只读 Skill Catalog](contracts/read-only-skill-catalog.md)已实现并验证：仅显式 `READ_ONLY` Root、无路径 Prompt 投影、依赖存在性检查与 always Skill 注入；默认不扫描任何 Root，且不执行 Skill/脚本。按需正文、`read_skill` Tool、脚本/网络和动态下载仍需新的 Contract。
+R12-S2 的[MCP Resources / Prompts 只读目录](contracts/mcp-read-only-asset-catalog.md)已实现并验证：默认
+`DISABLED`，只有显式 `CATALOG_ONLY` 才从受控 stdio Server 发现有界元数据；13 Case Fixture、本地 Reference
+Server 与三套完整门禁均通过。它不读取 Resource/Prompt 正文、不向模型注入远端文本，也不新增网络或 Tool。
 完整后续顺序见[Java / Akashic Agent 全量对齐计划](plans/2026-07-18-java-parity-program.md)。
 
 ## 目录职责

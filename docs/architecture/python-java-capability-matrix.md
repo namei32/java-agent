@@ -51,7 +51,7 @@
 | 文件/Shell/Web 工具 | `agent/tools/` | `CurrentTimeTool`（仅时间） | 部分 | 仅完成无副作用时间工具；R3.2 批准不授权真实副作用，仍需逐工具 Capability Contract | 极高 |
 | Tool Hook | `agent/tool_hooks/` | R7 Kernel/Application Plugin Tap（已实现） | 部分 | V1 固定顺序、超时和异常隔离，只读投影；可变 Gate/副作用仍冻结 | 高 |
 | Tool Bundle/Search | `agent/tool_bundles.py`、`tool_search.py` | `ToolCatalog`、`ToolCatalogSession`、`ToolRegistry` | 部分 | R11 B1 的 Java-owned Catalog/Fixture 已实现并验证：内置工具可常驻，静态只读 MCP 可 deferred，并在当前 Turn 搜索后于下一模型请求投放 Schema；完整 Bundle、动态注册、权限策略与真实副作用仍在后续 B 阶段 | 中 |
-| MCP | `agent/mcp/`、`bootstrap/toolsets/mcp.py` | `adapter-mcp`、Bootstrap `McpRuntime` 装配 | 部分 | R5.1 已完成静态 stdio、官方 SDK 隔离、分页发现、稳定命名、安全 Schema、只读调用、Wire Cancellation、Stale/单次重连和进程回收；缺 Streamable HTTP/OAuth、Resources/Prompts、真实 Server Smoke、动态 Catalog 与副作用能力 | 高 |
+| MCP | `agent/mcp/`、`bootstrap/toolsets/mcp.py` | `adapter-mcp`、Bootstrap `McpRuntime` 装配 | 部分 | R5.1 已完成静态 stdio、官方 SDK 隔离、分页发现、稳定命名、安全 Schema、只读调用、Wire Cancellation、Stale/单次重连和进程回收；R12-S2 已补默认关闭的 Resources/Prompts 元数据目录、预算、失败隔离与 Stale。仍缺正文读取/注入、Streamable HTTP/OAuth、真实 Server Smoke、动态 Catalog 与副作用能力 | 高 |
 | Skills | `agent/skills.py`、`agent/core/prompt_block.py` | `agent-kernel/.../skill`、`MarkdownSkillCatalogAdapter`、`SkillPromptService`、`SkillProperties` | 部分 | R12-S1 已实现并验证默认关闭的只读 Catalog、Workspace 覆盖、依赖可用性、无路径 Prompt 投影和 always 注入；无 `read_skill`、按需正文、脚本执行、动态下载或 Python import | 中 |
 | Plugins | `agent/plugins/` | R7 Java SPI + 隔离 stdio Bridge（已实现） | 部分 | 默认关闭、无真实 Python import、无 Tool/Channel 注入；不承诺运行时猴子补丁 | 高 |
 

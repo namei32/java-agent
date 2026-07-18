@@ -33,7 +33,7 @@
 | R9 | 生产切换 | 已实现并验证（仅离线演练） | sandbox 演练、备份、差异、回退门禁与独立生产授权 |
 | R10 | Prompt 编排与 Persona | 已实现并验证 | Java-owned Section/Fixture、context frame、注入时间/会话、固定预算裁剪、默认 `MINIMAL` 与 `AKASHIC_CORE` 接线；三套阶段门禁通过 |
 | R11 | Tool Catalog 与审批恢复安全基础 | 实施中（无执行） | Catalog、审批 Inbox、Pending Operation/Reservation/Ledger/Anchor Contract 已验证；生产恢复路由、Capability 与真实执行仍冻结 |
-| R12 | Skills、MCP 扩展与 Plugin 生命周期 | S1 已实现并验证 | 默认关闭的只读 Skill Catalog、显式 Root、覆盖/可用性和 `AKASHIC_CORE` always 注入；按需正文、MCP 扩展和生命周期尚未开始 |
+| R12 | Skills、MCP 扩展与 Plugin 生命周期 | S1–S2 已实现并验证 | 默认关闭的只读 Skill Catalog；默认关闭的 MCP Resources/Prompts 元数据目录、预算、失败隔离与 Stale；按需正文、远程 MCP 和生命周期尚未开始 |
 
 ## R0：治理、契约与跨语言基线
 
@@ -170,7 +170,9 @@ R4.2 已批准依据：
 
 R5.1 最终门禁通过：默认 284 个测试（270 单元、14 集成）、`failure` 63 个（62 单元、1 集成）、`compat` 323 个（308 单元、15 集成），均为零失败、零错误、零跳过。Kernel 生产依赖仍为空；SDK/Reactor 只存在于 `adapter-mcp`。Java Reference Server 测试后无存活进程，Secret、运行时文件、生产 Python/Shell/HTTP Transport/动态管理/副作用能力扫描均无命中。
 
-当前生产和模板保持 `AGENT_MCP_MODE=DISABLED`。已完成结果只覆盖仓库内 Java Reference Server，不授权真实 MCP Server、Secret、网络、Streamable HTTP、Resources/Prompts/Sampling、动态 Catalog 或副作用 Tool。
+当前生产和模板保持 `AGENT_MCP_MODE=DISABLED`。R12-S2 已在受控 stdio Reference Server 上验证 Resources/Prompts 的
+目录元数据，但不读取正文。已完成结果不授权真实 MCP Server、Secret、网络、Streamable HTTP、Sampling、动态 Catalog
+或副作用 Tool。
 
 实现依据：
 
@@ -288,8 +290,9 @@ Properties 均已落地，13 Case Fixture 以及 `clean verify`、`-Pfailure ver
 
 R12-S1 对齐 Python `agent/skills.py` 的发现、Workspace 覆盖、依赖可用性和 always Prompt 子集。默认
 `DISABLED`，只在显式 `READ_ONLY` 下读取 Java Skill Roots；它不执行 Skill、脚本、CLI、MCP、Tool 或网络，也不
-向模型公开物理路径。完整按需 Skill、MCP Resources/Prompts/Streamable HTTP 和 Plugin 生命周期函数属于后续 R12
-切片，均需新的 Fixture 与 Contract；R12-S1 完成不授予它们执行权限。
+向模型公开物理路径。R12-S2 已补只读 MCP Resources/Prompts 的目录元数据发现：默认关闭、仅本地 stdio、无正文、
+无 Prompt 注入、每类 32 项上限及 Stale；完整按需 Skill、正文读取/注入、Streamable HTTP 和 Plugin 生命周期仍属于
+后续 R12 切片，均需新的 Fixture 与 Contract。
 
 退出门禁：每个 R12 子切片的 Fixture、Disabled 零 I/O、失败路径、Prompt/生命周期纵向测试和三套阶段门禁
 通过；真实网络、Python import 与可执行 Skill 均保持独立授权。

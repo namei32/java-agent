@@ -101,6 +101,8 @@ agent:
     max-schema-bytes: ${AGENT_MCP_MAX_SCHEMA_BYTES:65536}
     max-wire-bytes: ${AGENT_MCP_MAX_WIRE_BYTES:1048576}
     max-concurrent-calls-per-server: ${AGENT_MCP_MAX_CONCURRENT_CALLS_PER_SERVER:1}
+    assets:
+      mode: ${AGENT_MCP_ASSETS_MODE:DISABLED}
   plugins:
     mode: ${AGENT_PLUGINS_MODE:DISABLED}
     tap-timeout: ${AGENT_PLUGINS_TAP_TIMEOUT:500ms}

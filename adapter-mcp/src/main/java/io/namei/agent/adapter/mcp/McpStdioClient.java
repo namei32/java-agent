@@ -5,11 +5,18 @@ import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpSchema.JSONRPCMessage;
 import io.modelcontextprotocol.spec.ProtocolVersions;
+import io.namei.agent.kernel.mcp.McpAssetCatalog;
+import io.namei.agent.kernel.mcp.McpAssetCatalogMode;
+import io.namei.agent.kernel.mcp.McpAssetDescriptor;
+import io.namei.agent.kernel.mcp.McpAssetKind;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
@@ -49,6 +56,12 @@ final class McpStdioClient implements AutoCloseable {
   }
 
   List<McpRemoteTool> initializeAndDiscover() {
+    return initializeAndDiscover(McpAssetCatalogMode.DISABLED, "unused").tools();
+  }
+
+  McpStartupCatalog initializeAndDiscover(McpAssetCatalogMode assetsMode, String serverId) {
+    Objects.requireNonNull(assetsMode, "assetsMode");
+    Objects.requireNonNull(serverId, "serverId");
     try {
       McpSchema.InitializeResult initialization =
           await(gateway.initialize().toFuture(), settings.connectTimeout());
@@ -57,23 +70,28 @@ final class McpStdioClient implements AutoCloseable {
         throw unavailable();
       }
 
-      McpCatalogAccumulator catalog =
-          new McpCatalogAccumulator(settings.maxListPages(), settings.maxToolsPerServer());
-      String cursor = null;
-      do {
-        McpSchema.ListToolsResult page =
-            await(gateway.listTools(cursor).toFuture(), settings.requestTimeout());
-        List<McpRemoteTool> tools = new ArrayList<>(page.tools().size());
-        for (McpSchema.Tool tool : page.tools()) {
-          Boolean readOnlyHint =
-              tool.annotations() == null ? null : tool.annotations().readOnlyHint();
-          tools.add(
-              new McpRemoteTool(tool.name(), tool.description(), tool.inputSchema(), readOnlyHint));
-        }
-        catalog.addPage(cursor, page.nextCursor(), tools);
-        cursor = page.nextCursor();
-      } while (cursor != null);
-      return catalog.finish();
+      McpAssetCatalog assets =
+          assetsMode == McpAssetCatalogMode.CATALOG_ONLY
+              ? discoverAssets(initialization, serverId)
+              : McpAssetCatalog.empty();
+      return new McpStartupCatalog(discoverTools(), assets);
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw unavailable();
+    } catch (ExecutionException | TimeoutException | RuntimeException exception) {
+      throw unavailable();
+    }
+  }
+
+  McpAssetCatalog initializeAndDiscoverAssets(String serverId) {
+    Objects.requireNonNull(serverId, "serverId");
+    try {
+      McpSchema.InitializeResult initialization =
+          await(gateway.initialize().toFuture(), settings.connectTimeout());
+      if (!ProtocolVersions.MCP_2025_11_25.equals(initialization.protocolVersion())) {
+        throw unavailable();
+      }
+      return discoverAssets(initialization, serverId);
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
       throw unavailable();
@@ -188,6 +206,177 @@ final class McpStdioClient implements AutoCloseable {
       text.add(textContent.text());
     }
     return McpCallOutcome.success(String.join("\n", text));
+  }
+
+  private void discoverResources(String serverId, List<McpAssetDescriptor> assets)
+      throws InterruptedException, ExecutionException, TimeoutException {
+    String cursor = null;
+    Set<String> cursors = new HashSet<>();
+    int discovered = 0;
+    for (int page = 0; ; page++) {
+      if (page >= settings.maxListPages() || !cursors.add(cursor == null ? "" : cursor)) {
+        throw unavailable();
+      }
+      McpSchema.ListResourcesResult response =
+          await(gateway.listResources(cursor).toFuture(), settings.requestTimeout());
+      if (response.resources() == null) {
+        throw unavailable();
+      }
+      for (McpSchema.Resource resource : response.resources()) {
+        if (++discovered > 32) {
+          throw unavailable();
+        }
+        projectResource(serverId, resource).ifPresent(assets::add);
+      }
+      cursor = nextCursor(response.nextCursor());
+      if (cursor == null) {
+        return;
+      }
+    }
+  }
+
+  private List<McpRemoteTool> discoverTools()
+      throws InterruptedException, ExecutionException, TimeoutException {
+    McpCatalogAccumulator catalog =
+        new McpCatalogAccumulator(settings.maxListPages(), settings.maxToolsPerServer());
+    String cursor = null;
+    do {
+      McpSchema.ListToolsResult page =
+          await(gateway.listTools(cursor).toFuture(), settings.requestTimeout());
+      List<McpRemoteTool> tools = new ArrayList<>(page.tools().size());
+      for (McpSchema.Tool tool : page.tools()) {
+        Boolean readOnlyHint =
+            tool.annotations() == null ? null : tool.annotations().readOnlyHint();
+        tools.add(
+            new McpRemoteTool(tool.name(), tool.description(), tool.inputSchema(), readOnlyHint));
+      }
+      catalog.addPage(cursor, page.nextCursor(), tools);
+      cursor = page.nextCursor();
+    } while (cursor != null);
+    return catalog.finish();
+  }
+
+  private McpAssetCatalog discoverAssets(McpSchema.InitializeResult initialization, String serverId)
+      throws InterruptedException, ExecutionException, TimeoutException {
+    List<McpAssetDescriptor> assets = new ArrayList<>();
+    try {
+      if (initialization.capabilities().resources() != null) {
+        discoverResources(serverId, assets);
+      }
+      if (initialization.capabilities().prompts() != null) {
+        discoverPrompts(serverId, assets);
+      }
+      return new McpAssetCatalog(assets);
+    } catch (ExecutionException | TimeoutException unavailable) {
+      return McpAssetCatalog.empty();
+    } catch (RuntimeException unavailable) {
+      return McpAssetCatalog.empty();
+    }
+  }
+
+  private void discoverPrompts(String serverId, List<McpAssetDescriptor> assets)
+      throws InterruptedException, ExecutionException, TimeoutException {
+    String cursor = null;
+    Set<String> cursors = new HashSet<>();
+    int discovered = 0;
+    for (int page = 0; ; page++) {
+      if (page >= settings.maxListPages() || !cursors.add(cursor == null ? "" : cursor)) {
+        throw unavailable();
+      }
+      McpSchema.ListPromptsResult response =
+          await(gateway.listPrompts(cursor).toFuture(), settings.requestTimeout());
+      if (response.prompts() == null) {
+        throw unavailable();
+      }
+      for (McpSchema.Prompt prompt : response.prompts()) {
+        if (++discovered > 32) {
+          throw unavailable();
+        }
+        projectPrompt(serverId, prompt).ifPresent(assets::add);
+      }
+      cursor = nextCursor(response.nextCursor());
+      if (cursor == null) {
+        return;
+      }
+    }
+  }
+
+  private static Optional<McpAssetDescriptor> projectResource(
+      String serverId, McpSchema.Resource resource) {
+    try {
+      if (resource == null
+          || resource.uri() == null
+          || !java.net.URI.create(resource.uri()).isAbsolute()) {
+        return Optional.empty();
+      }
+      return Optional.of(
+          new McpAssetDescriptor(
+              1,
+              serverId,
+              McpAssetKind.RESOURCE,
+              "mcp_" + serverId + "__resource_" + sha256Prefix(resource.uri()),
+              resource.name(),
+              resource.description(),
+              true));
+    } catch (IllegalArgumentException invalid) {
+      return Optional.empty();
+    }
+  }
+
+  private static Optional<McpAssetDescriptor> projectPrompt(
+      String serverId, McpSchema.Prompt prompt) {
+    try {
+      if (prompt == null
+          || prompt.arguments() == null
+          || prompt.arguments().size() > 16
+          || prompt.name() == null
+          || !prompt.name().matches("[a-z][a-z0-9_]{0,31}")) {
+        return Optional.empty();
+      }
+      for (McpSchema.PromptArgument argument : prompt.arguments()) {
+        if (argument == null
+            || argument.name() == null
+            || !argument.name().matches("[a-z][a-z0-9_]{0,63}")) {
+          return Optional.empty();
+        }
+      }
+      return Optional.of(
+          new McpAssetDescriptor(
+              1,
+              serverId,
+              McpAssetKind.PROMPT,
+              "mcp_" + serverId + "__prompt_" + prompt.name(),
+              prompt.name(),
+              prompt.description(),
+              true));
+    } catch (IllegalArgumentException invalid) {
+      return Optional.empty();
+    }
+  }
+
+  private static String nextCursor(String cursor) {
+    if (cursor == null) {
+      return null;
+    }
+    if (cursor.isBlank() || cursor.codePointCount(0, cursor.length()) > 512) {
+      throw unavailable();
+    }
+    return cursor;
+  }
+
+  private static String sha256Prefix(String value) {
+    try {
+      byte[] digest =
+          java.security.MessageDigest.getInstance("SHA-256")
+              .digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      StringBuilder result = new StringBuilder(16);
+      for (int index = 0; index < 8; index++) {
+        result.append(String.format("%02x", digest[index]));
+      }
+      return result.toString();
+    } catch (java.security.NoSuchAlgorithmException unavailable) {
+      throw new IllegalStateException(unavailable);
+    }
   }
 
   private static <T> T await(CompletableFuture<T> future, Duration timeout)

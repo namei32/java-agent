@@ -1,0 +1,96 @@
+{
+  "formatVersion": 1,
+  "suite": "mcp/read-only-asset-catalog-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0021-keep-mcp-assets-as-catalog-only.md",
+    "contract": "docs/contracts/mcp-read-only-asset-catalog.md",
+    "spec": "docs/specs/2026-07-19-r12-mcp-read-only-asset-catalog-design.md"
+  },
+  "normalization": [
+    "模式、类别、Server ID 和本地名称均大小写严格，不执行宽松归一化",
+    "Descriptor 只含安全元数据；URI、正文、参数值、路径和环境不进入 Kernel",
+    "Catalog 以 serverId、kind、localName 稳定排序；重复 localName Fail Closed"
+  ],
+  "cases": [
+    {
+      "id": "assets-disabled-is-empty",
+      "group": "mode",
+      "input": {"mode": "DISABLED"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "assets-catalog-only-is-explicit",
+      "group": "mode",
+      "input": {"mode": "CATALOG_ONLY"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "assets-mode-is-case-sensitive",
+      "group": "mode",
+      "input": {"mode": "catalog_only"},
+      "expected": {"accepted": false, "code": "MCP_ASSET_CONTRACT_INVALID"}
+    },
+    {
+      "id": "resource-descriptor-is-public-metadata-only",
+      "group": "descriptor",
+      "input": {"version": 1, "serverId": "docs", "kind": "RESOURCE", "localName": "mcp_docs__resource_abc123", "name": "API reference", "description": "Read-only API index", "available": true},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "prompt-descriptor-can-omit-description",
+      "group": "descriptor",
+      "input": {"version": 1, "serverId": "docs", "kind": "PROMPT", "localName": "mcp_docs__prompt_release_notes", "name": "release_notes", "available": false},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "unknown-descriptor-version-fails-closed",
+      "group": "descriptor",
+      "input": {"version": 2, "serverId": "docs", "kind": "RESOURCE", "localName": "mcp_docs__resource_abc123", "name": "API reference", "available": true},
+      "expected": {"accepted": false, "code": "MCP_ASSET_CONTRACT_INVALID"}
+    },
+    {
+      "id": "server-id-is-strict",
+      "group": "descriptor",
+      "input": {"version": 1, "serverId": "Docs", "kind": "RESOURCE", "localName": "mcp_docs__resource_abc123", "name": "API reference", "available": true},
+      "expected": {"accepted": false, "code": "MCP_ASSET_CONTRACT_INVALID"}
+    },
+    {
+      "id": "local-name-cannot-escape-mcp-namespace",
+      "group": "descriptor",
+      "input": {"version": 1, "serverId": "docs", "kind": "RESOURCE", "localName": "resource_abc123", "name": "API reference", "available": true},
+      "expected": {"accepted": false, "code": "MCP_ASSET_CONTRACT_INVALID"}
+    },
+    {
+      "id": "public-name-must-be-one-line",
+      "group": "descriptor",
+      "input": {"version": 1, "serverId": "docs", "kind": "RESOURCE", "localName": "mcp_docs__resource_abc123", "name": "API\nreference", "available": true},
+      "expected": {"accepted": false, "code": "MCP_ASSET_CONTRACT_INVALID"}
+    },
+    {
+      "id": "description-control-character-is-rejected",
+      "group": "descriptor",
+      "input": {"version": 1, "serverId": "docs", "kind": "RESOURCE", "localName": "mcp_docs__resource_abc123", "name": "API reference", "description": "bad\u0001summary", "available": true},
+      "expected": {"accepted": false, "code": "MCP_ASSET_CONTRACT_INVALID"}
+    },
+    {
+      "id": "catalog-sort-is-stable-by-server-kind-and-local-name",
+      "group": "catalog",
+      "input": {"duplicate": false},
+      "expected": {"accepted": true, "ordered": ["mcp_alpha__resource_z", "mcp_docs__resource_a", "mcp_docs__prompt_a"]}
+    },
+    {
+      "id": "catalog-duplicate-local-name-is-rejected",
+      "group": "catalog",
+      "input": {"duplicate": true},
+      "expected": {"accepted": false, "code": "MCP_ASSET_CONTRACT_INVALID"}
+    },
+    {
+      "id": "disabled-port-has-no-assets",
+      "group": "port",
+      "input": {},
+      "expected": {"accepted": true, "assets": 0}
+    }
+  ]
+}

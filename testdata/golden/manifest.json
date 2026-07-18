@@ -37,6 +37,12 @@
       "source": "java-contract"
     },
     {
+      "id": "mcp/read-only-asset-catalog-v1",
+      "path": "mcp/read-only-asset-catalog-v1.json",
+      "sha256": "ab668745d9d8f1957175c90817399a4a3e454e19f1fdb4b0c1cb5dba2d79024e",
+      "source": "java-contract"
+    },
+    {
       "id": "plugins/plugin-extension-runtime-v1",
       "path": "plugins/plugin-extension-runtime-v1.json",
       "sha256": "f62930f2b677df67460517e5b8812c74ab92fd1e7a445995e33185accf3d64bb",

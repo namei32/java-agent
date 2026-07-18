@@ -101,6 +101,7 @@ import org.springframework.core.io.Resource;
   PromptProperties.class,
   SkillProperties.class,
   McpProperties.class,
+  McpAssetProperties.class,
   CliProperties.class,
   PluginProperties.class,
   ProactiveProperties.class
@@ -310,7 +311,11 @@ public class ApplicationConfiguration {
   }
 
   @Bean(destroyMethod = "close")
-  McpRuntime mcpRuntime(McpProperties mcpProperties, AgentProperties agentProperties) {
+  McpRuntime mcpRuntime(
+      McpProperties mcpProperties,
+      McpAssetProperties mcpAssetProperties,
+      AgentProperties agentProperties) {
+    Objects.requireNonNull(mcpAssetProperties, "mcpAssetProperties");
     var settings = mcpProperties.toSettings();
     if (settings.mode() == McpMode.DISABLED) {
       return McpRuntimes.disabled();
@@ -325,7 +330,11 @@ public class ApplicationConfiguration {
       throw new IllegalStateException("agent.mcp.connect-timeout 必须小于 agent.model.timeout");
     }
     var configuration = new McpConfigLoader().load(settings);
-    return McpRuntimes.staticReadOnly(configuration, settings);
+    return McpRuntimes.staticReadOnly(configuration, settings, mcpAssetProperties.toMode());
+  }
+
+  McpRuntime mcpRuntime(McpProperties mcpProperties, AgentProperties agentProperties) {
+    return mcpRuntime(mcpProperties, new McpAssetProperties(null), agentProperties);
   }
 
   @Bean

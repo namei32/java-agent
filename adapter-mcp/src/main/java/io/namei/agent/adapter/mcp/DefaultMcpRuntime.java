@@ -1,5 +1,7 @@
 package io.namei.agent.adapter.mcp;
 
+import io.namei.agent.kernel.mcp.McpAssetCatalog;
+import io.namei.agent.kernel.mcp.McpAssetCatalogMode;
 import io.namei.agent.kernel.port.Tool;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -19,8 +21,14 @@ final class DefaultMcpRuntime implements McpRuntime {
   private final CountDownLatch closed = new CountDownLatch(1);
 
   DefaultMcpRuntime(McpConfiguration configuration, McpSettings settings) {
+    this(configuration, settings, McpAssetCatalogMode.DISABLED);
+  }
+
+  DefaultMcpRuntime(
+      McpConfiguration configuration, McpSettings settings, McpAssetCatalogMode assetsMode) {
     Objects.requireNonNull(configuration, "configuration");
     Objects.requireNonNull(settings, "settings");
+    Objects.requireNonNull(assetsMode, "assetsMode");
     validate(configuration, settings);
     this.configuredServers = configuration.servers().size();
 
@@ -31,7 +39,7 @@ final class DefaultMcpRuntime implements McpRuntime {
     for (McpServerDefinition server : configuration.servers()) {
       McpServerConnection connection = null;
       try {
-        connection = new McpServerConnection(server, settings);
+        connection = new McpServerConnection(server, settings, assetsMode);
         Set<String> serverNames = new HashSet<>();
         for (Tool tool : connection.tools()) {
           String name = tool.definition().name();
@@ -57,6 +65,14 @@ final class DefaultMcpRuntime implements McpRuntime {
   @Override
   public List<Tool> tools() {
     return tools;
+  }
+
+  @Override
+  public McpAssetCatalog assets() {
+    return new McpAssetCatalog(
+        connections.stream()
+            .flatMap(connection -> connection.assets().descriptors().stream())
+            .toList());
   }
 
   @Override

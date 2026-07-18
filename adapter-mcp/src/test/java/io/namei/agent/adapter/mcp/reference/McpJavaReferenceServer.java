@@ -66,6 +66,8 @@ public final class McpJavaReferenceServer {
         // Lifecycle notification has no response.
       }
       case "tools/list" -> listTools(scenario, message, id, writer);
+      case "resources/list" -> listResources(scenario, message, id, writer);
+      case "prompts/list" -> listPrompts(scenario, message, id, writer);
       case "tools/call" -> callTool(scenario, message, id, writer);
       case "notifications/cancelled" -> cancel(message, writer);
       default -> {
@@ -104,6 +106,13 @@ public final class McpJavaReferenceServer {
       Thread.sleep(600);
     }
     Object responseId = "wrong-id".equals(scenario) ? Objects.requireNonNull(id) + "-wrong" : id;
+    Map<String, Object> capabilities =
+        "tools-only".equals(scenario)
+            ? Map.of("tools", Map.of("listChanged", true))
+            : Map.of(
+                "tools", Map.of("listChanged", true),
+                "resources", Map.of("listChanged", true),
+                "prompts", Map.of("listChanged", true));
     send(
         writer,
         Map.of(
@@ -116,7 +125,7 @@ public final class McpJavaReferenceServer {
                 "protocolVersion",
                 "2025-11-25",
                 "capabilities",
-                Map.of("tools", Map.of("listChanged", true)),
+                capabilities,
                 "serverInfo",
                 Map.of("name", "java-reference", "version", "1.0.0"))));
   }
@@ -195,6 +204,12 @@ public final class McpJavaReferenceServer {
                           writer,
                           Map.of("jsonrpc", "2.0", "method", "notifications/tools/list_changed"));
                     }
+                    if ("assets-list-changed".equals(scenario)) {
+                      send(
+                          writer,
+                          Map.of(
+                              "jsonrpc", "2.0", "method", "notifications/resources/list_changed"));
+                    }
                     result(writer, id, List.of(Map.of("type", "text", "text", text)), false);
                   }
                   case "remote_error" ->
@@ -256,6 +271,96 @@ public final class McpJavaReferenceServer {
             });
   }
 
+  private static void listResources(
+      String scenario, JsonNode message, Object id, PrintWriter writer) throws Exception {
+    if ("assets-disabled-probe".equals(scenario)) {
+      Runtime.getRuntime().halt(76);
+    }
+    if (!assetCatalogScenario(scenario)) {
+      send(
+          writer,
+          Map.of(
+              "jsonrpc",
+              "2.0",
+              "id",
+              Objects.requireNonNull(id),
+              "result",
+              Map.of("resources", List.of())));
+      return;
+    }
+    String cursor = message.path("params").path("cursor").asString(null);
+    if (cursor == null) {
+      send(
+          writer,
+          Map.of(
+              "jsonrpc",
+              "2.0",
+              "id",
+              Objects.requireNonNull(id),
+              "result",
+              Map.of(
+                  "resources",
+                  List.of(
+                      Map.of(
+                          "uri", "file:///docs/first.md",
+                          "name", "First resource",
+                          "description", "First page resource")),
+                  "nextCursor",
+                  "resources-page-2")));
+      return;
+    }
+    send(
+        writer,
+        Map.of(
+            "jsonrpc",
+            "2.0",
+            "id",
+            Objects.requireNonNull(id),
+            "result",
+            Map.of(
+                "resources",
+                List.of(
+                    Map.of(
+                        "uri", "file:///docs/second.md",
+                        "name", "Second resource",
+                        "description", "Second page resource")))));
+  }
+
+  private static void listPrompts(String scenario, JsonNode message, Object id, PrintWriter writer)
+      throws Exception {
+    List<Map<String, Object>> prompts;
+    if (assetCatalogScenario(scenario)) {
+      prompts =
+          List.of(
+              Map.of(
+                  "name",
+                  "release_notes",
+                  "description",
+                  "Release summaries",
+                  "arguments",
+                  List.of(Map.of("name", "version", "required", true))));
+    } else if ("assets-too-many-prompts".equals(scenario)) {
+      prompts =
+          java.util.stream.IntStream.range(0, 33)
+              .mapToObj(
+                  index ->
+                      Map.<String, Object>of(
+                          "name", "prompt_" + index, "description", "Public prompt"))
+              .toList();
+    } else {
+      prompts = List.of();
+    }
+    send(
+        writer,
+        Map.of(
+            "jsonrpc",
+            "2.0",
+            "id",
+            Objects.requireNonNull(id),
+            "result",
+            Map.of("prompts", prompts)));
+  }
+
   private static void cancel(JsonNode message, PrintWriter writer) throws Exception {
     Object requestId = scalar(message.path("params").path("requestId"));
     Object slowId = SLOW_REQUEST_ID.get();
@@ -304,6 +409,10 @@ public final class McpJavaReferenceServer {
 
   private static String catalogDescriptionSuffix(String scenario) {
     return "catalog-change".equals(scenario) && markerExists(1) ? " changed" : "";
+  }
+
+  private static boolean assetCatalogScenario(String scenario) {
+    return "assets-paginated".equals(scenario) || "assets-list-changed".equals(scenario);
   }
 
   private static boolean markerExists(int index) {

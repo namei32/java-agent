@@ -1,5 +1,6 @@
 package io.namei.agent.adapter.mcp;
 
+import io.namei.agent.kernel.mcp.McpAssetCatalogMode;
 import io.namei.agent.kernel.port.Tool;
 import java.util.List;
 
@@ -12,7 +13,12 @@ public final class McpRuntimes {
   }
 
   public static McpRuntime staticReadOnly(McpConfiguration configuration, McpSettings settings) {
-    return new DefaultMcpRuntime(configuration, settings);
+    return staticReadOnly(configuration, settings, McpAssetCatalogMode.DISABLED);
+  }
+
+  public static McpRuntime staticReadOnly(
+      McpConfiguration configuration, McpSettings settings, McpAssetCatalogMode assetsMode) {
+    return new DefaultMcpRuntime(configuration, settings, assetsMode);
   }
 
   private enum DisabledRuntime implements McpRuntime {
