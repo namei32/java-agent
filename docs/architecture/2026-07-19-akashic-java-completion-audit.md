@@ -33,8 +33,8 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 | Provider 适配策略与 thinking/cache 细节 | `agent/provider.py`、`bootstrap/providers.py` | 一个 OpenAI-compatible Spring AI 适配器 | 逐 Provider 建立 Options/Message/Streaming Fixture；真实 Provider Smoke 仍独立批准 |
 | MCP Tool Client | `agent/mcp/client.py`、`bootstrap/toolsets/mcp.py` | 静态 stdio、只读 `tools/list`/`tools/call`；R12-S2 另有默认关闭的 `resources/list`/`prompts/list` 元数据目录与 Stale | Python 基线并不实现 Resources/Prompts；S2 是 Java-owned 安全扩展，不是对齐证据。远程认证、正文读取/注入、Streamable HTTP、取消与隔离须先证明必要性，再另立 Contract |
 | Python Plugin 全生命周期、配置与 Tool Hook | `agent/plugins/*`、`agent/lifecycle/*` | Java ServiceLoader/stdio 观察型 Tap，含 API v2 Lifecycle Phase 映射 | R12-S3 已实现默认关闭的只读映射；可变 Hook/动态 Python import 需要独立授权 |
-| QQ/Feishu/IPC、完整 Channel Host | `infra/channels/*`、`plugins/qqbot`、`plugins/feishu` | CLI/Telegram 纵向切片 | R13 按渠道分别冻结身份、投递、恢复、真实 Smoke 与回退 |
-| Dashboard 会话/消息/记忆管理与前端 | `bootstrap/dashboard_api.py`、`frontend/` | 后端 Loopback 状态/取消，零前端 | R13 先固定 API Fixture，再实现安全前端/历史操作 |
+| QQ/Feishu/IPC、完整 Channel Host | `infra/channels/*`、`plugins/qqbot`、`plugins/feishu` | CLI/Telegram 离线纵向切片 | [R13 计划](../plans/2026-07-19-r13-dashboard-channel-alignment-plan.md)已冻结渠道逐一的身份、投递、恢复、真实 Smoke 与回退路径；当前不实现 IPC/QQ/Plugin Channel，真实 Telegram 继续冻结 |
+| Dashboard 会话/消息/记忆管理与前端 | `bootstrap/dashboard_api.py`、`frontend/` | 后端 Loopback 状态/取消、审批 Inbox，零前端 | R13 计划已区分只读 API、受审批写入、前端供应链和渠道；先固定 API Fixture，且在解除 CLI+Web/前端冻结前不实现 |
 | 完整 Proactive v2、外部源、反馈、自动记忆/Optimizer | `proactive_v2/*`、`memory2/*`、`core/memory/*` | 安全 NoOp/只读/显式记忆 | R14 逐源、逐写入许可、审计、预算、恢复与回退；不得自动启用 |
 | Peer Agent 进程、Agent Card 与远端信任 | `agent/peer_agent/*` | 无 Peer Agent | R14 先建身份/协议/信任/资源边界，后建本地 Fake 演练 |
 | 部署、真实数据迁移、灰度与 Python 退役 | `bootstrap/*`、`docker/`、`infra/` | 仅 sandbox Cutover 演练 | R15 仅在书面授权、备份、双向回退及观察证据齐备后执行 |
