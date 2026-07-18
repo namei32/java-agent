@@ -27,7 +27,7 @@
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
 | R4 | 上下文与记忆 | R4.1、R4.2 已完成 | Java 原生显式记忆管理与语义检索闭环已通过最终门禁；自动写回/Optimizer 仍冻结 |
 | R5 | MCP 与外部工具 | R5.1 已完成 | 静态 stdio 只读 Client、工具发现/投影、取消、隔离和进程回收已验收；远程与副作用范围未开始 |
-| R6 | 渠道与控制面 | R6.1–R6.4 已合入；R6.5 后端 G0–G9 已完成 | 版本化 Message Runtime、本地 CLI、Provider Streaming、Telegram、可靠投递和认证 Loopback 控制面后端已离线验收；进入 G10 PR/CI |
+| R6 | 渠道与控制面 | R6.1–R6.4 已合入；R6.5 后端 G0–G10 已完成当前授权范围 | 认证 Loopback 控制面后端已通过本地与 Draft PR #9 远程三套门禁；待 Review/合并批准 |
 | R7 | 插件与扩展兼容 | 未开始 | Plugin Bridge、Hook 与配置兼容 |
 | R8 | 主动运行时 | 未开始 | Scheduler、Proactive、Drift、Subagent |
 | R9 | 生产切换 | 未开始 | 真实工作区演练、灰度、回退和 Python 退役 |
@@ -182,7 +182,7 @@ R5.1 最终门禁通过：默认 284 个测试（270 单元、14 集成）、`fa
 
 ## R6：渠道、消息总线与控制面
 
-状态：R6.1–R6.4 已实现、验证并合入 `main`；R6.4 合并后 CI 稳定性修复也已通过 PR #8 和主分支三套门禁；R6.5 后端 G0–G9 已完成本地离线实现和严格门禁，进入 G10 Draft PR/远程 CI。真实 Telegram Smoke 与前端仍待独立授权，R6 整体仍在进行中。
+状态：R6.1–R6.4 已实现、验证并合入 `main`；R6.4 合并后 CI 稳定性修复也已通过 PR #8 和主分支三套门禁；R6.5 后端 G0–G10 已完成当前授权范围，本地严格门禁与 Draft PR #9 远程 CI 全绿，等待 Review/合并批准。真实 Telegram Smoke 与前端仍待独立授权，R6 整体仍在进行中。
 
 R6.1 至 R6.6 的实施顺序见 [R6 渠道、消息总线与控制面总体工作计划](../plans/2026-07-15-r6-channel-message-control-plane-master-plan.md)。总体计划已批准并进入实施，后续子阶段仍须先分别冻结 Contract、Spec、ADR 和实施计划。
 

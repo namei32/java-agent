@@ -126,7 +126,7 @@ Golden/Schema 契约。完整阶段门禁需要依次执行三条命令；单独
 
 R5.1 的 MCP 验收只使用仓库编译的 Java Reference Server 和 stdio，不运行 Python、真实 MCP Server、真实 Secret 或外部网络。默认、`failure`、`compat` 分别通过 284、63、323 项测试；这是 2026-07-17 互斥测试集生效前的历史口径。`real-model-smoke` 不包含真实 MCP Smoke。
 
-R6.5 控制面后端 G0–G9 已完成本地离线实现和阶段门禁：格式、默认、`failure`、`compat` 均为零失败。该结论只覆盖默认关闭的 Loopback API、进程内 Session、安全状态/取消和 future-only SSE；真实 Telegram、远程访问、CLI+Web 与前端仍被冻结。
+R6.5 控制面后端 G0–G10 已完成当前授权范围：本地格式、默认、`failure`、`compat` 全绿，Draft PR #9 的远程三套 CI 也已通过。该结论只覆盖默认关闭的 Loopback API、进程内 Session、安全状态/取消和 future-only SSE；PR 尚未合并，真实 Telegram、远程访问、CLI+Web 与前端仍被冻结。
 
 ## 数据安全
 

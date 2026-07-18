@@ -1,6 +1,6 @@
 # R6 渠道、消息总线与控制面总体工作计划
 
-- 状态：已批准；R6.1–R6.4 已合入 `main`，R6.5 后端 G0–G9 已完成并进入 G10 PR/CI
+- 状态：已批准；R6.1–R6.4 已合入 `main`，R6.5 后端 G0–G10 已完成当前授权范围，Draft PR #9 CI 全绿
 - 日期：2026-07-15
 - 阶段：R6
 - 批准记录：用户要求完整实现本计划；各子阶段仍须先冻结对应 Contract、Spec、ADR 和实施计划，真实网络、Secret 与付费 Smoke 保留独立授权门禁
@@ -67,7 +67,7 @@ R6 完成不等于 Python 全部渠道、插件或主动能力已经迁移。Sch
 | R6.2 | 本地 CLI 与 Provider Streaming | 已完成并通过 PR #5 合入 `main` | 供应商无关流式 Port、Spring AI Adapter、本地 CLI、取消与提交隔离 |
 | R6.3 | Channel Host 与首个真实渠道 | 已通过 PR #6 合入 `main`；真实 Smoke 待授权 | 统一宿主、身份路由、Telegram 私聊文本、网络生命周期 |
 | R6.4 | 渠道幂等、可靠投递与恢复 | 已通过 PR #7 合入 `main`；PR #8 修复合并后 CI 观察竞态 | 入站去重、投递状态、崩溃恢复和有界重试 |
-| R6.5 | Dashboard 与最小控制面 | 后端 G0–G9 已完成，进入 G10 PR/CI | 默认关闭的 Loopback 安全状态、SSE 和活动 Telegram Turn 取消；前端待 G11 批准 |
+| R6.5 | Dashboard 与最小控制面 | 后端 G0–G10 已完成当前授权范围；PR #9 待 Review/合并 | 默认关闭的 Loopback 安全状态、SSE 和活动 Telegram Turn 取消；前端待 G11 批准 |
 | R6.6 | 阶段总验收与灰度 | 待前序完成 | Golden、故障/压力、安全审计、Runbook 和回退 |
 
 ## 4. R6.1：版本化 Message Contract Runtime
@@ -315,7 +315,7 @@ R6.4 退出门禁：重复投递、并发竞争、发送后崩溃、提交前崩
 
 初始阶段保持现有 React/Vite 前端不变，先冻结 Java Control Plane API。未完成认证、TLS 和权限 Contract 前只允许 Loopback。
 
-2026-07-17 已批准 [Loopback 控制面 Contract](../contracts/loopback-control-plane.md)、[ADR-0011](../adr/0011-use-authenticated-sse-for-loopback-control-events.md)、[设计](../specs/2026-07-17-loopback-control-plane-design.md)和[连续 TDD 计划](2026-07-17-r6-loopback-control-plane-implementation.md)。V1 明确默认 Disabled、进程内 Bearer Session、Fetch SSE、无历史重放、独立有界 Subscriber，以及只管理 Servlet 模式中当前存活的 Telegram 普通/可靠 Turn。后端 G0–G9 已完成本地离线实现和严格阶段门禁，当前进入 G10 Draft PR/远程 CI；CLI、同步 `/api/v1/chat`、`EXECUTION_UNKNOWN`、远程控制和前端仍不在当前实现范围。
+2026-07-17 已批准 [Loopback 控制面 Contract](../contracts/loopback-control-plane.md)、[ADR-0011](../adr/0011-use-authenticated-sse-for-loopback-control-events.md)、[设计](../specs/2026-07-17-loopback-control-plane-design.md)和[连续 TDD 计划](2026-07-17-r6-loopback-control-plane-implementation.md)。V1 明确默认 Disabled、进程内 Bearer Session、Fetch SSE、无历史重放、独立有界 Subscriber，以及只管理 Servlet 模式中当前存活的 Telegram 普通/可靠 Turn。后端 G0–G10 已完成当前授权范围，本地严格门禁和 Draft PR #9 远程 CI 全绿，等待 Review/合并批准；CLI、同步 `/api/v1/chat`、`EXECUTION_UNKNOWN`、远程控制和前端仍不在当前实现范围。
 
 本节的 G0–G4 只表达 R6.5 阶段级能力分解，不作为当前代码任务编号。实际执行状态、RED/GREEN 命令和提交边界统一以[详细实施计划](2026-07-17-r6-loopback-control-plane-implementation.md)的 G0–G12 为准。
 
@@ -423,4 +423,4 @@ R6 总退出条件：
 3. R6.3 Channel Host/Telegram 离线纵向切片已完成连续 TDD，并通过 PR #6 默认、`failure`、`compat` 远程门禁合入 `main`。
 4. 真实 Token、网络、费用和数据范围仍未获授权，因此真实 Telegram Smoke 必须保持禁用。
 5. R6.4 可靠投递已通过 PR #7 合入 `main`；聚焦 CI 稳定性修复 PR #8 和对应主分支默认、`failure`、`compat` 门禁全部通过，仍不实现自动重放或 Exactly Once。
-6. R6.5 后端 G0–G9 已完成默认关闭装配、Loopback 安全、状态/取消 API、认证 SSE 与故障矩阵，当前执行 G10 Draft PR 和远程 CI；后端合并前真实 Telegram Smoke、远程访问、CLI+Web 与前端继续冻结。
+6. R6.5 后端 G0–G10 已完成默认关闭装配、Loopback 安全、状态/取消 API、认证 SSE、故障矩阵、Draft PR #9 和远程 CI，当前等待 Review/合并批准；后端合并前真实 Telegram Smoke、远程访问、CLI+Web 与前端继续冻结。
