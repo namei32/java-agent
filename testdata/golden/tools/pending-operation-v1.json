@@ -1,21 +1,33 @@
 {
+  "suite": "pending-operation",
   "formatVersion": 1,
   "source": "java-contract",
   "contract": "pending-operation-v1",
+  "normalization": [],
+  "contractEvidence": {
+    "adr": "docs/adr/0018-use-single-transaction-pending-operation-store.md",
+    "approvedOn": "2026-07-18",
+    "contract": "docs/contracts/pending-tool-operation.md",
+    "spec": "docs/specs/2026-07-18-r11-pending-operation-design.md"
+  },
   "cases": [
-    {"id":"reference-accepts-128-bit","expected":"accepted"},
-    {"id":"reference-rejects-short","expected":"rejected"},
-    {"id":"reference-to-string-redacts","expected":"redacted"},
-    {"id":"pending-requires-non-negative-session-revision","expected":"rejected"},
-    {"id":"pending-is-initial-state","expected":"PENDING_APPROVAL"},
-    {"id":"pending-approves-once","expected":"APPROVED_PENDING_RESUME"},
-    {"id":"cancelled-beats-late-approval","expected":"CANCELLED"},
-    {"id":"expired-is-terminal","expected":"EXPIRED"},
-    {"id":"newer-session-is-terminal","expected":"STALE_SESSION"},
-    {"id":"approval-must-consume-before-success","expected":"rejected"},
-    {"id":"consuming-may-succeed","expected":"SUCCEEDED"},
-    {"id":"unknown-is-terminal","expected":"UNKNOWN"},
-    {"id":"commit-unreported-follows-known-success","expected":"COMMIT_UNREPORTED"},
-    {"id":"terminal-state-cannot-reopen","expected":"rejected"}
+    {"id":"reference-accepts-128-bit","input":{},"expected":"accepted"},
+    {"id":"reference-rejects-short","input":{},"expected":"rejected"},
+    {"id":"reference-to-string-redacts","input":{},"expected":"redacted"},
+    {"id":"pending-requires-non-negative-session-revision","input":{},"expected":"rejected"},
+    {"id":"pending-is-initial-state","input":{},"expected":"PENDING_APPROVAL"},
+    {"id":"pending-approves-once","input":{},"expected":"APPROVED_PENDING_RESUME"},
+    {"id":"cancelled-beats-late-approval","input":{},"expected":"CANCELLED"},
+    {"id":"expired-is-terminal","input":{},"expected":"EXPIRED"},
+    {"id":"newer-session-is-terminal","input":{},"expected":"STALE_SESSION"},
+    {"id":"approval-must-consume-before-success","input":{},"expected":"rejected"},
+    {"id":"consuming-may-succeed","input":{},"expected":"SUCCEEDED"},
+    {"id":"unknown-is-terminal","input":{},"expected":"UNKNOWN"},
+    {"id":"commit-unreported-follows-known-success","input":{},"expected":"COMMIT_UNREPORTED"},
+    {"id":"terminal-state-cannot-reopen","input":{},"expected":"rejected"},
+    {"id":"capsule-round-trips","input":{},"expected":"decrypted"},
+    {"id":"capsule-rejects-ciphertext-tamper","input":{},"expected":"fail-closed"},
+    {"id":"capsule-rejects-reference-replacement","input":{},"expected":"fail-closed"},
+    {"id":"capsule-rejects-unknown-key","input":{},"expected":"fail-closed"}
   ]
 }

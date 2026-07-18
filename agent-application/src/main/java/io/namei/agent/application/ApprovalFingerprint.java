@@ -13,18 +13,18 @@ import java.util.HexFormat;
 import java.util.Map;
 import java.util.Objects;
 
-final class ApprovalFingerprint {
+public final class ApprovalFingerprint {
   private ApprovalFingerprint() {}
 
   static String argumentsHash(Map<String, ?> arguments) {
     return sha256(CanonicalArguments.encode(arguments));
   }
 
-  static String argumentsHashJson(String argumentsJson) {
+  public static String argumentsHashJson(String argumentsJson) {
     return sha256(CanonicalArguments.encodeJson(argumentsJson));
   }
 
-  static String sessionBinding(String sessionId) {
+  public static String sessionBinding(String sessionId) {
     Objects.requireNonNull(sessionId, "sessionId");
     return sha256(sessionId.getBytes(StandardCharsets.UTF_8));
   }

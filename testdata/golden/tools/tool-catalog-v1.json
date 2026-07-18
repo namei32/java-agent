@@ -90,7 +90,12 @@
       }
     }
   ],
-  "contractEvidence": "docs/contracts/tool-catalog-capability-governance.md#3-可见性状态机",
+  "contractEvidence": {
+    "adr": "docs/adr/0016-use-turn-scoped-tool-catalog.md",
+    "approvedOn": "2026-07-18",
+    "contract": "docs/contracts/tool-catalog-capability-governance.md",
+    "spec": "docs/specs/2026-07-18-r11-tool-catalog-design.md"
+  },
   "formatVersion": 1,
   "normalization": [],
   "source": "java-contract",

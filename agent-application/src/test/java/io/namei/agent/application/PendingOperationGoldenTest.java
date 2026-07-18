@@ -26,9 +26,12 @@ class PendingOperationGoldenTest {
     assertThat(fixture.path("formatVersion").asInt()).isEqualTo(1);
     assertThat(fixture.path("source").asText()).isEqualTo("java-contract");
     assertThat(fixture.path("contract").asText()).isEqualTo("pending-operation-v1");
-    assertThat(fixture.path("cases").size()).isEqualTo(14);
+    assertThat(fixture.path("cases").size()).isEqualTo(18);
     for (JsonNode testCase : fixture.path("cases")) {
-      verify(testCase.path("id").asText());
+      String id = testCase.path("id").asText();
+      if (!id.startsWith("capsule-")) {
+        verify(id);
+      }
     }
   }
 

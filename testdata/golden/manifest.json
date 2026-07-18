@@ -129,19 +129,19 @@
     {
       "id": "tools/tool-catalog-v1",
       "path": "tools/tool-catalog-v1.json",
-      "sha256": "12a991268547fe4c3c439d6bf9caf8a9850b1ef33c2192e08ea5bdd0daa2308d",
+      "sha256": "3fbca4defcab0e8ae0768f4b1c405fa2db42999d9b7ad807aab8d5c9f03414a8",
       "source": "java-contract"
     },
     {
       "id": "tools/approval-inbox-v1",
       "path": "tools/approval-inbox-v1.json",
-      "sha256": "4b01be2bf6c2fb82befbf14335d65ae4a15bee51bc59b17789e3f6b38c82927a",
+      "sha256": "c44a7e4d3b0854885fb4dfc7234d2d058a873d73257dd010ab1e9bdf18a8ff5b",
       "source": "java-contract"
     },
     {
       "id": "tools/pending-operation-v1",
       "path": "tools/pending-operation-v1.json",
-      "sha256": "a306e2db93b43140769fe2e35a568c791c23dfa9230242dd281de73e60985c32",
+      "sha256": "2ceec85c0fa1a5b7e69ea15cf8f17617184b16b858351e0ed53502c135f0a2a8",
       "source": "java-contract"
     },
     {

@@ -10,6 +10,7 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -29,14 +30,29 @@ final class CanonicalArguments {
   static byte[] encodeJson(String json) {
     Objects.requireNonNull(json, "json");
     try {
-      Object decoded = new Parser(json).parse();
-      if (!(decoded instanceof Map<?, ?> map)) {
-        throw invalidJson();
-      }
-      return encodeValue(map);
+      return encodeValue(parseJsonObject(json));
     } catch (IllegalArgumentException exception) {
       throw invalidJson();
     }
+  }
+
+  static Map<String, Object> parseJsonObject(String json) {
+    Objects.requireNonNull(json, "json");
+    Object decoded = new Parser(json).parse();
+    if (!(decoded instanceof Map<?, ?> map)) {
+      throw invalidJson();
+    }
+    var result = new java.util.LinkedHashMap<String, Object>();
+    map.forEach(
+        (key, value) -> {
+          if (!(key instanceof String text)) {
+            throw invalidJson();
+          }
+          result.put(text, value);
+        });
+    // Map.copyOf rejects null values, while JSON object values legitimately include null.
+    // Keep the parsed shape immutable without narrowing the JSON value domain.
+    return Collections.unmodifiableMap(result);
   }
 
   private static byte[] encodeValue(Object value) {
@@ -73,11 +89,6 @@ final class CanonicalArguments {
         || value instanceof BigInteger) {
       output.writeByte('i');
       writeText(value.toString(), output);
-      return;
-    }
-    if (value instanceof JsonNumber number) {
-      output.writeByte(number.decimal() ? 'd' : 'i');
-      writeText(number.canonical(), output);
       return;
     }
     if (value instanceof BigDecimal decimal) {
@@ -169,8 +180,6 @@ final class CanonicalArguments {
   private static IllegalArgumentException invalidJson() {
     return new IllegalArgumentException("审批参数 JSON 无效");
   }
-
-  private record JsonNumber(boolean decimal, String canonical) {}
 
   private static final class Parser {
     private final String source;
@@ -299,7 +308,7 @@ final class CanonicalArguments {
       }
     }
 
-    private JsonNumber number() {
+    private Number number() {
       int start = index;
       consume('-');
       if (consume('0')) {
@@ -323,9 +332,7 @@ final class CanonicalArguments {
       }
       String token = source.substring(start, index);
       try {
-        String canonical =
-            decimal ? new BigDecimal(token).toString() : new BigInteger(token).toString();
-        return new JsonNumber(decimal, canonical);
+        return decimal ? new BigDecimal(token) : new BigInteger(token);
       } catch (NumberFormatException exception) {
         throw invalidJson();
       }

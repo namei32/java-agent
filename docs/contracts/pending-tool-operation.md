@@ -1,6 +1,6 @@
 # 待审批 Tool Operation、参数胶囊与恢复安全契约
 
-- 状态：已冻结；O1/O2 无执行状态机已实现并验证，耐久化与恢复未实施
+- 状态：已冻结；O1/O2 无执行状态机与 O3 的内存 AES-GCM 胶囊边界已实现并验证，耐久化与恢复未实施
 - 契约版本：1（B2b）
 - 日期：2026-07-18
 - 阶段：R11 B2b Pending Operation
@@ -69,8 +69,8 @@ PENDING_APPROVAL -> APPROVED_PENDING_RESUME -> CONSUMING -> SUCCEEDED
 
 ## 6. B2b 验收顺序
 
-1. Java-owned Fixture 固定 Capsule AAD/篡改、状态 CAS、取消/过期/新 Turn、重启、Ledger `UNKNOWN`、条件 Conversation 提交与零 Invoker。
-2. 先实现无执行的 Operation/Capsule/Store 状态机和 SQLite v2 迁移；测试所有失败路径。
+1. Java-owned Fixture 已固定 18 个 Case：不透明 Ref、状态优先级，以及 Capsule AAD/篡改、引用替换和未知密钥的失败关闭；后续扩展状态 CAS、重启、Ledger `UNKNOWN`、条件 Conversation 提交与零 Invoker。
+2. 已实现无执行的 Operation 状态机和内存 AES-256-GCM Capsule；下一步是 SQLite v2 迁移与单事务 Store，并测试所有失败路径。
 3. 再实现 `appendTurnIfNextSequence` 的 SQLite 条件提交；不接 Chat 或真实 Tool。
 4. 只有在某个单独批准的 Capability Contract 中，才将其接到创建/恢复路径并以本地 Fake Invoker 演练。
 5. R11 所有 B 阶段完成后，统一运行默认、`failure`、`compat` 三套 Reactor 门禁。
