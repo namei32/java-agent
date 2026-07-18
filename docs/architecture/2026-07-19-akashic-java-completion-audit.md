@@ -17,7 +17,9 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 2. 版本化渠道消息、CLI、Telegram 离线可靠投递、Loopback 控制面、受限 Plugin、Scheduler/Drift/Subagent
    和 sandbox Cutover 演练。
 3. 只读 Markdown 与 Java 原生显式语义记忆、R10 Prompt Section/Core Persona、R11 Catalog/Approval
-   Inbox/Pending Operation 无执行安全基础，以及默认关闭、当前 Session 限定的会话证据 Tool。
+   Inbox/Pending Operation 无执行安全基础，以及默认关闭、当前 Session 限定的会话证据 Tool。自动语义检索使用
+   Session 的 SHA-256 Binding，因此可覆盖 Telegram 等渠道；显式 Memory HTTP 管理 API 则有意只接受安全路径 ID，
+   不能直接管理 `telegram:<chatId>` Scope。
 
 这些闭环的证据在能力矩阵、Fixture Manifest 及默认、`failure`、`compat` Maven 门禁中维护；它们不等价于
 已启用真实网络、真实工作区写入或生产迁移。
@@ -51,6 +53,10 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 5. R12-S3 API v2 只读生命周期 Tap 与 R12-S4 deferred Skill 正文读取均已完成并通过三套门禁；R12-S2 的
    Assets 目录也已完成，但它是 Java-owned 扩展而非 Python MCP 对齐。实际主线仍是获得首个副作用 Capability
    的逐工具 Contract 后完成 R11-B2c，随后才进入 R13 多渠道/控制面、R14 主动/Peer/自动记忆和 R15 生产切换。
+6. **渠道级显式记忆管理尚未对齐。** `ChatService` 的自动 Retrieval 可以用私有 SHA-256 Binding 查询
+   `telegram:<chatId>` 的当前 Scope；但 Memory HTTP API 为避免危险路径和原始 Session 泄露，只接受
+   `[A-Za-z0-9_-]+`。未来模型 Tool 必须从当前 Turn 接收私有 Binding，不能复用该管理 API；若需要渠道侧的显式
+   管理，须先另立身份、授权和 API Contract。
 
 “与 Akashic 一样完善”的完成条件是：本表每个条目都已由当前源码、版本化 Contract Fixture、对应失败路径
 测试和阶段门禁证实，或有用户批准的替代方案；真实网络、密钥、用户数据、生产写入和 Python 退役还必须额外

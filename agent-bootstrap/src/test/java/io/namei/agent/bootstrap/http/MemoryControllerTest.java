@@ -215,6 +215,33 @@ class MemoryControllerTest {
   }
 
   @Test
+  void rejectsChannelQualifiedSessionIdsBeforeTheMemoryManagementApi() throws Exception {
+    String telegramSession = "telegram:10001";
+
+    mvc.perform(
+            put("/api/v1/sessions/{sessionId}/memories", telegramSession)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(validWriteBody()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.title").value("请求参数无效"));
+
+    mvc.perform(get("/api/v1/sessions/{sessionId}/memories", telegramSession))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.title").value("请求参数无效"));
+
+    mvc.perform(
+            delete(
+                    "/api/v1/sessions/{sessionId}/memories/{memoryId}",
+                    telegramSession,
+                    "memory-0001")
+                .header("Idempotency-Key", "req-delete-001"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.title").value("请求参数无效"));
+
+    assertThat(api.calls).isZero();
+  }
+
+  @Test
   void rejectsAnOversizedRequestBodyWithoutCallingTheApi() throws Exception {
     String body =
         "{\"requestId\":\"req\",\"type\":\"NOTE\",\"content\":\""

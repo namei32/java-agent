@@ -34,7 +34,7 @@ Java 则采用静态受信 Catalog、`tool_search` 后当前 Turn 解锁的 Defe
 | `write_file` / `edit_file` | 创建/覆盖、精确替换、文件锁、差异预览 | 无 | 未实现 | R11 后续逐 Tool `WRITE` Capability：Workspace Sandbox、备份/回退、TOCTOU、Approval、Capsule/Ledger、`UNKNOWN` 与恢复 Contract |
 | `fetch_messages` | 按 ID/source evidence 读取原始消息及有限上下文 | R11-B4 默认关闭的 `fetch_messages`：当前 Session、opaque `msg-v1:<seq>`、窗口、16 条/12k code-point 投影上限 | 有意替代 | 已通过 Fixture、SQLite、Tool Loop、Bootstrap 和三套门禁。Java 不接受 `source_ref`/原始 ID、不暴露 Session/Route、不能跨 Session，宽窗口安全失败而不静默截断 |
 | `search_messages` | 当前会话全文/关键词消息检索 | R11-B4 默认关闭的 `search_messages`：当前 Session、Unicode 空白分词、`Locale.ROOT` 小写 OR 匹配、角色/分页与 50 行预览 | 有意替代 | 已通过 Fixture、SQLite、Tool Loop、Bootstrap 和三套门禁。Java 不建 FTS 或跨 Channel 枚举；预览不是直接证据，模型须再调用 `fetch_messages` |
-| `recall_memory` | 语义/关键词/时间线检索、种类/时间筛选、证据/引用投影 | R4.2 有当前 Scope cosine/Hotness Context Retrieval，但无模型 Tool、无 Keyword/RRF、时间线或证据字段 | 部分 | [R12-S5 受限只读替代契约](../contracts/read-only-memory-recall-tool.md)已提议但未获实现授权；Java 原生记忆没有 Python `memory2` 的 evidence/source-ref/activation 元数据，不能声称等价 |
+| `recall_memory` | 语义/关键词/时间线检索、种类/时间筛选、证据/引用投影 | R4.2 有当前 Scope cosine/Hotness Context Retrieval，但无模型 Tool、无 Keyword/RRF、时间线或证据字段 | 部分 | [R12-S5 受限只读替代契约](../contracts/read-only-memory-recall-tool.md)已提议但未获实现授权；未来 Tool 必须使用 ChatService 的私有 SHA-256 Scope Binding，不能复用只接受安全 HTTP ID 的 Memory 管理 API。Java 原生记忆没有 Python `memory2` 的 evidence/source-ref/activation 元数据，不能声称等价 |
 | `memorize` | 由 Engine Profile 决定的记忆写入与类型 | Java 有显式 HTTP Write API，不是 Tool | 未实现 | `WRITE` Capability；先选择是否允许模型摘要持久化、Embedding 费用、Scope/类型、Approval 与恢复语义 |
 | `forget_memory` | 批量去重后软失效，返回命中/缺失和条目 | Java 有当前 Scope 单 ID 物理删除 API，不是 Tool | 部分 | 语义差异已单独审计；必须选择 Python 软失效对齐或 Java `delete_memory` 替代后，才能进入 R11-B2c |
 | `message_push` | 向已注册渠道发送文本/文件/图片 | Telegram 有渠道投递，但无模型 Tool | 未实现 | `EXTERNAL_SIDE_EFFECT` Capability；真实渠道、目标身份、内容/附件 Root、Receipt、Outbox、Approval、UNKNOWN 和真实 Smoke 均需独立范围 |
@@ -64,6 +64,8 @@ Java 则采用静态受信 Catalog、`tool_search` 后当前 Turn 解锁的 Defe
 
 - 不把 Java R12-S2 Resources/Prompts Assets Catalog 记为 Python MCP 对齐；Python 基线没有这个表面。
 - 不把 Java HTTP Memory API 或 Scheduler/Subagent Runtime 记为模型 Tool 对齐。
+- 不把 Java 的显式 Memory HTTP 管理 API 当作 Telegram 或任意渠道的 Memory Scope Resolver：它有意拒绝
+  `telegram:<chatId>` 等非安全路径标识；自动检索的私有 SHA-256 Binding 才是 Chat Tool 可用的 Scope 边界。
 - 不把 `read_file`/`list_dir` 的独立 Root 安全替代记为 Python 任意 Workspace 文件能力。
 - 不把 Fake Capability 演练、Approval Inbox 或 Pending Store 记为“已经能执行副作用”。
 - 不把真实 Telegram/Provider/MCP/Workspace 的 Smoke 或生产启用归入本清单；它们另需运行授权。
