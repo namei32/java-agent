@@ -28,9 +28,9 @@
 | R4 | 上下文与记忆 | R4.1、R4.2 已完成 | Java 原生显式记忆管理与语义检索闭环已通过最终门禁；自动写回/Optimizer 仍冻结 |
 | R5 | MCP 与外部工具 | R5.1 已完成 | 静态 stdio 只读 Client、工具发现/投影、取消、隔离和进程回收已验收；远程与副作用范围未开始 |
 | R6 | 渠道与控制面 | R6.1–R6.5 已合入 `main` | PR #9 与主分支三套 CI 均通过；前端仍待独立 Contract |
-| R7 | 插件与扩展兼容 | Contract/Spec/ADR/Plan 已冻结，实施中 | Java SPI、隔离 stdio Bridge、观察型 Hook 与配置兼容 |
-| R8 | 主动运行时 | Contract/Spec/ADR/Plan 已冻结，等待 R7 | SQLite Scheduler、受限 Proactive/Drift/Subagent |
-| R9 | 生产切换 | Contract/Spec/ADR/Plan 已冻结，等待 R8 | sandbox 演练、备份、差异、回退与独立生产授权 |
+| R7 | 插件与扩展兼容 | 代码完成，待本分支阶段门禁 | Java SPI、隔离 stdio Bridge、观察型 Hook 与默认关闭配置 |
+| R8 | 主动运行时 | 代码完成，待本分支阶段门禁 | SQLite Scheduler、hash-only allowlist、受限 Proactive/Drift/Subagent、NoOp Delivery |
+| R9 | 生产切换 | Contract/Spec/ADR/Plan 已冻结，等待 R8 阶段门禁 | sandbox 演练、备份、差异、回退与独立生产授权 |
 
 ## R0：治理、契约与跨语言基线
 

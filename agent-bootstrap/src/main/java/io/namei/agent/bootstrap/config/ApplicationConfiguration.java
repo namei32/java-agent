@@ -47,6 +47,8 @@ import io.namei.agent.bootstrap.plugin.JavaServicePluginDiscovery;
 import io.namei.agent.bootstrap.plugin.JdkExternalStdioPluginTransport;
 import io.namei.agent.bootstrap.plugin.PluginProperties;
 import io.namei.agent.bootstrap.plugin.PluginRuntime;
+import io.namei.agent.bootstrap.proactive.ProactiveProperties;
+import io.namei.agent.bootstrap.proactive.ProactiveRuntime;
 import io.namei.agent.bootstrap.tool.CurrentTimeTool;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
@@ -85,7 +87,8 @@ import org.springframework.core.io.Resource;
   AgentProperties.class,
   McpProperties.class,
   CliProperties.class,
-  PluginProperties.class
+  PluginProperties.class,
+  ProactiveProperties.class
 })
 @Import(SpringAiAdapterConfiguration.class)
 public class ApplicationConfiguration {
@@ -133,6 +136,14 @@ public class ApplicationConfiguration {
         agentProperties.tools().mode(),
         JavaServicePluginDiscovery.classpath(),
         JdkExternalStdioPluginTransport::start);
+  }
+
+  @Bean(destroyMethod = "close")
+  ProactiveRuntime proactiveRuntime(
+      AgentProperties agentProperties,
+      ProactiveProperties proactiveProperties,
+      PluginRuntime plugins) {
+    return ProactiveRuntime.start(proactiveProperties, agentProperties.workspace(), plugins);
   }
 
   @Bean

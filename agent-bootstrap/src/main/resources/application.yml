@@ -92,6 +92,14 @@ agent:
     max-frame-bytes: ${AGENT_PLUGINS_MAX_FRAME_BYTES:65536}
     java-service-ids: []
     external: []
+  proactive:
+    mode: ${AGENT_PROACTIVE_MODE:DISABLED}
+    owner-id: ${AGENT_PROACTIVE_OWNER_ID:proactive-local}
+    lease-duration: ${AGENT_PROACTIVE_LEASE_DURATION:30s}
+    idle-wait: ${AGENT_PROACTIVE_IDLE_WAIT:5s}
+    shutdown-timeout: ${AGENT_PROACTIVE_SHUTDOWN_TIMEOUT:2s}
+    cooldown: ${AGENT_PROACTIVE_COOLDOWN:5m}
+    plans: []
   memory:
     mode: ${AGENT_MEMORY_MODE:DISABLED}
     max-file-bytes: ${AGENT_MEMORY_MAX_FILE_BYTES:65536}

@@ -39,7 +39,7 @@
     {
       "id": "proactive/proactive-runtime-v1",
       "path": "proactive/proactive-runtime-v1.json",
-      "sha256": "d5850d7d58c3c61989a731ec5b6e91077b27a9f15ea277b31c2119fe9192e814",
+      "sha256": "f3a111636457444ccd8f6e741a325e751cffa347cc2bd63a323c0b04cabd7a5a",
       "source": "java-contract"
     },
     {

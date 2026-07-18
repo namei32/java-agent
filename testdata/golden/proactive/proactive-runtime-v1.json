@@ -8,6 +8,7 @@
     "contract": "docs/contracts/proactive-runtime.md",
     "spec": "docs/specs/2026-07-18-proactive-runtime-design.md"
   },
+  "normalization": [],
   "cases": [
     {"id":"at-once","group":"schedule","input":{"kind":"AT","nextRunAt":"2026-07-20T00:00:00Z"},"expected":{"accepted":true}},
     {"id":"every-minute","group":"schedule","input":{"kind":"EVERY","nextRunAt":"2026-07-20T00:00:00Z","everyMillis":60000},"expected":{"accepted":true}},

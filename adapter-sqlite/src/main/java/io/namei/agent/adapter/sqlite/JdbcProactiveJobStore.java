@@ -56,6 +56,27 @@ public final class JdbcProactiveJobStore implements ProactiveJobStore {
   }
 
   @Override
+  public Optional<ScheduledJob> find(ProactiveJobRef jobRef) {
+    Objects.requireNonNull(jobRef, "jobRef");
+    try (var connection = schema.openConnection();
+        var select =
+            connection.prepareStatement(
+                """
+                SELECT job_ref, schedule_kind, next_run_at, every_millis, target_hash, idempotency_key,
+                       state, attempts, max_attempts, revision
+                  FROM proactive_jobs
+                 WHERE job_ref = ?
+                """)) {
+      select.setString(1, jobRef.value());
+      try (var rows = select.executeQuery()) {
+        return rows.next() ? Optional.of(read(rows).job()) : Optional.empty();
+      }
+    } catch (SQLException exception) {
+      throw ProactiveRepositoryException.operationFailed(exception);
+    }
+  }
+
+  @Override
   public Optional<ProactiveJobLease> claimNext(
       Instant now, String ownerId, Duration leaseDuration) {
     Objects.requireNonNull(now, "now");
