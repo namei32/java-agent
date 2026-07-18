@@ -34,7 +34,7 @@ Java 则采用静态受信 Catalog、`tool_search` 后当前 Turn 解锁的 Defe
 | `write_file` / `edit_file` | 创建/覆盖、精确替换、文件锁、差异预览 | 无 | 未实现 | R11 后续逐 Tool `WRITE` Capability：Workspace Sandbox、备份/回退、TOCTOU、Approval、Capsule/Ledger、`UNKNOWN` 与恢复 Contract |
 | `fetch_messages` | 按 ID/source evidence 读取原始消息及有限上下文 | R11-B4 默认关闭的 `fetch_messages`：当前 Session、opaque `msg-v1:<seq>`、窗口、16 条/12k code-point 投影上限 | 有意替代 | 已通过 Fixture、SQLite、Tool Loop、Bootstrap 和三套门禁。Java 不接受 `source_ref`/原始 ID、不暴露 Session/Route、不能跨 Session，宽窗口安全失败而不静默截断 |
 | `search_messages` | 当前会话全文/关键词消息检索 | R11-B4 默认关闭的 `search_messages`：当前 Session、Unicode 空白分词、`Locale.ROOT` 小写 OR 匹配、角色/分页与 50 行预览 | 有意替代 | 已通过 Fixture、SQLite、Tool Loop、Bootstrap 和三套门禁。Java 不建 FTS 或跨 Channel 枚举；预览不是直接证据，模型须再调用 `fetch_messages` |
-| `recall_memory` | 语义/关键词/时间线检索、种类/时间筛选、证据/引用投影 | R4.2 有当前 Scope cosine/Hotness Context Retrieval，但无模型 Tool、无 Keyword/RRF、时间线或证据字段 | 部分 | 需要新的只读 Memory Tool Contract；Java 原生记忆也没有 Python `memory2` 的 evidence/source-ref/activation 元数据，不能声称等价 |
+| `recall_memory` | 语义/关键词/时间线检索、种类/时间筛选、证据/引用投影 | R4.2 有当前 Scope cosine/Hotness Context Retrieval，但无模型 Tool、无 Keyword/RRF、时间线或证据字段 | 部分 | [R12-S5 受限只读替代契约](../contracts/read-only-memory-recall-tool.md)已提议但未获实现授权；Java 原生记忆没有 Python `memory2` 的 evidence/source-ref/activation 元数据，不能声称等价 |
 | `memorize` | 由 Engine Profile 决定的记忆写入与类型 | Java 有显式 HTTP Write API，不是 Tool | 未实现 | `WRITE` Capability；先选择是否允许模型摘要持久化、Embedding 费用、Scope/类型、Approval 与恢复语义 |
 | `forget_memory` | 批量去重后软失效，返回命中/缺失和条目 | Java 有当前 Scope 单 ID 物理删除 API，不是 Tool | 部分 | 语义差异已单独审计；必须选择 Python 软失效对齐或 Java `delete_memory` 替代后，才能进入 R11-B2c |
 | `message_push` | 向已注册渠道发送文本/文件/图片 | Telegram 有渠道投递，但无模型 Tool | 未实现 | `EXTERNAL_SIDE_EFFECT` Capability；真实渠道、目标身份、内容/附件 Root、Receipt、Outbox、Approval、UNKNOWN 和真实 Smoke 均需独立范围 |
@@ -53,9 +53,9 @@ Java 则采用静态受信 Catalog、`tool_search` 后当前 Turn 解锁的 Defe
    固定，并通过默认、`failure`、`compat` 门禁；它不授予跨会话读取、Memory Tool 或任何写入。
 2. **R11-B2c：选择并实现第一个副作用 Capability。** 这是生产 Recovery Router 的必要前置；Python
    `forget_memory` 语义差异的两个路径见 [候选审计](../plans/2026-07-19-r11-first-side-effect-capability-selection.md)。
-3. **R12-S5：Memory Tool 对齐。** 在 Java 原生 Store 的明确替代边界下迁移 `recall_memory`，随后才分别处理
-   `memorize`/`forget_memory`；Keyword/RRF、时间线和 citation evidence 需要先补 Store/Model Contract，不能只把
-   Context Retrieval 包装成 Tool。
+3. **R12-S5：Memory Tool 对齐（提议，待批准）。** 在 Java 原生 Store 的明确替代边界下迁移 `recall_memory`，随后才
+   分别处理 `memorize`/`forget_memory`；Keyword/RRF、时间线和 citation evidence 需要先补 Store/Model Contract，不能
+   只把 Context Retrieval 包装成 Tool。
 4. **R12/R13：Scheduler 与 Subagent Tool 接线。** 先迁移只读状态，再迁移创建/取消；所有实际 Delivery 保持独立。
 5. **R13/R14：Channel Push、Web、Vision、Shell、动态 MCP 与动态 Tool。** 按网络、外部副作用、进程、数据泄露等
    风险维度逐个 Contract，不能以 Python Registry 的“默认可见”作为 Java 实现依据。
