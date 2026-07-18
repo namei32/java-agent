@@ -15,9 +15,15 @@ import java.util.concurrent.locks.ReentrantLock;
 /** Creates and validates the intentionally isolated approval-inbox SQLite boundary. */
 public final class ApprovalInboxSchemaInitializer {
   private static final String DATABASE_FILE_NAME = "approval-inbox.db";
-  private static final int VERSION = 1;
-  private static final Set<String> REQUIRED_TABLES =
+  private static final int VERSION = 2;
+  private static final Set<String> V1_TABLES =
       Set.of("approval_inbox_schema", "approval_inbox_entries");
+  private static final Set<String> REQUIRED_TABLES =
+      Set.of(
+          "approval_inbox_schema",
+          "approval_inbox_entries",
+          "pending_operations",
+          "side_effect_reservations");
 
   private final Path database;
   private final String jdbcUrl;
@@ -53,8 +59,19 @@ public final class ApprovalInboxSchemaInitializer {
           transaction(
               connection,
               () -> {
-                createSchema(connection);
-                validate(connection);
+                createV2Schema(connection);
+                validateV2(connection);
+                return null;
+              });
+          return;
+        }
+        if (tables.equals(V1_TABLES)) {
+          transaction(
+              connection,
+              () -> {
+                validateV1(connection);
+                migrateV1ToV2(connection);
+                validateV2(connection);
                 return null;
               });
           return;
@@ -62,7 +79,7 @@ public final class ApprovalInboxSchemaInitializer {
         if (!tables.equals(REQUIRED_TABLES)) {
           throw ApprovalInboxRepositoryException.incompatible();
         }
-        validate(connection);
+        validateV2(connection);
       }
     } catch (ApprovalInboxRepositoryException exception) {
       throw exception;
@@ -91,16 +108,16 @@ public final class ApprovalInboxSchemaInitializer {
     }
   }
 
-  private static void createSchema(Connection connection) throws SQLException {
+  private static void createV2Schema(Connection connection) throws SQLException {
     try (var statement = connection.createStatement()) {
       statement.execute(
           """
           CREATE TABLE approval_inbox_schema (
             singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-            version INTEGER NOT NULL CHECK (version = 1)
+            version INTEGER NOT NULL CHECK (version = 2)
           )
           """);
-      statement.execute("INSERT INTO approval_inbox_schema(singleton, version) VALUES (1, 1)");
+      statement.execute("INSERT INTO approval_inbox_schema(singleton, version) VALUES (1, 2)");
       statement.execute(
           """
           CREATE TABLE approval_inbox_entries (
@@ -134,24 +151,104 @@ public final class ApprovalInboxSchemaInitializer {
       statement.execute(
           "CREATE INDEX approval_inbox_entries_expiry_idx "
               + "ON approval_inbox_entries(state, expires_epoch_second, expires_nano)");
+      createV2OperationTables(statement);
     }
   }
 
-  private static void validate(Connection connection) throws SQLException {
+  private static void migrateV1ToV2(Connection connection) throws SQLException {
+    try (var statement = connection.createStatement()) {
+      statement.execute("ALTER TABLE approval_inbox_schema RENAME TO approval_inbox_schema_v1");
+      statement.execute(
+          """
+          CREATE TABLE approval_inbox_schema (
+            singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+            version INTEGER NOT NULL CHECK (version = 2)
+          )
+          """);
+      statement.execute("INSERT INTO approval_inbox_schema(singleton, version) VALUES (1, 2)");
+      statement.execute("DROP TABLE approval_inbox_schema_v1");
+      createV2OperationTables(statement);
+    }
+  }
+
+  private static void createV2OperationTables(java.sql.Statement statement) throws SQLException {
+    statement.execute(
+        """
+        CREATE TABLE pending_operations (
+          operation_ref TEXT PRIMARY KEY NOT NULL,
+          approval_id TEXT UNIQUE NOT NULL REFERENCES approval_inbox_entries(approval_id),
+          approval_ref TEXT UNIQUE NOT NULL REFERENCES approval_inbox_entries(approval_ref),
+          expected_next_sequence INTEGER NOT NULL CHECK (expected_next_sequence >= 0),
+          state TEXT NOT NULL,
+          state_changed_at TEXT NOT NULL,
+          capsule_schema_version INTEGER NOT NULL CHECK (capsule_schema_version = 1),
+          capsule_key_id TEXT NOT NULL,
+          capsule_nonce BLOB NOT NULL CHECK (length(capsule_nonce) = 12),
+          capsule_ciphertext BLOB NOT NULL CHECK (length(capsule_ciphertext) >= 16)
+        )
+        """);
+    statement.execute(
+        "CREATE INDEX pending_operations_state_idx "
+            + "ON pending_operations(state, state_changed_at, operation_ref)");
+    statement.execute(
+        """
+        CREATE TABLE side_effect_reservations (
+          operation_ref TEXT PRIMARY KEY NOT NULL REFERENCES pending_operations(operation_ref),
+          approval_id TEXT UNIQUE NOT NULL REFERENCES approval_inbox_entries(approval_id),
+          state TEXT NOT NULL,
+          state_changed_at TEXT NOT NULL,
+          safe_result TEXT,
+          error_code TEXT NOT NULL
+        )
+        """);
+  }
+
+  private static void validateV1(Connection connection) throws SQLException {
+    validateVersion(connection, 1);
+    validateInboxColumns(connection);
+  }
+
+  private static void validateV2(Connection connection) throws SQLException {
+    validateVersion(connection, VERSION);
+    validateInboxColumns(connection);
+    validateColumns(
+        connection,
+        "pending_operations",
+        Set.of(
+            "operation_ref",
+            "approval_id",
+            "approval_ref",
+            "expected_next_sequence",
+            "state",
+            "state_changed_at",
+            "capsule_schema_version",
+            "capsule_key_id",
+            "capsule_nonce",
+            "capsule_ciphertext"));
+    validateColumns(
+        connection,
+        "side_effect_reservations",
+        Set.of(
+            "operation_ref",
+            "approval_id",
+            "state",
+            "state_changed_at",
+            "safe_result",
+            "error_code"));
+  }
+
+  private static void validateVersion(Connection connection, int expectedVersion)
+      throws SQLException {
     try (var statement = connection.createStatement();
         ResultSet rows =
             statement.executeQuery("SELECT singleton, version FROM approval_inbox_schema")) {
-      if (!rows.next() || rows.getInt(1) != 1 || rows.getInt(2) != VERSION || rows.next()) {
+      if (!rows.next() || rows.getInt(1) != 1 || rows.getInt(2) != expectedVersion || rows.next()) {
         throw ApprovalInboxRepositoryException.incompatible();
       }
     }
-    Set<String> columns = new HashSet<>();
-    try (var statement = connection.createStatement();
-        ResultSet rows = statement.executeQuery("PRAGMA table_info(approval_inbox_entries)")) {
-      while (rows.next()) {
-        columns.add(rows.getString("name"));
-      }
-    }
+  }
+
+  private static void validateInboxColumns(Connection connection) throws SQLException {
     Set<String> required =
         Set.of(
             "approval_id",
@@ -176,7 +273,20 @@ public final class ApprovalInboxSchemaInitializer {
             "state",
             "decided_at",
             "actor_reference");
-    if (!columns.equals(required) || columns.contains("arguments")) {
+    validateColumns(connection, "approval_inbox_entries", required);
+  }
+
+  private static void validateColumns(Connection connection, String table, Set<String> required)
+      throws SQLException {
+    Set<String> columns = new HashSet<>();
+    try (var statement = connection.createStatement();
+        ResultSet rows = statement.executeQuery("PRAGMA table_info(" + table + ")")) {
+      while (rows.next()) {
+        columns.add(rows.getString("name"));
+      }
+    }
+    if (!columns.equals(required)
+        || (table.equals("approval_inbox_entries") && columns.contains("arguments"))) {
       throw ApprovalInboxRepositoryException.incompatible();
     }
   }

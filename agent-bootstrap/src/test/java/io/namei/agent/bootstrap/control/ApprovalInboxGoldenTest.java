@@ -118,7 +118,7 @@ class ApprovalInboxGoldenTest {
         ApprovalInboxEntry pending = entry(7, id, ISSUED);
         inbox.create(pending);
         assertThat(resolveConcurrently(inbox, pending))
-            .containsExactly(
+            .containsExactlyInAnyOrder(
                 ApprovalInboxResolutionStatus.RESOLVED,
                 ApprovalInboxResolutionStatus.ALREADY_RESOLVED);
       }

@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 
 /** SQLite implementation with database-authoritative expiry and compare-and-set resolution. */
 public final class JdbcApprovalInbox implements ApprovalInbox {
-  private static final int MAX_ENTRIES = 64;
+  static final int MAX_ENTRIES = 64;
   private static final Pattern ACTOR_REFERENCE = Pattern.compile("[A-Za-z0-9_-]{1,128}");
   private static final String COLUMNS =
       "approval_id, approval_ref, session_binding, turn_id, call_id, tool_name, tool_version, "
@@ -157,7 +157,7 @@ public final class JdbcApprovalInbox implements ApprovalInbox {
         : ApprovalInboxResolution.alreadyResolved(refreshed);
   }
 
-  private static void insert(Connection connection, ApprovalInboxEntry entry) throws SQLException {
+  static void insert(Connection connection, ApprovalInboxEntry entry) throws SQLException {
     ApprovalRequest request = entry.request();
     try (var statement =
         connection.prepareStatement(
@@ -196,7 +196,7 @@ public final class JdbcApprovalInbox implements ApprovalInbox {
     }
   }
 
-  private static int entryCount(Connection connection) throws SQLException {
+  static int entryCount(Connection connection) throws SQLException {
     try (var statement = connection.createStatement();
         var rows = statement.executeQuery("SELECT COUNT(*) FROM approval_inbox_entries")) {
       if (!rows.next()) {

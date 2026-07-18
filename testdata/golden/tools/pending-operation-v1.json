@@ -28,6 +28,9 @@
     {"id":"capsule-round-trips","input":{},"expected":"decrypted"},
     {"id":"capsule-rejects-ciphertext-tamper","input":{},"expected":"fail-closed"},
     {"id":"capsule-rejects-reference-replacement","input":{},"expected":"fail-closed"},
-    {"id":"capsule-rejects-unknown-key","input":{},"expected":"fail-closed"}
+    {"id":"capsule-rejects-unknown-key","input":{},"expected":"fail-closed"},
+    {"id":"operation-store-persists-atomically","input":{},"expected":"PENDING_APPROVAL"},
+    {"id":"operation-store-migrates-v1","input":{},"expected":"version-2"},
+    {"id":"operation-store-rejects-capsule-tamper","input":{},"expected":"fail-closed"}
   ]
 }

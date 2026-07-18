@@ -3,6 +3,7 @@ package io.namei.agent.adapter.sqlite;
 import io.namei.agent.application.EncryptedPendingOperationCapsule;
 import io.namei.agent.application.PendingOperation;
 import io.namei.agent.application.PendingOperationCapsule;
+import io.namei.agent.application.PendingOperationCapsuleBinding;
 import io.namei.agent.application.PendingOperationCapsuleCipher;
 import io.namei.agent.application.PendingOperationCapsuleException;
 import io.namei.agent.application.PendingOperationKey;
@@ -79,6 +80,18 @@ public final class AesGcmPendingOperationCapsuleCipher implements PendingOperati
   public PendingOperationCapsule decrypt(
       PendingOperation operation, EncryptedPendingOperationCapsule encrypted) {
     Objects.requireNonNull(operation, "operation");
+    PendingOperationCapsule capsule =
+        decryptBound(PendingOperationCapsuleBinding.from(operation), encrypted);
+    if (!capsule.matches(operation)) {
+      throw new PendingOperationCapsuleException();
+    }
+    return capsule;
+  }
+
+  @Override
+  public PendingOperationCapsule decryptBound(
+      PendingOperationCapsuleBinding binding, EncryptedPendingOperationCapsule encrypted) {
+    Objects.requireNonNull(binding, "binding");
     Objects.requireNonNull(encrypted, "encrypted");
     byte[] plaintext = null;
     try {
@@ -87,13 +100,9 @@ public final class AesGcmPendingOperationCapsuleCipher implements PendingOperati
       Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
       cipher.init(
           Cipher.DECRYPT_MODE, key.key(), new GCMParameterSpec(TAG_BITS, encrypted.nonce()));
-      cipher.updateAAD(aad(operation, PendingOperationCapsule.SCHEMA_VERSION));
+      cipher.updateAAD(aad(binding, PendingOperationCapsule.SCHEMA_VERSION));
       plaintext = cipher.doFinal(encrypted.ciphertext());
-      PendingOperationCapsule capsule = CapsuleCodec.decode(plaintext);
-      if (!capsule.matches(operation)) {
-        throw new PendingOperationCapsuleException();
-      }
-      return capsule;
+      return CapsuleCodec.decode(plaintext);
     } catch (PendingOperationCapsuleException exception) {
       throw exception;
     } catch (GeneralSecurityException | RuntimeException exception) {
@@ -106,13 +115,17 @@ public final class AesGcmPendingOperationCapsuleCipher implements PendingOperati
   }
 
   private static byte[] aad(PendingOperation operation, int capsuleVersion) {
+    return aad(PendingOperationCapsuleBinding.from(operation), capsuleVersion);
+  }
+
+  private static byte[] aad(PendingOperationCapsuleBinding binding, int capsuleVersion) {
     try {
       var bytes = new ByteArrayOutputStream();
       try (var output = new DataOutputStream(bytes)) {
         output.writeInt(capsuleVersion);
-        writeText(operation.reference().value(), output);
-        writeText(operation.approval().fingerprint(), output);
-        writeText(operation.approval().toolVersion(), output);
+        writeText(binding.reference().value(), output);
+        writeText(binding.approvalFingerprint(), output);
+        writeText(binding.toolVersion(), output);
       }
       return bytes.toByteArray();
     } catch (IOException exception) {
