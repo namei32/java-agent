@@ -1,0 +1,21 @@
+{
+  "formatVersion": 1,
+  "source": "java-contract",
+  "contract": "pending-operation-v1",
+  "cases": [
+    {"id":"reference-accepts-128-bit","expected":"accepted"},
+    {"id":"reference-rejects-short","expected":"rejected"},
+    {"id":"reference-to-string-redacts","expected":"redacted"},
+    {"id":"pending-requires-non-negative-session-revision","expected":"rejected"},
+    {"id":"pending-is-initial-state","expected":"PENDING_APPROVAL"},
+    {"id":"pending-approves-once","expected":"APPROVED_PENDING_RESUME"},
+    {"id":"cancelled-beats-late-approval","expected":"CANCELLED"},
+    {"id":"expired-is-terminal","expected":"EXPIRED"},
+    {"id":"newer-session-is-terminal","expected":"STALE_SESSION"},
+    {"id":"approval-must-consume-before-success","expected":"rejected"},
+    {"id":"consuming-may-succeed","expected":"SUCCEEDED"},
+    {"id":"unknown-is-terminal","expected":"UNKNOWN"},
+    {"id":"commit-unreported-follows-known-success","expected":"COMMIT_UNREPORTED"},
+    {"id":"terminal-state-cannot-reopen","expected":"rejected"}
+  ]
+}

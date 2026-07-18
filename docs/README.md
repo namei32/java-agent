@@ -22,7 +22,7 @@
 - 已完成并验证：R7 受信 Java `ServiceLoader` SPI、隔离 stdio Plugin Bridge、观察型 Hook 与默认关闭装配；R8 本地 SQLite 租约 Scheduler、hash-only allowlist、受限 Proactive Gate/NoOp Delivery、只读 Drift、parent-bound Subagent、完成后安全 Plugin Tap 与默认关闭装配；R9 仅 sandbox 的状态/资格/备份 Manifest/差异、预 Spring CLI 和回退演练。三阶段均通过默认、`failure`、`compat` 门禁，且不访问真实网络、Provider、Telegram 或 Workspace 写入。
 - 已完成并验证：R10 的 Java-owned Prompt Fixture、版本化 Section/Frame、code point 预算及固定裁剪、classpath Akashic Core Persona、严格 `agent.prompt` Properties、HTTP/CLI/Telegram 可信时间/会话 Context 与只读 Memory 接线。默认继续为 `MINIMAL`；`AKASHIC_CORE` 必须显式启用；三套阶段门禁均已通过。
 - 已完成并验证：R11 B1 Tool Catalog 与 B2a Local Approval Inbox Foundation。B2a 提供默认关闭、独立 SQLite、29 场景 Fixture、Loopback Operator 的安全列表/一次性决定、过期/容量/CAS 与零执行边界；它不恢复 Turn，不调用 Tool。
-- 已冻结、待实施：R11 B2b 的[待审批 Tool Operation、参数胶囊与恢复安全契约](contracts/pending-tool-operation.md)和[ADR-0018](adr/0018-use-single-transaction-pending-operation-store.md)。它要求单一隔离事务 Store、AES-GCM Capsule、条件 Conversation 提交及零自动恢复；仍未接入 Chat 或 Tool。
+- 已冻结并完成初始无执行状态机：R11 B2b 的[待审批 Tool Operation、参数胶囊与恢复安全契约](contracts/pending-tool-operation.md)和[ADR-0018](adr/0018-use-single-transaction-pending-operation-store.md)。14 场景 Fixture 已验证不透明引用、状态优先级与零执行；单一隔离事务 Store、AES-GCM Capsule、条件 Conversation 提交及恢复仍未实现，且未接入 Chat 或 Tool。
 - 尚未覆盖：自动 Memory 写回/Optimizer、真实 Embedding/真实 Workspace 启用、可恢复 Pending Turn、生产 Durable Side Effect Ledger、真实副作用工具、真实 Telegram Smoke、经单独授权的真实 Provider 流式 Smoke、真实 MCP Server/Streamable HTTP，以及任何真实生产切换。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。

@@ -139,6 +139,12 @@
       "source": "java-contract"
     },
     {
+      "id": "tools/pending-operation-v1",
+      "path": "tools/pending-operation-v1.json",
+      "sha256": "a306e2db93b43140769fe2e35a568c791c23dfa9230242dd281de73e60985c32",
+      "source": "java-contract"
+    },
+    {
       "id": "errors/http-error-mapping",
       "path": "errors/http-error-mapping.json",
       "sha256": "44d9983e58cc5d4816312f1dc1970e1bdcb76e2c8e430d5b05c0b2b870afe465",
