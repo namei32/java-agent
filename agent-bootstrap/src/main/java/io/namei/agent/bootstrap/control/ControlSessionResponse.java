@@ -12,4 +12,15 @@ public record ControlSessionResponse(
         created.tokenType(),
         created.expiresAt());
   }
+
+  @Override
+  public String toString() {
+    return "ControlSessionResponse[schemaVersion="
+        + schemaVersion
+        + ", accessToken=<redacted>, tokenType="
+        + tokenType
+        + ", expiresAt="
+        + expiresAt
+        + "]";
+  }
 }

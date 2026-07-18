@@ -28,6 +28,9 @@ class OperatorSessionStoreTest {
     assertThat(created.accessToken()).hasSize(43).doesNotContain("=");
     assertThat(created.tokenType()).isEqualTo("Bearer");
     assertThat(created.expiresAt()).isEqualTo(NOW.plus(Duration.ofMinutes(15)));
+    assertThat(ControlSessionResponse.from(created).toString())
+        .doesNotContain(created.accessToken())
+        .contains("accessToken=<redacted>");
     OperatorSessionPrincipal principal = store.authenticate(created.accessToken()).orElseThrow();
     assertThat(principal.actorRef()).hasSize(22);
     assertThat(store.toString()).doesNotContain(created.accessToken(), principal.actorRef());
