@@ -38,6 +38,11 @@
     {"id":"operation-store-replay-is-not-an-execution-right","input":{},"expected":"ALREADY_RESERVED"},
     {"id":"operation-store-rolls-back-reservation-failure","input":{},"expected":"fail-closed"},
     {"id":"operation-store-concurrent-reservation-single-winner","input":{},"expected":"one RESERVED / one ALREADY_RESERVED"},
+    {"id":"operation-ledger-runs-before-success","input":{},"expected":"SUCCEEDED"},
+    {"id":"operation-ledger-rejects-direct-success","input":{},"expected":"fail-closed"},
+    {"id":"operation-ledger-unknown-is-terminal","input":{},"expected":"UNKNOWN"},
+    {"id":"operation-ledger-fails-before-start","input":{},"expected":"FAILED"},
+    {"id":"operation-ledger-commit-unreported-follows-success","input":{},"expected":"COMMIT_UNREPORTED"},
     {"id":"session-conditional-append-matches-next-sequence","input":{},"expected":"committed"},
     {"id":"session-conditional-append-rejects-stale-sequence","input":{},"expected":"not-committed"}
   ]

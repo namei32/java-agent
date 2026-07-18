@@ -8,6 +8,7 @@ import io.namei.agent.application.PendingOperationCapsule;
 import io.namei.agent.application.PendingOperationCapsuleBinding;
 import io.namei.agent.application.PendingOperationCapsuleCipher;
 import io.namei.agent.application.PendingOperationCapsuleException;
+import io.namei.agent.application.PendingOperationLedgerEntry;
 import io.namei.agent.application.PendingOperationReference;
 import io.namei.agent.application.PendingOperationReservation;
 import io.namei.agent.application.PendingOperationReservationStatus;
@@ -16,17 +17,25 @@ import io.namei.agent.application.PendingOperationStore;
 import io.namei.agent.application.PendingOperationStoreException;
 import io.namei.agent.kernel.approval.ApprovalRequest;
 import io.namei.agent.kernel.approval.ApprovalState;
+import io.namei.agent.kernel.tool.SideEffectExecutionState;
+import io.namei.agent.kernel.tool.ToolResult;
+import io.namei.agent.kernel.tool.ToolResultStatus;
 import io.namei.agent.kernel.tool.ToolRisk;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
 
 /**
- * V2 isolated SQLite store. It persists an Inbox record and an authenticated capsule atomically,
- * but deliberately does not consume approval, reserve a Ledger entry, or invoke a Tool.
+ * V2 isolated SQLite store. It atomically persists a pending Inbox record/capsule and its later
+ * Approval, Reservation and Ledger state changes, but deliberately never invokes a Tool.
  */
 public final class JdbcPendingOperationStore implements PendingOperationStore {
   private final ApprovalInboxSchemaInitializer schema;
@@ -96,6 +105,187 @@ public final class JdbcPendingOperationStore implements PendingOperationStore {
     } catch (SQLException | RuntimeException exception) {
       throw new PendingOperationStoreException(exception);
     }
+  }
+
+  @Override
+  public PendingOperationLedgerEntry markRunning(
+      PendingOperationReference reference, Instant observedAt) {
+    Objects.requireNonNull(reference, "reference");
+    Objects.requireNonNull(observedAt, "observedAt");
+    return transitionLedger(
+        reference,
+        observedAt,
+        SideEffectExecutionState.RESERVED,
+        SideEffectExecutionState.RUNNING,
+        null,
+        "",
+        PendingOperationState.CONSUMING,
+        PendingOperationState.CONSUMING);
+  }
+
+  @Override
+  public PendingOperationLedgerEntry markSucceeded(
+      PendingOperationReference reference, ToolResult safeResult, Instant observedAt) {
+    Objects.requireNonNull(reference, "reference");
+    Objects.requireNonNull(safeResult, "safeResult");
+    Objects.requireNonNull(observedAt, "observedAt");
+    requireSafeResult(reference, SideEffectExecutionState.SUCCEEDED, safeResult);
+    return transitionLedger(
+        reference,
+        observedAt,
+        SideEffectExecutionState.RUNNING,
+        SideEffectExecutionState.SUCCEEDED,
+        safeResult,
+        "",
+        PendingOperationState.CONSUMING,
+        PendingOperationState.SUCCEEDED);
+  }
+
+  @Override
+  public PendingOperationLedgerEntry markFailedBeforeStart(
+      PendingOperationReference reference, ToolResult safeResult, Instant observedAt) {
+    Objects.requireNonNull(reference, "reference");
+    Objects.requireNonNull(safeResult, "safeResult");
+    Objects.requireNonNull(observedAt, "observedAt");
+    requireSafeResult(reference, SideEffectExecutionState.FAILED, safeResult);
+    return transitionLedger(
+        reference,
+        observedAt,
+        SideEffectExecutionState.RESERVED,
+        SideEffectExecutionState.FAILED,
+        safeResult,
+        "",
+        PendingOperationState.CONSUMING,
+        PendingOperationState.FAILED);
+  }
+
+  @Override
+  public PendingOperationLedgerEntry markUnknown(
+      PendingOperationReference reference, String errorCode, Instant observedAt) {
+    Objects.requireNonNull(reference, "reference");
+    Objects.requireNonNull(observedAt, "observedAt");
+    String normalizedErrorCode =
+        new PendingOperationLedgerEntry(
+                reference, SideEffectExecutionState.UNKNOWN, Optional.empty(), errorCode)
+            .errorCode();
+    try (var connection = schema.openConnection()) {
+      return ApprovalInboxSchemaInitializer.immediateTransaction(
+          connection,
+          () -> {
+            SideEffectExecutionState current = ledgerState(connection, reference);
+            if (current != SideEffectExecutionState.RESERVED
+                && current != SideEffectExecutionState.RUNNING) {
+              throw new PendingOperationStoreException();
+            }
+            return transitionLedger(
+                connection,
+                reference,
+                observedAt,
+                current,
+                SideEffectExecutionState.UNKNOWN,
+                null,
+                normalizedErrorCode,
+                PendingOperationState.CONSUMING,
+                PendingOperationState.UNKNOWN);
+          });
+    } catch (PendingOperationStoreException exception) {
+      throw exception;
+    } catch (SQLException | RuntimeException exception) {
+      throw new PendingOperationStoreException(exception);
+    }
+  }
+
+  @Override
+  public PendingOperation markCommitUnreported(
+      PendingOperationReference reference, Instant observedAt) {
+    Objects.requireNonNull(reference, "reference");
+    Objects.requireNonNull(observedAt, "observedAt");
+    try (var connection = schema.openConnection()) {
+      return ApprovalInboxSchemaInitializer.immediateTransaction(
+          connection,
+          () -> {
+            if (ledgerState(connection, reference) != SideEffectExecutionState.SUCCEEDED) {
+              throw new PendingOperationStoreException();
+            }
+            updateOperationState(
+                connection,
+                reference,
+                PendingOperationState.SUCCEEDED,
+                PendingOperationState.COMMIT_UNREPORTED,
+                observedAt);
+            return find(connection, reference).orElseThrow(PendingOperationStoreException::new);
+          });
+    } catch (PendingOperationStoreException exception) {
+      throw exception;
+    } catch (SQLException | RuntimeException exception) {
+      throw new PendingOperationStoreException(exception);
+    }
+  }
+
+  @Override
+  public Optional<PendingOperationLedgerEntry> findLedger(PendingOperationReference reference) {
+    Objects.requireNonNull(reference, "reference");
+    try (var connection = schema.openConnection()) {
+      return findLedger(connection, reference);
+    } catch (PendingOperationStoreException exception) {
+      throw exception;
+    } catch (SQLException | RuntimeException exception) {
+      throw new PendingOperationStoreException(exception);
+    }
+  }
+
+  private PendingOperationLedgerEntry transitionLedger(
+      PendingOperationReference reference,
+      Instant observedAt,
+      SideEffectExecutionState expectedLedgerState,
+      SideEffectExecutionState nextLedgerState,
+      ToolResult safeResult,
+      String errorCode,
+      PendingOperationState expectedOperationState,
+      PendingOperationState nextOperationState) {
+    try (var connection = schema.openConnection()) {
+      return ApprovalInboxSchemaInitializer.immediateTransaction(
+          connection,
+          () ->
+              transitionLedger(
+                  connection,
+                  reference,
+                  observedAt,
+                  expectedLedgerState,
+                  nextLedgerState,
+                  safeResult,
+                  errorCode,
+                  expectedOperationState,
+                  nextOperationState));
+    } catch (PendingOperationStoreException exception) {
+      throw exception;
+    } catch (SQLException | RuntimeException exception) {
+      throw new PendingOperationStoreException(exception);
+    }
+  }
+
+  private PendingOperationLedgerEntry transitionLedger(
+      Connection connection,
+      PendingOperationReference reference,
+      Instant observedAt,
+      SideEffectExecutionState expectedLedgerState,
+      SideEffectExecutionState nextLedgerState,
+      ToolResult safeResult,
+      String errorCode,
+      PendingOperationState expectedOperationState,
+      PendingOperationState nextOperationState)
+      throws SQLException {
+    updateLedgerState(
+        connection,
+        reference,
+        expectedLedgerState,
+        nextLedgerState,
+        safeResult,
+        errorCode,
+        observedAt);
+    updateOperationState(
+        connection, reference, expectedOperationState, nextOperationState, observedAt);
+    return findLedger(connection, reference).orElseThrow(PendingOperationStoreException::new);
   }
 
   private PendingOperationReservation reserveApproved(
@@ -300,6 +490,115 @@ public final class JdbcPendingOperationStore implements PendingOperationStore {
         }
         return true;
       }
+    }
+  }
+
+  private static void requireSafeResult(
+      PendingOperationReference reference, SideEffectExecutionState state, ToolResult safeResult) {
+    new PendingOperationLedgerEntry(reference, state, Optional.of(safeResult), "");
+  }
+
+  private static void updateLedgerState(
+      Connection connection,
+      PendingOperationReference reference,
+      SideEffectExecutionState expected,
+      SideEffectExecutionState next,
+      ToolResult safeResult,
+      String errorCode,
+      Instant changedAt)
+      throws SQLException {
+    try (var statement =
+        connection.prepareStatement(
+            """
+            UPDATE side_effect_reservations
+            SET state = ?, state_changed_at = ?, safe_result = ?, error_code = ?
+            WHERE operation_ref = ? AND state = ?
+            """)) {
+      statement.setString(1, next.name());
+      statement.setString(2, changedAt.toString());
+      if (safeResult == null) {
+        statement.setNull(3, java.sql.Types.VARCHAR);
+      } else {
+        statement.setString(3, encodeSafeResult(safeResult));
+      }
+      statement.setString(4, errorCode);
+      statement.setString(5, reference.value());
+      statement.setString(6, expected.name());
+      if (statement.executeUpdate() != 1) {
+        throw new PendingOperationStoreException();
+      }
+    }
+  }
+
+  private static SideEffectExecutionState ledgerState(
+      Connection connection, PendingOperationReference reference) throws SQLException {
+    return findLedger(connection, reference)
+        .map(PendingOperationLedgerEntry::state)
+        .orElseThrow(PendingOperationStoreException::new);
+  }
+
+  private static Optional<PendingOperationLedgerEntry> findLedger(
+      Connection connection, PendingOperationReference reference) throws SQLException {
+    try (var statement =
+        connection.prepareStatement(
+            """
+            SELECT state, safe_result, error_code
+            FROM side_effect_reservations
+            WHERE operation_ref = ?
+            """)) {
+      statement.setString(1, reference.value());
+      try (var rows = statement.executeQuery()) {
+        if (!rows.next()) {
+          return Optional.empty();
+        }
+        SideEffectExecutionState state = SideEffectExecutionState.valueOf(rows.getString("state"));
+        String storedResult = rows.getString("safe_result");
+        PendingOperationLedgerEntry entry =
+            new PendingOperationLedgerEntry(
+                reference,
+                state,
+                storedResult == null
+                    ? Optional.empty()
+                    : Optional.of(decodeSafeResult(storedResult)),
+                rows.getString("error_code"));
+        if (rows.next()) {
+          throw new PendingOperationStoreException();
+        }
+        return Optional.of(entry);
+      }
+    } catch (IllegalArgumentException exception) {
+      throw new PendingOperationStoreException(exception);
+    }
+  }
+
+  private static String encodeSafeResult(ToolResult result) {
+    return result.status().name()
+        + ":"
+        + Base64.getUrlEncoder()
+            .withoutPadding()
+            .encodeToString(result.content().getBytes(StandardCharsets.UTF_8));
+  }
+
+  private static ToolResult decodeSafeResult(String encoded) {
+    int separator = encoded.indexOf(':');
+    if (separator < 1 || separator != encoded.lastIndexOf(':')) {
+      throw new IllegalArgumentException("安全 Tool 结果编码无效");
+    }
+    ToolResultStatus status = ToolResultStatus.valueOf(encoded.substring(0, separator));
+    String content = decodeUtf8(Base64.getUrlDecoder().decode(encoded.substring(separator + 1)));
+    return new ToolResult(status, content);
+  }
+
+  private static String decodeUtf8(byte[] value) {
+    try {
+      return StandardCharsets.UTF_8
+          .newDecoder()
+          .onMalformedInput(CodingErrorAction.REPORT)
+          .onUnmappableCharacter(CodingErrorAction.REPORT)
+          .decode(ByteBuffer.wrap(value))
+          .toString();
+    } catch (CharacterCodingException exception) {
+      throw new IllegalArgumentException("安全 Tool 结果编码无效", exception);
     }
   }
 

@@ -1,5 +1,6 @@
 package io.namei.agent.application;
 
+import io.namei.agent.kernel.tool.ToolResult;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -24,4 +25,19 @@ public interface PendingOperationStore {
    */
   PendingOperationReservation reserveApproved(
       PendingOperationReference reference, Instant observedAt);
+
+  PendingOperationLedgerEntry markRunning(PendingOperationReference reference, Instant observedAt);
+
+  PendingOperationLedgerEntry markSucceeded(
+      PendingOperationReference reference, ToolResult safeResult, Instant observedAt);
+
+  PendingOperationLedgerEntry markFailedBeforeStart(
+      PendingOperationReference reference, ToolResult safeResult, Instant observedAt);
+
+  PendingOperationLedgerEntry markUnknown(
+      PendingOperationReference reference, String errorCode, Instant observedAt);
+
+  PendingOperation markCommitUnreported(PendingOperationReference reference, Instant observedAt);
+
+  Optional<PendingOperationLedgerEntry> findLedger(PendingOperationReference reference);
 }

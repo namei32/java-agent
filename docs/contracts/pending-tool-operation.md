@@ -1,6 +1,6 @@
 # 待审批 Tool Operation、参数胶囊与恢复安全契约
 
-- 状态：已冻结；O1–O4 无执行安全底座已实现并通过聚焦门禁；Capability 接缝、结果状态、条件恢复和真实 Tool 仍未实施
+- 状态：已冻结；O1–O4 与 O5 的无执行 Ledger 状态已实现并通过聚焦门禁；恢复编排、Capability 与真实 Tool 仍未实施
 - 契约版本：1（B2b）
 - 日期：2026-07-18
 - 阶段：R11 B2b Pending Operation
@@ -47,6 +47,11 @@ PENDING_APPROVAL -> APPROVED_PENDING_RESUME -> CONSUMING -> SUCCEEDED
 4. `RESERVED`、`RUNNING`、`UNKNOWN` 的重放绝不调用 Invoker。无法证明 Invoker 未越过副作用边界时一律 `UNKNOWN`。
 5. 进程重启不会自动恢复或调用工具；只允许未来显式、认证后的本机恢复动作竞争 `APPROVED_PENDING_RESUME`，并重复第 3 条检查。
 
+Reservation 的耐久状态也必须同库 compare-and-set：`RESERVED -> RUNNING -> SUCCEEDED`，或 `RESERVED -> FAILED`，
+`RESERVED|RUNNING -> UNKNOWN`。`SUCCEEDED` 只保存受具体 Capability 审查后的安全 Result 投影；`FAILED` 只能表示
+尚未跨越副作用边界；`UNKNOWN` 只保存稳定错误码，绝不伪造 Result。只有已知 `SUCCEEDED` 的 Operation 才可转为
+`COMMIT_UNREPORTED`。这些转换已实现，但没有任何 Invoker 或恢复 Worker 可以触发它们。
+
 取消、过期、新 Turn 与重启都不是“重新向模型提问”的理由。它们只产生稳定、无参数的终态投影。
 
 ## 4. Conversation 与 Channel 边界
@@ -69,9 +74,10 @@ PENDING_APPROVAL -> APPROVED_PENDING_RESUME -> CONSUMING -> SUCCEEDED
 
 ## 6. B2b 验收顺序
 
-1. Java-owned Fixture 已固定 29 个 Case：原有不透明 Ref、状态优先级、Capsule AAD/篡改、引用替换、未知密钥、v1→v2 迁移及原子 Store 外，新增已批准的一次性消费、未批准拒绝、到期优先、重复/并发 Reservation 非执行权、Reservation 失败回滚和两项 Session 条件提交。重启、实际结果与 Tool Invocation Case 仍留在后续 Capability。
+1. Java-owned Fixture 已固定 34 个 Case：原有不透明 Ref、状态优先级、Capsule AAD/篡改、引用替换、未知密钥、v1→v2 迁移及原子 Store 外，新增已批准的一次性消费、未批准拒绝、到期优先、重复/并发 Reservation 非执行权、Reservation 失败回滚、五项 Ledger 终态和两项 Session 条件提交。重启、实际 Tool Invocation Case 仍留在后续 Capability。
 2. 已实现无执行的 Operation 状态机、AES-256-GCM Capsule 及 SQLite v2 Store；创建时 Inbox 与密文同一事务写入，读取重新认证 AAD 并重建完整绑定。
 3. 已实现 Approval `CONSUMED`、Operation `CONSUMING` 和唯一 Ledger `RESERVED` 的同库原子预留：待批准、拒绝、到期、重放和 Reservation 写入失败均有 Fixture/Test；它不解密暴露参数、不调用 Tool，也不注册恢复器。
 4. 已实现 `SessionRepository.appendTurnIfNextSequence` 的 SQLite Compare-And-Set，旧 Revision 或不存在的非零 Revision 不会写入任何 Turn 或空 Session；它仍未连接到 Tool 恢复路径。
-5. 只有在某个单独批准的 Capability Contract 中，才将 Session Revision 检查、预留、受限 Fake Invoker、结果 Ledger 状态与条件 Conversation 提交连接为一条显式恢复路径。
-6. R11 所有 B 阶段完成后，统一运行默认、`failure`、`compat` 三套 Reactor 门禁。
+5. 已实现无执行的 Ledger `RESERVED/RUNNING/SUCCEEDED/FAILED/UNKNOWN` 和 `COMMIT_UNREPORTED` 状态：所有更新与 Operation 同一 SQLite 原子提交；安全结果有固定上限且不会在 `toString()` 输出。
+6. 只有在某个单独批准的 Capability Contract 中，才将 Session Revision 检查、预留、受限 Fake Invoker、结果 Ledger 状态与条件 Conversation 提交连接为一条显式恢复路径。
+7. R11 所有 B 阶段完成后，统一运行默认、`failure`、`compat` 三套 Reactor 门禁。
