@@ -14,7 +14,7 @@ R0–R9 已建立被动聊天、只读 Tool/MCP、SQLite、渠道可靠性、控
 | 阶段 | 对齐主题 | Python 证据 | Java 完成标准 | 当前状态 |
 | --- | --- | --- | --- | --- |
 | R10 | Prompt、Persona、时间、预算 | `agent/context.py`、`agent/core/prompt_block.py`、`agent/persona.py`、`prompts/agent.py` | Section/Frame/预算/裁剪有 Fixture，`AKASHIC_CORE` 可离线验收 | 已实现并验证 |
-| R11 | Tool Catalog、审批与逐工具 Capability | `agent/tool_bundles.py`、`agent/tools/*`、`agent/tool_runtime.py` | 可用人类审批、Durable Ledger、每个副作用 Tool 的幂等/UNKNOWN/沙箱 Contract | 实施中：B1 Catalog、B2a Inbox 与 B2b 的状态机、AES-GCM、v2 原子 Store、一次性 `CONSUMED`/`RESERVED`、Ledger 终态、Session 条件提交、初始 Anchor 原子写入和安全 Result 条件提交已验证。没有恢复编排、Resume/Cancel、Capability 或真实执行 |
+| R11 | Tool Catalog、审批与逐工具 Capability | `agent/tool_bundles.py`、`agent/tools/*`、`agent/tool_runtime.py` | 可用人类审批、Durable Ledger、每个副作用 Tool 的幂等/UNKNOWN/沙箱 Contract | 实施中：B1 Catalog、B2a Inbox 与 B2b 的状态机、AES-GCM、v2 原子 Store、一次性 `CONSUMED`/`RESERVED`、Ledger 终态、Session 条件提交、初始 Anchor 原子写入、安全 Result 条件提交和测试专用 Fake Capability 零重放演练已验证。没有生产恢复编排、Resume/Cancel、Capability 或真实执行 |
 | R12 | Skills、MCP 扩展与 Plugin 能力 | `agent/skills.py`、`agent/mcp/*`、`agent/plugins/*` | 受信 Skill Catalog/执行边界、MCP Resources/Prompts/Streamable HTTP、Plugin 生命周期兼容 | 未开始 |
 | R13 | 多渠道、Dashboard 与控制面 | `infra/channels/*`、`bootstrap/dashboard_api.py` | 频道 Contract、真实渠道验收、前端/控制面完整 API 与安全边界 | 未开始 |
 | R14 | Peer、真实 Proactive/Drift 与 Memory 自动化 | `agent/peer_agent/*`、`agent/core/proactive_*`、`core/memory/*` | 身份/信任、外部源、写入许可、审计、预算、恢复与回退契约 | 未开始 |

@@ -46,7 +46,7 @@
 
 | 能力 | Python 基准位置 | Java 位置 | 状态 | 主要差距/下一步 | 数据风险 |
 | --- | --- | --- | --- | --- | --- |
-| Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry`、`ToolCatalog`、`ApprovalInbox` | 部分 | Approval/副作用/幂等协议、整批门禁和生产 Deny All Framework 已实现；R11 B1 提供常驻/Deferred Catalog、Turn-scoped `tool_search`、确定性 CJK/精确检索和 Schema 逐轮投放；B2a 提供默认关闭的本地 SQLite Inbox、Loopback 单次决定和无执行边界，B2b 已验证 AES-GCM、v2 原子 Store、同库 `CONSUMED`/唯一 `RESERVED`、Ledger `UNKNOWN`/安全结果、Session 条件提交、初始 Anchor 原子写入及安全 Result 的 Anchor 条件提交。仍缺连接 Ledger 的恢复编排、Resume/Cancel 与具体 Tool Contract。 |
+| Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry`、`ToolCatalog`、`ApprovalInbox` | 部分 | Approval/副作用/幂等协议、整批门禁和生产 Deny All Framework 已实现；R11 B1 提供常驻/Deferred Catalog、Turn-scoped `tool_search`、确定性 CJK/精确检索和 Schema 逐轮投放；B2a 提供默认关闭的本地 SQLite Inbox、Loopback 单次决定和无执行边界，B2b 已验证 AES-GCM、v2 原子 Store、同库 `CONSUMED`/唯一 `RESERVED`、Ledger `UNKNOWN`/安全结果、Session 条件提交、初始 Anchor 原子写入、安全 Result 的 Anchor 条件提交及测试专用 Fake Capability 零重放演练。仍缺生产 Ledger 恢复编排、Resume/Cancel 与具体 Tool Contract。 |
 | Tool Loop | `agent/looping/`、`agent/tool_runtime.py` | `ToolLoop`、`ChatService`、`SideEffectBatchCoordinator` | 部分 | 有界顺序执行、安全预算、审批生命周期、一次性消费、幂等/UNKNOWN、提交边界和取消 Token 透传已完成；Telegram 断开已接入同一取消边界，生产仍无可执行副作用 | 高 |
 | 文件/Shell/Web 工具 | `agent/tools/` | `CurrentTimeTool`（仅时间） | 部分 | 仅完成无副作用时间工具；R3.2 批准不授权真实副作用，仍需逐工具 Capability Contract | 极高 |
 | Tool Hook | `agent/tool_hooks/` | R7 Kernel/Application Plugin Tap（已实现） | 部分 | V1 固定顺序、超时和异常隔离，只读投影；可变 Gate/副作用仍冻结 | 高 |
@@ -83,7 +83,7 @@
 ## 当前优先级
 
 1. R6.1–R6.5 已合入 `main`，PR #9 与主分支三套 CI 均通过；R7–R9 已完成当前 Java 实现并通过默认、`failure`、`compat` 阶段门禁，R9 只提供离线演练。R9 的忽略规则遗漏已由本地 `main` 的 `2ceb44b` 修复。
-2. R10 已完成并通过三套阶段门禁；R11 的 B1 Tool Catalog、B2a Local Approval Inbox 及 B2b Pending Operation 的无执行状态机、AES-GCM、v2 Store、`CONSUMED`/`RESERVED`、Ledger 终态、Session 条件提交、初始 Anchor 原子写入与安全 Result 条件提交已完成聚焦验证，随后是 Resume/Cancel、恢复编排和逐工具 Capability Contract。
+2. R10 已完成并通过三套阶段门禁；R11 的 B1 Tool Catalog、B2a Local Approval Inbox 及 B2b Pending Operation 的无执行状态机、AES-GCM、v2 Store、`CONSUMED`/`RESERVED`、Ledger 终态、Session 条件提交、初始 Anchor 原子写入、安全 Result 条件提交和测试专用 Fake Capability 零重放演练已完成聚焦验证，随后是 Resume/Cancel、生产恢复编排和逐工具 Capability Contract。
 3. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 4. R11–R15 的全量对齐顺序、Python 证据和完成标准见[Java / Akashic Agent 全量对齐计划](../plans/2026-07-18-java-parity-program.md)。
 5. 真实 Telegram、远程 MCP、真实 Python Plugin、主动外部源、真实 Workspace、部署与 Python 退役不因 R10 实施而获得授权。

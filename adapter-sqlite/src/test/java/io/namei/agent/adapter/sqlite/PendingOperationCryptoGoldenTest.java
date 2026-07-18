@@ -30,7 +30,7 @@ class PendingOperationCryptoGoldenTest {
   void executesEveryCipherFixtureCaseAgainstTheProductionAesGcmAdapter() throws Exception {
     JsonNode fixture =
         JSON.readTree(goldenRoot().resolve("tools/pending-operation-v1.json").toFile());
-    assertThat(fixture.path("cases").size()).isEqualTo(50);
+    assertThat(fixture.path("cases").size()).isEqualTo(54);
     for (JsonNode testCase : fixture.path("cases")) {
       verify(testCase.path("id").asText());
     }

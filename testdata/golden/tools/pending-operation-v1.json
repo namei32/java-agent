@@ -60,6 +60,10 @@
     {"id":"anchor-recovery-stales-on-newer-turn","input":{},"expected":"STALE_SESSION"},
     {"id":"anchor-recovery-rejects-cancelled-anchor","input":{},"expected":"not-committed"},
     {"id":"anchor-recovery-rolls-back-commit-failure","input":{},"expected":"fail-closed"},
-    {"id":"anchor-recovery-rejects-projection-version","input":{},"expected":"rejected"}
+    {"id":"anchor-recovery-rejects-projection-version","input":{},"expected":"rejected"},
+    {"id":"anchor-rehearsal-commits-once","input":{},"expected":"COMMITTED / one invocation"},
+    {"id":"anchor-rehearsal-unknown-never-replays","input":{},"expected":"UNKNOWN / one invocation"},
+    {"id":"anchor-rehearsal-commit-unreported-never-replays","input":{},"expected":"COMMIT_UNREPORTED / one invocation"},
+    {"id":"anchor-rehearsal-rejects-mismatched-binding","input":{},"expected":"not-started / zero invocation"}
   ]
 }

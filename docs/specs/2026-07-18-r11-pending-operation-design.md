@@ -1,6 +1,6 @@
 # R11 B2b Pending Operation 设计
 
-- 状态：部分实现；无执行状态机、AES-GCM Capsule、SQLite v2 原子 Store、一次性 Reservation、Ledger 状态、Session 条件提交与 Anchor 安全 Result 条件提交已验证
+- 状态：部分实现；无执行状态机、AES-GCM Capsule、SQLite v2 原子 Store、一次性 Reservation、Ledger 状态、Session 条件提交、Anchor 安全 Result 条件提交与测试专用 Fake Capability 演练已验证
 - 日期：2026-07-18
 - Contract：[待审批 Tool Operation、参数胶囊与恢复安全契约](../contracts/pending-tool-operation.md)
 - ADR：[ADR-0018：待审批操作使用单一隔离事务存储](../adr/0018-use-single-transaction-pending-operation-store.md)
@@ -42,4 +42,6 @@ Reservation 的状态存于同一 `approval-inbox.db`：只有 `RESERVED` 能变
 只有 `RUNNING` 能变为 `SUCCEEDED`；`RESERVED/RUNNING` 均可失败关闭为 `UNKNOWN`。结果序列化为有大小上限的
 安全投影，`UNKNOWN` 不保存结果。实现未提供 Invoker、自动恢复或公开 API，因此这些状态只能由测试构造。
 
-真实 Capability、Key 配置、Ledger、恢复 API 和任何副作用 Tool 必须在独立批准后才可接线。
+测试专用 Fake Capability 已在 `adapter-sqlite` 测试源码连接 Reservation、Ledger 与 Anchor Port，验证成功、
+`UNKNOWN`、`COMMIT_UNREPORTED` 和零重放；它没有生产类型或 Bean。生产恢复编排、真实 Capability、Key 配置、
+恢复 API 和任何副作用 Tool 必须在独立批准后才可接线。

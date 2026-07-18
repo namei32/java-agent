@@ -1,6 +1,6 @@
 # Pending Operation Session Anchor 与 Recovery Capability 契约
 
-- 状态：已冻结；A1–A4 的 Fixture、Anchor Model、初始 SQLite 原子写入与安全 Result 条件提交已实现并通过聚焦门禁；恢复编排未实现
+- 状态：已冻结；A1–A5 的 Fixture、Anchor Model、初始 SQLite 原子写入、安全 Result 条件提交与测试专用 Fake Capability 演练已实现并通过聚焦门禁；生产恢复编排未实现
 - 契约版本：1
 - 日期：2026-07-19
 - 阶段：R11 B2b / O6
@@ -79,6 +79,7 @@ Config 字符串、Plugin 或 MCP 返回值动态创建。
    `COMMIT_UNREPORTED` 的编排 Case；
 2. `sessions.db` 已实现 Anchor Schema、版本检查、读写、初始 Pending Turn 条件 Port 和安全 Assistant
    Result 的条件提交 Port；仍未实现连接 Operation Ledger 的恢复编排；
-3. 以本地 Fake Capability/Invoker 验证唯一 Reservation、零泄漏、零重放和崩溃矩阵；
+3. 已以只在测试源码显式构造的 Fake Capability/Invoker 验证精确 Anchor/Operation 绑定、唯一 Reservation、
+   `RUNNING`/`SUCCEEDED`、`UNKNOWN`、`COMMIT_UNREPORTED` 和零重放；它没有生产类型、Bean 或路由；
 4. 再冻结认证 Loopback API；
 5. 最后逐 Tool 单独批准 Sandbox/Smoke；R11 全部完成后执行三套完整 Reactor 门禁。

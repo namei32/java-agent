@@ -26,7 +26,7 @@ R11 B2b 已有加密参数胶囊、一次性 Approval/Reservation、耐久 Ledge
 
 Anchor 的任何原文都不得进入 `approval-inbox.db` Capsule、Approval Inbox、Lifecycle、普通日志、公开 API 或
 Fixture Expected 字段。具体 Tool Capability 仍需在 Anchor、显式认证的本机 Resume/Cancel、Sandbox、Key 和
-Fake Invoker 演练完成后单独批准。
+测试专用 Fake Invoker 演练已完成；生产恢复编排、真实 Capability、Key 与任何副作用 Tool 仍须单独批准。
 
 ## 后果
 

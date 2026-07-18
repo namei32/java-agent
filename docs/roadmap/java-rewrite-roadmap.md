@@ -270,7 +270,7 @@ Tool 权限视为已迁移。
 
 ## R11：Tool Catalog、审批与逐工具 Capability
 
-状态：B1 Tool Catalog 与 B2a Local Approval Inbox Foundation 已实现并验证；B2b Pending Operation Contract 的无执行状态机、AES-GCM 参数胶囊、v2 原子 Store、同库 `CONSUMED`/唯一 `RESERVED`、并发单获胜者、Ledger 终态、Session 条件提交、初始 Session Anchor 原子写入、安全 Result 的 Anchor 条件提交、不可恢复 Cursor 拒绝与 50 场景 Fixture 已通过聚焦验证；恢复编排、Resume/Cancel 与真实 Capability 尚未实现；R11 尚未完成。
+状态：B1 Tool Catalog 与 B2a Local Approval Inbox Foundation 已实现并验证；B2b Pending Operation Contract 的无执行状态机、AES-GCM 参数胶囊、v2 原子 Store、同库 `CONSUMED`/唯一 `RESERVED`、并发单获胜者、Ledger 终态、Session 条件提交、初始 Session Anchor 原子写入、安全 Result 的 Anchor 条件提交、不可恢复 Cursor 拒绝、测试专用 Fake Capability 零重放演练与 54 场景 Fixture 已通过聚焦验证；生产恢复编排、Resume/Cancel 与真实 Capability 尚未实现；R11 尚未完成。
 
 B1 把 Python Registry 的“常驻工具—`tool_search`—本轮解锁—下一请求投放 Schema”共同投影迁移为 Java-owned Catalog。Catalog 的来源、风险、版本、可见性和搜索提示由受信注册固定；搜索结果只能缩小模型的未知工具范围，不能改变 Tool Runtime 的 Schema、预算、取消、审批或 Ledger 执行边界。静态只读 MCP 项在 Bootstrap 中作为 deferred Catalog 项投放，默认关闭和 R5.1 的连接/调用边界不变。
 
