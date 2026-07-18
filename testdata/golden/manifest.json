@@ -31,6 +31,12 @@
       "source": "java-contract"
     },
     {
+      "id": "plugins/plugin-extension-runtime-v1",
+      "path": "plugins/plugin-extension-runtime-v1.json",
+      "sha256": "f62930f2b677df67460517e5b8812c74ab92fd1e7a445995e33185accf3d64bb",
+      "source": "java-contract"
+    },
+    {
       "id": "message-bus/versioned-channel-message",
       "path": "message-bus/versioned-channel-message.json",
       "sha256": "f002241efa99160e51dab971c544912594c40f10f4dbb7131fed07ee31d9acd4",

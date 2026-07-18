@@ -1,0 +1,260 @@
+{
+  "formatVersion": 1,
+  "suite": "plugins/plugin-extension-runtime",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-18",
+    "adr": "docs/adr/0012-use-service-loader-and-isolated-stdio-plugin-bridge.md",
+    "contract": "docs/contracts/plugin-extension-runtime.md",
+    "spec": "docs/specs/2026-07-18-plugin-extension-runtime-design.md"
+  },
+  "normalization": [
+    "Plugin ID uses strict lowercase ASCII",
+    "Manifest fields are V1 closed-world values",
+    "Catalog order is plugin ID ascending"
+  ],
+  "cases": [
+    {
+      "id": "java-turn-tap",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "calendar-observer",
+        "version": "1.2.3",
+        "apiVersion": 1,
+        "kind": "JAVA_SERVICE",
+        "capabilities": ["TURN_TAP"]
+      },
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "external-proactive-tap",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "digest-observer",
+        "version": "0.1.0",
+        "apiVersion": 1,
+        "kind": "EXTERNAL_STDIO",
+        "capabilities": ["PROACTIVE_TAP"]
+      },
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "empty-capability-is-observer-only",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "metadata-only",
+        "version": "1",
+        "apiVersion": 1,
+        "kind": "JAVA_SERVICE",
+        "capabilities": []
+      },
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "all-observer-capabilities",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "audit-observer",
+        "version": "1.0.0-beta",
+        "apiVersion": 1,
+        "kind": "JAVA_SERVICE",
+        "capabilities": ["TURN_TAP", "TOOL_TAP", "PROACTIVE_TAP"]
+      },
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "schema-version-invalid",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 2,
+        "id": "calendar-observer",
+        "version": "1",
+        "apiVersion": 1,
+        "kind": "JAVA_SERVICE",
+        "capabilities": []
+      },
+      "expected": {"accepted": false, "code": "PLUGIN_MANIFEST_INVALID"}
+    },
+    {
+      "id": "id-uppercase-rejected",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "Calendar-Observer",
+        "version": "1",
+        "apiVersion": 1,
+        "kind": "JAVA_SERVICE",
+        "capabilities": []
+      },
+      "expected": {"accepted": false, "code": "PLUGIN_MANIFEST_INVALID"}
+    },
+    {
+      "id": "id-leading-digit-rejected",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "1calendar",
+        "version": "1",
+        "apiVersion": 1,
+        "kind": "JAVA_SERVICE",
+        "capabilities": []
+      },
+      "expected": {"accepted": false, "code": "PLUGIN_MANIFEST_INVALID"}
+    },
+    {
+      "id": "id-too-long-rejected",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "version": "1",
+        "apiVersion": 1,
+        "kind": "JAVA_SERVICE",
+        "capabilities": []
+      },
+      "expected": {"accepted": false, "code": "PLUGIN_MANIFEST_INVALID"}
+    },
+    {
+      "id": "version-empty-rejected",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "calendar-observer",
+        "version": "",
+        "apiVersion": 1,
+        "kind": "JAVA_SERVICE",
+        "capabilities": []
+      },
+      "expected": {"accepted": false, "code": "PLUGIN_MANIFEST_INVALID"}
+    },
+    {
+      "id": "version-control-character-rejected",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "calendar-observer",
+        "version": "1\n2",
+        "apiVersion": 1,
+        "kind": "JAVA_SERVICE",
+        "capabilities": []
+      },
+      "expected": {"accepted": false, "code": "PLUGIN_MANIFEST_INVALID"}
+    },
+    {
+      "id": "api-version-incompatible",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "calendar-observer",
+        "version": "1",
+        "apiVersion": 2,
+        "kind": "JAVA_SERVICE",
+        "capabilities": []
+      },
+      "expected": {"accepted": false, "code": "PLUGIN_API_INCOMPATIBLE"}
+    },
+    {
+      "id": "kind-unknown-rejected",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "calendar-observer",
+        "version": "1",
+        "apiVersion": 1,
+        "kind": "PYTHON_IMPORT",
+        "capabilities": []
+      },
+      "expected": {"accepted": false, "code": "PLUGIN_MANIFEST_INVALID"}
+    },
+    {
+      "id": "capability-unknown-rejected",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "calendar-observer",
+        "version": "1",
+        "apiVersion": 1,
+        "kind": "JAVA_SERVICE",
+        "capabilities": ["NETWORK"]
+      },
+      "expected": {"accepted": false, "code": "PLUGIN_CAPABILITY_UNAVAILABLE"}
+    },
+    {
+      "id": "tool-capability-rejected",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "calendar-observer",
+        "version": "1",
+        "apiVersion": 1,
+        "kind": "JAVA_SERVICE",
+        "capabilities": ["TOOL"]
+      },
+      "expected": {"accepted": false, "code": "PLUGIN_CAPABILITY_UNAVAILABLE"}
+    },
+    {
+      "id": "channel-capability-rejected",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "calendar-observer",
+        "version": "1",
+        "apiVersion": 1,
+        "kind": "JAVA_SERVICE",
+        "capabilities": ["CHANNEL"]
+      },
+      "expected": {"accepted": false, "code": "PLUGIN_CAPABILITY_UNAVAILABLE"}
+    },
+    {
+      "id": "duplicate-capability-rejected",
+      "group": "manifest",
+      "input": {
+        "schemaVersion": 1,
+        "id": "calendar-observer",
+        "version": "1",
+        "apiVersion": 1,
+        "kind": "JAVA_SERVICE",
+        "capabilities": ["TURN_TAP", "TURN_TAP"]
+      },
+      "expected": {"accepted": false, "code": "PLUGIN_MANIFEST_INVALID"}
+    },
+    {
+      "id": "catalog-sorts-by-id",
+      "group": "catalog",
+      "input": {
+        "manifests": [
+          {"schemaVersion": 1, "id": "zeta", "version": "1", "apiVersion": 1, "kind": "JAVA_SERVICE", "capabilities": []},
+          {"schemaVersion": 1, "id": "alpha", "version": "1", "apiVersion": 1, "kind": "JAVA_SERVICE", "capabilities": []}
+        ]
+      },
+      "expected": {"accepted": true, "ids": ["alpha", "zeta"]}
+    },
+    {
+      "id": "catalog-duplicate-id-rejected",
+      "group": "catalog",
+      "input": {
+        "manifests": [
+          {"schemaVersion": 1, "id": "duplicate", "version": "1", "apiVersion": 1, "kind": "JAVA_SERVICE", "capabilities": []},
+          {"schemaVersion": 1, "id": "duplicate", "version": "2", "apiVersion": 1, "kind": "EXTERNAL_STDIO", "capabilities": []}
+        ]
+      },
+      "expected": {"accepted": false, "code": "PLUGIN_DUPLICATE_ID"}
+    },
+    {
+      "id": "stable-code-retryable-shutdown",
+      "group": "stable-code",
+      "input": {"code": "PLUGIN_SHUTTING_DOWN"},
+      "expected": {"accepted": true, "retryable": true}
+    },
+    {
+      "id": "stable-code-nonretryable-manifest",
+      "group": "stable-code",
+      "input": {"code": "PLUGIN_MANIFEST_INVALID"},
+      "expected": {"accepted": true, "retryable": false}
+    }
+  ]
+}
