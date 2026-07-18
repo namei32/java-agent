@@ -85,6 +85,12 @@
       "source": "java-contract"
     },
     {
+      "id": "control-plane/pending-recovery-control-v1",
+      "path": "control-plane/pending-recovery-control-v1.json",
+      "sha256": "815fa50ae216cec8eddb8711b7de4965c320c3e9aaf757996ad0b8e18b6dab51",
+      "source": "java-contract"
+    },
+    {
       "id": "sqlite/session-store",
       "path": "sqlite/session-store.json",
       "sha256": "84e43ab7d89269c53a63d6909d562588208fd515c8f26f7db289bb58c63f7f10",

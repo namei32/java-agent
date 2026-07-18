@@ -12,7 +12,7 @@
 3. **O3 SQLite Schema v2（GREEN，第二段）。** `AES/GCM/NoPadding` Adapter 每次加密使用随机 96-bit nonce，AAD 绑定 Ref/Fingerprint/Capsule Version/Tool Version，认证失败统一关闭。`approval-inbox.db` 已从 v1 迁移到 v2，保留 Inbox 历史，并在一个事务写 Inbox、密文 Capsule。已实现已批准 Approval 的 CAS `CONSUMED`、Operation `CONSUMING` 和唯一 Ledger `RESERVED`：未批准、到期、重复或写入失败不产生第二个 Reservation，更不调用 Tool。
 4. **O4 Session 条件提交（GREEN）。** 已扩展 `SessionRepository` 为 `appendTurnIfNextSequence`，SQLite 使用 Cursor Compare-And-Set 原子追加完整 Turn；旧 Revision 和不存在的非零 Revision 不写入数据或空 Session。此 Port 尚未接 Chat 或 Tool。
 5. **O5 Durable Ledger 状态（GREEN，无执行）。** 已实现 `RESERVED -> RUNNING -> SUCCEEDED`、`RESERVED -> FAILED`、`RESERVED|RUNNING -> UNKNOWN` 和已知成功后的 `COMMIT_UNREPORTED`。每次状态写入与 Operation 在同一立即事务中；安全 Result 使用受限编码和 `toString` 脱敏。没有 Invoker 或 Resume Worker。
-6. **O6 Capability 接缝（实施中）。** 已完成版本化 Pending 投影、Anchor 条件提交与受限 Fake Capability 演练；下一步仅冻结显式 Resume/Cancel API Contract、密钥轮换和单 Tool Capability 的连接点。没有独立批准不得注册 Bean。
+6. **O6 Capability 接缝（实施中）。** 已完成版本化 Pending 投影、Anchor 条件提交、受限 Fake Capability 演练及 Resume/Cancel/Status Message Contract；下一步仅冻结密钥轮换和单 Tool Capability 的连接点。没有独立批准不得注册 Bean。
 7. **O7 阶段验收。** B2b 的 Capability 接缝及恢复演练完成后，才与 R11 剩余 Capability 统一运行默认、`failure`、`compat` Reactor 门禁。
 
 ## 不做

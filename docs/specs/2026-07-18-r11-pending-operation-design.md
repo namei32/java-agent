@@ -43,5 +43,6 @@ Reservation 的状态存于同一 `approval-inbox.db`：只有 `RESERVED` 能变
 安全投影，`UNKNOWN` 不保存结果。实现未提供 Invoker、自动恢复或公开 API，因此这些状态只能由测试构造。
 
 测试专用 Fake Capability 已在 `adapter-sqlite` 测试源码连接 Reservation、Ledger 与 Anchor Port，验证成功、
-`UNKNOWN`、`COMMIT_UNREPORTED` 和零重放；它没有生产类型或 Bean。生产恢复编排、真实 Capability、Key 配置、
-恢复 API 和任何副作用 Tool 必须在独立批准后才可接线。
+`UNKNOWN`、`COMMIT_UNREPORTED` 和零重放；它没有生产类型或 Bean。Resume/Cancel/Status 的 Loopback Message
+Contract 也已冻结，但既有 Control Plane 不会映射这些路由。生产恢复编排、真实 Capability、Key 配置、恢复 API
+实现和任何副作用 Tool 必须在独立批准后才可接线。

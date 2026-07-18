@@ -1,0 +1,182 @@
+{
+  "formatVersion": 1,
+  "suite": "pending-recovery-control-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0019-freeze-pending-operation-session-anchor-before-resume.md",
+    "contract": "docs/contracts/pending-operation-loopback-control.md",
+    "precondition": "docs/contracts/pending-operation-recovery-capability.md",
+    "spec": "docs/specs/2026-07-18-r11-pending-operation-design.md"
+  },
+  "normalization": [
+    "action、字段名、枚举和稳定错误码大小写严格，不做宽松归一化",
+    "operationRef 是 128-bit Base64URL 无 Padding 的不透明引用；不能由 Session、Tool、Approval 或参数推导",
+    "请求 Body、Query、Tool Name、Arguments、Result、Session、Cursor、风险、边界和 Actor 均不在本契约输入中",
+    "响应只包含稳定状态和错误码；不得回显 Capsule、审批、Ledger 安全结果或任何 Conversation 内容"
+  ],
+  "limits": {
+    "schemaVersion": 1,
+    "operationReferenceBytes": 16,
+    "requestBodyBytes": 0,
+    "allowedActions": ["STATUS", "RESUME", "CANCEL"]
+  },
+  "defaults": {
+    "operationRef": "AAECAwQFBgcICQoLDA0ODw",
+    "rawSession": "telegram:raw-session-secret",
+    "rawTool": "unsafe_write",
+    "rawArguments": "{\"path\":\"/secret\"}",
+    "rawResult": "secret-result",
+    "rawApproval": "approval-secret"
+  },
+  "cases": [
+    {
+      "id": "pending-recovery-default-unmapped",
+      "group": "activation",
+      "input": {"controlMode": "DISABLED", "recoveryMode": "DISABLED"},
+      "expected": {"mapped": false}
+    },
+    {
+      "id": "loopback-control-alone-does-not-map-pending-recovery",
+      "group": "activation",
+      "input": {"controlMode": "LOOPBACK", "recoveryMode": "DISABLED"},
+      "expected": {"mapped": false}
+    },
+    {
+      "id": "frozen-contract-does-not-create-worker-or-capability",
+      "group": "activation",
+      "input": {"controlMode": "LOOPBACK", "recoveryMode": "CONTRACT_ONLY"},
+      "expected": {"mapped": false, "workerCreated": false, "capabilityCreated": false}
+    },
+    {
+      "id": "future-enabled-surface-reuses-loopback-operator-authentication",
+      "group": "activation",
+      "input": {"controlMode": "LOOPBACK", "recoveryMode": "ENABLED_BY_FUTURE_CAPABILITY"},
+      "expected": {"authentication": "EXISTING_LOOPBACK_BEARER", "newTokenType": false}
+    },
+
+    {
+      "id": "status-uses-get-with-opaque-path-reference-only",
+      "group": "request-shape",
+      "input": {"action": "STATUS", "method": "GET", "body": false, "query": false},
+      "expected": {"accepted": true, "path": "/api/v1/control/pending-operations/{operationRef}"}
+    },
+    {
+      "id": "resume-uses-post-with-opaque-path-reference-only",
+      "group": "request-shape",
+      "input": {"action": "RESUME", "method": "POST", "body": false, "query": false},
+      "expected": {"accepted": true, "path": "/api/v1/control/pending-operations/{operationRef}/resume"}
+    },
+    {
+      "id": "cancel-uses-post-with-opaque-path-reference-only",
+      "group": "request-shape",
+      "input": {"action": "CANCEL", "method": "POST", "body": false, "query": false},
+      "expected": {"accepted": true, "path": "/api/v1/control/pending-operations/{operationRef}/cancel"}
+    },
+    {
+      "id": "lowercase-action-is-rejected",
+      "group": "request-shape",
+      "input": {"action": "resume"},
+      "expected": {"accepted": false, "code": "PENDING_RECOVERY_REQUEST_INVALID"}
+    },
+    {
+      "id": "body-is-rejected-before-recovery-lookup",
+      "group": "request-shape",
+      "input": {"action": "RESUME", "body": true},
+      "expected": {"accepted": false, "code": "PENDING_RECOVERY_REQUEST_INVALID", "lookup": false}
+    },
+    {
+      "id": "query-is-rejected-before-recovery-lookup",
+      "group": "request-shape",
+      "input": {"action": "STATUS", "query": true},
+      "expected": {"accepted": false, "code": "PENDING_RECOVERY_REQUEST_INVALID", "lookup": false}
+    },
+
+    {
+      "id": "resume-requires-approved-pending-anchor-and-capability",
+      "group": "resume",
+      "input": {"action": "RESUME", "state": "APPROVED_PENDING_RESUME"},
+      "expected": {"accepted": true, "outcome": "RECOVERY_ACCEPTED", "invocation": "FUTURE_CAPABILITY_ONLY"}
+    },
+    {
+      "id": "resume-pending-approval-is-not-an-execution-right",
+      "group": "resume",
+      "input": {"action": "RESUME", "state": "PENDING_APPROVAL"},
+      "expected": {"accepted": false, "code": "PENDING_RECOVERY_NOT_RESUMABLE", "invocations": 0}
+    },
+    {
+      "id": "resume-cancelled-is-not-an-execution-right",
+      "group": "resume",
+      "input": {"action": "RESUME", "state": "CANCELLED"},
+      "expected": {"accepted": false, "code": "PENDING_RECOVERY_NOT_RESUMABLE", "invocations": 0}
+    },
+    {
+      "id": "resume-unknown-never-retries",
+      "group": "resume",
+      "input": {"action": "RESUME", "state": "UNKNOWN"},
+      "expected": {"accepted": false, "code": "PENDING_RECOVERY_UNKNOWN_REQUIRES_OPERATOR", "invocations": 0}
+    },
+    {
+      "id": "resume-commit-unreported-never-replays",
+      "group": "resume",
+      "input": {"action": "RESUME", "state": "COMMIT_UNREPORTED"},
+      "expected": {"accepted": false, "code": "PENDING_RECOVERY_NOT_RESUMABLE", "invocations": 0}
+    },
+    {
+      "id": "resume-missing-reference-is-not-found",
+      "group": "resume",
+      "input": {"action": "RESUME", "reference": "MISSING"},
+      "expected": {"accepted": false, "code": "PENDING_RECOVERY_NOT_FOUND", "invocations": 0}
+    },
+
+    {
+      "id": "cancel-pending-is-idempotently-cancelled",
+      "group": "cancel",
+      "input": {"action": "CANCEL", "state": "PENDING_APPROVAL"},
+      "expected": {"accepted": true, "outcome": "CANCELLED", "invocations": 0}
+    },
+    {
+      "id": "cancel-approved-is-idempotently-cancelled-before-running",
+      "group": "cancel",
+      "input": {"action": "CANCEL", "state": "APPROVED_PENDING_RESUME"},
+      "expected": {"accepted": true, "outcome": "CANCELLED", "invocations": 0}
+    },
+    {
+      "id": "cancel-running-is-not-a-retry-or-kill-signal",
+      "group": "cancel",
+      "input": {"action": "CANCEL", "state": "CONSUMING"},
+      "expected": {"accepted": false, "code": "PENDING_RECOVERY_NOT_CANCELLABLE", "invocations": 0}
+    },
+    {
+      "id": "cancel-terminal-is-idempotent-without-invocation",
+      "group": "cancel",
+      "input": {"action": "CANCEL", "state": "SUCCEEDED"},
+      "expected": {"accepted": true, "outcome": "ALREADY_TERMINAL", "invocations": 0}
+    },
+
+    {
+      "id": "status-projects-only-stable-lifecycle-fields",
+      "group": "status",
+      "input": {"action": "STATUS", "state": "PENDING_APPROVAL"},
+      "expected": {"accepted": true, "fields": ["schemaVersion", "state", "updatedAt"]}
+    },
+    {
+      "id": "status-unknown-is-stable-without-error-body",
+      "group": "status",
+      "input": {"action": "STATUS", "state": "UNKNOWN"},
+      "expected": {"accepted": true, "state": "UNKNOWN", "errorBodyPresent": false}
+    },
+    {
+      "id": "status-commit-unreported-is-stable-without-safe-result",
+      "group": "status",
+      "input": {"action": "STATUS", "state": "COMMIT_UNREPORTED"},
+      "expected": {"accepted": true, "state": "COMMIT_UNREPORTED", "safeResultPresent": false}
+    },
+    {
+      "id": "status-projection-never-leaks-sensitive-boundings",
+      "group": "status",
+      "input": {"action": "STATUS", "state": "SUCCEEDED"},
+      "expected": {"accepted": true, "leaks": false}
+    }
+  ]
+}

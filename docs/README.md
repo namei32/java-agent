@@ -23,6 +23,7 @@
 - 已完成并验证：R10 的 Java-owned Prompt Fixture、版本化 Section/Frame、code point 预算及固定裁剪、classpath Akashic Core Persona、严格 `agent.prompt` Properties、HTTP/CLI/Telegram 可信时间/会话 Context 与只读 Memory 接线。默认继续为 `MINIMAL`；`AKASHIC_CORE` 必须显式启用；三套阶段门禁均已通过。
 - 已完成并验证：R11 B1 Tool Catalog 与 B2a Local Approval Inbox Foundation。B2a 提供默认关闭、独立 SQLite、29 场景 Fixture、Loopback Operator 的安全列表/一次性决定、过期/容量/CAS 与零执行边界；它不恢复 Turn，不调用 Tool。
 - 已冻结并完成第三段无执行安全边界：R11 B2b 的[待审批 Tool Operation、参数胶囊与恢复安全契约](contracts/pending-tool-operation.md)和[ADR-0018](adr/0018-use-single-transaction-pending-operation-store.md)。54 场景 Fixture 已验证不透明引用、状态优先级、AES-256-GCM、迁移、密文原子保存、同库 `CONSUMED`/`CONSUMING`/唯一 `RESERVED`、并发/重放非执行权、Ledger 终态、Session 条件追加、初始 Session Anchor 原子写入、安全 Result 投影的 Anchor 条件提交、不可恢复 Cursor 拒绝，以及测试专用 Fake Capability 的成功/`UNKNOWN`/`COMMIT_UNREPORTED` 零重放演练；尚未接入生产恢复编排、调用 Tool 或接入 Chat。
+- 已冻结但未实现：[Pending Operation Loopback Control 契约](contracts/pending-operation-loopback-control.md)及其 24 场景 Fixture。它只定义未来获批 Capability 的本机 Resume/Cancel/Status 消息，当前即使 Loopback 控制面开启也保持零 Pending Recovery 路由、Worker 和 Capability。
 - 尚未覆盖：自动 Memory 写回/Optimizer、真实 Embedding/真实 Workspace 启用、可恢复 Pending Turn、生产 Durable Side Effect Ledger、真实副作用工具、真实 Telegram Smoke、经单独授权的真实 Provider 流式 Smoke、真实 MCP Server/Streamable HTTP，以及任何真实生产切换。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。
