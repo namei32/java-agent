@@ -1,6 +1,6 @@
 # R7 插件与扩展运行时实施计划
 
-- 状态：G0、P1、P2、P3、P4、P5 已完成；等待 P6 阶段门禁
+- 状态：G0、P1、P2、P3、P4、P5、P6 已完成
 - 分支：`agent/r7-r9-runtime`
 - 前置：R6.5 已通过 PR #9 合入 `main`，主分支三套 CI 全绿
 
@@ -50,3 +50,11 @@ Tool Runtime 为 `READ_ONLY`。聚焦 GREEN 共 12 个 Bootstrap 场景，另以
 `publishProactive` 复用 `PROACTIVE_TAP`。命令：
 `./mvnw --batch-mode --no-transfer-progress -pl agent-bootstrap -am -Dtest=PluginPropertiesTest,PluginRuntimeTest,ApplicationConfigurationTest -Dsurefire.failIfNoSpecifiedTests=false test`，
 以及 `./mvnw --batch-mode --no-transfer-progress -pl agent-application -am -Dtest=MessageTurnServiceTest,PluginTapDispatcherTest -Dsurefire.failIfNoSpecifiedTests=false test`。
+
+P6 证据（2026-07-18）：审查发现 External stdio Bridge 在 Tap 协议错误后仍会保持可用；先加
+`protocolFailureDuringTapClosesOnlyThatBridgeAndDoesNotAllowReplay`，确认 Transport 未关闭的 RED，随后改为
+关闭该 Bridge 并拒绝重放，同一目标 5/5 GREEN。格式化后执行阶段全门禁：
+`./mvnw --batch-mode --no-transfer-progress clean verify`、
+`./mvnw --batch-mode --no-transfer-progress -Pfailure verify`、
+`./mvnw --batch-mode --no-transfer-progress -Pcompat verify`；三套均完成，Surefire/Failsafe 报告无
+`failure`/`error`。本阶段未启动真实 Provider、真实 Python Plugin、远程访问、CLI+Web 或前端变更。

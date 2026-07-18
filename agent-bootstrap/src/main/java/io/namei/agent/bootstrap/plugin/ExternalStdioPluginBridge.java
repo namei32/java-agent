@@ -81,10 +81,15 @@ public final class ExternalStdioPluginBridge implements PluginTap, AutoCloseable
     if (event.code() != null) {
       params.put("code", event.code().name());
     }
-    JsonNode result = request(method(event.capability()), params);
-    JsonNode accepted = result.get("accepted");
-    if (accepted == null || !accepted.isBoolean() || !accepted.asBoolean()) {
-      fail(PluginStableCode.PLUGIN_PROTOCOL_INVALID);
+    try {
+      JsonNode result = request(method(event.capability()), params);
+      JsonNode accepted = result.get("accepted");
+      if (accepted == null || !accepted.isBoolean() || !accepted.asBoolean()) {
+        fail(PluginStableCode.PLUGIN_PROTOCOL_INVALID);
+      }
+    } catch (ExternalStdioPluginException failure) {
+      disableAfterFailure();
+      throw failure;
     }
   }
 
@@ -209,5 +214,11 @@ public final class ExternalStdioPluginBridge implements PluginTap, AutoCloseable
 
   private static void fail(PluginStableCode code) throws ExternalStdioPluginException {
     throw new ExternalStdioPluginException(code);
+  }
+
+  private void disableAfterFailure() {
+    if (accepting.compareAndSet(true, false)) {
+      transport.close(limits.shutdownTimeout());
+    }
   }
 }

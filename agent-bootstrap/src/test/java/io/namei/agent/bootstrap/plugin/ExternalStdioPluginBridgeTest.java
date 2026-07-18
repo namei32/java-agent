@@ -121,6 +121,38 @@ class ExternalStdioPluginBridgeTest {
         PluginStableCode.PLUGIN_SHUTTING_DOWN);
   }
 
+  @Test
+  void protocolFailureDuringTapClosesOnlyThatBridgeAndDoesNotAllowReplay() throws Exception {
+    var transport =
+        new ScriptedTransport(response("hello-1", Map.of("manifest", manifestMap())), "not-json");
+    var bridge =
+        ExternalStdioPluginBridge.start(
+            transport, MANIFEST, limits(), new ScriptedRequestIds("hello-1", "tap-2"));
+
+    assertCode(
+        () ->
+            bridge.accept(
+                new PluginTapEvent(
+                    PluginCapability.TURN_TAP,
+                    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                    PluginTapOutcome.COMPLETED,
+                    null,
+                    1)),
+        PluginStableCode.PLUGIN_PROTOCOL_INVALID);
+
+    assertThat(transport.closedWith).containsExactly(Duration.ofMillis(100));
+    assertCode(
+        () ->
+            bridge.accept(
+                new PluginTapEvent(
+                    PluginCapability.TURN_TAP,
+                    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                    PluginTapOutcome.COMPLETED,
+                    null,
+                    1)),
+        PluginStableCode.PLUGIN_SHUTTING_DOWN);
+  }
+
   private static ExternalStdioBridgeLimits limits() {
     return new ExternalStdioBridgeLimits(256, Duration.ofMillis(80), Duration.ofMillis(100));
   }
