@@ -151,6 +151,12 @@
       "source": "java-contract"
     },
     {
+      "id": "tools/read-only-workspace-v1",
+      "path": "tools/read-only-workspace-v1.json",
+      "sha256": "ce4effdba2cb0717925a550b96496c1254cb46c317663f88e4f71fecc4e96a2c",
+      "source": "java-contract"
+    },
+    {
       "id": "tools/approval-inbox-v1",
       "path": "tools/approval-inbox-v1.json",
       "sha256": "c44a7e4d3b0854885fb4dfc7234d2d058a873d73257dd010ab1e9bdf18a8ff5b",

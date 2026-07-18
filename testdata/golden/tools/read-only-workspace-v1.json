@@ -1,0 +1,102 @@
+{
+  "formatVersion": 1,
+  "suite": "tools/read-only-workspace-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0022-use-explicit-root-for-read-only-workspace-tools.md",
+    "contract": "docs/contracts/read-only-workspace-tools.md",
+    "spec": "docs/specs/2026-07-19-r11-read-only-workspace-tools-design.md"
+  },
+  "normalization": [
+    "path 只接受根目录相对的单一安全投影；绝对路径、点段、链接和物理根目录不进入模型结果",
+    "read_file 只读取严格 UTF-8 普通文件，list_dir 只列直接普通文件/目录",
+    "Tool Definition、风险、版本、预算和稳定错误码全部由 Java 代码固定，模型参数不能改变"
+  ],
+  "cases": [
+    {
+      "id": "workspace-tools-disabled-is-empty",
+      "group": "toolset",
+      "input": {"mode": "DISABLED"},
+      "expected": {"accepted": true, "tools": 0}
+    },
+    {
+      "id": "workspace-tools-read-only-is-explicit",
+      "group": "mode",
+      "input": {"mode": "READ_ONLY"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "workspace-tools-mode-is-case-sensitive",
+      "group": "mode",
+      "input": {"mode": "read_only"},
+      "expected": {"accepted": false, "code": "WORKSPACE_TOOL_UNAVAILABLE"}
+    },
+    {
+      "id": "read-file-definition-is-read-only-deferred",
+      "group": "definition",
+      "input": {"name": "read_file"},
+      "expected": {"accepted": true, "version": "workspace-read-only-v1", "risk": "READ_ONLY"}
+    },
+    {
+      "id": "list-dir-definition-is-read-only-deferred",
+      "group": "definition",
+      "input": {"name": "list_dir"},
+      "expected": {"accepted": true, "version": "workspace-read-only-v1", "risk": "READ_ONLY"}
+    },
+    {
+      "id": "relative-file-path-is-accepted",
+      "group": "path",
+      "input": {"path": "notes/today.txt"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "absolute-path-is-rejected",
+      "group": "path",
+      "input": {"path": "/private/data.txt"},
+      "expected": {"accepted": false, "code": "WORKSPACE_PATH_REJECTED"}
+    },
+    {
+      "id": "parent-traversal-is-rejected",
+      "group": "path",
+      "input": {"path": "notes/../secret.txt"},
+      "expected": {"accepted": false, "code": "WORKSPACE_PATH_REJECTED"}
+    },
+    {
+      "id": "empty-segment-is-rejected",
+      "group": "path",
+      "input": {"path": "notes//today.txt"},
+      "expected": {"accepted": false, "code": "WORKSPACE_PATH_REJECTED"}
+    },
+    {
+      "id": "dot-segment-is-rejected",
+      "group": "path",
+      "input": {"path": "./today.txt"},
+      "expected": {"accepted": false, "code": "WORKSPACE_PATH_REJECTED"}
+    },
+    {
+      "id": "utf8-and-line-budgets-are-fixed",
+      "group": "limits",
+      "input": {},
+      "expected": {"accepted": true, "maxLines": 400, "maxOutputBytes": 10000, "maxOutputCodePoints": 20000}
+    },
+    {
+      "id": "directory-budget-is-fixed",
+      "group": "limits",
+      "input": {},
+      "expected": {"accepted": true, "maxEntries": 256}
+    },
+    {
+      "id": "stable-error-codes-are-not-paths",
+      "group": "error",
+      "input": {"code": "WORKSPACE_PATH_REJECTED"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "unknown-error-code-fails-closed",
+      "group": "error",
+      "input": {"code": "filesystem_error"},
+      "expected": {"accepted": false, "code": "WORKSPACE_TOOL_UNAVAILABLE"}
+    }
+  ]
+}

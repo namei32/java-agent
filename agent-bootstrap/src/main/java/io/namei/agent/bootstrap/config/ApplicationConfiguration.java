@@ -15,6 +15,8 @@ import io.namei.agent.adapter.workspace.MarkdownMemoryProfileAdapter;
 import io.namei.agent.adapter.workspace.MarkdownSkillCatalogAdapter;
 import io.namei.agent.adapter.workspace.SkillCatalogLimits;
 import io.namei.agent.adapter.workspace.SkillRequirementChecker;
+import io.namei.agent.adapter.workspace.WorkspaceReadOnlyToolset;
+import io.namei.agent.adapter.workspace.WorkspaceToolMode;
 import io.namei.agent.application.AkashicCorePromptRenderer;
 import io.namei.agent.application.ApprovalPort;
 import io.namei.agent.application.ChatService;
@@ -100,6 +102,7 @@ import org.springframework.core.io.Resource;
   AgentProperties.class,
   PromptProperties.class,
   SkillProperties.class,
+  WorkspaceToolProperties.class,
   McpProperties.class,
   McpAssetProperties.class,
   CliProperties.class,
@@ -306,6 +309,22 @@ public class ApplicationConfiguration {
   }
 
   @Bean
+  WorkspaceReadOnlyToolset workspaceReadOnlyToolset(
+      AgentProperties agentProperties, WorkspaceToolProperties properties) {
+    if (properties.mode() == WorkspaceToolMode.DISABLED) {
+      return WorkspaceReadOnlyToolset.disabled();
+    }
+    if (agentProperties.tools().mode() != ToolRuntimeMode.READ_ONLY) {
+      throw new IllegalStateException("只读 Workspace Tool 要求 agent.tools.mode=READ_ONLY");
+    }
+    java.nio.file.Path root = properties.root();
+    if (root.equals(agentProperties.workspace().toAbsolutePath().normalize())) {
+      throw new IllegalStateException("agent.workspace-tools.root 不能复用 agent.workspace");
+    }
+    return WorkspaceReadOnlyToolset.enabled(root, properties.limits());
+  }
+
+  @Bean
   PromptTurnContextFactory promptTurnContextFactory(PromptProperties properties) {
     return new PromptTurnContextFactory(properties.zoneId());
   }
@@ -346,13 +365,14 @@ public class ApplicationConfiguration {
       ApprovalPort approvalPort,
       MemoryContextService memoryContext,
       McpRuntime mcpRuntime,
+      WorkspaceReadOnlyToolset workspaceTools,
       AgentProperties properties,
       @Value("${spring.ai.openai.chat.model}") String modelName,
       @Value("${agent.compatibility.system-prompt-base64:}") String compatibilityPrompt,
       @Value("classpath:/prompts/system.md") Resource systemPrompt)
       throws IOException {
     String prompt = systemPrompt(compatibilityPrompt, systemPrompt);
-    ToolCatalog tools = configuredToolCatalog(properties, mcpRuntime);
+    ToolCatalog tools = configuredToolCatalog(properties, mcpRuntime, workspaceTools);
     var toolSettings =
         new ToolRuntimeSettings(
             properties.tools().mode(),
@@ -383,6 +403,34 @@ public class ApplicationConfiguration {
             new ModelStreamingSettings(
                 properties.model().maxDeltaEvents(), properties.model().maxDeltaCodePoints()));
     return new SafeChatUseCase(service, Clock.systemUTC());
+  }
+
+  ChatUseCase chatUseCase(
+      SessionRepository sessions,
+      ChatModelPort model,
+      SessionExecutionGate gate,
+      TurnLifecycleObserver lifecycleObserver,
+      ApprovalPort approvalPort,
+      MemoryContextService memoryContext,
+      McpRuntime mcpRuntime,
+      AgentProperties properties,
+      String modelName,
+      String compatibilityPrompt,
+      Resource systemPrompt)
+      throws IOException {
+    return chatUseCase(
+        sessions,
+        model,
+        gate,
+        lifecycleObserver,
+        approvalPort,
+        memoryContext,
+        mcpRuntime,
+        WorkspaceReadOnlyToolset.disabled(),
+        properties,
+        modelName,
+        compatibilityPrompt,
+        systemPrompt);
   }
 
   MessageTurnService messageTurnService(ChatUseCase chat) {
@@ -433,8 +481,14 @@ public class ApplicationConfiguration {
   }
 
   ToolCatalog configuredToolCatalog(AgentProperties properties, McpRuntime mcpRuntime) {
+    return configuredToolCatalog(properties, mcpRuntime, WorkspaceReadOnlyToolset.disabled());
+  }
+
+  ToolCatalog configuredToolCatalog(
+      AgentProperties properties, McpRuntime mcpRuntime, WorkspaceReadOnlyToolset workspaceTools) {
     Objects.requireNonNull(properties, "properties");
     Objects.requireNonNull(mcpRuntime, "mcpRuntime");
+    Objects.requireNonNull(workspaceTools, "workspaceTools");
     if (properties.tools().mode() == ToolRuntimeMode.DISABLED) {
       return new ToolCatalog(List.of());
     }
@@ -446,6 +500,18 @@ public class ApplicationConfiguration {
             ToolCatalogSource.BUILTIN,
             "",
             List.of("当前时间", "UTC")));
+    for (Tool tool : workspaceTools.tools()) {
+      if (tool.definition().risk() != ToolRisk.READ_ONLY) {
+        throw new IllegalStateException("Workspace Runtime 暴露了非只读工具");
+      }
+      tools.add(
+          new ToolCatalogEntry(
+              tool,
+              ToolCatalogVisibility.DEFERRED,
+              ToolCatalogSource.BUILTIN,
+              "",
+              List.of("文件", "目录", "workspace")));
+    }
     for (Tool tool : mcpRuntime.tools()) {
       if (tool.definition().risk() != ToolRisk.READ_ONLY) {
         throw new IllegalStateException("MCP Runtime 暴露了非只读工具");
@@ -462,13 +528,25 @@ public class ApplicationConfiguration {
   }
 
   List<Tool> configuredTools(AgentProperties properties, McpRuntime mcpRuntime) {
+    return configuredTools(properties, mcpRuntime, WorkspaceReadOnlyToolset.disabled());
+  }
+
+  List<Tool> configuredTools(
+      AgentProperties properties, McpRuntime mcpRuntime, WorkspaceReadOnlyToolset workspaceTools) {
     Objects.requireNonNull(properties, "properties");
     Objects.requireNonNull(mcpRuntime, "mcpRuntime");
+    Objects.requireNonNull(workspaceTools, "workspaceTools");
     if (properties.tools().mode() == ToolRuntimeMode.DISABLED) {
       return List.of();
     }
     var tools = new ArrayList<Tool>();
     tools.add(new CurrentTimeTool(Clock.systemUTC()));
+    for (Tool tool : workspaceTools.tools()) {
+      if (tool.definition().risk() != ToolRisk.READ_ONLY) {
+        throw new IllegalStateException("Workspace Runtime 暴露了非只读工具");
+      }
+      tools.add(tool);
+    }
     for (Tool tool : mcpRuntime.tools()) {
       if (tool.definition().risk() != ToolRisk.READ_ONLY) {
         throw new IllegalStateException("MCP Runtime 暴露了非只读工具");

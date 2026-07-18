@@ -39,6 +39,14 @@ agent:
     max-file-bytes: ${AGENT_SKILLS_MAX_FILE_BYTES:65536}
     max-catalog-code-points: ${AGENT_SKILLS_MAX_CATALOG_CODE_POINTS:32768}
     max-active-code-points: ${AGENT_SKILLS_MAX_ACTIVE_CODE_POINTS:32768}
+  workspace-tools:
+    mode: ${AGENT_WORKSPACE_TOOLS_MODE:DISABLED}
+    root: ${AGENT_WORKSPACE_TOOLS_ROOT:}
+    max-source-bytes: ${AGENT_WORKSPACE_TOOLS_MAX_SOURCE_BYTES:1000000}
+    max-lines: ${AGENT_WORKSPACE_TOOLS_MAX_LINES:400}
+    max-output-bytes: ${AGENT_WORKSPACE_TOOLS_MAX_OUTPUT_BYTES:10000}
+    max-output-code-points: ${AGENT_WORKSPACE_TOOLS_MAX_OUTPUT_CODE_POINTS:20000}
+    max-directory-entries: ${AGENT_WORKSPACE_TOOLS_MAX_DIRECTORY_ENTRIES:256}
   history:
     max-messages: 40
     max-characters: 100000
