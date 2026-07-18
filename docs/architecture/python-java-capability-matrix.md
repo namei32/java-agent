@@ -62,7 +62,7 @@
 | CLI/渠道宿主 | `bootstrap/channel_host.py`、`bootstrap/channels.py` | `agent-bootstrap/.../cli`、`channel`、`telegram` | 部分 | 显式 Non-Web CLI、通用 Host、Telegram 私聊与该渠道的持久恢复已离线验证；多渠道和主动宿主未迁移 | 中 |
 | Telegram 等渠道 | 渠道模块与 Bootstrap | `agent-bootstrap/.../channel`、`telegram` | 部分 | 数值 Allowlist、Long Polling、持久 Cursor/Claim、事务 Outbox、Receipt、429 有界重试、`UNKNOWN`、恢复与回退已通过 PR #7 合入，PR #8 完成合并后 CI 稳定性修复；真实 Smoke 待授权 | 高 |
 | 流式输出 | Bus/Channel 生命周期事件 | Kernel Channel Contract、`BoundedOutboundBuffer`、`MessageTurnService`、Spring AI Streaming Adapter、`LocalCliRunner`、`TelegramTerminalRenderer` | 部分 | Provider Delta、Tool Loop 预览、权威完成、唯一终态、断开/背压、CLI 实时渲染、Telegram 终态投影与持久投递已完成；其他渠道与真实 Smoke 未覆盖 | 中 |
-| Dashboard/控制面 API | `bootstrap/dashboard_api.py` | R6.5 后端已完成 Fixture、Registry、Event Hub、Telegram 接入、默认关闭 Spring 装配、Loopback Session、安全状态/取消 API、future-only SSE、安全审计和共享关闭 Deadline | 部分 | Draft PR #9 首轮 CI 全绿；本地 Review 修复待阶段门禁、发布和 Ready。前端、远程访问、CLI+Web、同步 Chat、历史/删除/Proactive/Plugin 不在当前范围 | 中 |
+| Dashboard/控制面 API | `bootstrap/dashboard_api.py` | R6.5 后端已完成 Fixture、Registry、Event Hub、Telegram 接入、默认关闭 Spring 装配、Loopback Session、安全状态/取消 API、future-only SSE、安全审计和共享关闭 Deadline | 部分 | 本地 Review 修复已通过阶段门禁；Draft PR #9 待推送、远程 CI 和 Ready。前端、远程访问、CLI+Web、同步 Chat、历史/删除/Proactive/Plugin 不在当前范围 | 中 |
 | Scheduler | `agent/scheduler.py` | 无 | 未开始 | 需持久化、重启恢复、时区和幂等 | 高 |
 | Proactive | `agent/core/proactive_*`、`bootstrap/proactive.py` | 无 | 未开始 | 需来源、审批、限流和审计 | 极高 |
 | Drift | `agent/core/drift_turn.py`、`_handbook/drift-guide.md` | 无 | 未开始 | 需运行记录、预算、取消和回退 | 极高 |
@@ -81,7 +81,7 @@
 
 ## 当前优先级
 
-1. R6.1–R6.4 已合入 `main`；R6.5 后端 G0–G10 已完成，Draft PR #9 首轮远程 CI 全绿；本地高风险 Review 修复正在执行阶段门禁，完成后申请发布与 Ready/合并批准。
+1. R6.1–R6.4 已合入 `main`；R6.5 后端 G0–G10 与本地高风险 Review 修复已通过阶段门禁，Draft PR #9 等待推送、远程 CI 和 Ready/合并批准。
 2. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
