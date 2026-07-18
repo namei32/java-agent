@@ -44,6 +44,13 @@
     {"id":"operation-ledger-fails-before-start","input":{},"expected":"FAILED"},
     {"id":"operation-ledger-commit-unreported-follows-success","input":{},"expected":"COMMIT_UNREPORTED"},
     {"id":"session-conditional-append-matches-next-sequence","input":{},"expected":"committed"},
-    {"id":"session-conditional-append-rejects-stale-sequence","input":{},"expected":"not-committed"}
+    {"id":"session-conditional-append-rejects-stale-sequence","input":{},"expected":"not-committed"},
+    {"id":"anchor-accepts-exact-bindings","input":{},"expected":"PENDING_APPROVAL"},
+    {"id":"anchor-rejects-unknown-version","input":{},"expected":"rejected"},
+    {"id":"anchor-rejects-nonopaque-operation-reference","input":{},"expected":"rejected"},
+    {"id":"anchor-requires-following-resume-sequence","input":{},"expected":"rejected"},
+    {"id":"anchor-cancelled-is-terminal","input":{},"expected":"CANCELLED"},
+    {"id":"anchor-stale-is-terminal","input":{},"expected":"STALE_SESSION"},
+    {"id":"anchor-to-string-redacts-bindings","input":{},"expected":"redacted"}
   ]
 }

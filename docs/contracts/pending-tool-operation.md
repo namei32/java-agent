@@ -74,7 +74,7 @@ Reservation 的耐久状态也必须同库 compare-and-set：`RESERVED -> RUNNIN
 
 ## 6. B2b 验收顺序
 
-1. Java-owned Fixture 已固定 34 个 Case：原有不透明 Ref、状态优先级、Capsule AAD/篡改、引用替换、未知密钥、v1→v2 迁移及原子 Store 外，新增已批准的一次性消费、未批准拒绝、到期优先、重复/并发 Reservation 非执行权、Reservation 失败回滚、五项 Ledger 终态和两项 Session 条件提交。重启、实际 Tool Invocation Case 仍留在后续 Capability。
+1. Java-owned Fixture 已固定 41 个 Case：原有不透明 Ref、状态优先级、Capsule AAD/篡改、引用替换、未知密钥、v1→v2 迁移及原子 Store 外，新增已批准的一次性消费、未批准拒绝、到期优先、重复/并发 Reservation 非执行权、Reservation 失败回滚、五项 Ledger 终态、两项 Session 条件提交及 O6 的七项纯 Anchor Model Case。重启、Anchor SQLite 和实际 Tool Invocation Case 仍留在后续 Capability。
 2. 已实现无执行的 Operation 状态机、AES-256-GCM Capsule 及 SQLite v2 Store；创建时 Inbox 与密文同一事务写入，读取重新认证 AAD 并重建完整绑定。
 3. 已实现 Approval `CONSUMED`、Operation `CONSUMING` 和唯一 Ledger `RESERVED` 的同库原子预留：待批准、拒绝、到期、重放和 Reservation 写入失败均有 Fixture/Test；它不解密暴露参数、不调用 Tool，也不注册恢复器。
 4. 已实现 `SessionRepository.appendTurnIfNextSequence` 的 SQLite Compare-And-Set，旧 Revision 或不存在的非零 Revision 不会写入任何 Turn 或空 Session；它仍未连接到 Tool 恢复路径。

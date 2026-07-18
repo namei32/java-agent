@@ -1,6 +1,6 @@
 # Pending Operation Session Anchor 与 Recovery Capability 契约
 
-- 状态：已冻结，待实现
+- 状态：已冻结；A1 Fixture 与纯 Anchor Model 已实现并通过聚焦 compat，持久化/条件 Port 未实现
 - 契约版本：1
 - 日期：2026-07-19
 - 阶段：R11 B2b / O6
@@ -70,7 +70,8 @@ Config 字符串、Plugin 或 MCP 返回值动态创建。
 
 ## 5. 验收顺序
 
-1. Java-owned `pending-operation-v1` 扩展 Anchor 创建、旧 Cursor、新 Turn、取消、成功提交、`UNKNOWN` 和
+1. Java-owned `pending-operation-v1` 已扩展 Anchor 版本、Opaque Ref、精确 Cursor、取消/新 Turn 终态和
+   `toString` 零泄漏 Case；后续补 Anchor SQLite 创建、旧 Cursor、新 Turn、成功提交、`UNKNOWN` 和
    `COMMIT_UNREPORTED` Case；
 2. 在 `sessions.db` 实现 Anchor Schema、迁移、读写与两个条件 Port；
 3. 以本地 Fake Capability/Invoker 验证唯一 Reservation、零泄漏、零重放和崩溃矩阵；

@@ -1,6 +1,6 @@
 # R11 O6 Pending Recovery Capability 实施计划
 
-- 状态：已冻结，待开始
+- 状态：A1 基础 Fixture/Anchor Model 已实现并通过聚焦 compat；Session Anchor Port 与 SQLite 未开始
 - 日期：2026-07-19
 - Contract：[Pending Operation Session Anchor 与 Recovery Capability 契约](../contracts/pending-operation-recovery-capability.md)
 - ADR：[ADR-0019：在恢复前冻结 Pending Operation 的 Session Anchor](../adr/0019-freeze-pending-operation-session-anchor-before-resume.md)
@@ -13,10 +13,12 @@
 
 ## 连续 TDD 切片
 
-1. **A1 Anchor Fixture（RED）。** 扩展 `pending-operation-v1`：合法 Anchor、未知版本、原始 Message/参数零泄漏、
-   创建原子性、非零 Cursor 拒绝、新 Turn 失效、取消/到期、恢复 CAS、`UNKNOWN` 与 `COMMIT_UNREPORTED`。
-2. **A2 Session Anchor Port/Model（GREEN）。** 新增不可变 Anchor 类型及 Fail Closed Port；默认实现拒绝，
-   现有 Chat/Telegram/CLI 不调用。
+1. **A1 Anchor Fixture（RED → GREEN，第一段）。** 已扩展 `pending-operation-v1` 至 41 Case，固定合法 Anchor、
+   未知版本、Opaque Operation Ref、精确 Cursor、取消/新 Turn 终态和 `toString` 零泄漏；原始 Message/参数零泄漏
+   由纯 Model 证明。后续补 SQLite 创建原子性、非零 Cursor、新 Turn失效、恢复 CAS、`UNKNOWN` 与
+   `COMMIT_UNREPORTED` Fixture。
+2. **A2 Session Anchor Port/Model（GREEN，第一段）。** 已新增不可变 Kernel Anchor Model；默认实现拒绝和
+   SQLite Port 尚未添加，现有 Chat/Telegram/CLI 不调用。
 3. **A3 SQLite Schema/迁移（GREEN）。** 对 `sessions.db` 使用版本化、前向检查的 Schema；完整初始 Turn、
    Pending 投影和 Anchor 同一事务写入；失败回滚全部。
 4. **A4 条件恢复提交（GREEN）。** 只支持 Anchor 已知安全 Result 投影的 CAS 追加；旧 Cursor/取消/新 Turn
