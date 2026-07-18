@@ -6,7 +6,7 @@ target/
 **/target/
 .env
 /config.toml
-workspace/
+/workspace/
 workspace-java/
 *.db
 *.db-shm
