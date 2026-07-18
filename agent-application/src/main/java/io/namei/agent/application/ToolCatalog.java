@@ -45,7 +45,7 @@ public final class ToolCatalog {
     var registered = new LinkedHashMap<String, ToolCatalogEntry>();
     for (ToolCatalogEntry entry : entries) {
       Objects.requireNonNull(entry, "entry");
-      String name = entry.tool().definition().name();
+      String name = entry.definition().name();
       if (SEARCH_TOOL_NAME.equals(name)) {
         throw new IllegalArgumentException("工具名称为保留名称: " + SEARCH_TOOL_NAME);
       }
@@ -95,7 +95,7 @@ public final class ToolCatalog {
   List<ToolDefinition> allDefinitions() {
     var definitions =
         entriesByName.values().stream()
-            .map(entry -> entry.tool().definition())
+            .map(ToolCatalogEntry::definition)
             .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
     if (searchEnabled) {
       definitions.add(SEARCH_DEFINITION);
@@ -114,7 +114,7 @@ public final class ToolCatalog {
         if (entry == null) {
           throw new IllegalStateException("Tool Catalog Session 包含未知工具");
         }
-        definitions.add(entry.tool().definition());
+        definitions.add(entry.definition());
       }
     }
     return List.copyOf(definitions);
@@ -130,7 +130,7 @@ public final class ToolCatalog {
       return SEARCH_DEFINITION;
     }
     ToolCatalogEntry entry = entriesByName.get(name);
-    return entry == null ? null : entry.tool().definition();
+    return entry == null ? null : entry.definition();
   }
 
   boolean isVisible(ToolCatalogSession session, String name) {
@@ -167,7 +167,7 @@ public final class ToolCatalog {
       if (entry.visibility() != ToolCatalogVisibility.DEFERRED || session.isVisible(name)) {
         continue;
       }
-      int score = score(entry, query, queryTokens);
+      int score = score(entry.definition(), entry, query, queryTokens);
       if (score > 0) {
         candidates.add(new ScoredEntry(name, entry, score));
       }
@@ -217,8 +217,9 @@ public final class ToolCatalog {
     return new ToolCatalogSearchResult(matched, unlocked, alreadyLoaded);
   }
 
-  private static int score(ToolCatalogEntry entry, String query, List<String> queryTokens) {
-    String indexed = index(entry);
+  private static int score(
+      ToolDefinition definition, ToolCatalogEntry entry, String query, List<String> queryTokens) {
+    String indexed = index(definition, entry);
     if (queryTokens.isEmpty() || queryTokens.stream().anyMatch(token -> !indexed.contains(token))) {
       return 0;
     }
@@ -227,17 +228,17 @@ public final class ToolCatalog {
     if (indexed.contains(normalizedQuery)) {
       score += 20;
     }
-    String normalizedName = normalize(entry.tool().definition().name());
+    String normalizedName = normalize(definition.name());
     if (normalizedName.contains(normalizedQuery)) {
       score += 10;
     }
     return score;
   }
 
-  private static String index(ToolCatalogEntry entry) {
+  private static String index(ToolDefinition definition, ToolCatalogEntry entry) {
     var values = new ArrayList<String>();
-    values.add(entry.tool().definition().name());
-    values.add(entry.tool().definition().description());
+    values.add(definition.name());
+    values.add(definition.description());
     values.addAll(entry.searchHints());
     return String.join(" ", values.stream().map(ToolCatalog::normalize).toList());
   }
@@ -302,10 +303,11 @@ public final class ToolCatalog {
   }
 
   private static ToolCatalogMatch match(String name, ToolCatalogEntry entry) {
+    ToolDefinition definition = entry.definition();
     return new ToolCatalogMatch(
         name,
-        summary(entry.tool().definition().description()),
-        entry.tool().definition().risk(),
+        summary(definition.description()),
+        definition.risk(),
         entry.source(),
         entry.visibility() == ToolCatalogVisibility.ALWAYS_ON);
   }
