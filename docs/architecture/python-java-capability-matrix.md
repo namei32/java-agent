@@ -46,11 +46,11 @@
 
 | 能力 | Python 基准位置 | Java 位置 | 状态 | 主要差距/下一步 | 数据风险 |
 | --- | --- | --- | --- | --- | --- |
-| Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry` | 部分 | Approval/副作用/幂等协议、整批门禁和生产 Deny All Framework 已实现；缺真实 Approval Channel、Durable Ledger 和具体 Side Effect Tool Contract | 中 |
+| Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry`、`ToolCatalog` | 部分 | Approval/副作用/幂等协议、整批门禁和生产 Deny All Framework 已实现；R11 B1 另实现常驻/Deferred Catalog、Turn-scoped `tool_search`、确定性 CJK/精确检索和 Schema 逐轮投放；缺真实 Approval Channel、Durable Ledger 和具体 Side Effect Tool Contract | 中 |
 | Tool Loop | `agent/looping/`、`agent/tool_runtime.py` | `ToolLoop`、`ChatService`、`SideEffectBatchCoordinator` | 部分 | 有界顺序执行、安全预算、审批生命周期、一次性消费、幂等/UNKNOWN、提交边界和取消 Token 透传已完成；Telegram 断开已接入同一取消边界，生产仍无可执行副作用 | 高 |
 | 文件/Shell/Web 工具 | `agent/tools/` | `CurrentTimeTool`（仅时间） | 部分 | 仅完成无副作用时间工具；R3.2 批准不授权真实副作用，仍需逐工具 Capability Contract | 极高 |
 | Tool Hook | `agent/tool_hooks/` | R7 Kernel/Application Plugin Tap（已实现） | 部分 | V1 固定顺序、超时和异常隔离，只读投影；可变 Gate/副作用仍冻结 | 高 |
-| Tool Bundle/Search | `agent/tool_bundles.py`、`tool_search.py` | 无 | 未开始 | 在基础 Tool Loop 稳定后迁移 | 中 |
+| Tool Bundle/Search | `agent/tool_bundles.py`、`tool_search.py` | `ToolCatalog`、`ToolCatalogSession`、`ToolRegistry` | 部分 | R11 B1 的 Java-owned Catalog/Fixture 已实现并验证：内置工具可常驻，静态只读 MCP 可 deferred，并在当前 Turn 搜索后于下一模型请求投放 Schema；完整 Bundle、动态注册、权限策略与真实副作用仍在后续 B 阶段 | 中 |
 | MCP | `agent/mcp/`、`bootstrap/toolsets/mcp.py` | `adapter-mcp`、Bootstrap `McpRuntime` 装配 | 部分 | R5.1 已完成静态 stdio、官方 SDK 隔离、分页发现、稳定命名、安全 Schema、只读调用、Wire Cancellation、Stale/单次重连和进程回收；缺 Streamable HTTP/OAuth、Resources/Prompts、真实 Server Smoke、动态 Catalog 与副作用能力 | 高 |
 | Skills | `agent/skills.py` | R10 只读 Catalog Port（计划） | 未开始 | R10 先冻结 Prompt Catalog 边界；完整技能发现、依赖检查、读取与执行进入 R12 | 中 |
 | Plugins | `agent/plugins/` | R7 Java SPI + 隔离 stdio Bridge（已实现） | 部分 | 默认关闭、无真实 Python import、无 Tool/Channel 注入；不承诺运行时猴子补丁 | 高 |
@@ -83,7 +83,7 @@
 ## 当前优先级
 
 1. R6.1–R6.5 已合入 `main`，PR #9 与主分支三套 CI 均通过；R7–R9 已完成当前 Java 实现并通过默认、`failure`、`compat` 阶段门禁，R9 只提供离线演练。R9 的忽略规则遗漏已由本地 `main` 的 `2ceb44b` 修复。
-2. R10 已完成并通过三套阶段门禁；下一步进入 R11 Tool Catalog、可用审批和逐工具 Capability Contract。
+2. R10 已完成并通过三套阶段门禁；R11 已进入 B1 Tool Catalog，随后才是可用审批、Durable Ledger 和逐工具 Capability Contract。
 3. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 4. R11–R15 的全量对齐顺序、Python 证据和完成标准见[Java / Akashic Agent 全量对齐计划](../plans/2026-07-18-java-parity-program.md)。
 5. 真实 Telegram、远程 MCP、真实 Python Plugin、主动外部源、真实 Workspace、部署与 Python 退役不因 R10 实施而获得授权。

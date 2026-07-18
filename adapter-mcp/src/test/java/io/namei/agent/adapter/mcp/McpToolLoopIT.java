@@ -7,6 +7,10 @@ import io.namei.agent.adapter.sqlite.SqliteSchemaInitializer;
 import io.namei.agent.application.ChatCommand;
 import io.namei.agent.application.ChatService;
 import io.namei.agent.application.SessionExecutionGate;
+import io.namei.agent.application.ToolCatalog;
+import io.namei.agent.application.ToolCatalogEntry;
+import io.namei.agent.application.ToolCatalogSource;
+import io.namei.agent.application.ToolCatalogVisibility;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
 import io.namei.agent.kernel.model.ChatModelRequest;
@@ -64,21 +68,36 @@ class McpToolLoopIT {
               directGate(),
               "系统提示",
               CLOCK,
-              runtime.tools(),
-              3,
+              new ToolCatalog(
+                  runtime.tools().stream()
+                      .map(
+                          tool ->
+                              new ToolCatalogEntry(
+                                  tool,
+                                  ToolCatalogVisibility.DEFERRED,
+                                  ToolCatalogSource.MCP,
+                                  "docs",
+                                  tool.definition().name().endsWith("__echo")
+                                      ? List.of("echo")
+                                      : List.of()))
+                      .toList()),
+              4,
               TurnLifecycleObserver.noop());
 
       assertThat(chat.chat(new ChatCommand("mcp-session", "调用只读 MCP 工具")).assistant().content())
           .isEqualTo("MCP 闭环完成");
 
-      assertThat(model.requests).hasSize(2);
+      assertThat(model.requests).hasSize(3);
       assertThat(model.requests.getFirst().tools())
           .extracting(definition -> definition.name())
-          .contains("mcp_docs__echo");
-      assertThat(model.requests.get(1).messages())
+          .containsExactly("tool_search");
+      assertThat(model.requests.get(1).tools())
+          .extracting(definition -> definition.name())
+          .containsExactly("tool_search", "mcp_docs__echo");
+      assertThat(model.requests.get(2).messages())
           .filteredOn(ToolResultMessage.class::isInstance)
           .extracting(message -> ((ToolResultMessage) message).content())
-          .containsExactly("来自 Java MCP");
+          .contains("来自 Java MCP");
 
       var persisted = repository.load("mcp-session");
       assertThat(persisted.messages())
@@ -115,6 +134,10 @@ class McpToolLoopIT {
     public ChatModelResponse generate(ChatModelRequest request) {
       requests.add(request);
       if (requests.size() == 1) {
+        return new ChatModelResponse(
+            "", List.of(new ToolCall("mcp-search-1", "tool_search", Map.of("query", "echo"))));
+      }
+      if (requests.size() == 2) {
         return new ChatModelResponse(
             "",
             List.of(new ToolCall("mcp-call-1", "mcp_docs__echo", Map.of("text", "来自 Java MCP"))));

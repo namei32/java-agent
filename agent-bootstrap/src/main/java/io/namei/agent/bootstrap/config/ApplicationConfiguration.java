@@ -30,6 +30,10 @@ import io.namei.agent.application.SemanticMemoryRetrievalAdapter;
 import io.namei.agent.application.SemanticMemoryRetrievalSettings;
 import io.namei.agent.application.SessionExecutionGate;
 import io.namei.agent.application.SideEffectLedger;
+import io.namei.agent.application.ToolCatalog;
+import io.namei.agent.application.ToolCatalogEntry;
+import io.namei.agent.application.ToolCatalogSource;
+import io.namei.agent.application.ToolCatalogVisibility;
 import io.namei.agent.application.ToolRuntimeMode;
 import io.namei.agent.application.ToolRuntimeSettings;
 import io.namei.agent.bootstrap.cli.CliIdGenerator;
@@ -303,7 +307,7 @@ public class ApplicationConfiguration {
       @Value("classpath:/prompts/system.md") Resource systemPrompt)
       throws IOException {
     String prompt = systemPrompt(compatibilityPrompt, systemPrompt);
-    List<Tool> tools = configuredTools(properties, mcpRuntime);
+    ToolCatalog tools = configuredToolCatalog(properties, mcpRuntime);
     var toolSettings =
         new ToolRuntimeSettings(
             properties.tools().mode(),
@@ -383,13 +387,42 @@ public class ApplicationConfiguration {
     return new LocalCliRunner(turns, properties, cliClock, ids, input, output, threadStarter);
   }
 
+  ToolCatalog configuredToolCatalog(AgentProperties properties, McpRuntime mcpRuntime) {
+    Objects.requireNonNull(properties, "properties");
+    Objects.requireNonNull(mcpRuntime, "mcpRuntime");
+    if (properties.tools().mode() == ToolRuntimeMode.DISABLED) {
+      return new ToolCatalog(List.of());
+    }
+    List<ToolCatalogEntry> tools = new ArrayList<>();
+    tools.add(
+        new ToolCatalogEntry(
+            new CurrentTimeTool(Clock.systemUTC()),
+            ToolCatalogVisibility.ALWAYS_ON,
+            ToolCatalogSource.BUILTIN,
+            "",
+            List.of("当前时间", "UTC")));
+    for (Tool tool : mcpRuntime.tools()) {
+      if (tool.definition().risk() != ToolRisk.READ_ONLY) {
+        throw new IllegalStateException("MCP Runtime 暴露了非只读工具");
+      }
+      tools.add(
+          new ToolCatalogEntry(
+              tool,
+              ToolCatalogVisibility.DEFERRED,
+              ToolCatalogSource.MCP,
+              mcpSourceId(tool.definition().name()),
+              List.of()));
+    }
+    return new ToolCatalog(tools);
+  }
+
   List<Tool> configuredTools(AgentProperties properties, McpRuntime mcpRuntime) {
     Objects.requireNonNull(properties, "properties");
     Objects.requireNonNull(mcpRuntime, "mcpRuntime");
     if (properties.tools().mode() == ToolRuntimeMode.DISABLED) {
       return List.of();
     }
-    List<Tool> tools = new ArrayList<>();
+    var tools = new ArrayList<Tool>();
     tools.add(new CurrentTimeTool(Clock.systemUTC()));
     for (Tool tool : mcpRuntime.tools()) {
       if (tool.definition().risk() != ToolRisk.READ_ONLY) {
@@ -418,5 +451,17 @@ public class ApplicationConfiguration {
       throw new IllegalStateException("JAVA_NATIVE 记忆装配不完整");
     }
     return value;
+  }
+
+  private static String mcpSourceId(String toolName) {
+    Objects.requireNonNull(toolName, "toolName");
+    if (!toolName.startsWith("mcp_")) {
+      return toolName;
+    }
+    int separator = toolName.indexOf("__", "mcp_".length());
+    if (separator <= "mcp_".length()) {
+      return toolName;
+    }
+    return toolName.substring("mcp_".length(), separator);
   }
 }

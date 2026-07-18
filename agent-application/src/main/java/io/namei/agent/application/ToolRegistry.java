@@ -5,9 +5,7 @@ import io.namei.agent.kernel.tool.ToolCall;
 import io.namei.agent.kernel.tool.ToolDefinition;
 import io.namei.agent.kernel.tool.ToolResult;
 import io.namei.agent.kernel.tool.ToolRisk;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CancellationException;
@@ -18,10 +16,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 final class ToolRegistry {
-  private final Map<String, Tool> tools;
-  private final Map<String, ToolDefinition> definitionsByName;
-  private final Map<String, ToolSchemaValidator> validators;
-  private final List<ToolDefinition> definitions;
+  private final ToolCatalog catalog;
+  private final java.util.Map<String, ToolSchemaValidator> validators;
   private final ToolRuntimeSettings settings;
   private final Semaphore executionPermits;
   private final ToolTaskStarter taskStarter;
@@ -32,58 +28,66 @@ final class ToolRegistry {
 
   ToolRegistry(List<Tool> tools, ToolRuntimeSettings settings) {
     this(
-        tools,
+        ToolCatalog.alwaysOn(tools),
+        settings,
+        (toolName, task) -> Thread.ofVirtual().name("namei-tool-" + toolName).start(task));
+  }
+
+  ToolRegistry(ToolCatalog catalog, ToolRuntimeSettings settings) {
+    this(
+        catalog,
         settings,
         (toolName, task) -> Thread.ofVirtual().name("namei-tool-" + toolName).start(task));
   }
 
   ToolRegistry(List<Tool> tools, ToolRuntimeSettings settings, ToolTaskStarter taskStarter) {
-    Objects.requireNonNull(tools, "tools");
+    this(ToolCatalog.alwaysOn(tools), settings, taskStarter);
+  }
+
+  ToolRegistry(ToolCatalog catalog, ToolRuntimeSettings settings, ToolTaskStarter taskStarter) {
+    this.catalog = Objects.requireNonNull(catalog, "catalog");
     this.settings = Objects.requireNonNull(settings, "settings");
     this.taskStarter = Objects.requireNonNull(taskStarter, "taskStarter");
     this.executionPermits = new Semaphore(settings.maxConcurrentCalls(), true);
     if (settings.mode() == ToolRuntimeMode.DISABLED) {
-      this.tools = Map.of();
-      this.definitionsByName = Map.of();
-      this.validators = Map.of();
-      this.definitions = List.of();
+      this.validators = java.util.Map.of();
       return;
     }
-    var registered = new LinkedHashMap<String, Tool>();
-    var registeredDefinitions = new LinkedHashMap<String, ToolDefinition>();
-    var registeredValidators = new LinkedHashMap<String, ToolSchemaValidator>();
-    for (Tool tool : tools) {
-      Objects.requireNonNull(tool, "tool");
-      var definition = Objects.requireNonNull(tool.definition(), "tool.definition");
+    var registeredValidators = new java.util.LinkedHashMap<String, ToolSchemaValidator>();
+    for (ToolDefinition definition : catalog.allDefinitions()) {
       if (settings.mode() == ToolRuntimeMode.READ_ONLY && definition.risk() != ToolRisk.READ_ONLY) {
         throw new IllegalArgumentException("READ_ONLY 模式不能注册副作用工具");
       }
-      if (registered.putIfAbsent(definition.name(), tool) != null) {
-        throw new IllegalArgumentException("工具名称重复: " + definition.name());
-      }
       registeredValidators.put(
           definition.name(), new ToolSchemaValidator(definition.inputSchema()));
-      registeredDefinitions.put(definition.name(), definition);
     }
-    this.tools = Map.copyOf(registered);
-    this.definitionsByName = Map.copyOf(registeredDefinitions);
-    this.validators = Map.copyOf(registeredValidators);
-    this.definitions = List.copyOf(registeredDefinitions.values());
+    this.validators = java.util.Map.copyOf(registeredValidators);
   }
 
   List<Optional<ToolResult>> preflight(List<ToolCall> calls) {
-    return prepare(calls).stream()
+    return prepare(calls, newCatalogSession()).stream()
         .map(item -> Optional.ofNullable(item.preflightFailure()))
         .toList();
   }
 
   List<PreparedCall> prepare(List<ToolCall> calls) {
+    return prepare(calls, newCatalogSession());
+  }
+
+  List<PreparedCall> prepare(List<ToolCall> calls, ToolCatalogSession session) {
     Objects.requireNonNull(calls, "calls");
+    Objects.requireNonNull(session, "session");
+    if (settings.mode() == ToolRuntimeMode.DISABLED) {
+      return calls.stream()
+          .map(call -> new PreparedCall(call, null, ToolResult.error("工具不可用。")))
+          .toList();
+    }
     return calls.stream()
         .map(
             call -> {
               Objects.requireNonNull(call, "call");
-              var definition = definitionsByName.get(call.name());
+              var definition =
+                  catalog.isVisible(session, call.name()) ? catalog.definition(call.name()) : null;
               var validator = validators.get(call.name());
               ToolResult failure =
                   definition == null
@@ -95,7 +99,18 @@ final class ToolRegistry {
   }
 
   List<ToolDefinition> definitions() {
-    return definitions;
+    return definitions(newCatalogSession());
+  }
+
+  List<ToolDefinition> definitions(ToolCatalogSession session) {
+    if (settings.mode() == ToolRuntimeMode.DISABLED) {
+      return List.of();
+    }
+    return catalog.definitions(session);
+  }
+
+  ToolCatalogSession newCatalogSession() {
+    return catalog.newSession();
   }
 
   ToolResult execute(ToolCall call) {
@@ -103,9 +118,27 @@ final class ToolRegistry {
   }
 
   ToolResult execute(ToolCall call, TurnCancellation cancellation) {
+    return execute(call, cancellation, newCatalogSession());
+  }
+
+  ToolResult execute(ToolCall call, TurnCancellation cancellation, ToolCatalogSession session) {
     Objects.requireNonNull(call, "call");
     Objects.requireNonNull(cancellation, "cancellation");
-    var tool = tools.get(call.name());
+    Objects.requireNonNull(session, "session");
+    if (settings.mode() == ToolRuntimeMode.DISABLED) {
+      return ToolResult.error("工具不可用。");
+    }
+    if (!catalog.isVisible(session, call.name())) {
+      return ToolResult.error("工具不可用。");
+    }
+    if (catalog.isSearchTool(call.name())) {
+      ToolSchemaValidator validator = validators.get(call.name());
+      if (validator == null || !validator.accepts(call.arguments())) {
+        return ToolResult.error("工具参数无效。");
+      }
+      return search(call, session);
+    }
+    var tool = catalog.tool(call.name());
     if (tool == null) {
       return ToolResult.error("工具不可用。");
     }
@@ -170,6 +203,29 @@ final class ToolRegistry {
       throw new IllegalStateException("等待工具执行时被中断", exception);
     } catch (ExecutionException exception) {
       return ToolResult.error("工具执行失败。");
+    }
+  }
+
+  private ToolResult search(ToolCall call, ToolCatalogSession session) {
+    Object rawQuery = call.arguments().get("query");
+    Object rawTopK = call.arguments().get("top_k");
+    if (!(rawQuery instanceof String query)) {
+      return ToolResult.error("工具参数无效。");
+    }
+    int topK = 5;
+    if (rawTopK != null) {
+      if (!(rawTopK instanceof Number number)) {
+        return ToolResult.error("工具参数无效。");
+      }
+      topK = number.intValue();
+      if (number.longValue() != topK) {
+        return ToolResult.error("工具参数无效。");
+      }
+    }
+    try {
+      return ToolResult.success(ToolCatalogJson.render(catalog.search(session, query, topK)));
+    } catch (IllegalArgumentException exception) {
+      return ToolResult.error("工具参数无效。");
     }
   }
 

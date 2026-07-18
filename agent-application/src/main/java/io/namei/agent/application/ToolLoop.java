@@ -131,12 +131,13 @@ final class ToolLoop {
     Objects.requireNonNull(cancellation, "cancellation");
     Objects.requireNonNull(context, "context");
     var messages = new ArrayList<ModelMessage>(initialMessages);
+    ToolCatalogSession catalogSession = tools.newCatalogSession();
     var streamingBudget = progressListener == null ? null : new StreamingBudget(streamingSettings);
     int totalCalls = 0;
     for (int iteration = 1; iteration <= maxIterations; iteration++) {
       checkCancellation(cancellation);
       lifecycle.emit(TurnLifecycleEvent.modelRequested(iteration));
-      var request = new ChatModelRequest(messages, tools.definitions());
+      var request = new ChatModelRequest(messages, tools.definitions(catalogSession));
       var response =
           progressListener == null
               ? model.generate(request)
@@ -171,7 +172,9 @@ final class ToolLoop {
       }
       totalCalls += callsInResponse;
       messages.add(new AssistantToolCallMessage(response.content(), response.toolCalls()));
-      var results = coordinator.execute(context, iteration, response.toolCalls(), cancellation);
+      var results =
+          coordinator.execute(
+              context, iteration, response.toolCalls(), cancellation, catalogSession);
       for (int callIndex = 0; callIndex < response.toolCalls().size(); callIndex++) {
         var call = response.toolCalls().get(callIndex);
         var result = results.get(callIndex);

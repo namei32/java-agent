@@ -88,15 +88,25 @@ final class SideEffectBatchCoordinator {
   }
 
   List<ToolResult> execute(Context context, List<ToolCall> calls, TurnCancellation cancellation) {
-    return execute(context, 1, calls, cancellation);
+    return execute(context, 1, calls, cancellation, tools.newCatalogSession());
   }
 
   List<ToolResult> execute(
       Context context, int iteration, List<ToolCall> calls, TurnCancellation cancellation) {
+    return execute(context, iteration, calls, cancellation, tools.newCatalogSession());
+  }
+
+  List<ToolResult> execute(
+      Context context,
+      int iteration,
+      List<ToolCall> calls,
+      TurnCancellation cancellation,
+      ToolCatalogSession catalogSession) {
     Objects.requireNonNull(context, "context");
     Objects.requireNonNull(calls, "calls");
     Objects.requireNonNull(cancellation, "cancellation");
-    List<ToolRegistry.PreparedCall> prepared = tools.prepare(calls);
+    Objects.requireNonNull(catalogSession, "catalogSession");
+    List<ToolRegistry.PreparedCall> prepared = tools.prepare(calls, catalogSession);
     List<ToolRisk> risks =
         prepared.stream()
             .map(
@@ -107,7 +117,7 @@ final class SideEffectBatchCoordinator {
             .toList();
     boolean hasSideEffect = risks.stream().anyMatch(risk -> risk != ToolRisk.READ_ONLY);
     if (!hasSideEffect) {
-      return executeReadOnly(prepared, iteration, cancellation);
+      return executeReadOnly(prepared, iteration, cancellation, catalogSession);
     }
     prepared.forEach(
         item ->
@@ -201,8 +211,9 @@ final class SideEffectBatchCoordinator {
       }
       ToolResult result =
           currentRisk == ToolRisk.READ_ONLY
-              ? tools.execute(item.call(), cancellation)
-              : executeSideEffect(requests.get(index), item.call(), iteration, cancellation);
+              ? tools.execute(item.call(), cancellation, catalogSession)
+              : executeSideEffect(
+                  requests.get(index), item.call(), iteration, cancellation, catalogSession);
       results.add(result);
       lifecycle.emit(
           TurnLifecycleEvent.toolCompleted(
@@ -215,7 +226,11 @@ final class SideEffectBatchCoordinator {
   }
 
   private ToolResult executeSideEffect(
-      ApprovalRequest request, ToolCall call, int iteration, TurnCancellation cancellation) {
+      ApprovalRequest request,
+      ToolCall call,
+      int iteration,
+      TurnCancellation cancellation,
+      ToolCatalogSession catalogSession) {
     SideEffectIdentity identity = SideEffectIdentity.from(request);
     SideEffectLedger.Reservation reservation;
     try {
@@ -249,7 +264,7 @@ final class SideEffectBatchCoordinator {
 
     ToolResult result;
     try {
-      result = tools.execute(call, cancellation);
+      result = tools.execute(call, cancellation, catalogSession);
     } catch (RuntimeException exception) {
       recordUnknown(identity, "SIDE_EFFECT_INVOCATION_UNCERTAIN");
       lifecycle.emit(
@@ -295,14 +310,17 @@ final class SideEffectBatchCoordinator {
   }
 
   private List<ToolResult> executeReadOnly(
-      List<ToolRegistry.PreparedCall> prepared, int iteration, TurnCancellation cancellation) {
+      List<ToolRegistry.PreparedCall> prepared,
+      int iteration,
+      TurnCancellation cancellation,
+      ToolCatalogSession catalogSession) {
     var results = new ArrayList<ToolResult>(prepared.size());
     for (var item : prepared) {
       lifecycle.emit(
           TurnLifecycleEvent.toolStarted(iteration, item.call().id(), item.call().name()));
       ToolResult result =
           item.preflightFailure() == null
-              ? tools.execute(item.call(), cancellation)
+              ? tools.execute(item.call(), cancellation, catalogSession)
               : item.preflightFailure();
       results.add(result);
       lifecycle.emit(

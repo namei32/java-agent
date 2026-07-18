@@ -90,6 +90,19 @@ class McpBootstrapConfigurationTest {
   }
 
   @Test
+  void publishesMcpToolsAsDeferredCatalogEntriesAndOnlyExposesSearchInitially() {
+    var catalog =
+        new ApplicationConfiguration()
+            .configuredToolCatalog(
+                agentProperties(ToolRuntimeMode.READ_ONLY),
+                fixedRuntime(readOnlyTool("mcp_docs_search")));
+
+    assertThat(catalog.initialDefinitions())
+        .extracting(ToolDefinition::name)
+        .containsExactly("current_time", "tool_search");
+  }
+
+  @Test
   void globalDisabledModePublishesNoBuiltInOrMcpTools() {
     List<Tool> tools =
         new ApplicationConfiguration()
@@ -117,7 +130,7 @@ class McpBootstrapConfigurationTest {
     assertThatThrownBy(
             () ->
                 new ApplicationConfiguration()
-                    .configuredTools(
+                    .configuredToolCatalog(
                         agentProperties(ToolRuntimeMode.READ_ONLY), fixedRuntime(writeTool)))
         .isInstanceOf(IllegalStateException.class)
         .hasMessage("MCP Runtime 暴露了非只读工具");

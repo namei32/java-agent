@@ -268,6 +268,16 @@ Tool 权限视为已迁移。
 退出门禁：每个 Section 的顺序、位置、空值、时间、模式、预算和裁剪均有 Java-owned Fixture；默认、失败路径、
 兼容门禁通过；默认 `MINIMAL` 行为保持兼容。
 
+## R11：Tool Catalog、审批与逐工具 Capability
+
+状态：B1 Tool Catalog 已实现并验证；R11 尚未完成。
+
+B1 把 Python Registry 的“常驻工具—`tool_search`—本轮解锁—下一请求投放 Schema”共同投影迁移为 Java-owned Catalog。Catalog 的来源、风险、版本、可见性和搜索提示由受信注册固定；搜索结果只能缩小模型的未知工具范围，不能改变 Tool Runtime 的 Schema、预算、取消、审批或 Ledger 执行边界。静态只读 MCP 项在 Bootstrap 中作为 deferred Catalog 项投放，默认关闭和 R5.1 的连接/调用边界不变。
+
+R11 之后的 B 阶段必须按顺序完成 Approval Inbox/Pending Turn/身份 Contract、Durable Approval/Audit/Idempotency Ledger Contract，再对每一种真实副作用 Tool 单独建立 Capability/Sandbox/`UNKNOWN`/Smoke Contract。生产继续为 Deny All、Ledger unavailable、`AGENT_TOOL_MODE=DISABLED`；不能将 B1 描述为可用人类审批或真实副作用能力。
+
+退出门禁：Catalog Fixture、Registry/Loop/Bootstrap 纵向测试和 R11 全部 B 阶段的三套门禁通过；每个真实副作用 Tool 具有独立批准的最小权限契约与回退演练。
+
 ## Roadmap 变更规则
 
 新增模块、数据库、消息中间件或部署单元，必须先写 ADR。阶段状态只能在相应门禁有可复现证据后更新。具体日期在能力和依赖稳定后安排，不能用日历目标替代退出标准。

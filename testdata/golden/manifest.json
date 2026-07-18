@@ -127,6 +127,12 @@
       "source": "migration-contract"
     },
     {
+      "id": "tools/tool-catalog-v1",
+      "path": "tools/tool-catalog-v1.json",
+      "sha256": "12a991268547fe4c3c439d6bf9caf8a9850b1ef33c2192e08ea5bdd0daa2308d",
+      "source": "java-contract"
+    },
+    {
       "id": "errors/http-error-mapping",
       "path": "errors/http-error-mapping.json",
       "sha256": "44d9983e58cc5d4816312f1dc1970e1bdcb76e2c8e430d5b05c0b2b870afe465",
@@ -153,9 +159,11 @@
       "agent/tool_hooks/base.py": "b04d0f5e984a5350877d4d4582c753ea1b4fb4ec7128b8276576ddabc0616813",
       "agent/tool_hooks/executor.py": "dadf36b86b15f36f4b063122d8525e2d225ddafbd665e50c794fe360f091e157",
       "agent/tool_hooks/types.py": "3e0e4494ef8855f5a1409bc997ec467d98c58294e149185e3d650e90c14e2d5f",
+      "agent/tool_bundles.py": "4c0e38f9dca3d00b805debae6f62103257366b902df4daed8b91b703956baa9a",
       "agent/tool_runtime.py": "e2d74a7e46fe0a6234e9ce868a3ed909da290638de408306c8e64e2464bb7a87",
       "agent/tools/base.py": "f05e0e27dd5f1a17c5a0624f8da51d3b764b0c9e1f5f2cecf658887afae8e9f8",
       "agent/tools/registry.py": "869873131ceecff7284812c4788d7a0915f3b32e320163670e4c1eb79198cb70",
+      "agent/tools/tool_search.py": "eaa560a66e5a0542dc5e702b1100550839cec8c7049c5f903fe1af82cea4c34a",
       "bus/events_lifecycle.py": "c81a667d64711bb6688809a563e7bbe8060c5917d2987f952543760fa946a1c8",
       "config.example.toml": "7d3f2024e2812dddc0ec4f51cd057566eefa0ac522fa1ca647c4212fc29540ad",
       "core/memory/markdown.py": "f5ae4dbc98f20eb94b753dd72d9f2f44db7be81bd9425efd960585b38f09ce25",

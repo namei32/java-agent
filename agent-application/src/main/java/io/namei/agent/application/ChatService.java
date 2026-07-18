@@ -89,6 +89,37 @@ public final class ChatService implements ChatUseCase {
       SessionExecutionGate gate,
       String systemPrompt,
       Clock clock,
+      ToolCatalog catalog,
+      int maxIterations,
+      TurnLifecycleObserver observer) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
+        catalog,
+        maxIterations,
+        observer,
+        ToolRuntimeSettings.readOnlyDefaults(),
+        request -> ApprovalDecision.deniedFor(request, clock.instant(), "deny-all"),
+        SideEffectLedger.unavailable(),
+        new SecureIdGenerator(),
+        Duration.ofMinutes(5),
+        MemoryContextService.disabled(),
+        ModelStreamingSettings.defaults());
+  }
+
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
       List<Tool> tools,
       int maxIterations,
       TurnLifecycleObserver observer,
@@ -233,6 +264,44 @@ public final class ChatService implements ChatUseCase {
       Duration approvalTimeout,
       MemoryContextService memoryContext,
       ModelStreamingSettings streamingSettings) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
+        ToolCatalog.alwaysOn(List.copyOf(tools)),
+        maxIterations,
+        observer,
+        toolSettings,
+        approvals,
+        ledger,
+        ids,
+        approvalTimeout,
+        memoryContext,
+        streamingSettings);
+  }
+
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
+      ToolCatalog catalog,
+      int maxIterations,
+      TurnLifecycleObserver observer,
+      ToolRuntimeSettings toolSettings,
+      ApprovalPort approvals,
+      SideEffectLedger ledger,
+      IdGenerator ids,
+      Duration approvalTimeout,
+      MemoryContextService memoryContext,
+      ModelStreamingSettings streamingSettings) {
     this.sessions = Objects.requireNonNull(sessions, "sessions");
     this.historySelector = Objects.requireNonNull(historySelector, "historySelector");
     this.limits = Objects.requireNonNull(limits, "limits");
@@ -242,7 +311,7 @@ public final class ChatService implements ChatUseCase {
     this.lifecycle = new LifecyclePublisher(observer);
     this.ids = Objects.requireNonNull(ids, "ids");
     this.memoryContext = Objects.requireNonNull(memoryContext, "memoryContext");
-    var registry = new ToolRegistry(List.copyOf(tools), toolSettings);
+    var registry = new ToolRegistry(catalog, toolSettings);
     var coordinator =
         new SideEffectBatchCoordinator(
             registry,

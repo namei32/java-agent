@@ -1,0 +1,98 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "definitions": [
+          "current_time",
+          "tool_search"
+        ]
+      },
+      "id": "initial-always-on-and-search",
+      "input": {
+        "mode": "READ_ONLY"
+      }
+    },
+    {
+      "expected": {
+        "matched": [
+          "calendar_lookup"
+        ],
+        "unlocked": [
+          "calendar_lookup"
+        ]
+      },
+      "id": "cjk-search-unlocks-deferred",
+      "input": {
+        "query": "日历",
+        "topK": 5
+      }
+    },
+    {
+      "expected": {
+        "alreadyLoaded": [
+          "calendar_lookup"
+        ],
+        "unlocked": [
+          "weather_lookup"
+        ]
+      },
+      "id": "select-exact-and-already-loaded",
+      "input": {
+        "query": "select:calendar_lookup,weather_lookup",
+        "topK": 5
+      }
+    },
+    {
+      "expected": {
+        "result": "工具不可用。"
+      },
+      "id": "hidden-tool-preflight-fails-closed",
+      "input": {
+        "tool": "calendar_lookup"
+      }
+    },
+    {
+      "expected": {
+        "requests": [
+          [
+            "current_time",
+            "tool_search"
+          ],
+          [
+            "current_time",
+            "tool_search",
+            "calendar_lookup"
+          ]
+        ]
+      },
+      "id": "next-request-receives-unlocked-schema",
+      "input": {
+        "query": "日历"
+      }
+    },
+    {
+      "expected": {
+        "hiddenStatus": "ERROR",
+        "executions": []
+      },
+      "id": "same-batch-cannot-execute-hidden-tool",
+      "input": {
+        "query": "日历"
+      }
+    },
+    {
+      "expected": {
+        "definitions": []
+      },
+      "id": "disabled-hides-catalog",
+      "input": {
+        "mode": "DISABLED"
+      }
+    }
+  ],
+  "contractEvidence": "docs/contracts/tool-catalog-capability-governance.md#3-可见性状态机",
+  "formatVersion": 1,
+  "normalization": [],
+  "source": "java-contract",
+  "suite": "tool-catalog"
+}
