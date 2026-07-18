@@ -28,11 +28,14 @@ import io.namei.agent.application.KeyedSessionExecutionGate;
 import io.namei.agent.application.MemoryContextService;
 import io.namei.agent.application.MemoryDeleteService;
 import io.namei.agent.application.MemoryQueryService;
+import io.namei.agent.application.MemoryRecallContextFactory;
+import io.namei.agent.application.MemoryRecallToolset;
 import io.namei.agent.application.MemoryWriteService;
 import io.namei.agent.application.MessageTurnService;
 import io.namei.agent.application.ModelStreamingSettings;
 import io.namei.agent.application.PromptRuntimeSettings;
 import io.namei.agent.application.PromptTurnContextFactory;
+import io.namei.agent.application.ReadOnlyMemoryRecallService;
 import io.namei.agent.application.SecureIdGenerator;
 import io.namei.agent.application.SemanticMemoryRetrievalAdapter;
 import io.namei.agent.application.SemanticMemoryRetrievalSettings;
@@ -111,6 +114,7 @@ import org.springframework.core.io.Resource;
   McpProperties.class,
   McpAssetProperties.class,
   ConversationEvidenceProperties.class,
+  MemoryRecallProperties.class,
   CliProperties.class,
   PluginProperties.class,
   ProactiveProperties.class
@@ -271,19 +275,38 @@ public class ApplicationConfiguration {
     if (properties.memory().mode() != io.namei.agent.kernel.memory.MemoryRuntimeMode.JAVA_NATIVE) {
       return MemoryRetrievalPort.disabled();
     }
-    AgentProperties.Memory memory = properties.memory();
-    AgentProperties.Retrieval retrieval = memory.retrieval();
-    var settings =
-        new SemanticMemoryRetrievalSettings(
-            memory.embedding().model(),
-            memory.embedding().dimensions(),
-            retrieval.topK(),
-            retrieval.scoreThreshold(),
-            retrieval.hotnessAlpha(),
-            retrieval.hotnessHalfLifeDays(),
-            retrieval.maxCandidates(),
-            retrieval.maxInjectedCharacters());
-    return new SemanticMemoryRetrievalAdapter(required(stores), required(embeddings), settings);
+    return new SemanticMemoryRetrievalAdapter(
+        required(stores), required(embeddings), semanticMemoryRetrievalSettings(properties));
+  }
+
+  @Bean
+  MemoryRecallContextFactory memoryRecallContextFactory(
+      AgentProperties properties,
+      MemoryRecallProperties recallProperties,
+      ObjectProvider<JdbcJavaMemoryStore> stores,
+      ObjectProvider<EmbeddingPort> embeddings) {
+    if (!memoryRecallEnabled(properties, recallProperties)) {
+      return MemoryRecallContextFactory.disabled();
+    }
+    return MemoryRecallContextFactory.enabled(
+        new ReadOnlyMemoryRecallService(
+            required(stores),
+            required(embeddings),
+            semanticMemoryRetrievalSettings(properties),
+            Clock.systemUTC()));
+  }
+
+  @Bean
+  MemoryRecallToolset memoryRecallToolset(
+      AgentProperties properties, MemoryRecallProperties recallProperties) {
+    if (!memoryRecallEnabled(properties, recallProperties)) {
+      return MemoryRecallToolset.disabled();
+    }
+    if (MemoryRecallToolset.MAX_PROJECTED_CODE_POINTS > properties.tools().maxResultCharacters()) {
+      throw new IllegalStateException(
+          "agent.memory-recall 单项预算不能大于 agent.tools.max-result-characters");
+    }
+    return MemoryRecallToolset.enabled();
   }
 
   @Bean
@@ -431,7 +454,6 @@ public class ApplicationConfiguration {
         systemPrompt);
   }
 
-  @Bean
   ChatUseCase chatUseCase(
       SessionRepository sessions,
       ChatModelPort model,
@@ -450,6 +472,48 @@ public class ApplicationConfiguration {
       @Value("${agent.compatibility.system-prompt-base64:}") String compatibilityPrompt,
       @Value("classpath:/prompts/system.md") Resource systemPrompt)
       throws IOException {
+    return chatUseCase(
+        sessions,
+        model,
+        gate,
+        lifecycleObserver,
+        approvalPort,
+        memoryContext,
+        mcpRuntime,
+        workspaceTools,
+        skillCatalog,
+        skillProperties,
+        conversationEvidenceTools,
+        conversationEvidenceContexts,
+        MemoryRecallToolset.disabled(),
+        MemoryRecallContextFactory.disabled(),
+        properties,
+        modelName,
+        compatibilityPrompt,
+        systemPrompt);
+  }
+
+  @Bean
+  ChatUseCase chatUseCase(
+      SessionRepository sessions,
+      ChatModelPort model,
+      SessionExecutionGate gate,
+      TurnLifecycleObserver lifecycleObserver,
+      ApprovalPort approvalPort,
+      MemoryContextService memoryContext,
+      McpRuntime mcpRuntime,
+      WorkspaceReadOnlyToolset workspaceTools,
+      SkillCatalogPort skillCatalog,
+      SkillProperties skillProperties,
+      ConversationEvidenceToolset conversationEvidenceTools,
+      ConversationEvidenceContextFactory conversationEvidenceContexts,
+      MemoryRecallToolset memoryRecallTools,
+      MemoryRecallContextFactory memoryRecallContexts,
+      AgentProperties properties,
+      @Value("${spring.ai.openai.chat.model}") String modelName,
+      @Value("${agent.compatibility.system-prompt-base64:}") String compatibilityPrompt,
+      @Value("classpath:/prompts/system.md") Resource systemPrompt)
+      throws IOException {
     String prompt = systemPrompt(compatibilityPrompt, systemPrompt);
     ToolCatalog tools =
         configuredToolCatalog(
@@ -458,7 +522,8 @@ public class ApplicationConfiguration {
             workspaceTools,
             skillCatalog,
             skillProperties,
-            conversationEvidenceTools);
+            conversationEvidenceTools,
+            memoryRecallTools);
     var toolSettings =
         new ToolRuntimeSettings(
             properties.tools().mode(),
@@ -488,7 +553,8 @@ public class ApplicationConfiguration {
             memoryContext,
             new ModelStreamingSettings(
                 properties.model().maxDeltaEvents(), properties.model().maxDeltaCodePoints()),
-            conversationEvidenceContexts);
+            conversationEvidenceContexts,
+            memoryRecallContexts);
     return new SafeChatUseCase(service, Clock.systemUTC());
   }
 
@@ -643,12 +709,31 @@ public class ApplicationConfiguration {
       SkillCatalogPort skillCatalog,
       SkillProperties skillProperties,
       ConversationEvidenceToolset conversationEvidenceTools) {
+    return configuredToolCatalog(
+        properties,
+        mcpRuntime,
+        workspaceTools,
+        skillCatalog,
+        skillProperties,
+        conversationEvidenceTools,
+        MemoryRecallToolset.disabled());
+  }
+
+  ToolCatalog configuredToolCatalog(
+      AgentProperties properties,
+      McpRuntime mcpRuntime,
+      WorkspaceReadOnlyToolset workspaceTools,
+      SkillCatalogPort skillCatalog,
+      SkillProperties skillProperties,
+      ConversationEvidenceToolset conversationEvidenceTools,
+      MemoryRecallToolset memoryRecallTools) {
     Objects.requireNonNull(properties, "properties");
     Objects.requireNonNull(mcpRuntime, "mcpRuntime");
     Objects.requireNonNull(workspaceTools, "workspaceTools");
     Objects.requireNonNull(skillCatalog, "skillCatalog");
     Objects.requireNonNull(skillProperties, "skillProperties");
     Objects.requireNonNull(conversationEvidenceTools, "conversationEvidenceTools");
+    Objects.requireNonNull(memoryRecallTools, "memoryRecallTools");
     Tool skillTool = readSkillTool(properties, skillCatalog, skillProperties);
     if (properties.tools().mode() == ToolRuntimeMode.DISABLED) {
       return new ToolCatalog(List.of());
@@ -681,6 +766,18 @@ public class ApplicationConfiguration {
               ToolCatalogSource.BUILTIN,
               "",
               List.of("历史消息", "conversation", "evidence", "search")));
+    }
+    for (Tool tool : memoryRecallTools.tools()) {
+      if (tool.definition().risk() != ToolRisk.READ_ONLY) {
+        throw new IllegalStateException("Memory Recall Runtime 暴露了非只读工具");
+      }
+      tools.add(
+          new ToolCatalogEntry(
+              tool,
+              ToolCatalogVisibility.DEFERRED,
+              ToolCatalogSource.BUILTIN,
+              "",
+              List.of("记忆", "memory", "recall")));
     }
     for (Tool tool : workspaceTools.tools()) {
       if (tool.definition().risk() != ToolRisk.READ_ONLY) {
@@ -740,6 +837,35 @@ public class ApplicationConfiguration {
           "只读 Conversation Evidence Tool 要求 agent.tools.mode=READ_ONLY");
     }
     return true;
+  }
+
+  private static boolean memoryRecallEnabled(
+      AgentProperties agentProperties, MemoryRecallProperties properties) {
+    if (agentProperties.tools().mode() == ToolRuntimeMode.DISABLED
+        || properties.toMode() == io.namei.agent.kernel.memory.MemoryRecallMode.DISABLED
+        || agentProperties.memory().mode()
+            != io.namei.agent.kernel.memory.MemoryRuntimeMode.JAVA_NATIVE) {
+      return false;
+    }
+    if (agentProperties.tools().mode() != ToolRuntimeMode.READ_ONLY) {
+      throw new IllegalStateException("只读 Memory Recall Tool 要求 agent.tools.mode=READ_ONLY");
+    }
+    return true;
+  }
+
+  private static SemanticMemoryRetrievalSettings semanticMemoryRetrievalSettings(
+      AgentProperties properties) {
+    AgentProperties.Memory memory = properties.memory();
+    AgentProperties.Retrieval retrieval = memory.retrieval();
+    return new SemanticMemoryRetrievalSettings(
+        memory.embedding().model(),
+        memory.embedding().dimensions(),
+        retrieval.topK(),
+        retrieval.scoreThreshold(),
+        retrieval.hotnessAlpha(),
+        retrieval.hotnessHalfLifeDays(),
+        retrieval.maxCandidates(),
+        retrieval.maxInjectedCharacters());
   }
 
   List<Tool> configuredTools(AgentProperties properties, McpRuntime mcpRuntime) {

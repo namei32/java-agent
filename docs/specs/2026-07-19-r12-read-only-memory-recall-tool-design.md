@@ -1,6 +1,6 @@
-# R12-S5 当前 Scope 只读记忆召回 Tool 设计（提议）
+# R12-S5 当前 Scope 只读记忆召回 Tool 设计
 
-- 状态：提议，未获实现授权
+- 状态：已实现；默认 `DISABLED`
 - 日期：2026-07-19
 - Contract：[当前 Scope 只读记忆召回 Tool 契约](../contracts/read-only-memory-recall-tool.md)
 - ADR：[ADR-0026](../adr/0026-restrict-memory-recall-to-current-scope-read-only-tool.md)
@@ -21,8 +21,8 @@ ToolLoop → ToolRegistry → deferred recall_memory(query, type, limit)
           MemoryStorePort / EmbeddingPort / Java-native agent-memory.db
 ```
 
-R4.2 的 `SemanticMemoryRetrievalAdapter` 面向 Prompt 注入，只输出文本块和计数，不能直接作为 Tool Result。若获批，
-S5 将建立独立的只读 Query Service，复用 `MemorySearchRequest`、`SemanticMemorySearch` 与 Embedding 响应校验，输出
+R4.2 的 `SemanticMemoryRetrievalAdapter` 面向 Prompt 注入，只输出文本块和计数，不能直接作为 Tool Result。S5 建立独立的
+`ReadOnlyMemoryRecallService`，复用 `MemorySearchRequest`、`SemanticMemorySearch` 与 Embedding 响应校验，输出
 受限 `MemorySearchHit` 投影；不能为了复用而扩大现有 `MemoryRetrievalResult` 或向 Prompt 注入路径暴露 Memory ID。
 
 原始 Session ID 仍由 ChatService 私有地转为 `MemoryScope`；Scope 只能由 package-private ContextualTool 获得。现有普通

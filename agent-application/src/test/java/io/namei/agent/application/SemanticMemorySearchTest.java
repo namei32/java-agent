@@ -85,6 +85,34 @@ class SemanticMemorySearchTest {
   }
 
   @Test
+  void appliesTheCallerTypeFilterBeforeRankingAndTopK() {
+    var note = item("note", SCOPE, vector(1.0, 0.0), "model", 1, 0, NOW);
+    var fact = item("fact", SCOPE, vector(0.8, 0.6), "model", 1, 0, NOW);
+    fact =
+        new MemoryItem(
+            fact.id(),
+            fact.scope(),
+            MemoryType.FACT,
+            fact.content(),
+            fact.contentHash(),
+            fact.embedding(),
+            fact.embeddingModel(),
+            fact.reinforcement(),
+            fact.emotionalWeight(),
+            fact.sourceKind(),
+            fact.happenedAt(),
+            fact.revision(),
+            fact.createdAt(),
+            fact.updatedAt());
+
+    List<MemorySearchHit> hits =
+        new SemanticMemorySearch(new RecordingStore(List.of(note, fact)))
+            .search(request(1, -1.0, 0.0, 14.0, 100), item -> item.type() == MemoryType.FACT);
+
+    assertThat(hits).singleElement().extracting(hit -> hit.item().id()).isEqualTo("fact");
+  }
+
+  @Test
   void clampsFutureAgeToZeroAndUsesEmotionalWeightToExtendHalfLife() {
     var future = item("future", SCOPE, vector(1.0, 0.0), "model", 1, 0, NOW.plusSeconds(3600));
     var emotional =

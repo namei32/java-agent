@@ -2,7 +2,7 @@
 
 - 状态：当前事实；后续实现必须以本审计和各阶段 Contract 为准
 - Python 证据基线：`akashic-agent` 提交 `b65a5430e332c8733b981dfc2dfbc3eb1967e9ef`
-- Java 证据基线：`agent/r12-skill-catalog`（R12-S4 deferred `read_skill` 与 R11-B4 会话证据 Tool）
+- Java 证据基线：`agent/r12-skill-catalog`（R12-S5 当前 Scope `recall_memory`、R12-S4 `read_skill` 与 R11-B4 会话证据 Tool）
 - 审计日期：2026-07-19
 
 ## 审计边界
@@ -50,7 +50,8 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
    `${agent.workspace}`；它不解决 B2c 恢复，也不授权写入、Shell、网络或真实 Workspace。
 4. **R11-B4 当前会话证据已完成并验证。** `fetch_messages`/`search_messages` 只在双重 `READ_ONLY` 后经当前 Turn
    `tool_search` 解锁，使用 opaque ID 和显式 Scope 查询当前 Session；它不对齐 Python 的原始 ID、跨会话或 FTS 表面。
-5. R12-S3 API v2 只读生命周期 Tap 与 R12-S4 deferred Skill 正文读取均已完成并通过三套门禁；R12-S2 的
+5. R12-S3 API v2 只读生命周期 Tap 与 R12-S4 deferred Skill 正文读取均已完成并通过三套门禁；R12-S5 已实现默认关闭的
+   当前 Scope `recall_memory` 受限替代，不读取 Python 记忆、不写入，也不提供跨 Scope/Keyword/RRF/时间线；R12-S2 的
    Assets 目录也已完成，但它是 Java-owned 扩展而非 Python MCP 对齐。实际主线仍是获得首个副作用 Capability
    的逐工具 Contract 后完成 R11-B2c，随后才进入 R13 多渠道/控制面、R14 主动/Peer/自动记忆和 R15 生产切换。
 6. **渠道级显式记忆管理尚未对齐。** `ChatService` 的自动 Retrieval 可以用私有 SHA-256 Binding 查询

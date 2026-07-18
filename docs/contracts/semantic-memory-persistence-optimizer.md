@@ -8,7 +8,7 @@
 - 数据迁移决定：旧 Python 语义记忆允许丢弃，不读取或迁移 `memory2.db`
 - 关联 ADR：[ADR-0005：采用 Java 原生语义记忆库](../adr/0005-use-java-native-semantic-memory-store.md)
 
-> 本契约授权在 Java 专用或临时测试 Workspace 中实现 `agent-memory.db`、显式记忆写入/查看/删除、Embedding 和语义检索。它不授权访问或删除真实 Python Workspace，不授权自动提取所有对话、运行 Optimizer、开放 Memory Tool、调用真实 Embedding Provider 或把服务暴露到未经认证的远程网络。
+> 本契约授权在 Java 专用或临时测试 Workspace 中实现 `agent-memory.db`、显式记忆写入/查看/删除、Embedding 和语义检索。它不授权访问或删除真实 Python Workspace，不授权自动提取所有对话、运行 Optimizer、调用真实 Embedding Provider 或把服务暴露到未经认证的远程网络。模型可调用召回仅由后续、独立的 [R12-S5 契约](read-only-memory-recall-tool.md) 受限授权。
 
 ## 1. 目标
 

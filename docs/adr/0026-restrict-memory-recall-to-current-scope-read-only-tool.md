@@ -1,6 +1,6 @@
-# ADR-0026：将记忆召回限制为当前 Scope 的只读 Deferred Tool（提议）
+# ADR-0026：将记忆召回限制为当前 Scope 的只读 Deferred Tool
 
-- 状态：提议；不能作为生产实现授权
+- 状态：已接受；实现保持默认 `DISABLED`
 - 日期：2026-07-19
 - 决策范围：R12-S5 受限 `recall_memory` 替代
 
@@ -11,9 +11,9 @@ Python `recall_memory` 由动态 Memory Engine Profile 定义，能够返回 evi
 Tool。直接复用 Python Tool 名称/Schema 或把 Prompt Retrieval 暴露给模型，会错误承诺不存在的证据可追溯性、时间线和
 跨 Scope 行为，并可能把原始 Scope 扩散到 Tool 参数。
 
-## 拟议决策
+## 决策
 
-如获用户批准，仅添加默认关闭、三重 Mode、当前 Scope 限定的 Deferred `recall_memory`。它使用现有 Java-native
+添加默认关闭、三重 Mode、当前 Scope 限定的 Deferred `recall_memory`。它使用现有 Java-native
 Embedding/cosine/Hotness 检索，但只投影 opaque ID、Java MemoryType、正文和有界 score；它不支持 Python intent、
 time filter、source evidence、dynamic Engine Profile 或跨 Scope。Scope 通过显式 per-Turn Context 绑定，普通 Tool/
 Plugin/MCP/模型参数都不可见。

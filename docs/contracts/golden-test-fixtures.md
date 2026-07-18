@@ -33,6 +33,8 @@ testdata/golden/
 │   ├── runtime-safety.json
 │   ├── approval-side-effects.json
 │   ├── tool-catalog-v1.json
+│   ├── conversation-evidence-v1.json
+│   ├── read-only-memory-recall-v1.json
 │   ├── approval-inbox-v1.json
 │   └── pending-operation-v1.json
 └── errors/http-error-mapping.json
@@ -63,7 +65,7 @@ testdata/golden/
 }
 ```
 
-Manifest 当前登记 25 个业务夹具。普通业务夹具固定：
+Manifest 当前登记 33 个业务夹具。普通业务夹具固定：
 
 - `formatVersion`：当前为 `1`。
 - `suite`：所属能力的稳定套件名。

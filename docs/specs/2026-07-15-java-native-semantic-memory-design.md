@@ -24,7 +24,7 @@ ChatService -> MemoryRetrievalPort -> EmbeddingPort -> Semantic Search
 - 不读取、迁移或删除 Python `memory2.db`。
 - 不运行 Python Golden 生成器或 Python 测试作为 R4.2 门禁。
 - 不自动分析所有聊天并写入记忆。
-- 不开放模型可调用的 Memory Tool。
+- R4.2 本身不开放模型可调用的 Memory Tool；后续 R12-S5 的受限只读替代由独立契约治理。
 - 不实现 Keyword/RRF、Rewrite/HyDE、ANN 或远程 Vector Store。
 - 不实现 Optimizer、Scheduler、Consolidation、Backfill 或跨 Session 身份。
 - 不访问真实 Workspace、真实 Embedding Provider 或真实用户记忆。
@@ -102,7 +102,7 @@ ChatService -> MemoryRetrievalPort -> EmbeddingPort -> Semantic Search
 - `READ_ONLY` 保持 R4.1 行为，不创建 Java Memory DB。
 - `DISABLED` 零文件、零 Embedding、零 Memory API。
 - 非 Loopback 监听时拒绝启用 `JAVA_NATIVE`，直到项目具备认证授权。
-- Spring Context 不包含 Optimizer、Scheduler、Memory Tool、Python Bridge 或 Vector Store Bean。
+- Spring Context 不包含 Optimizer、Scheduler、Python Bridge 或 Vector Store Bean；R12-S5 的 `recall_memory` 仅在独立三重开关下作为 Deferred Tool 装配。
 
 ## 4. 配置
 

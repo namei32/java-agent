@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
 
 public final class SemanticMemorySearch {
   private static final double SECONDS_PER_DAY = 86_400.0;
@@ -28,7 +29,17 @@ public final class SemanticMemorySearch {
   }
 
   public List<MemorySearchHit> search(MemorySearchRequest request) {
+    return search(request, item -> true);
+  }
+
+  /**
+   * Searches the already authenticated scope and applies an optional caller-owned item filter
+   * before ranking and top-K selection.
+   */
+  public List<MemorySearchHit> search(
+      MemorySearchRequest request, Predicate<MemoryItem> itemFilter) {
     Objects.requireNonNull(request, "request");
+    Objects.requireNonNull(itemFilter, "itemFilter");
     List<MemoryItem> candidates =
         List.copyOf(Objects.requireNonNull(store.loadCandidates(request), "candidates"));
     if (candidates.size() > request.maxCandidates()) {
@@ -39,6 +50,7 @@ public final class SemanticMemorySearch {
         .filter(item -> item.scope().equals(request.scope()))
         .filter(item -> item.embeddingModel().equals(request.embeddingModel()))
         .filter(item -> item.embeddingDimensions() == request.queryEmbedding().dimensions())
+        .filter(itemFilter)
         .map(
             item -> new SemanticCandidate(item, cosine(request.queryEmbedding(), item.embedding())))
         .filter(candidate -> candidate.semanticScore() >= request.scoreThreshold())

@@ -35,6 +35,7 @@ public final class ChatService implements ChatUseCase {
   private final IdGenerator ids;
   private final MemoryContextService memoryContext;
   private final ConversationEvidenceContextFactory conversationEvidenceContexts;
+  private final MemoryRecallContextFactory memoryRecallContexts;
 
   public ChatService(
       SessionRepository sessions,
@@ -344,6 +345,48 @@ public final class ChatService implements ChatUseCase {
       MemoryContextService memoryContext,
       ModelStreamingSettings streamingSettings,
       ConversationEvidenceContextFactory conversationEvidenceContexts) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
+        catalog,
+        maxIterations,
+        observer,
+        toolSettings,
+        approvals,
+        ledger,
+        ids,
+        approvalTimeout,
+        memoryContext,
+        streamingSettings,
+        conversationEvidenceContexts,
+        MemoryRecallContextFactory.disabled());
+  }
+
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
+      ToolCatalog catalog,
+      int maxIterations,
+      TurnLifecycleObserver observer,
+      ToolRuntimeSettings toolSettings,
+      ApprovalPort approvals,
+      SideEffectLedger ledger,
+      IdGenerator ids,
+      Duration approvalTimeout,
+      MemoryContextService memoryContext,
+      ModelStreamingSettings streamingSettings,
+      ConversationEvidenceContextFactory conversationEvidenceContexts,
+      MemoryRecallContextFactory memoryRecallContexts) {
     this.sessions = Objects.requireNonNull(sessions, "sessions");
     this.historySelector = Objects.requireNonNull(historySelector, "historySelector");
     this.limits = Objects.requireNonNull(limits, "limits");
@@ -355,6 +398,8 @@ public final class ChatService implements ChatUseCase {
     this.memoryContext = Objects.requireNonNull(memoryContext, "memoryContext");
     this.conversationEvidenceContexts =
         Objects.requireNonNull(conversationEvidenceContexts, "conversationEvidenceContexts");
+    this.memoryRecallContexts =
+        Objects.requireNonNull(memoryRecallContexts, "memoryRecallContexts");
     var registry = new ToolRegistry(catalog, toolSettings);
     var coordinator =
         new SideEffectBatchCoordinator(
@@ -424,6 +469,7 @@ public final class ChatService implements ChatUseCase {
       OffsetDateTime userAt = OffsetDateTime.now(clock);
       var context = new SideEffectBatchCoordinator.Context(sessionBinding, ids.newTurnId());
       var invocationContext = conversationEvidenceContexts.forSession(command.sessionId());
+      invocationContext = memoryRecallContexts.forSessionBinding(sessionBinding, invocationContext);
       var finalContent =
           progressListener == null
               ? toolLoop.complete(messages, cancellation, context, invocationContext)

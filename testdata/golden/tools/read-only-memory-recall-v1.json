@@ -1,0 +1,169 @@
+{
+  "formatVersion": 1,
+  "suite": "tools/read-only-memory-recall-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0026-restrict-memory-recall-to-current-scope-read-only-tool.md",
+    "contract": "docs/contracts/read-only-memory-recall-tool.md",
+    "spec": "docs/specs/2026-07-19-r12-read-only-memory-recall-tool-design.md"
+  },
+  "normalization": [],
+  "limits": {
+    "maxQueryCodePoints": 256,
+    "defaultLimit": 8,
+    "maxLimit": 20,
+    "maxProjectedCodePoints": 12000
+  },
+  "defaults": {
+    "rawSession": "telegram:123456789",
+    "scopeBinding": "ed5a4b3f7172a9efad00fc879f3c1ee98cf6c9549ef1c5e9b74cc35b5c2c8fb9",
+    "opaqueMemoryId": "memory-0001"
+  },
+  "cases": [
+    {
+      "id": "recall-disabled-is-zero-tools-zero-store-zero-embedding",
+      "group": "activation",
+      "input": {"mode": "DISABLED", "toolMode": "READ_ONLY", "memoryMode": "JAVA_NATIVE"},
+      "expected": {"accepted": true, "tools": 0, "storeCalls": 0, "embeddingCalls": 0}
+    },
+    {
+      "id": "recall-current-scope-read-only-is-explicit",
+      "group": "activation",
+      "input": {"mode": "CURRENT_SCOPE_READ_ONLY", "toolMode": "READ_ONLY", "memoryMode": "JAVA_NATIVE"},
+      "expected": {"accepted": true, "tools": 1}
+    },
+    {
+      "id": "recall-mode-is-case-sensitive",
+      "group": "activation",
+      "input": {"mode": "current_scope_read_only", "toolMode": "READ_ONLY", "memoryMode": "JAVA_NATIVE"},
+      "expected": {"accepted": false, "code": "MEMORY_RECALL_UNAVAILABLE"}
+    },
+    {
+      "id": "recall-global-tool-disabled-is-zero-tools-zero-io",
+      "group": "activation",
+      "input": {"mode": "CURRENT_SCOPE_READ_ONLY", "toolMode": "DISABLED", "memoryMode": "JAVA_NATIVE"},
+      "expected": {"accepted": true, "tools": 0, "storeCalls": 0, "embeddingCalls": 0}
+    },
+    {
+      "id": "recall-non-read-only-tool-mode-is-rejected",
+      "group": "activation",
+      "input": {"mode": "CURRENT_SCOPE_READ_ONLY", "toolMode": "APPROVAL_REQUIRED", "memoryMode": "JAVA_NATIVE"},
+      "expected": {"accepted": false, "code": "MEMORY_RECALL_UNAVAILABLE"}
+    },
+    {
+      "id": "recall-non-java-native-memory-is-zero-tools-zero-io",
+      "group": "activation",
+      "input": {"mode": "CURRENT_SCOPE_READ_ONLY", "toolMode": "READ_ONLY", "memoryMode": "READ_ONLY"},
+      "expected": {"accepted": true, "tools": 0, "storeCalls": 0, "embeddingCalls": 0}
+    },
+    {
+      "id": "recall-definition-is-read-only-deferred",
+      "group": "definition",
+      "input": {"name": "recall_memory"},
+      "expected": {"accepted": true, "risk": "READ_ONLY", "version": "java-memory-recall-v1", "visibility": "DEFERRED"}
+    },
+    {
+      "id": "recall-deferred-tool-requires-current-turn-search",
+      "group": "catalog",
+      "input": {"action": "direct-call", "name": "recall_memory"},
+      "expected": {"accepted": false, "code": "TOOL_UNAVAILABLE"}
+    },
+    {
+      "id": "recall-search-unlocks-only-current-turn",
+      "group": "catalog",
+      "input": {"action": "tool_search", "query": "记忆 recall"},
+      "expected": {"accepted": true, "unlocks": ["recall_memory"]}
+    },
+    {
+      "id": "recall-query-is-required-and-bounded",
+      "group": "schema",
+      "input": {"query": "   "},
+      "expected": {"accepted": false, "code": "MEMORY_RECALL_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "recall-query-rejects-over-budget-code-points",
+      "group": "schema",
+      "input": {"query": "<257-code-points>"},
+      "expected": {"accepted": false, "code": "MEMORY_RECALL_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "recall-memory-type-is-strict-java-uppercase-enum",
+      "group": "schema",
+      "input": {"query": "缓存", "memory_type": "fact"},
+      "expected": {"accepted": false, "code": "MEMORY_RECALL_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "recall-limit-is-strict-integral-and-bounded",
+      "group": "schema",
+      "input": {"query": "缓存", "limit": 20.0},
+      "expected": {"accepted": false, "code": "MEMORY_RECALL_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "recall-uses-default-limit",
+      "group": "schema",
+      "input": {"query": "缓存"},
+      "expected": {"accepted": true, "limit": 8}
+    },
+    {
+      "id": "recall-rejects-scope-model-and-unknown-fields",
+      "group": "schema",
+      "input": {"query": "缓存", "session": "telegram:123456789", "embedding_model": "other"},
+      "expected": {"accepted": false, "code": "MEMORY_RECALL_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "recall-binds-only-current-turn-private-scope",
+      "group": "scope",
+      "input": {"query": "缓存"},
+      "expected": {"accepted": true, "scopeSource": "CHAT_SERVICE_PRIVATE_BINDING"}
+    },
+    {
+      "id": "recall-never-returns-cross-scope-items",
+      "group": "scope",
+      "input": {"query": "缓存", "memory_type": "FACT"},
+      "expected": {"accepted": true, "crossScopeItems": 0}
+    },
+    {
+      "id": "recall-success-projection-is-minimal",
+      "group": "projection",
+      "input": {"query": "缓存"},
+      "expected": {"accepted": true, "fields": ["count", "limit", "items"], "itemFields": ["id", "memory_type", "content", "score"]}
+    },
+    {
+      "id": "recall-empty-hit-page-is-success",
+      "group": "projection",
+      "input": {"query": "无结果"},
+      "expected": {"accepted": true, "count": 0, "items": []}
+    },
+    {
+      "id": "recall-over-budget-content-fails-closed-without-truncation",
+      "group": "projection",
+      "input": {"query": "缓存", "limit": 20},
+      "expected": {"accepted": false, "code": "MEMORY_RECALL_UNAVAILABLE", "truncated": false}
+    },
+    {
+      "id": "recall-uses-cosine-hotness-stable-order-after-type-filter",
+      "group": "ranking",
+      "input": {"query": "缓存", "memory_type": "FACT", "limit": 8},
+      "expected": {"accepted": true, "order": "FINAL_DESC_SEMANTIC_DESC_UPDATED_DESC_ID_ASC"}
+    },
+    {
+      "id": "recall-candidate-limit-fails-closed-before-embedding",
+      "group": "failure",
+      "input": {"query": "缓存", "candidateCount": "OVER_LIMIT"},
+      "expected": {"accepted": false, "code": "MEMORY_RECALL_UNAVAILABLE", "embeddingCalls": 0, "mutations": 0}
+    },
+    {
+      "id": "recall-embedding-failure-is-stable-and-no-dml",
+      "group": "failure",
+      "input": {"query": "缓存", "embedding": "FAILURE"},
+      "expected": {"accepted": false, "code": "MEMORY_RECALL_UNAVAILABLE", "mutations": 0}
+    },
+    {
+      "id": "recall-store-cancellation-and-internal-failure-are-stable-and-no-dml",
+      "group": "failure",
+      "input": {"query": "缓存", "store": "FAILURE_OR_CANCEL"},
+      "expected": {"accepted": false, "code": "MEMORY_RECALL_UNAVAILABLE", "mutations": 0}
+    }
+  ]
+}

@@ -91,7 +91,7 @@ AGENT_TOOL_APPROVAL_TIMEOUT=5m
 
 `AGENT_MEMORY_MODE` 默认 `DISABLED`；`READ_ONLY` 只读取固定的三个 Markdown Profile 文件，Retrieval 为空，不启用记忆写入或 Embedding。`JAVA_NATIVE` 不读取旧 Markdown/Python 记忆，而是在 `${AKASHIC_WORKSPACE}/memory/agent-memory.db` 启用显式 Memory API 和语义检索；它只允许 Loopback 监听，并会在写入或当前 Scope 非空检索时调用与 `OPENAI_*` 相同 Provider 配置下的 Embedding 模型。未获得网络、费用和部署授权时必须保持 `DISABLED`。
 
-三个外层 `AGENT_MEMORY_MAX_*` 值分别限制单文件 UTF-8 字节、全部 Context 字符和单检索块字符。Embedding 配置限制逻辑模型、维度和单条输入 Code Point；Retrieval 配置限制 Top-K、cosine 阈值、Hotness、候选总数和注入字符。所有范围在启动时校验，`MAX_INJECTED_CHARACTERS` 不得超过外层 `MAX_RETRIEVED_CHARACTERS`。任何模式都不注册 Optimizer、Scheduler、自动摄入或 Memory Tool。
+三个外层 `AGENT_MEMORY_MAX_*` 值分别限制单文件 UTF-8 字节、全部 Context 字符和单检索块字符。Embedding 配置限制逻辑模型、维度和单条输入 Code Point；Retrieval 配置限制 Top-K、cosine 阈值、Hotness、候选总数和注入字符。所有范围在启动时校验，`MAX_INJECTED_CHARACTERS` 不得超过外层 `MAX_RETRIEVED_CHARACTERS`。`AGENT_MEMORY_RECALL_MODE` 仍默认 `DISABLED`；只有 Java Native Memory、全局只读 Tool 和 `CURRENT_SCOPE_READ_ONLY` 三者同时显式开启时，才注册当前 Turn `tool_search` 后可见的 `recall_memory`。它没有 DML、跨 Scope、Optimizer、Scheduler 或自动摄入权限。
 
 `AGENT_TOOL_MAX_ITERATIONS` 表示一次聊天最多允许多少次模型调用，必须大于零，默认 `6`。其余 `AGENT_TOOL_*` 配置分别限制运行模式、单响应/单轮调用数、等待加执行的共享超时、JVM 并发许可、参数 UTF-8 字节数、结果 Unicode 字符数和审批请求有效期。整数必须大于零，单轮上限不得小于单响应上限，工具超时必须小于模型超时；审批有效期默认 `5m`，必须大于零且不超过 `15m`。非法值会使应用启动失败。
 
