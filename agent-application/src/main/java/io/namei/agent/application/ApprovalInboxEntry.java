@@ -17,9 +17,6 @@ public record ApprovalInboxEntry(
     request = Objects.requireNonNull(request, "request");
     state = Objects.requireNonNull(state, "state");
     actorReference = Objects.requireNonNullElse(actorReference, "").strip();
-    if (state == ApprovalState.CONSUMED) {
-      throw new IllegalArgumentException("审批收件箱不接受已消费状态");
-    }
     if (state == ApprovalState.PENDING) {
       if (decidedAt != null || !actorReference.isEmpty()) {
         throw new IllegalArgumentException("待审批记录不能包含决定信息");
@@ -28,7 +25,10 @@ public record ApprovalInboxEntry(
       if (decidedAt == null || decidedAt.isBefore(request.issuedAt())) {
         throw new IllegalArgumentException("终态审批记录的决定时间无效");
       }
-      boolean requiresActor = state == ApprovalState.APPROVED || state == ApprovalState.DENIED;
+      boolean requiresActor =
+          state == ApprovalState.APPROVED
+              || state == ApprovalState.DENIED
+              || state == ApprovalState.CONSUMED;
       if (requiresActor != !actorReference.isEmpty()) {
         throw new IllegalArgumentException("审批记录的决定主体无效");
       }

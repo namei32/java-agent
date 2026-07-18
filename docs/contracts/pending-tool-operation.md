@@ -1,6 +1,6 @@
 # 待审批 Tool Operation、参数胶囊与恢复安全契约
 
-- 状态：已冻结；O1/O2 无执行状态机、AES-GCM 胶囊与 O3 v2 原子 Store 已实现并验证，消费、条件提交与恢复未实施
+- 状态：已冻结；O1–O4 无执行安全底座已实现并通过聚焦门禁；Capability 接缝、结果状态、条件恢复和真实 Tool 仍未实施
 - 契约版本：1（B2b）
 - 日期：2026-07-18
 - 阶段：R11 B2b Pending Operation
@@ -43,7 +43,7 @@ PENDING_APPROVAL -> APPROVED_PENDING_RESUME -> CONSUMING -> SUCCEEDED
 
 1. 到期或显式取消在 `CONSUMING` 前优先于迟到批准；不调用 Invoker。
 2. 已提交的新 Session Turn（`nextSequence` 不再等于 Capsule 记录值）使旧 Operation 变为 `STALE_SESSION`；批准不再可消费。
-3. `CONSUMING` 只可在再次验证 Approval、Capsule、Session Revision、取消标记与 Ledger 后，将 Approval 标为 `CONSUMED` 并创建 Ledger `RESERVED`。两个写入必须属于同一 SQLite 事务。
+3. Operation Store 只可在再次验证 Approval、Capsule、取消标记与到期时间后，在同一 SQLite 事务将 Approval 标为 `CONSUMED`、将 Operation 标为 `CONSUMING` 并创建唯一 Ledger `RESERVED`。这只是无执行的耐久预留；未来 Capability 恢复器仍须在调用 Invoker 前验证 Session Revision，并在提交时再次使用第 4 节的条件追加。重复预留只返回 `ALREADY_RESERVED`，绝不成为再次调用的权利。
 4. `RESERVED`、`RUNNING`、`UNKNOWN` 的重放绝不调用 Invoker。无法证明 Invoker 未越过副作用边界时一律 `UNKNOWN`。
 5. 进程重启不会自动恢复或调用工具；只允许未来显式、认证后的本机恢复动作竞争 `APPROVED_PENDING_RESUME`，并重复第 3 条检查。
 
@@ -69,8 +69,9 @@ PENDING_APPROVAL -> APPROVED_PENDING_RESUME -> CONSUMING -> SUCCEEDED
 
 ## 6. B2b 验收顺序
 
-1. Java-owned Fixture 已固定 21 个 Case：不透明 Ref、状态优先级、Capsule AAD/篡改、引用替换和未知密钥的失败关闭，以及 v1→v2 迁移、Inbox+密文 Capsule 原子保存和密文篡改；后续扩展状态 CAS、重启、Ledger `UNKNOWN`、条件 Conversation 提交与零 Invoker。
-2. 已实现无执行的 Operation 状态机、AES-256-GCM Capsule 及 SQLite v2 Store；创建时 Inbox 与密文同一事务写入，读取重新认证 AAD 并重建完整绑定。下一步是消费 Approval、Reservation 和条件提交，并测试所有失败路径。
-3. 再实现 `appendTurnIfNextSequence` 的 SQLite 条件提交；不接 Chat 或真实 Tool。
-4. 只有在某个单独批准的 Capability Contract 中，才将其接到创建/恢复路径并以本地 Fake Invoker 演练。
-5. R11 所有 B 阶段完成后，统一运行默认、`failure`、`compat` 三套 Reactor 门禁。
+1. Java-owned Fixture 已固定 29 个 Case：原有不透明 Ref、状态优先级、Capsule AAD/篡改、引用替换、未知密钥、v1→v2 迁移及原子 Store 外，新增已批准的一次性消费、未批准拒绝、到期优先、重复/并发 Reservation 非执行权、Reservation 失败回滚和两项 Session 条件提交。重启、实际结果与 Tool Invocation Case 仍留在后续 Capability。
+2. 已实现无执行的 Operation 状态机、AES-256-GCM Capsule 及 SQLite v2 Store；创建时 Inbox 与密文同一事务写入，读取重新认证 AAD 并重建完整绑定。
+3. 已实现 Approval `CONSUMED`、Operation `CONSUMING` 和唯一 Ledger `RESERVED` 的同库原子预留：待批准、拒绝、到期、重放和 Reservation 写入失败均有 Fixture/Test；它不解密暴露参数、不调用 Tool，也不注册恢复器。
+4. 已实现 `SessionRepository.appendTurnIfNextSequence` 的 SQLite Compare-And-Set，旧 Revision 或不存在的非零 Revision 不会写入任何 Turn 或空 Session；它仍未连接到 Tool 恢复路径。
+5. 只有在某个单独批准的 Capability Contract 中，才将 Session Revision 检查、预留、受限 Fake Invoker、结果 Ledger 状态与条件 Conversation 提交连接为一条显式恢复路径。
+6. R11 所有 B 阶段完成后，统一运行默认、`failure`、`compat` 三套 Reactor 门禁。

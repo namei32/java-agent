@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.namei.agent.application.ApprovalFingerprint;
+import io.namei.agent.application.ApprovalInboxDecision;
 import io.namei.agent.application.ApprovalInboxEntry;
 import io.namei.agent.application.ApprovalInboxReference;
 import io.namei.agent.application.PendingOperation;
@@ -11,6 +12,7 @@ import io.namei.agent.application.PendingOperationCapsule;
 import io.namei.agent.application.PendingOperationKey;
 import io.namei.agent.application.PendingOperationKeyProvider;
 import io.namei.agent.application.PendingOperationReference;
+import io.namei.agent.application.PendingOperationReservationStatus;
 import io.namei.agent.application.PendingOperationState;
 import io.namei.agent.application.PendingOperationStoreException;
 import io.namei.agent.kernel.approval.ApprovalRequest;
@@ -19,7 +21,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -38,7 +45,7 @@ class PendingOperationStoreGoldenTest {
   void executesEveryVersionedOperationStoreFixtureCaseAgainstTheProductionStore() throws Exception {
     JsonNode fixture =
         JSON.readTree(goldenRoot().resolve("tools/pending-operation-v1.json").toFile());
-    assertThat(fixture.path("cases").size()).isEqualTo(21);
+    assertThat(fixture.path("cases").size()).isEqualTo(29);
     for (JsonNode testCase : fixture.path("cases")) {
       String id = testCase.path("id").asText();
       if (id.startsWith("operation-store-")) {
@@ -86,7 +93,82 @@ class PendingOperationStoreGoldenTest {
         assertThatThrownBy(() -> store.find(operation.reference()))
             .isInstanceOf(PendingOperationStoreException.class);
       }
+      case "operation-store-consumes-approved-once" -> {
+        approve(schema, operation);
+        assertThat(store.reserveApproved(operation.reference(), ISSUED.plusSeconds(2)).status())
+            .isEqualTo(PendingOperationReservationStatus.RESERVED);
+      }
+      case "operation-store-rejects-unapproved-consumption" ->
+          assertThat(store.reserveApproved(operation.reference(), ISSUED.plusSeconds(1)).status())
+              .isEqualTo(PendingOperationReservationStatus.PENDING_APPROVAL);
+      case "operation-store-expiry-beats-consumption" -> {
+        approve(schema, operation);
+        assertThat(store.reserveApproved(operation.reference(), ISSUED.plusSeconds(300)).status())
+            .isEqualTo(PendingOperationReservationStatus.EXPIRED);
+      }
+      case "operation-store-replay-is-not-an-execution-right" -> {
+        approve(schema, operation);
+        assertThat(store.reserveApproved(operation.reference(), ISSUED.plusSeconds(2)).acquired())
+            .isTrue();
+        assertThat(store.reserveApproved(operation.reference(), ISSUED.plusSeconds(3)).status())
+            .isEqualTo(PendingOperationReservationStatus.ALREADY_RESERVED);
+      }
+      case "operation-store-rolls-back-reservation-failure" -> {
+        approve(schema, operation);
+        try (Connection connection = schema.openConnection();
+            var statement = connection.createStatement()) {
+          statement.execute(
+              """
+              CREATE TRIGGER fail_reservation BEFORE INSERT ON side_effect_reservations
+              BEGIN SELECT RAISE(ABORT, 'reservation-failure'); END
+              """);
+        }
+        assertThatThrownBy(
+                () -> store.reserveApproved(operation.reference(), ISSUED.plusSeconds(2)))
+            .isInstanceOf(PendingOperationStoreException.class);
+      }
+      case "operation-store-concurrent-reservation-single-winner" ->
+          assertConcurrentSingleWinner(store, schema, operation);
       default -> throw new AssertionError("未知 Pending Operation Store Fixture Case: " + id);
+    }
+  }
+
+  private static void approve(ApprovalInboxSchemaInitializer schema, PendingOperation operation) {
+    new JdbcApprovalInbox(schema)
+        .resolve(
+            inbox(operation).reference(),
+            ApprovalInboxDecision.APPROVED,
+            "local-operator",
+            ISSUED.plusSeconds(1));
+  }
+
+  private static void assertConcurrentSingleWinner(
+      JdbcPendingOperationStore store,
+      ApprovalInboxSchemaInitializer schema,
+      PendingOperation operation)
+      throws Exception {
+    approve(schema, operation);
+    CyclicBarrier start = new CyclicBarrier(2);
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      var first =
+          executor.submit(
+              () -> {
+                start.await();
+                return store.reserveApproved(operation.reference(), ISSUED.plusSeconds(2)).status();
+              });
+      var second =
+          executor.submit(
+              () -> {
+                start.await();
+                return store.reserveApproved(operation.reference(), ISSUED.plusSeconds(2)).status();
+              });
+      assertThat(List.of(first.get(10, TimeUnit.SECONDS), second.get(10, TimeUnit.SECONDS)))
+          .containsExactlyInAnyOrder(
+              PendingOperationReservationStatus.RESERVED,
+              PendingOperationReservationStatus.ALREADY_RESERVED);
+    } finally {
+      executor.shutdownNow();
     }
   }
 

@@ -88,6 +88,49 @@ public final class JdbcSessionRepository implements SessionRepository {
     }
   }
 
+  @Override
+  public boolean appendTurnIfNextSequence(
+      String sessionId, long expectedNextSequence, PersistedTurn turn) {
+    Objects.requireNonNull(sessionId, "sessionId");
+    if (expectedNextSequence < 0) {
+      throw new IllegalArgumentException("预期 Session 序号不能为负数");
+    }
+    Objects.requireNonNull(turn, "turn");
+    try (var connection = schema.openConnection()) {
+      connection.setAutoCommit(false);
+      try {
+        long actualSequence =
+            ensureSessionAndReadNext(connection, sessionId, timestamp(turn.userAt()));
+        if (actualSequence != expectedNextSequence
+            || !advanceSessionIfExpected(
+                connection,
+                sessionId,
+                expectedNextSequence,
+                Math.addExact(expectedNextSequence, 2),
+                timestamp(turn.userAt()),
+                timestamp(turn.assistantAt()))) {
+          connection.rollback();
+          return false;
+        }
+        insertMessage(
+            connection, sessionId, expectedNextSequence, turn.user(), timestamp(turn.userAt()));
+        insertMessage(
+            connection,
+            sessionId,
+            Math.addExact(expectedNextSequence, 1),
+            turn.assistant(),
+            timestamp(turn.assistantAt()));
+        connection.commit();
+        return true;
+      } catch (SQLException | RuntimeException exception) {
+        rollbackPreservingFailure(connection, exception);
+        throw exception;
+      }
+    } catch (SQLException | RuntimeException exception) {
+      throw new SqliteRepositoryException("条件写入完整对话轮次失败", exception);
+    }
+  }
+
   public boolean isAvailable() {
     try (var connection = schema.openConnection();
         var statement = connection.createStatement();
@@ -204,6 +247,34 @@ public final class JdbcSessionRepository implements SessionRepository {
       if (update.executeUpdate() != 1) {
         throw new SQLException("Session 更新行数不是 1: " + sessionId);
       }
+    }
+  }
+
+  private static boolean advanceSessionIfExpected(
+      Connection connection,
+      String sessionId,
+      long expectedNextSequence,
+      long followingSequence,
+      String userTimestamp,
+      String assistantTimestamp)
+      throws SQLException {
+    try (var update =
+        connection.prepareStatement(
+            """
+            UPDATE sessions
+            SET next_seq = ?, updated_at = ?, last_user_at = ?
+            WHERE key = ? AND next_seq = ?
+            """)) {
+      update.setLong(1, followingSequence);
+      update.setString(2, assistantTimestamp);
+      update.setString(3, userTimestamp);
+      update.setString(4, sessionId);
+      update.setLong(5, expectedNextSequence);
+      int updated = update.executeUpdate();
+      if (updated < 0 || updated > 1) {
+        throw new SQLException("Session 条件更新行数无效: " + sessionId);
+      }
+      return updated == 1;
     }
   }
 

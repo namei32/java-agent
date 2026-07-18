@@ -32,6 +32,12 @@ public final class ObservedSessionRepository implements SessionRepository {
         });
   }
 
+  @Override
+  public boolean appendTurnIfNextSequence(
+      String sessionId, long expectedNextSequence, PersistedTurn turn) {
+    return observe(() -> delegate.appendTurnIfNextSequence(sessionId, expectedNextSequence, turn));
+  }
+
   private <T> T observe(Supplier<T> action) {
     long startedNanos = System.nanoTime();
     RuntimeException failure = null;

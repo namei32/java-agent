@@ -8,6 +8,11 @@ import io.namei.agent.kernel.model.MessageRole;
 import io.namei.agent.kernel.model.PersistedTurn;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -209,6 +214,58 @@ class JdbcSessionRepositoryTest {
       assertThat(rows.getString("id")).isEqualTo("recovered-append:7");
       assertThat(rows.getLong("seq")).isEqualTo(7);
       assertThat(rows.next()).isFalse();
+    }
+  }
+
+  @Test
+  void conditionallyAppendsOnlyWhenThePersistedCursorStillMatches() {
+    assertThat(repository.appendTurnIfNextSequence("conditional", 0, turn("第一问", "第一答"))).isTrue();
+
+    assertThat(repository.appendTurnIfNextSequence("conditional", 0, turn("不应写入", "不应回答")))
+        .isFalse();
+    assertThat(repository.load("conditional").nextSequence()).isEqualTo(2);
+    assertThat(repository.load("conditional").messages())
+        .containsExactly(
+            new ChatMessage(MessageRole.USER, "第一问"),
+            new ChatMessage(MessageRole.ASSISTANT, "第一答"));
+  }
+
+  @Test
+  void failedConditionalAppendDoesNotCreateAnEmptySession() throws Exception {
+    assertThat(repository.appendTurnIfNextSequence("missing", 2, turn("不应写入", "不应回答"))).isFalse();
+
+    try (var connection = schema.openConnection();
+        var statement =
+            connection.prepareStatement("SELECT COUNT(*) FROM sessions WHERE key = 'missing'");
+        var rows = statement.executeQuery()) {
+      assertThat(rows.next()).isTrue();
+      assertThat(rows.getInt(1)).isZero();
+    }
+  }
+
+  @Test
+  void concurrentConditionalAppendsProduceOneCommitAndOneStaleOutcome() throws Exception {
+    CyclicBarrier start = new CyclicBarrier(2);
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      var first =
+          executor.submit(
+              () -> {
+                start.await();
+                return repository.appendTurnIfNextSequence("concurrent", 0, turn("第一问", "第一答"));
+              });
+      var second =
+          executor.submit(
+              () -> {
+                start.await();
+                return repository.appendTurnIfNextSequence("concurrent", 0, turn("第二问", "第二答"));
+              });
+
+      assertThat(List.of(first.get(10, TimeUnit.SECONDS), second.get(10, TimeUnit.SECONDS)))
+          .containsExactlyInAnyOrder(true, false);
+      assertThat(repository.load("concurrent").messages()).hasSize(2);
+    } finally {
+      executor.shutdownNow();
     }
   }
 

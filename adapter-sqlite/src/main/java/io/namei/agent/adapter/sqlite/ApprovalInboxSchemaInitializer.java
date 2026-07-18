@@ -335,6 +335,38 @@ public final class ApprovalInboxSchemaInitializer {
     }
   }
 
+  /**
+   * Starts a SQLite writer transaction before reading a state machine that will necessarily mutate.
+   * This prevents two deferred readers from both attempting the Approval consumption upgrade and
+   * turning a normal single-winner race into {@code SQLITE_BUSY}.
+   */
+  static <T> T immediateTransaction(Connection connection, SqlWork<T> work) throws SQLException {
+    executeTransactionControl(connection, "BEGIN IMMEDIATE");
+    try {
+      T result = work.run();
+      executeTransactionControl(connection, "COMMIT");
+      return result;
+    } catch (SQLException | RuntimeException exception) {
+      rollbackImmediatePreservingFailure(connection, exception);
+      throw exception;
+    }
+  }
+
+  private static void executeTransactionControl(Connection connection, String command)
+      throws SQLException {
+    try (var statement = connection.createStatement()) {
+      statement.execute(command);
+    }
+  }
+
+  private static void rollbackImmediatePreservingFailure(Connection connection, Exception failure) {
+    try {
+      executeTransactionControl(connection, "ROLLBACK");
+    } catch (SQLException rollbackFailure) {
+      failure.addSuppressed(rollbackFailure);
+    }
+  }
+
   @FunctionalInterface
   interface SqlWork<T> {
     T run() throws SQLException;

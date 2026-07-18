@@ -19,7 +19,11 @@ public record ApprovalInboxResolution(
       case RESOLVED -> requireState(entry, ApprovalState.APPROVED, ApprovalState.DENIED);
       case ALREADY_RESOLVED ->
           requireState(
-              entry, ApprovalState.APPROVED, ApprovalState.DENIED, ApprovalState.CANCELLED);
+              entry,
+              ApprovalState.APPROVED,
+              ApprovalState.CONSUMED,
+              ApprovalState.DENIED,
+              ApprovalState.CANCELLED);
       case EXPIRED -> requireState(entry, ApprovalState.EXPIRED);
     }
   }

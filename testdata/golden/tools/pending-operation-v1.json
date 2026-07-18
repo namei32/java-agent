@@ -31,6 +31,14 @@
     {"id":"capsule-rejects-unknown-key","input":{},"expected":"fail-closed"},
     {"id":"operation-store-persists-atomically","input":{},"expected":"PENDING_APPROVAL"},
     {"id":"operation-store-migrates-v1","input":{},"expected":"version-2"},
-    {"id":"operation-store-rejects-capsule-tamper","input":{},"expected":"fail-closed"}
+    {"id":"operation-store-rejects-capsule-tamper","input":{},"expected":"fail-closed"},
+    {"id":"operation-store-consumes-approved-once","input":{},"expected":"RESERVED"},
+    {"id":"operation-store-rejects-unapproved-consumption","input":{},"expected":"PENDING_APPROVAL"},
+    {"id":"operation-store-expiry-beats-consumption","input":{},"expected":"EXPIRED"},
+    {"id":"operation-store-replay-is-not-an-execution-right","input":{},"expected":"ALREADY_RESERVED"},
+    {"id":"operation-store-rolls-back-reservation-failure","input":{},"expected":"fail-closed"},
+    {"id":"operation-store-concurrent-reservation-single-winner","input":{},"expected":"one RESERVED / one ALREADY_RESERVED"},
+    {"id":"session-conditional-append-matches-next-sequence","input":{},"expected":"committed"},
+    {"id":"session-conditional-append-rejects-stale-sequence","input":{},"expected":"not-committed"}
   ]
 }

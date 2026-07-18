@@ -1,5 +1,6 @@
 package io.namei.agent.application;
 
+import java.time.Instant;
 import java.util.Optional;
 
 /**
@@ -13,4 +14,14 @@ public interface PendingOperationStore {
       PendingOperation operation, ApprovalInboxEntry approval, PendingOperationCapsule capsule);
 
   Optional<PendingOperation> find(PendingOperationReference reference);
+
+  /**
+   * Atomically consumes an already-approved Inbox record, advances its operation to {@code
+   * CONSUMING}, and creates the only durable side-effect Reservation.
+   *
+   * <p>The returned value deliberately contains no Tool arguments and never invokes a Tool. A
+   * replay is explicitly not an execution right.
+   */
+  PendingOperationReservation reserveApproved(
+      PendingOperationReference reference, Instant observedAt);
 }
