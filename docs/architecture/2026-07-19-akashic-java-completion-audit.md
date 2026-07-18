@@ -35,8 +35,8 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 | Python Plugin 全生命周期、配置与 Tool Hook | `agent/plugins/*`、`agent/lifecycle/*` | Java ServiceLoader/stdio 观察型 Tap，含 API v2 Lifecycle Phase 映射 | R12-S3 已实现默认关闭的只读映射；可变 Hook/动态 Python import 需要独立授权 |
 | QQ/Feishu/IPC、完整 Channel Host | `infra/channels/*`、`plugins/qqbot`、`plugins/feishu` | CLI/Telegram 离线纵向切片 | [R13 计划](../plans/2026-07-19-r13-dashboard-channel-alignment-plan.md)已冻结渠道逐一的身份、投递、恢复、真实 Smoke 与回退路径；当前不实现 IPC/QQ/Plugin Channel，真实 Telegram 继续冻结 |
 | Dashboard 会话/消息/记忆管理与前端 | `bootstrap/dashboard_api.py`、`frontend/` | 后端 Loopback 状态/取消、审批 Inbox，零前端 | R13 计划已区分只读 API、受审批写入、前端供应链和渠道；先固定 API Fixture，且在解除 CLI+Web/前端冻结前不实现 |
-| 完整 Proactive v2、外部源、反馈、自动记忆/Optimizer | `proactive_v2/*`、`memory2/*`、`core/memory/*` | 安全 NoOp/只读/显式记忆 | R14 逐源、逐写入许可、审计、预算、恢复与回退；不得自动启用 |
-| Peer Agent 进程、Agent Card 与远端信任 | `agent/peer_agent/*` | 无 Peer Agent | R14 先建身份/协议/信任/资源边界，后建本地 Fake 演练 |
+| 完整 Proactive v2、外部源、反馈、自动记忆/Optimizer | `proactive_v2/*`、`memory2/*`、`core/memory/*` | 安全 NoOp/只读/显式记忆 | [R14 计划](../plans/2026-07-19-r14-proactive-peer-memory-automation-plan.md)已冻结逐源、逐写入许可、审计、预算、恢复与回退路径；不得自动启用，旧 Python `memory2` 数据仍不迁移 |
+| Peer Agent 进程、Agent Card 与远端信任 | `agent/peer_agent/*` | 无 Peer Agent | R14 计划先建身份/协议/信任/资源边界，再以本地 Fake 演练；真实进程、远程 A2A 和推送仍未授权 |
 | 部署、真实数据迁移、灰度与 Python 退役 | `bootstrap/*`、`docker/`、`infra/` | 仅 sandbox Cutover 演练 | R15 仅在书面授权、备份、双向回退及观察证据齐备后执行 |
 
 ## 优先级与依赖
