@@ -34,6 +34,7 @@ public final class ChatService implements ChatUseCase {
   private final LifecyclePublisher lifecycle;
   private final IdGenerator ids;
   private final MemoryContextService memoryContext;
+  private final ConversationEvidenceContextFactory conversationEvidenceContexts;
 
   public ChatService(
       SessionRepository sessions,
@@ -281,7 +282,8 @@ public final class ChatService implements ChatUseCase {
         ids,
         approvalTimeout,
         memoryContext,
-        streamingSettings);
+        streamingSettings,
+        ConversationEvidenceContextFactory.disabled());
   }
 
   public ChatService(
@@ -302,6 +304,46 @@ public final class ChatService implements ChatUseCase {
       Duration approvalTimeout,
       MemoryContextService memoryContext,
       ModelStreamingSettings streamingSettings) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
+        catalog,
+        maxIterations,
+        observer,
+        toolSettings,
+        approvals,
+        ledger,
+        ids,
+        approvalTimeout,
+        memoryContext,
+        streamingSettings,
+        ConversationEvidenceContextFactory.disabled());
+  }
+
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
+      ToolCatalog catalog,
+      int maxIterations,
+      TurnLifecycleObserver observer,
+      ToolRuntimeSettings toolSettings,
+      ApprovalPort approvals,
+      SideEffectLedger ledger,
+      IdGenerator ids,
+      Duration approvalTimeout,
+      MemoryContextService memoryContext,
+      ModelStreamingSettings streamingSettings,
+      ConversationEvidenceContextFactory conversationEvidenceContexts) {
     this.sessions = Objects.requireNonNull(sessions, "sessions");
     this.historySelector = Objects.requireNonNull(historySelector, "historySelector");
     this.limits = Objects.requireNonNull(limits, "limits");
@@ -311,6 +353,8 @@ public final class ChatService implements ChatUseCase {
     this.lifecycle = new LifecyclePublisher(observer);
     this.ids = Objects.requireNonNull(ids, "ids");
     this.memoryContext = Objects.requireNonNull(memoryContext, "memoryContext");
+    this.conversationEvidenceContexts =
+        Objects.requireNonNull(conversationEvidenceContexts, "conversationEvidenceContexts");
     var registry = new ToolRegistry(catalog, toolSettings);
     var coordinator =
         new SideEffectBatchCoordinator(
@@ -379,10 +423,12 @@ public final class ChatService implements ChatUseCase {
       var messages = new ArrayList<ModelMessage>(assembled.messages());
       OffsetDateTime userAt = OffsetDateTime.now(clock);
       var context = new SideEffectBatchCoordinator.Context(sessionBinding, ids.newTurnId());
+      var invocationContext = conversationEvidenceContexts.forSession(command.sessionId());
       var finalContent =
           progressListener == null
-              ? toolLoop.complete(messages, cancellation, context)
-              : toolLoop.completeStreaming(messages, cancellation, context, progressListener);
+              ? toolLoop.complete(messages, cancellation, context, invocationContext)
+              : toolLoop.completeStreaming(
+                  messages, cancellation, context, invocationContext, progressListener);
       if (finalContent.isBlank()) {
         throw new InvalidModelResponseException("模型返回了空响应");
       }

@@ -1,6 +1,6 @@
 # Namei Agent Java
 
-Namei Agent Java 是 Akashic Agent 的渐进式 Java 重写项目。当前已实现同步 HTTP 被动聊天、会话历史恢复、具备安全预算的只读 Tool Runtime，以及默认关闭的 Context/Memory、静态 stdio MCP 只读客户端、认证 Loopback 控制面、受信插件扩展与本地主动运行时，并把最终 `user/assistant` 对话轮次原子写入 SQLite。R9 另提供完全离线的 sandbox 切换演练，不能进入生产切换。Memory 可选择 R4.1 只读 Markdown Profile，或在 Loopback 上显式启用独立 Java `agent-memory.db`、管理 API、Embedding、cosine/Hotness 检索和临时 Context Frame。启动配置支持原有环境变量模式，以及只读解析 Python `config.toml` 的兼容模式。
+Namei Agent Java 是 Akashic Agent 的渐进式 Java 重写项目。当前已实现同步 HTTP 被动聊天、会话历史恢复、具备安全预算的只读 Tool Runtime，以及默认关闭的 Context/Memory、静态 stdio MCP 只读客户端、认证 Loopback 控制面、受信插件扩展与本地主动运行时，并把最终 `user/assistant` 对话轮次原子写入 SQLite。R11-B4 另提供默认关闭、仅当前 Session 的 `fetch_messages`/`search_messages` 只读证据 Tool，且已通过完整阶段门禁。R9 另提供完全离线的 sandbox 切换演练，不能进入生产切换。Memory 可选择 R4.1 只读 Markdown Profile，或在 Loopback 上显式启用独立 Java `agent-memory.db`、管理 API、Embedding、cosine/Hotness 检索和临时 Context Frame。启动配置支持原有环境变量模式，以及只读解析 Python `config.toml` 的兼容模式。
 
 项目使用 JDK 21、Maven Wrapper、Spring Boot 4.1、Spring AI 2.0、官方 MCP Java SDK 2.0 和 SQLite。默认仅监听 `127.0.0.1`，不提供远程访问认证。MCP 关闭时 Tool Runtime 只注册无副作用的 `current_time`；经单独批准静态启用后，也只接收本地 Allowlist 的 `READ_ONLY` MCP Tool。运行时具有模式、调用预算、Schema 校验、Arguments/Result/Wire 上限、超时、并发许可和取消协议。审批指纹、整批门禁、幂等 Ledger Port 和 `UNKNOWN` 安全语义已经实现，但生产只装配 Deny All；Plugin 与 Proactive 默认关闭，且尚无可用的人类审批渠道、生产 Durable Ledger、真实副作用工具、真实/远程 MCP Server、真实主动投递或生产切换。
 
@@ -53,6 +53,7 @@ java -jar agent-bootstrap/target/agent-bootstrap-0.1.0-SNAPSHOT.jar
 - `AGENT_MEMORY_RETRIEVAL_MAX_CANDIDATES`/`AGENT_MEMORY_RETRIEVAL_MAX_INJECTED_CHARACTERS`：候选硬上限和注入字符预算，默认 `10000`/`6000`；注入预算不得超过外层检索预算。
 - `AGENT_WORKSPACE_TOOLS_MODE`：支持严格 `DISABLED` 和 `READ_ONLY`，默认 `DISABLED`。后者要求 `AGENT_TOOL_MODE=READ_ONLY` 及独立的绝对 `AGENT_WORKSPACE_TOOLS_ROOT`；它绝不回退到 `AKASHIC_WORKSPACE`，只注册 Deferred `read_file`/`list_dir`，并在 `tool_search` 后才投放 Schema。
 - `AGENT_WORKSPACE_TOOLS_ROOT`：只读 Tool 的独立真实目录，不会自动创建，且不得是符号链接。`AGENT_WORKSPACE_TOOLS_MAX_*` 可收紧 1MB 源文件、400 行、10KB、20K code point、256 项的固定上限，不能放大。
+- `AGENT_CONVERSATION_EVIDENCE_MODE`：支持严格 `DISABLED` 与 `CURRENT_SESSION_READ_ONLY`，默认 `DISABLED`。后者必须同时设置 `AGENT_TOOL_MODE=READ_ONLY`，并只把当前 Chat Session 的 `user`/`assistant` 历史以 opaque ID 投影给 deferred `fetch_messages`/`search_messages`；不接受或回显 Session/Route/原始消息 ID，不写入，也不跨会话搜索。
 - `AGENT_MCP_MODE`：支持 `DISABLED` 和 `STATIC_READ_ONLY`，模板与部署默认 `DISABLED`。关闭时零 MCP 配置读取、零 Client、零子进程、零 MCP Tool；静态启用需要同时启用全局 Tool Runtime，并使用单独批准的绝对配置路径、stdio Executable 和只读 Allowlist。
 - `AGENT_MCP_CONFIG_FILE`：版本化严格 JSON 配置的绝对路径；只保存命令参数、环境变量名和只读 Tool Policy，禁止保存 Secret 值。
 - `AGENT_MCP_*` 其余字段：限制 Server/Tool/分页数量、连接/请求/关闭超时、Schema/Wire 字节和单 Server 并发；完整范围见运行手册。
@@ -138,6 +139,10 @@ R12-S1–S4 已完成默认关闭的只读扩展切片：Skill Catalog、MCP Res
 `LIFECYCLE_TAP`，以及只能经当前 Turn `tool_search` 解锁的 `read_skill`。后两者分别只投影 Phase/安全 Hash/Outcome，
 或按名返回已审计且可用的 Skill 正文；外部 stdio Plugin 必须显式选择 `api-version: 2`。这些切片不执行 Skill、不导入
 Python、不提供可变 Plugin Gate，也不启用真实网络或外部 Plugin。
+
+R11-B4 已完成当前 Session 的只读会话证据 Tool，且默认保持 `AGENT_CONVERSATION_EVIDENCE_MODE=DISABLED`。只有它与
+`AGENT_TOOL_MODE=READ_ONLY` 都明确启用，模型才可经本 Turn `tool_search` 解锁 `search_messages`/`fetch_messages`；默认、
+`failure`、`compat` 阶段门禁均已通过。它不授权真实用户数据、跨会话检索、远程访问或任何写入。
 
 ## 数据安全
 

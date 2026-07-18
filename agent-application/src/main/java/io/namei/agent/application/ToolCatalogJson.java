@@ -41,7 +41,7 @@ final class ToolCatalogJson {
     output.append(']');
   }
 
-  private static String string(String value) {
+  static String string(String value) {
     var escaped = new StringBuilder("\"");
     for (int offset = 0; offset < value.length(); ) {
       char character = value.charAt(offset++);

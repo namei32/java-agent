@@ -1,0 +1,191 @@
+{
+  "formatVersion": 1,
+  "suite": "tools/conversation-evidence-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0025-bind-conversation-evidence-tools-to-current-turn-context.md",
+    "contract": "docs/contracts/read-only-conversation-evidence-tools.md",
+    "spec": "docs/specs/2026-07-19-r11-conversation-evidence-tools-design.md"
+  },
+  "normalization": [
+    "模型只见当前 Session 内的 msg-v1:<seq>；Session、Route、Sender、原始消息 ID 和内部元数据绝不进入参数或结果",
+    "fetch_messages 与 search_messages 始终为 READ_ONLY Deferred Tool，必须由当前 Turn 的 tool_search 解锁",
+    "SQLite 查询、分页、预览与窗口均有固定上限；超限、取消和 Store 故障只投影稳定安全码且零写入"
+  ],
+  "limits": {
+    "maxFetchIds": 16,
+    "maxContext": 10,
+    "maxSearchLimit": 50,
+    "maxSearchOffset": 1000,
+    "maxQueryCodePoints": 256,
+    "maxFetchItems": 16,
+    "maxProjectedCodePoints": 12000,
+    "maxPreviewLines": 50
+  },
+  "defaults": {
+    "rawSession": "telegram:123456789",
+    "rawRoute": "telegram",
+    "rawToolChain": "internal_tool_chain",
+    "opaqueMessageId": "msg-v1:12",
+    "invalidMessageId": "telegram:123456789:12"
+  },
+  "cases": [
+    {
+      "id": "evidence-disabled-is-zero-tools-zero-query",
+      "group": "activation",
+      "input": {"mode": "DISABLED", "toolMode": "READ_ONLY"},
+      "expected": {"accepted": true, "tools": 0, "queries": 0}
+    },
+    {
+      "id": "evidence-current-session-read-only-is-explicit",
+      "group": "activation",
+      "input": {"mode": "CURRENT_SESSION_READ_ONLY", "toolMode": "READ_ONLY"},
+      "expected": {"accepted": true, "tools": 2}
+    },
+    {
+      "id": "evidence-mode-is-case-sensitive",
+      "group": "activation",
+      "input": {"mode": "current_session_read_only", "toolMode": "READ_ONLY"},
+      "expected": {"accepted": false, "code": "CONVERSATION_EVIDENCE_UNAVAILABLE"}
+    },
+    {
+      "id": "evidence-global-tool-disabled-is-zero-tools-zero-query",
+      "group": "activation",
+      "input": {"mode": "CURRENT_SESSION_READ_ONLY", "toolMode": "DISABLED"},
+      "expected": {"accepted": true, "tools": 0, "queries": 0}
+    },
+    {
+      "id": "evidence-non-read-only-tool-mode-is-rejected",
+      "group": "activation",
+      "input": {"mode": "CURRENT_SESSION_READ_ONLY", "toolMode": "APPROVAL_REQUIRED"},
+      "expected": {"accepted": false, "code": "CONVERSATION_EVIDENCE_UNAVAILABLE"}
+    },
+    {
+      "id": "fetch-definition-is-read-only-deferred",
+      "group": "definition",
+      "input": {"name": "fetch_messages"},
+      "expected": {"accepted": true, "risk": "READ_ONLY", "version": "conversation-evidence-v1", "visibility": "DEFERRED"}
+    },
+    {
+      "id": "search-definition-is-read-only-deferred",
+      "group": "definition",
+      "input": {"name": "search_messages"},
+      "expected": {"accepted": true, "risk": "READ_ONLY", "version": "conversation-evidence-v1", "visibility": "DEFERRED"}
+    },
+    {
+      "id": "deferred-tool-requires-current-turn-search",
+      "group": "catalog",
+      "input": {"action": "direct-call", "name": "fetch_messages"},
+      "expected": {"accepted": false, "code": "TOOL_UNAVAILABLE"}
+    },
+    {
+      "id": "search-unlocks-only-current-turn",
+      "group": "catalog",
+      "input": {"action": "tool_search", "query": "历史消息"},
+      "expected": {"accepted": true, "unlocks": ["fetch_messages", "search_messages"]}
+    },
+    {
+      "id": "opaque-message-id-is-accepted",
+      "group": "fetch-schema",
+      "input": {"ids": ["msg-v1:12"]},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "raw-session-derived-id-is-rejected",
+      "group": "fetch-schema",
+      "input": {"ids": ["telegram:123456789:12"]},
+      "expected": {"accepted": false, "code": "CONVERSATION_EVIDENCE_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "fetch-rejects-session-key-field",
+      "group": "fetch-schema",
+      "input": {"ids": ["msg-v1:12"], "session_key": "telegram:123456789"},
+      "expected": {"accepted": false, "code": "CONVERSATION_EVIDENCE_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "fetch-rejects-empty-or-duplicate-id-array",
+      "group": "fetch-schema",
+      "input": {"ids": ["msg-v1:12", "msg-v1:12"]},
+      "expected": {"accepted": false, "code": "CONVERSATION_EVIDENCE_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "fetch-context-is-bounded",
+      "group": "fetch-schema",
+      "input": {"ids": ["msg-v1:12"], "context": 11},
+      "expected": {"accepted": false, "code": "CONVERSATION_EVIDENCE_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "fetch-preserves-request-order-without-context",
+      "group": "fetch-result",
+      "input": {"ids": ["msg-v1:8", "msg-v1:2"], "context": 0},
+      "expected": {"accepted": true, "order": ["msg-v1:8", "msg-v1:2"]}
+    },
+    {
+      "id": "fetch-window-is-current-session-only",
+      "group": "scope",
+      "input": {"ids": ["msg-v1:12"], "context": 2},
+      "expected": {"accepted": true, "crossSessionResults": 0, "marksSource": true}
+    },
+    {
+      "id": "unknown-or-cross-session-message-is-unavailable",
+      "group": "scope",
+      "input": {"ids": ["msg-v1:999"]},
+      "expected": {"accepted": false, "code": "CONVERSATION_EVIDENCE_UNAVAILABLE"}
+    },
+    {
+      "id": "search-query-is-required-and-bounded",
+      "group": "search-schema",
+      "input": {"query": "   "},
+      "expected": {"accepted": false, "code": "CONVERSATION_EVIDENCE_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "search-role-is-strict",
+      "group": "search-schema",
+      "input": {"query": "缓存", "role": "USER"},
+      "expected": {"accepted": false, "code": "CONVERSATION_EVIDENCE_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "search-limit-and-offset-are-bounded",
+      "group": "search-schema",
+      "input": {"query": "缓存", "limit": 51, "offset": 0},
+      "expected": {"accepted": false, "code": "CONVERSATION_EVIDENCE_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "search-multi-term-is-locale-root-lowercase-or-match",
+      "group": "search-result",
+      "input": {"query": "phase 支付", "limit": 10, "offset": 0},
+      "expected": {"accepted": true, "matching": "ANY_TERM", "order": "SEQ_DESC"}
+    },
+    {
+      "id": "search-role-and-pagination-stay-in-current-session",
+      "group": "scope",
+      "input": {"query": "缓存", "role": "user", "limit": 2, "offset": 2},
+      "expected": {"accepted": true, "crossSessionResults": 0, "hasMoreField": true}
+    },
+    {
+      "id": "search-preview-is-not-direct-evidence",
+      "group": "projection",
+      "input": {"query": "缓存"},
+      "expected": {"accepted": true, "fields": ["source_ref", "preview", "truncated"], "requiresFetch": true}
+    },
+    {
+      "id": "citation-rule-is-untrusted-tool-result-only",
+      "group": "projection",
+      "input": {"action": "successful-result"},
+      "expected": {"accepted": true, "citationRequired": true, "citationFormat": "§cited:[id1,id2,...]§"}
+    },
+    {
+      "id": "projected-data-has-no-session-route-or-internal-metadata",
+      "group": "privacy",
+      "input": {"action": "successful-result"},
+      "expected": {"accepted": true, "forbidden": ["telegram:123456789", "telegram", "internal_tool_chain"]}
+    },
+    {
+      "id": "cancellation-and-store-failure-never-mutate",
+      "group": "failure",
+      "input": {"action": "cancel-or-store-failure"},
+      "expected": {"accepted": true, "mutations": 0, "safeCode": "CONVERSATION_EVIDENCE_UNAVAILABLE"}
+    }
+  ]
+}

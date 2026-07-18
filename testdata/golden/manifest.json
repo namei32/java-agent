@@ -169,6 +169,12 @@
       "source": "java-contract"
     },
     {
+      "id": "tools/conversation-evidence-v1",
+      "path": "tools/conversation-evidence-v1.json",
+      "sha256": "e364aad73000bac72037ec9494f698547ff1fd88fa85f935b4f596e5741be57b",
+      "source": "java-contract"
+    },
+    {
       "id": "tools/approval-inbox-v1",
       "path": "tools/approval-inbox-v1.json",
       "sha256": "c44a7e4d3b0854885fb4dfc7234d2d058a873d73257dd010ab1e9bdf18a8ff5b",

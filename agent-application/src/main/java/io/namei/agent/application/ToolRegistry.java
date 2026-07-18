@@ -122,9 +122,18 @@ final class ToolRegistry {
   }
 
   ToolResult execute(ToolCall call, TurnCancellation cancellation, ToolCatalogSession session) {
+    return execute(call, cancellation, session, ToolInvocationContext.none());
+  }
+
+  ToolResult execute(
+      ToolCall call,
+      TurnCancellation cancellation,
+      ToolCatalogSession session,
+      ToolInvocationContext invocationContext) {
     Objects.requireNonNull(call, "call");
     Objects.requireNonNull(cancellation, "cancellation");
     Objects.requireNonNull(session, "session");
+    Objects.requireNonNull(invocationContext, "invocationContext");
     if (settings.mode() == ToolRuntimeMode.DISABLED) {
       return ToolResult.error("工具不可用。");
     }
@@ -161,7 +170,7 @@ final class ToolRegistry {
       return ToolResult.timeout();
     }
 
-    var task = new FutureTask<ToolResult>(() -> invoke(tool, call));
+    var task = new FutureTask<ToolResult>(() -> invoke(tool, call, invocationContext));
     Runnable worker =
         () -> {
           try {
@@ -248,9 +257,12 @@ final class ToolRegistry {
     }
   }
 
-  private ToolResult invoke(Tool tool, ToolCall call) {
+  private ToolResult invoke(Tool tool, ToolCall call, ToolInvocationContext invocationContext) {
     try {
-      var result = tool.execute(call.arguments());
+      var result =
+          tool instanceof ContextualTool contextual
+              ? contextual.execute(call.arguments(), invocationContext)
+              : tool.execute(call.arguments());
       if (result == null) {
         return ToolResult.error("工具执行失败。");
       }

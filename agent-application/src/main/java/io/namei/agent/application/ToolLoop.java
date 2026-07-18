@@ -108,7 +108,15 @@ final class ToolLoop {
       List<? extends ModelMessage> initialMessages,
       TurnCancellation cancellation,
       SideEffectBatchCoordinator.Context context) {
-    return complete(initialMessages, cancellation, context, null);
+    return complete(initialMessages, cancellation, context, ToolInvocationContext.none(), null);
+  }
+
+  String complete(
+      List<? extends ModelMessage> initialMessages,
+      TurnCancellation cancellation,
+      SideEffectBatchCoordinator.Context context,
+      ToolInvocationContext invocationContext) {
+    return complete(initialMessages, cancellation, context, invocationContext, null);
   }
 
   String completeStreaming(
@@ -116,10 +124,21 @@ final class ToolLoop {
       TurnCancellation cancellation,
       SideEffectBatchCoordinator.Context context,
       ChatProgressListener progressListener) {
+    return completeStreaming(
+        initialMessages, cancellation, context, ToolInvocationContext.none(), progressListener);
+  }
+
+  String completeStreaming(
+      List<? extends ModelMessage> initialMessages,
+      TurnCancellation cancellation,
+      SideEffectBatchCoordinator.Context context,
+      ToolInvocationContext invocationContext,
+      ChatProgressListener progressListener) {
     return complete(
         initialMessages,
         cancellation,
         context,
+        invocationContext,
         Objects.requireNonNull(progressListener, "progressListener"));
   }
 
@@ -127,9 +146,11 @@ final class ToolLoop {
       List<? extends ModelMessage> initialMessages,
       TurnCancellation cancellation,
       SideEffectBatchCoordinator.Context context,
+      ToolInvocationContext invocationContext,
       ChatProgressListener progressListener) {
     Objects.requireNonNull(cancellation, "cancellation");
     Objects.requireNonNull(context, "context");
+    Objects.requireNonNull(invocationContext, "invocationContext");
     var messages = new ArrayList<ModelMessage>(initialMessages);
     ToolCatalogSession catalogSession = tools.newCatalogSession();
     var streamingBudget = progressListener == null ? null : new StreamingBudget(streamingSettings);
@@ -174,7 +195,12 @@ final class ToolLoop {
       messages.add(new AssistantToolCallMessage(response.content(), response.toolCalls()));
       var results =
           coordinator.execute(
-              context, iteration, response.toolCalls(), cancellation, catalogSession);
+              context,
+              iteration,
+              response.toolCalls(),
+              cancellation,
+              catalogSession,
+              invocationContext);
       for (int callIndex = 0; callIndex < response.toolCalls().size(); callIndex++) {
         var call = response.toolCalls().get(callIndex);
         var result = results.get(callIndex);

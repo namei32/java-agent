@@ -10,7 +10,7 @@ import java.util.Set;
 
 final class ToolSchemaValidator {
   private static final Set<String> SUPPORTED_KEYWORDS =
-      Set.of("type", "properties", "required", "additionalProperties", "enum");
+      Set.of("type", "properties", "required", "additionalProperties", "enum", "items");
   private static final Set<String> SUPPORTED_TYPES =
       Set.of("string", "integer", "number", "boolean", "object", "array");
 
@@ -43,9 +43,12 @@ final class ToolSchemaValidator {
     validateEnum(schema.get("enum"));
     if ("object".equals(type)) {
       validateObjectSchema(schema);
+    } else if ("array".equals(type)) {
+      validateArraySchema(schema);
     } else if (schema.containsKey("properties")
         || schema.containsKey("required")
-        || schema.containsKey("additionalProperties")) {
+        || schema.containsKey("additionalProperties")
+        || schema.containsKey("items")) {
       throw invalidSchema("非 object 类型不能声明对象关键字");
     }
   }
@@ -60,6 +63,9 @@ final class ToolSchemaValidator {
   }
 
   private static void validateObjectSchema(Map<String, Object> schema) {
+    if (schema.containsKey("items")) {
+      throw invalidSchema("object 类型不能声明 items");
+    }
     Map<String, Object> properties = objectValue(schema.get("properties"), "properties");
     for (Map.Entry<String, Object> property : properties.entrySet()) {
       if (!(property.getValue() instanceof Map<?, ?> propertySchema)) {
@@ -87,6 +93,22 @@ final class ToolSchemaValidator {
     }
   }
 
+  private static void validateArraySchema(Map<String, Object> schema) {
+    if (schema.containsKey("properties")
+        || schema.containsKey("required")
+        || schema.containsKey("additionalProperties")) {
+      throw invalidSchema("array 类型不能声明对象关键字");
+    }
+    Object items = schema.get("items");
+    if (items == null) {
+      return;
+    }
+    if (!(items instanceof Map<?, ?> itemSchema)) {
+      throw invalidSchema("items 必须是对象");
+    }
+    validateSchema(stringObjectMap(itemSchema, "items"), false);
+  }
+
   private static boolean acceptsValue(Map<String, Object> schema, Object value) {
     if (!acceptsType((String) schema.get("type"), value)) {
       return false;
@@ -97,6 +119,10 @@ final class ToolSchemaValidator {
       return false;
     }
     if (!"object".equals(schema.get("type"))) {
+      if ("array".equals(schema.get("type")) && schema.get("items") instanceof Map<?, ?> items) {
+        Map<String, Object> itemSchema = stringObjectMap(items, "items");
+        return ((List<?>) value).stream().allMatch(item -> acceptsValue(itemSchema, item));
+      }
       return true;
     }
 

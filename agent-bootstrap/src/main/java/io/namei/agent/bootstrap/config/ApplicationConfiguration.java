@@ -8,6 +8,7 @@ import io.namei.agent.adapter.springai.SpringAiAdapterConfiguration;
 import io.namei.agent.adapter.springai.SpringAiEmbeddingAdapter;
 import io.namei.agent.adapter.sqlite.Float32VectorCodec;
 import io.namei.agent.adapter.sqlite.JavaMemorySchemaInitializer;
+import io.namei.agent.adapter.sqlite.JdbcConversationEvidenceRepository;
 import io.namei.agent.adapter.sqlite.JdbcJavaMemoryStore;
 import io.namei.agent.adapter.sqlite.JdbcSessionRepository;
 import io.namei.agent.adapter.sqlite.SqliteSchemaInitializer;
@@ -21,6 +22,8 @@ import io.namei.agent.application.AkashicCorePromptRenderer;
 import io.namei.agent.application.ApprovalPort;
 import io.namei.agent.application.ChatService;
 import io.namei.agent.application.ChatUseCase;
+import io.namei.agent.application.ConversationEvidenceContextFactory;
+import io.namei.agent.application.ConversationEvidenceToolset;
 import io.namei.agent.application.KeyedSessionExecutionGate;
 import io.namei.agent.application.MemoryContextService;
 import io.namei.agent.application.MemoryDeleteService;
@@ -67,6 +70,7 @@ import io.namei.agent.bootstrap.tool.ReadSkillTool;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
 import io.namei.agent.kernel.port.ChatModelPort;
+import io.namei.agent.kernel.port.ConversationEvidencePort;
 import io.namei.agent.kernel.port.EmbeddingPort;
 import io.namei.agent.kernel.port.MemoryProfilePort;
 import io.namei.agent.kernel.port.MemoryRetrievalPort;
@@ -106,6 +110,7 @@ import org.springframework.core.io.Resource;
   WorkspaceToolProperties.class,
   McpProperties.class,
   McpAssetProperties.class,
+  ConversationEvidenceProperties.class,
   CliProperties.class,
   PluginProperties.class,
   ProactiveProperties.class
@@ -132,6 +137,40 @@ public class ApplicationConfiguration {
   @Bean
   JdbcSessionRepository jdbcSessionRepository(SqliteSchemaInitializer schema) {
     return new JdbcSessionRepository(schema);
+  }
+
+  @Bean
+  ConversationEvidencePort conversationEvidencePort(
+      AgentProperties agentProperties,
+      ConversationEvidenceProperties properties,
+      SqliteSchemaInitializer schema) {
+    if (!conversationEvidenceEnabled(agentProperties, properties)) {
+      return ConversationEvidencePort.disabled();
+    }
+    if (ConversationEvidenceToolset.MAX_PROJECTED_CODE_POINTS
+        > agentProperties.tools().maxResultCharacters()) {
+      throw new IllegalStateException(
+          "agent.conversation-evidence 单项预算不能大于 agent.tools.max-result-characters");
+    }
+    return new JdbcConversationEvidenceRepository(schema);
+  }
+
+  @Bean
+  ConversationEvidenceContextFactory conversationEvidenceContextFactory(
+      AgentProperties agentProperties,
+      ConversationEvidenceProperties properties,
+      ConversationEvidencePort port) {
+    return conversationEvidenceEnabled(agentProperties, properties)
+        ? ConversationEvidenceContextFactory.enabled(port)
+        : ConversationEvidenceContextFactory.disabled();
+  }
+
+  @Bean
+  ConversationEvidenceToolset conversationEvidenceToolset(
+      AgentProperties agentProperties, ConversationEvidenceProperties properties) {
+    return conversationEvidenceEnabled(agentProperties, properties)
+        ? ConversationEvidenceToolset.enabled()
+        : ConversationEvidenceToolset.disabled();
   }
 
   @Bean
@@ -357,7 +396,6 @@ public class ApplicationConfiguration {
     return mcpRuntime(mcpProperties, new McpAssetProperties(null), agentProperties);
   }
 
-  @Bean
   ChatUseCase chatUseCase(
       SessionRepository sessions,
       ChatModelPort model,
@@ -370,6 +408,44 @@ public class ApplicationConfiguration {
       SkillCatalogPort skillCatalog,
       SkillProperties skillProperties,
       AgentProperties properties,
+      String modelName,
+      String compatibilityPrompt,
+      Resource systemPrompt)
+      throws IOException {
+    return chatUseCase(
+        sessions,
+        model,
+        gate,
+        lifecycleObserver,
+        approvalPort,
+        memoryContext,
+        mcpRuntime,
+        workspaceTools,
+        skillCatalog,
+        skillProperties,
+        ConversationEvidenceToolset.disabled(),
+        ConversationEvidenceContextFactory.disabled(),
+        properties,
+        modelName,
+        compatibilityPrompt,
+        systemPrompt);
+  }
+
+  @Bean
+  ChatUseCase chatUseCase(
+      SessionRepository sessions,
+      ChatModelPort model,
+      SessionExecutionGate gate,
+      TurnLifecycleObserver lifecycleObserver,
+      ApprovalPort approvalPort,
+      MemoryContextService memoryContext,
+      McpRuntime mcpRuntime,
+      WorkspaceReadOnlyToolset workspaceTools,
+      SkillCatalogPort skillCatalog,
+      SkillProperties skillProperties,
+      ConversationEvidenceToolset conversationEvidenceTools,
+      ConversationEvidenceContextFactory conversationEvidenceContexts,
+      AgentProperties properties,
       @Value("${spring.ai.openai.chat.model}") String modelName,
       @Value("${agent.compatibility.system-prompt-base64:}") String compatibilityPrompt,
       @Value("classpath:/prompts/system.md") Resource systemPrompt)
@@ -377,7 +453,12 @@ public class ApplicationConfiguration {
     String prompt = systemPrompt(compatibilityPrompt, systemPrompt);
     ToolCatalog tools =
         configuredToolCatalog(
-            properties, mcpRuntime, workspaceTools, skillCatalog, skillProperties);
+            properties,
+            mcpRuntime,
+            workspaceTools,
+            skillCatalog,
+            skillProperties,
+            conversationEvidenceTools);
     var toolSettings =
         new ToolRuntimeSettings(
             properties.tools().mode(),
@@ -406,7 +487,8 @@ public class ApplicationConfiguration {
             properties.tools().approvalTimeout(),
             memoryContext,
             new ModelStreamingSettings(
-                properties.model().maxDeltaEvents(), properties.model().maxDeltaCodePoints()));
+                properties.model().maxDeltaEvents(), properties.model().maxDeltaCodePoints()),
+            conversationEvidenceContexts);
     return new SafeChatUseCase(service, Clock.systemUTC());
   }
 
@@ -435,6 +517,8 @@ public class ApplicationConfiguration {
         workspaceTools,
         SkillCatalogPort.disabled(),
         defaultSkillProperties(),
+        ConversationEvidenceToolset.disabled(),
+        ConversationEvidenceContextFactory.disabled(),
         properties,
         modelName,
         compatibilityPrompt,
@@ -522,7 +606,8 @@ public class ApplicationConfiguration {
         mcpRuntime,
         WorkspaceReadOnlyToolset.disabled(),
         SkillCatalogPort.disabled(),
-        defaultSkillProperties());
+        defaultSkillProperties(),
+        ConversationEvidenceToolset.disabled());
   }
 
   ToolCatalog configuredToolCatalog(
@@ -532,7 +617,8 @@ public class ApplicationConfiguration {
         mcpRuntime,
         workspaceTools,
         SkillCatalogPort.disabled(),
-        defaultSkillProperties());
+        defaultSkillProperties(),
+        ConversationEvidenceToolset.disabled());
   }
 
   ToolCatalog configuredToolCatalog(
@@ -541,11 +627,28 @@ public class ApplicationConfiguration {
       WorkspaceReadOnlyToolset workspaceTools,
       SkillCatalogPort skillCatalog,
       SkillProperties skillProperties) {
+    return configuredToolCatalog(
+        properties,
+        mcpRuntime,
+        workspaceTools,
+        skillCatalog,
+        skillProperties,
+        ConversationEvidenceToolset.disabled());
+  }
+
+  ToolCatalog configuredToolCatalog(
+      AgentProperties properties,
+      McpRuntime mcpRuntime,
+      WorkspaceReadOnlyToolset workspaceTools,
+      SkillCatalogPort skillCatalog,
+      SkillProperties skillProperties,
+      ConversationEvidenceToolset conversationEvidenceTools) {
     Objects.requireNonNull(properties, "properties");
     Objects.requireNonNull(mcpRuntime, "mcpRuntime");
     Objects.requireNonNull(workspaceTools, "workspaceTools");
     Objects.requireNonNull(skillCatalog, "skillCatalog");
     Objects.requireNonNull(skillProperties, "skillProperties");
+    Objects.requireNonNull(conversationEvidenceTools, "conversationEvidenceTools");
     Tool skillTool = readSkillTool(properties, skillCatalog, skillProperties);
     if (properties.tools().mode() == ToolRuntimeMode.DISABLED) {
       return new ToolCatalog(List.of());
@@ -566,6 +669,18 @@ public class ApplicationConfiguration {
               ToolCatalogSource.BUILTIN,
               "",
               List.of("skill", "技能", "instruction")));
+    }
+    for (Tool tool : conversationEvidenceTools.tools()) {
+      if (tool.definition().risk() != ToolRisk.READ_ONLY) {
+        throw new IllegalStateException("Conversation Evidence Runtime 暴露了非只读工具");
+      }
+      tools.add(
+          new ToolCatalogEntry(
+              tool,
+              ToolCatalogVisibility.DEFERRED,
+              ToolCatalogSource.BUILTIN,
+              "",
+              List.of("历史消息", "conversation", "evidence", "search")));
     }
     for (Tool tool : workspaceTools.tools()) {
       if (tool.definition().risk() != ToolRisk.READ_ONLY) {
@@ -611,6 +726,20 @@ public class ApplicationConfiguration {
 
   private static SkillProperties defaultSkillProperties() {
     return new SkillProperties("DISABLED", "", 64, 65_536, 32_768, 32_768, 20_000);
+  }
+
+  private static boolean conversationEvidenceEnabled(
+      AgentProperties agentProperties, ConversationEvidenceProperties properties) {
+    if (agentProperties.tools().mode() == ToolRuntimeMode.DISABLED
+        || properties.toMode()
+            == io.namei.agent.kernel.evidence.ConversationEvidenceMode.DISABLED) {
+      return false;
+    }
+    if (agentProperties.tools().mode() != ToolRuntimeMode.READ_ONLY) {
+      throw new IllegalStateException(
+          "只读 Conversation Evidence Tool 要求 agent.tools.mode=READ_ONLY");
+    }
+    return true;
   }
 
   List<Tool> configuredTools(AgentProperties properties, McpRuntime mcpRuntime) {

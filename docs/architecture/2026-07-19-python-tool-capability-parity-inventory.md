@@ -2,7 +2,7 @@
 
 - 状态：当前事实；用于排定 R11–R14，不代表任何未实现 Tool 已获授权
 - Python 证据基线：`akashic-agent` 提交 `b65a5430e332c8733b981dfc2dfbc3eb1967e9ef`
-- Java 证据基线：`agent/r12-skill-catalog`，含 R12-S4 `read_skill` 与后续文档审计提交
+- Java 证据基线：`agent/r12-skill-catalog`，含 R12-S4 `read_skill` 与 R11-B4 会话证据 Tool
 - 关联：[Python/Java 能力差距矩阵](python-java-capability-matrix.md)、[全量对齐计划](../plans/2026-07-18-java-parity-program.md)
 
 ## 判定规则
@@ -32,8 +32,8 @@ Java 则采用静态受信 Catalog、`tool_search` 后当前 Turn 解锁的 Defe
 | `tool_search` | 关键词索引、风险/来源元数据、动态 Registry 搜索 | R11-B1 `ToolCatalog`、CJK/精确检索、Turn-scoped 解锁 | 部分 | Java 已验证受信静态 Catalog；Python 的动态注册、always-on 与完整 Bundle 策略仍未对齐，后续需结合每个来源 Tool 的 Contract |
 | `read_file` / `list_dir` | 普通 Workspace 路径、文本分页、图片/二进制提示和目录 emoji 投影 | R11-B3 显式独立 Root、逐段链接拒绝、严格 UTF-8、固定预算、一层目录 | 有意替代 | Java 安全边界已通过 Fixture；图片、二进制提示、递归和真实 `${agent.workspace}` 不在此替代范围 |
 | `write_file` / `edit_file` | 创建/覆盖、精确替换、文件锁、差异预览 | 无 | 未实现 | R11 后续逐 Tool `WRITE` Capability：Workspace Sandbox、备份/回退、TOCTOU、Approval、Capsule/Ledger、`UNKNOWN` 与恢复 Contract |
-| `fetch_messages` | 按 ID/source evidence 读取原始消息及有限上下文 | 无模型 Tool；Java 有 Session Repository | 未实现 | 可作为 R11 的只读证据切片；先冻结当前 Session/Actor 身份、ID 格式、上下文上限、正文脱敏、引用协议和历史读取隔离 |
-| `search_messages` | 当前会话全文/关键词消息检索 | 无 | 未实现 | 与 `fetch_messages` 共用受限 Conversation Evidence Contract；禁止跨 Session/Channel 枚举和将搜索命中写入 Prompt |
+| `fetch_messages` | 按 ID/source evidence 读取原始消息及有限上下文 | R11-B4 默认关闭的 `fetch_messages`：当前 Session、opaque `msg-v1:<seq>`、窗口、16 条/12k code-point 投影上限 | 有意替代 | 已通过 Fixture、SQLite、Tool Loop、Bootstrap 和三套门禁。Java 不接受 `source_ref`/原始 ID、不暴露 Session/Route、不能跨 Session，宽窗口安全失败而不静默截断 |
+| `search_messages` | 当前会话全文/关键词消息检索 | R11-B4 默认关闭的 `search_messages`：当前 Session、Unicode 空白分词、`Locale.ROOT` 小写 OR 匹配、角色/分页与 50 行预览 | 有意替代 | 已通过 Fixture、SQLite、Tool Loop、Bootstrap 和三套门禁。Java 不建 FTS 或跨 Channel 枚举；预览不是直接证据，模型须再调用 `fetch_messages` |
 | `recall_memory` | 语义/关键词/时间线检索、种类/时间筛选、证据/引用投影 | R4.2 有当前 Scope cosine/Hotness Context Retrieval，但无模型 Tool、无 Keyword/RRF、时间线或证据字段 | 部分 | 需要新的只读 Memory Tool Contract；Java 原生记忆也没有 Python `memory2` 的 evidence/source-ref/activation 元数据，不能声称等价 |
 | `memorize` | 由 Engine Profile 决定的记忆写入与类型 | Java 有显式 HTTP Write API，不是 Tool | 未实现 | `WRITE` Capability；先选择是否允许模型摘要持久化、Embedding 费用、Scope/类型、Approval 与恢复语义 |
 | `forget_memory` | 批量去重后软失效，返回命中/缺失和条目 | Java 有当前 Scope 单 ID 物理删除 API，不是 Tool | 部分 | 语义差异已单独审计；必须选择 Python 软失效对齐或 Java `delete_memory` 替代后，才能进入 R11-B2c |
@@ -49,10 +49,10 @@ Java 则采用静态受信 Catalog、`tool_search` 后当前 Turn 解锁的 Defe
 
 ## 与计划的依赖顺序
 
-1. **R11-B2c：选择并实现第一个副作用 Capability。** 这是生产 Recovery Router 的必要前置；Python
+1. **R11-B4 已完成。** 当前 Session 的受限只读 `fetch_messages`/`search_messages` 已由 Contract/ADR/26 Case Fixture
+   固定，并通过默认、`failure`、`compat` 门禁；它不授予跨会话读取、Memory Tool 或任何写入。
+2. **R11-B2c：选择并实现第一个副作用 Capability。** 这是生产 Recovery Router 的必要前置；Python
    `forget_memory` 语义差异的两个路径见 [候选审计](../plans/2026-07-19-r11-first-side-effect-capability-selection.md)。
-2. **R11-B4：Conversation Evidence 只读切片。** `fetch_messages`/`search_messages` 可以复用 Session Store，但必须先
-   固定 Scope、正文预算和引用隐私；它不依赖副作用执行，可在 B2c 选择等待期间完成 Contract/Fixture 审计。
 3. **R12-S5：Memory Tool 对齐。** 在 Java 原生 Store 的明确替代边界下迁移 `recall_memory`，随后才分别处理
    `memorize`/`forget_memory`；Keyword/RRF、时间线和 citation evidence 需要先补 Store/Model Contract，不能只把
    Context Retrieval 包装成 Tool。
