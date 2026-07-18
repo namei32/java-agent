@@ -19,7 +19,9 @@ public final class LoopbackRequestGuard {
         || request.getQueryString() != null) {
       reject(ControlStableCode.CONTROL_REQUEST_INVALID, 400);
     }
-    validateEmptyBody(request);
+    if (!allowsDecisionBody(request)) {
+      validateEmptyBody(request);
+    }
     if (!isLoopback(request.getRemoteAddr())) {
       reject(ControlStableCode.CONTROL_REMOTE_ACCESS_REJECTED, 403);
     }
@@ -45,14 +47,35 @@ public final class LoopbackRequestGuard {
       if ("/api/v1/control/status".equals(path) || "/api/v1/control/turns".equals(path)) {
         return true;
       }
+      if ("/api/v1/control/approvals".equals(path)) {
+        return true;
+      }
       return turnPath(path, "/events");
     }
-    return "POST".equals(method) && turnPath(path, "/cancel");
+    return ("POST".equals(method) && turnPath(path, "/cancel"))
+        || approvalDecisionPath(method, path);
+  }
+
+  private static boolean allowsDecisionBody(HttpServletRequest request) {
+    return approvalDecisionPath(request.getMethod(), request.getRequestURI());
   }
 
   private static boolean turnPath(String path, String suffix) {
     String prefix = "/api/v1/control/turns/";
     if (path == null || !path.startsWith(prefix) || !path.endsWith(suffix)) {
+      return false;
+    }
+    String reference = path.substring(prefix.length(), path.length() - suffix.length());
+    return TURN_REF.matcher(reference).matches();
+  }
+
+  private static boolean approvalDecisionPath(String method, String path) {
+    String prefix = "/api/v1/control/approvals/";
+    String suffix = "/decisions";
+    if (!"POST".equals(method)
+        || path == null
+        || !path.startsWith(prefix)
+        || !path.endsWith(suffix)) {
       return false;
     }
     String reference = path.substring(prefix.length(), path.length() - suffix.length());

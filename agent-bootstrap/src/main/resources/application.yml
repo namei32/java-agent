@@ -58,6 +58,8 @@ agent:
     heartbeat-interval: ${AGENT_CONTROL_PLANE_HEARTBEAT_INTERVAL:15s}
     stream-max-lifetime: ${AGENT_CONTROL_PLANE_STREAM_MAX_LIFETIME:15m}
     shutdown-timeout: ${AGENT_CONTROL_PLANE_SHUTDOWN_TIMEOUT:2s}
+  approval-inbox:
+    mode: ${AGENT_APPROVAL_INBOX_MODE:DISABLED}
   channels:
     reliability:
       mode: ${AGENT_CHANNEL_RELIABILITY_MODE:DISABLED}
