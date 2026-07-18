@@ -34,7 +34,8 @@ authenticated local Operator Session
 4. 所有 HTTP 集成只使用 `127.0.0.1` Ephemeral Port；所有 SQLite 使用 `@TempDir`。
 5. Observer、Session、订阅和审计必须有硬上限；控制面失败不进入 Agent 主失败路径。
 6. R6.4 Ledger 是只读状态来源；测试逐表证明取消不修改 Claim/Outbox/Delivery。
-7. G4、G8、G10 执行集中阶段门禁；其他 Task 不重复跑完整 Reactor。
+7. G4 只执行四类聚焦门禁；G5–G9 完成后统一执行格式、默认、`failure` 和 `compat`
+   严格阶段门禁，G10 做最终发布验证；中间 Task 不重复跑完整 Reactor。
 8. 原始脏工作树 `/Users/namei/idea/agent/java-agent`、Python 仓库和真实 Workspace 不修改。
 9. 任一行为需要 Cookie/CORS、远程访问、历史存储、新依赖/模块、CLI+Web 或 Python Dashboard 写接口时立即暂停。
 10. 从 2026-07-17 起，默认、`failure`、`compat` 和 `real-model-smoke` 按 Tag 互斥选择；G10 分别执行前三组获得完整离线证据，不重复执行同一用例。
@@ -158,6 +159,7 @@ RED/GREEN：
 ```bash
 ./mvnw -pl agent-application -am \
   -Dtest=ActiveTurnRegistryTest,ActiveTurnCancellationTest,ActiveTurnRegistryConcurrencyTest \
+  -Dexcluded.test.groups=compat,real-model \
   -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
@@ -209,6 +211,7 @@ RED/GREEN：
 ```bash
 ./mvnw -pl agent-application -am \
   -Dtest=ObservedOutboundMessageSinkTest,ControlEventHubTest,ControlEventHubConcurrencyTest \
+  -Dexcluded.test.groups=compat,real-model \
   -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
@@ -253,20 +256,13 @@ RED 覆盖：
 - Registry 饱和/Observer 失败不改变 Agent 调用次数、Channel 终态或 Ledger。
 - `EXECUTION_UNKNOWN` 没有 Registry 项。
 
-聚焦：
+聚焦门禁：
 
 ```bash
 ./mvnw -pl agent-bootstrap -am \
   -Dtest=TelegramChannelAdapterTest,TelegramReliableChannelAdapterTest,ReliableInboundCoordinatorTest,ControlPlaneTelegramIntegrationTest \
   -Dexcluded.test.groups=compat,real-model \
   -Dsurefire.failIfNoSpecifiedTests=false test
-```
-
-阶段门禁：
-
-```bash
-./mvnw --batch-mode --no-transfer-progress spotless:check
-./mvnw --batch-mode --no-transfer-progress clean verify
 ```
 
 自审：Disabled 使用 No-op；CLI 构造/行为不变；R6.4 Schema、状态、重试和 SQL 无变化。
@@ -413,14 +409,6 @@ RED/GREEN：
   -Dfailsafe.failIfNoSpecifiedTests=false verify
 ```
 
-阶段门禁：
-
-```bash
-./mvnw --batch-mode --no-transfer-progress spotless:check
-./mvnw --batch-mode --no-transfer-progress clean verify
-./mvnw --batch-mode --no-transfer-progress -Pfailure verify
-```
-
 预计提交：`feat: 流式输出认证控制事件`
 
 ## 12. Task G9：Contract Compat、安全与并发故障矩阵
@@ -455,6 +443,15 @@ RED/GREEN：
 ./mvnw -pl agent-bootstrap -am -Pcompat \
   -Dtest=LoopbackControlPlaneGoldenTest \
   -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+G5–G9 严格阶段门禁：
+
+```bash
+./mvnw --batch-mode --no-transfer-progress spotless:check
+./mvnw --batch-mode --no-transfer-progress clean verify
+./mvnw --batch-mode --no-transfer-progress -Pfailure verify
+./mvnw --batch-mode --no-transfer-progress -Pcompat verify
 ```
 
 自审：记录调用次数和最终取消原因；所有 Queue/Map/线程有上限；无 Sleep、外网、真实 Secret、工作区或访问日志泄漏。
