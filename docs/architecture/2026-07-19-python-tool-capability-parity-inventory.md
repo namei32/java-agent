@@ -25,6 +25,23 @@ Memory Profile 还能按 Engine 动态注册 `memorize`、`forget_memory`、`rec
 Java 则采用静态受信 Catalog、`tool_search` 后当前 Turn 解锁的 Deferred Schema 和默认关闭的每一类 Runtime。这是重要的
 安全差异：任何“迁移”必须明确保留 Python 的可见性，或以 Contract 把 Java 的受限可见性记录为替代，不能仅添加同名类。
 
+### 已核查的 Python 注册面
+
+下表来自基线 `b65a543` 的注册源码，而不是对运行中配置的推测。它确保“逐 Tool 对齐”包含条件和动态表面，
+不会因能力矩阵只按族归类而漏掉实际可注册的名称。
+
+| 注册点 | 精确 Tool 名称/族 | 注册条件 | 本清单对应行 |
+| --- | --- | --- | --- |
+| `register_common_meta_tools` | `tool_search`、`shell`、`task_output`、`task_stop`、`web_search`、`web_fetch`、`read_file`、`list_dir`、`fetch_messages`、`search_messages`、`message_push`、`write_file`、`edit_file` | 该注册方法内均为 `always_on` | Catalog、文件/Shell/Web、消息证据、消息推送各行 |
+| `CommonMetaToolsetProvider` | `read_image_vision` | 配置 VL Provider/Model | Vision 行 |
+| `SchedulerToolsetProvider` | `schedule`、`list_schedules`、`cancel_schedule` | Scheduler Toolset | Scheduler 行 |
+| `SpawnToolsetProvider` | `spawn`、`spawn_manage` | `spawn_enabled` | Spawn 行 |
+| `MemoryToolsetProvider` | `memorize`、`forget_memory`、`recall_memory`、Engine 自定义名 | Memory Engine `tool_profile` | Memory 三件套、动态 Memory Signal 行 |
+| `McpToolsetProvider` 与动态 MCP Wrapper | `mcp_add`、`mcp_remove`、`mcp_list`，以及 Server 投影 Tool | MCP Toolset/运行时 Server | MCP 管理、动态 Wrapper 行 |
+
+在相应 Python Toolset 被装配时，上表大多数 Tool 以 `always_on` 注册；Java 的静态 Catalog 和 Deferred 解锁是有意
+安全分叉，而非注册面缺失的证据。
+
 ## Tool 对照
 
 | Python Tool/族 | Python 已提交行为 | Java 当前状态 | 判定 | 对齐路径与前置 |
