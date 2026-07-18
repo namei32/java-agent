@@ -22,7 +22,7 @@ Tool 层不能只按“是否存在相似 Runtime”盘点：Python 注册的每
 | R12 | Skills、MCP 扩展与 Plugin 能力 | `agent/skills.py`、`agent/mcp/*`、`agent/plugins/*` | 受信 Skill Catalog/执行边界、Python MCP Tool Client、Plugin 生命周期兼容 | R12-S1 Skill Catalog、S3 API v2 只读 Lifecycle Tap 和 S4 deferred `read_skill` 均已实现并通过三套门禁；S2 MCP Assets 目录同样完成，但 Python 基线不实现 Resources/Prompts，故它是 Java-owned 扩展。Skill 执行、远程 MCP 与可变 Plugin 生命周期仍未开始 |
 | R13 | 多渠道、Dashboard 与控制面 | `infra/channels/*`、`bootstrap/dashboard_api.py` | 频道 Contract、真实渠道验收、前端/控制面完整 API 与安全边界 | 差距审计与[分阶段计划](2026-07-19-r13-dashboard-channel-alignment-plan.md)已冻结；实现未开始。现有 Loopback 控制面、审批 Inbox、CLI/Telegram 离线切片不是 Python Dashboard、IPC/QQ/Plugin Channel 或前端对齐；远程、真实 Telegram、CLI+Web 与前端继续冻结 |
 | R14 | Peer、真实 Proactive/Drift 与 Memory 自动化 | `agent/peer_agent/*`、`agent/core/proactive_*`、`core/memory/*` | 身份/信任、外部源、写入许可、审计、预算、恢复与回退契约 | 差距审计与[分阶段计划](2026-07-19-r14-proactive-peer-memory-automation-plan.md)已冻结；实现未开始。R8 的 SQLite/NoOp/只读 Drift/Subagent 是安全基础，不是 Python 自动记忆、外部主动源、Peer 进程/A2A 或真实投递对齐 |
-| R15 | 生产迁移与 Python 退役 | `bootstrap/*`、部署资产 | 真实副本验证、演练、灰度、观察、回退与逐项书面授权 | 未开始 |
+| R15 | 生产迁移与 Python 退役 | `bootstrap/*`、部署资产 | 真实副本验证、演练、灰度、观察、回退与逐项书面授权 | 差距审计与[分阶段计划](2026-07-19-r15-production-migration-retirement-plan.md)已冻结；真实迁移未开始。R9 仅证明 sandbox 演练，不能替代 Java 部署资产、数据副本、灰度、观察或 Python 退役授权 |
 
 每个阶段都必须先写 Contract/Spec/Plan，在隔离 worktree 按 RED/GREEN 实现，并通过默认、`failure`、`compat`
 门禁。真实密钥、外部网络、用户 Workspace、真实渠道、生产副作用和 Python 停止不从本计划自动获得授权。

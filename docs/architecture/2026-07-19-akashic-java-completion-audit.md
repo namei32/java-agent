@@ -37,7 +37,7 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 | Dashboard 会话/消息/记忆管理与前端 | `bootstrap/dashboard_api.py`、`frontend/` | 后端 Loopback 状态/取消、审批 Inbox，零前端 | R13 计划已区分只读 API、受审批写入、前端供应链和渠道；先固定 API Fixture，且在解除 CLI+Web/前端冻结前不实现 |
 | 完整 Proactive v2、外部源、反馈、自动记忆/Optimizer | `proactive_v2/*`、`memory2/*`、`core/memory/*` | 安全 NoOp/只读/显式记忆 | [R14 计划](../plans/2026-07-19-r14-proactive-peer-memory-automation-plan.md)已冻结逐源、逐写入许可、审计、预算、恢复与回退路径；不得自动启用，旧 Python `memory2` 数据仍不迁移 |
 | Peer Agent 进程、Agent Card 与远端信任 | `agent/peer_agent/*` | 无 Peer Agent | R14 计划先建身份/协议/信任/资源边界，再以本地 Fake 演练；真实进程、远程 A2A 和推送仍未授权 |
-| 部署、真实数据迁移、灰度与 Python 退役 | `bootstrap/*`、`docker/`、`infra/` | 仅 sandbox Cutover 演练 | R15 仅在书面授权、备份、双向回退及观察证据齐备后执行 |
+| 部署、真实数据迁移、灰度与 Python 退役 | `bootstrap/*`、`docker/`、`infra/` | 仅 sandbox Cutover 演练 | [R15 计划](../plans/2026-07-19-r15-production-migration-retirement-plan.md)已冻结配置、实例、数据副本、灰度与退役门槛；仅在书面授权、备份、双向回退及观察证据齐备后执行 |
 
 ## 优先级与依赖
 
