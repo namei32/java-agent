@@ -1,6 +1,6 @@
 # R11 O6 Pending Recovery Capability 实施计划
 
-- 状态：A1–A7 的 Anchor 写入、安全 Result 条件提交、测试专用 Fake Capability 演练和 Loopback Message Contract 已完成；R11 分支的完整 `clean verify`、`-Pfailure verify`、`-Pcompat verify` 均已通过；生产恢复编排等待首个逐 Tool Capability 授权。候选与拟议 TDD 顺序见[首个副作用 Capability 候选与授权边界](2026-07-19-r11-first-side-effect-capability-selection.md)
+- 状态：A1–A7 的 Anchor 写入、安全 Result 条件提交、测试专用 Fake Capability 演练和 Loopback Message Contract 已完成；R11 分支的完整 `clean verify`、`-Pfailure verify`、`-Pcompat verify` 均已通过；生产恢复编排等待首个逐 Tool Capability 及其语义路径授权。候选、Python/Java 差异与拟议 TDD 顺序见[首个副作用 Capability 候选、语义差异与授权边界](2026-07-19-r11-first-side-effect-capability-selection.md)
 - 日期：2026-07-19
 - Contract：[Pending Operation Session Anchor 与 Recovery Capability 契约](../contracts/pending-operation-recovery-capability.md)
 - ADR：[ADR-0019：在恢复前冻结 Pending Operation 的 Session Anchor](../adr/0019-freeze-pending-operation-session-anchor-before-resume.md)
@@ -38,8 +38,9 @@
 ## 下一步（等待逐 Tool 授权）
 
 R11-B2c 不能先实现泛化“恢复器”再寻找执行对象：Capability 的精确 Tool/Version、风险、参数、Sandbox、
-`UNKNOWN` 和安全结果决定 Capsule 绑定、批准摘要和恢复语义。当前推荐的最小候选为 Java 原生记忆的
-`forget_memory`，但它会物理删除数据；在用户确认该范围前，保持本计划 A1–A7 的无执行结论。
+`UNKNOWN` 和安全结果决定 Capsule 绑定、批准摘要和恢复语义。首个候选是 Python `forget_memory`，但其批量软失效
+语义与 Java 当前 Scope 物理删除 API 不同；在用户选择 Python 对齐或 Java 安全替代路径前，保持本计划 A1–A7 的
+无执行结论。
 
 ## 明确不做
 
