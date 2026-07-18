@@ -49,6 +49,20 @@ class MessageTurnServiceTest {
     assertThat(terminal.content()).isEqualTo("完整回答");
   }
 
+  @Test
+  void notifiesAnOptionalObserverOnlyAfterTheTerminalMessageIsPublished() {
+    var chat = RecordingChat.success("完整回答");
+    var sink = new RecordingSink();
+    var observed = new ArrayList<OutboundMessage>();
+
+    OutboundMessage terminal =
+        new MessageTurnService(chat, observed::add)
+            .process(inbound(), sink, TurnCancellation.none());
+
+    assertThat(observed).containsExactly(terminal);
+    assertThat(observed.getFirst()).isSameAs(sink.messages.getLast());
+  }
+
   @ParameterizedTest
   @EnumSource(TurnCancellationCode.class)
   void projectsEveryPreexistingCancellationReasonWithoutCallingChat(TurnCancellationCode reason) {

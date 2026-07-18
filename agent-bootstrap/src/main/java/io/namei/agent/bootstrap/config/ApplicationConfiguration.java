@@ -43,6 +43,10 @@ import io.namei.agent.bootstrap.http.MemoryManagementApi;
 import io.namei.agent.bootstrap.observability.ObservedChatModelPort;
 import io.namei.agent.bootstrap.observability.ObservedSessionRepository;
 import io.namei.agent.bootstrap.observability.SafeChatUseCase;
+import io.namei.agent.bootstrap.plugin.JavaServicePluginDiscovery;
+import io.namei.agent.bootstrap.plugin.JdkExternalStdioPluginTransport;
+import io.namei.agent.bootstrap.plugin.PluginProperties;
+import io.namei.agent.bootstrap.plugin.PluginRuntime;
 import io.namei.agent.bootstrap.tool.CurrentTimeTool;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
@@ -77,7 +81,12 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties({AgentProperties.class, McpProperties.class, CliProperties.class})
+@EnableConfigurationProperties({
+  AgentProperties.class,
+  McpProperties.class,
+  CliProperties.class,
+  PluginProperties.class
+})
 @Import(SpringAiAdapterConfiguration.class)
 public class ApplicationConfiguration {
   @Bean
@@ -113,9 +122,22 @@ public class ApplicationConfiguration {
     return new KeyedSessionExecutionGate(properties.model().timeout());
   }
 
-  @Bean
   TurnLifecycleObserver turnLifecycleObserver() {
     return TurnLifecycleObserver.noop();
+  }
+
+  @Bean(destroyMethod = "close")
+  PluginRuntime pluginRuntime(AgentProperties agentProperties, PluginProperties pluginProperties) {
+    return PluginRuntime.start(
+        pluginProperties,
+        agentProperties.tools().mode(),
+        JavaServicePluginDiscovery.classpath(),
+        JdkExternalStdioPluginTransport::start);
+  }
+
+  @Bean
+  TurnLifecycleObserver turnLifecycleObserver(PluginRuntime plugins) {
+    return plugins.lifecycleObserver();
   }
 
   @Bean
@@ -288,9 +310,13 @@ public class ApplicationConfiguration {
     return new SafeChatUseCase(service, Clock.systemUTC());
   }
 
-  @Bean
   MessageTurnService messageTurnService(ChatUseCase chat) {
     return new MessageTurnService(chat);
+  }
+
+  @Bean
+  MessageTurnService messageTurnService(ChatUseCase chat, PluginRuntime plugins) {
+    return new MessageTurnService(chat, plugins.outboundMessageObserver());
   }
 
   @Bean

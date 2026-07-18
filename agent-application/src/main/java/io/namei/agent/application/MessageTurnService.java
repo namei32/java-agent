@@ -8,9 +8,15 @@ import java.util.Objects;
 
 public final class MessageTurnService {
   private final ChatUseCase chat;
+  private final OutboundMessageObserver observer;
 
   public MessageTurnService(ChatUseCase chat) {
+    this(chat, OutboundMessageObserver.noop());
+  }
+
+  public MessageTurnService(ChatUseCase chat, OutboundMessageObserver observer) {
     this.chat = Objects.requireNonNull(chat, "chat");
+    this.observer = Objects.requireNonNull(observer, "observer");
   }
 
   public OutboundMessage process(
@@ -35,17 +41,26 @@ public final class MessageTurnService {
       }
       OutboundMessage completed = sequence.completed(result.assistant().content());
       sink.publish(completed);
-      return completed;
+      return observed(completed);
     } catch (OutboundDeliveryException delivery) {
       throw delivery;
     } catch (TurnCancelledException cancelled) {
       OutboundMessage terminal = sequence.cancelled(cancellation.reason());
       sink.publish(terminal);
-      return terminal;
+      return observed(terminal);
     } catch (RuntimeException failure) {
       OutboundMessage terminal = sequence.failed(TurnFailureClassifier.classify(failure));
       sink.publish(terminal);
-      return terminal;
+      return observed(terminal);
     }
+  }
+
+  private OutboundMessage observed(OutboundMessage terminal) {
+    try {
+      observer.onTerminal(terminal);
+    } catch (RuntimeException ignored) {
+      // 消息观察不能改变已完成的权威投递结果。
+    }
+    return terminal;
   }
 }

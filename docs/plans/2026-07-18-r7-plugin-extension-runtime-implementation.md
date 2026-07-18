@@ -1,6 +1,6 @@
 # R7 插件与扩展运行时实施计划
 
-- 状态：G0、P1、P2、P3、P4 已完成；等待 P5 连续 TDD
+- 状态：G0、P1、P2、P3、P4、P5 已完成；等待 P6 阶段门禁
 - 分支：`agent/r7-r9-runtime`
 - 前置：R6.5 已通过 PR #9 合入 `main`，主分支三套 CI 全绿
 
@@ -40,3 +40,13 @@ Transport、request ID、帧预算和稳定异常而编译失败，构成有效 
 进程 I/O 与共享关闭 Deadline。另以 `ExternalStdioCommandTest` 先 RED 后 GREEN，固定绝对非 Shell 可执行文件
 和无控制字符 token；JDK Transport 清空继承环境、固定 `/` 工作目录、限制读取帧并在超时/关闭时终止进程。
 命令：`./mvnw --batch-mode --no-transfer-progress -pl agent-bootstrap -am -Dtest=ExternalStdioPluginBridgeTest,ExternalStdioCommandTest -Dsurefire.failIfNoSpecifiedTests=false test`。
+
+P5 证据（2026-07-18）：先添加 `PluginPropertiesTest` 与 `PluginRuntimeTest`，前者因缺少严格
+`agent.plugins` 配置失败，后者因缺少 Bootstrap Runtime 失败，构成 RED。随后接入默认 `DISABLED` 的
+Properties、classpath/stdio Runtime、Virtual Thread Tap 执行器、共享 Deadline 以及 Spring 的
+`TurnLifecycleObserver` Bean；Disabled 不发现 Provider、不启动进程、不创建 dispatcher，启用时强制全局
+Tool Runtime 为 `READ_ONLY`。聚焦 GREEN 共 12 个 Bootstrap 场景，另以 `MessageTurnServiceTest` 证明
+终端 Message 仅在权威 Sink 发布后观察；Chat/Tool/Message 映射均只发送域隔离 Hash，R8 可通过
+`publishProactive` 复用 `PROACTIVE_TAP`。命令：
+`./mvnw --batch-mode --no-transfer-progress -pl agent-bootstrap -am -Dtest=PluginPropertiesTest,PluginRuntimeTest,ApplicationConfigurationTest -Dsurefire.failIfNoSpecifiedTests=false test`，
+以及 `./mvnw --batch-mode --no-transfer-progress -pl agent-application -am -Dtest=MessageTurnServiceTest,PluginTapDispatcherTest -Dsurefire.failIfNoSpecifiedTests=false test`。

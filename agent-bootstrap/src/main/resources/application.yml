@@ -85,6 +85,13 @@ agent:
     max-schema-bytes: ${AGENT_MCP_MAX_SCHEMA_BYTES:65536}
     max-wire-bytes: ${AGENT_MCP_MAX_WIRE_BYTES:1048576}
     max-concurrent-calls-per-server: ${AGENT_MCP_MAX_CONCURRENT_CALLS_PER_SERVER:1}
+  plugins:
+    mode: ${AGENT_PLUGINS_MODE:DISABLED}
+    tap-timeout: ${AGENT_PLUGINS_TAP_TIMEOUT:500ms}
+    shutdown-timeout: ${AGENT_PLUGINS_SHUTDOWN_TIMEOUT:1s}
+    max-frame-bytes: ${AGENT_PLUGINS_MAX_FRAME_BYTES:65536}
+    java-service-ids: []
+    external: []
   memory:
     mode: ${AGENT_MEMORY_MODE:DISABLED}
     max-file-bytes: ${AGENT_MEMORY_MAX_FILE_BYTES:65536}
