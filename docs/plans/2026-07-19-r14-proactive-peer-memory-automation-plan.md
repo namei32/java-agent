@@ -1,6 +1,6 @@
 # R14 主动运行、自动记忆与 Peer Agent 对齐计划
 
-- 状态：P0 已完成（离线 Fixture/Kernel 边界）；P1–P5 未开始
+- 状态：P0、P1 已完成（离线边界与未接线只读决策）；P2–P5 未开始
 - 日期：2026-07-19
 - Python 证据基线：`akashic-agent` 提交 `b65a5430e332c8733b981dfc2dfbc3eb1967e9ef`
 - Java 证据基线：`agent/r12-skill-catalog`，含 R8 本地 SQLite Proactive、只读 Drift 与隔离 Subagent
@@ -46,10 +46,18 @@ Python 还包括主动外部源和 MCP 读取、决策/投递链、自动 Memory
 P0 不启动真实进程或网络，也不接线 Scheduler、Source、Transport、Provider、Memory DML 或 Tool。它是 P1–P4 的
 测试前置，而不是主动、自动记忆或 Peer 能力完成声明。
 
-### P1：可审计的本地只读主动决策（GREEN）
+### P1：可审计的本地只读主动决策（GREEN，已完成）
 
 在 R8 基础上只允许本地 Fake/预置 Source 和有界只读 Drift，生成 `SKIP` 或“待审批的请求”投影；仍不调用模型、
 不写 Memory、不开启 Delivery。验证冷却、目标 busy、租约丢失、取消、崩溃恢复和关闭。
+
+P1 已增加 15 Case 的 ReadOnlyProactiveDecision Fixture 与 failure Profile 的异常/取消测试；详细语义见
+[P1 Contract](../contracts/r14-read-only-proactive-decision.md) 与
+[设计](../specs/2026-07-19-r14-read-only-proactive-decision-design.md)。它顺序消费 Gate、P0 FIXED_LOCAL
+Fake Source 与现有 ReadOnlyDriftRunner，只输出 SKIPPED(code)、PENDING_APPROVAL 或 CANCELLED 的无正文投影。
+它不由 Bootstrap 或 ProactiveRuntime 接线，不启动 Scheduler，也不调用模型、Memory、Delivery、Transport、网络、
+进程或 Peer。PENDING_APPROVAL 没有 Approval request、Capsule、Ledger、Outbox、Receipt 或执行权；R8 已有
+Lease recovery、崩溃和关闭测试保持所有权。它是 P2–P4 的局部安全基础，而不是 Python proactive_v2 对齐完成声明。
 
 ### P2：外部 Source 与主动投递（GREEN，逐项）
 
@@ -80,4 +88,4 @@ R11-B2c Capability、幂等/Revision 和可恢复审计；先只用固定 Embedd
 - 失败测试必须覆盖：Disabled 零 I/O、拒绝未知模式、预算、取消、过期/租约、并发单获胜者、关闭、审计脱敏、`UNKNOWN` 和零重放。
 - R11-B2c 的首个生产 Capability 与 R13 的渠道身份 Contract 是 P2/P3/P5 的必要前置。R12-S5 仅在同一版本要
   向模型暴露 Java-native Memory Recall 时才是前置，不能被错误地当成自动写入的替代授权；前置未完成时 R14 仍保持
-  P1–P5 未实现，P0 不扩大任何运行权限。
+  P2–P5 未实现，P0/P1 都不扩大任何运行权限。

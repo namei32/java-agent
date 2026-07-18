@@ -31,6 +31,7 @@
 - 已完成并验证：R12-S4 的[按需只读 Skill 正文 Tool](contracts/read-only-skill-content-tool.md)，只在 Skill/Tool 双重 `READ_ONLY` 后作为 deferred `read_skill` 出现，须经当前 Turn `tool_search` 解锁；它只回送可用且已审计的无 frontmatter 正文，不暴露路径或执行任何 Skill。
 - 已完成并验证：R12-S5 的[当前 Scope 只读记忆召回 Tool](contracts/read-only-memory-recall-tool.md)，以三重默认关闭条件和当前 Turn `tool_search` 暴露受限 `recall_memory`；它只读取 Java Native 当前 Scope，结果不含 Session/Scope/模型/检索 trace，且没有写入或真实 Provider 启用。
 - 已完成：R14-P0 的[主动、自动记忆与 Peer 边界 Contract](contracts/r14-proactive-peer-automation-boundaries.md)，以 28 Case Fixture 固定 Scheduler/租约状态、本地 Fake Source、待审批 Delivery 投影、`NONE` Memory Mutation 和 `LOCAL_FAKE` Peer；它没有接线线程、数据库、网络、进程、投递或自动记忆。
+- 已完成：R14-P1 的[本地只读主动决策 Contract](contracts/r14-read-only-proactive-decision.md)，以 15 Case Fixture 和 failure 测试串联 Gate、Fake Source、只读 Drift 与无正文 skip/pending/cancel 投影；它不创建审批、投递、记忆写入或任何 Bootstrap Runtime。
 - 尚未覆盖：自动 Memory 写回/Optimizer、真实 Embedding/真实 Workspace 启用、可恢复 Pending Turn、生产 Durable Side Effect Ledger、真实副作用工具、真实 Telegram Smoke、经单独授权的真实 Provider 流式 Smoke、真实 MCP Server/Streamable HTTP，以及任何真实生产切换。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。
@@ -82,7 +83,7 @@ R12-S5 的[当前 Scope 只读记忆召回 Tool](contracts/read-only-memory-reca
 Embedding、Store、取消和内部失败收敛为稳定安全码；它不是 Python `memory2`、Keyword/RRF、时间线或写入 Tool 的对齐声明。
 R14-P0 的[主动、自动记忆与 Peer 边界 Contract](contracts/r14-proactive-peer-automation-boundaries.md)已作为下一阶段的
 离线前置完成：它只定义 Fixture/Kernel 值，不启动 R8 Scheduler，不接入 Source、Transport、Memory DML 或 Peer Process；
-P1–P5 与 R11-B2c 的副作用 Capability 继续按独立 Contract 推进。
+P2–P5 与 R11-B2c 的副作用 Capability 继续按独立 Contract 推进。
 完整后续顺序见[Java / Akashic Agent 全量对齐计划](plans/2026-07-18-java-parity-program.md)。
 
 ## 目录职责

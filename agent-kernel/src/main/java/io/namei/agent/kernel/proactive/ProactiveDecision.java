@@ -33,7 +33,10 @@ public record ProactiveDecision(Kind kind, Optional<ProactiveStableCode> code) {
           PROACTIVE_COOLDOWN,
           PROACTIVE_TARGET_BUSY,
           PROACTIVE_DUPLICATE,
-          PROACTIVE_LEASE_LOST ->
+          PROACTIVE_LEASE_LOST,
+          PROACTIVE_NO_SOURCE,
+          PROACTIVE_SOURCE_INVALID,
+          PROACTIVE_NO_DRIFT ->
           true;
       default -> false;
     };

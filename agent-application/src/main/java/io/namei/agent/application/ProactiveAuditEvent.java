@@ -13,6 +13,9 @@ public record ProactiveAuditEvent(
 
   public enum Action {
     GATE,
+    SOURCE,
+    DRIFT,
+    PROJECTION,
     PLAN,
     DELIVERY
   }

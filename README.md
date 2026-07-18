@@ -153,7 +153,11 @@ Turn `tool_search` 发现；返回仅限 opaque ID、Java MemoryType、正文和
 R14-P0 已完成离线的[主动、自动记忆与 Peer 边界 Contract](docs/contracts/r14-proactive-peer-automation-boundaries.md)：
 28 个版本化 Fixture 场景冻结 Scheduler/租约状态、本地 Fake Source 净化、待审批 Delivery 投影、禁止自动 Memory Mutation
 和 `LOCAL_FAKE` Peer 引用。它不启动 Scheduler、不接线 Source/Transport/Peer Process，不访问数据库、网络或 Provider，
-也不改变 `AGENT_PROACTIVE_MODE=DISABLED` 默认；P1–P5 仍未实现。
+也不改变 `AGENT_PROACTIVE_MODE=DISABLED` 默认；P2–P5 仍未实现。
+
+R14-P1 已完成未接线的[本地只读主动决策 Contract](docs/contracts/r14-read-only-proactive-decision.md)：15 个 Fixture 场景与
+failure 测试只允许 Gate、Fake Source 和只读 Drift 生成无正文的 SKIPPED/PENDING_APPROVAL/CANCELLED 投影。它不创建
+审批请求、Ledger、Outbox、Receipt、Memory DML 或 Delivery/Transport，且没有 Bootstrap Bean；P2–P5 仍未实现。
 
 ## 数据安全
 

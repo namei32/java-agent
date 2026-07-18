@@ -1,0 +1,111 @@
+{
+  "formatVersion": 1,
+  "suite": "proactive/r14-read-only-proactive-decision-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0027-freeze-r14-proactive-peer-automation-boundaries.md",
+    "contract": "docs/contracts/r14-read-only-proactive-decision.md",
+    "spec": "docs/specs/2026-07-19-r14-read-only-proactive-decision-design.md"
+  },
+  "normalization": [],
+  "limits": {
+    "maxDriftSummaryCodePoints": 512
+  },
+  "defaults": {
+    "sourceText": "local alert: check inventory",
+    "driftText": "inventory changed"
+  },
+  "cases": [
+    {
+      "id": "disabled-gate-skips-before-local-source-and-drift",
+      "group": "gate",
+      "input": {"gate": "PROACTIVE_DISABLED", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "SKIPPED", "code": "PROACTIVE_DISABLED", "sourceCalls": 0, "driftCalls": 0}
+    },
+    {
+      "id": "busy-gate-skips-before-local-source-and-drift",
+      "group": "gate",
+      "input": {"gate": "PROACTIVE_TARGET_BUSY", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "SKIPPED", "code": "PROACTIVE_TARGET_BUSY", "sourceCalls": 0, "driftCalls": 0}
+    },
+    {
+      "id": "cooldown-gate-skips-before-local-source-and-drift",
+      "group": "gate",
+      "input": {"gate": "PROACTIVE_COOLDOWN", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "SKIPPED", "code": "PROACTIVE_COOLDOWN", "sourceCalls": 0, "driftCalls": 0}
+    },
+    {
+      "id": "expired-lease-skips-before-gate-source-and-drift",
+      "group": "lease",
+      "input": {"lease": "EXPIRED", "gate": "REQUESTED", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "SKIPPED", "code": "PROACTIVE_LEASE_LOST", "sourceCalls": 0, "driftCalls": 0}
+    },
+    {
+      "id": "empty-fixed-local-source-skips-without-drift",
+      "group": "source",
+      "input": {"gate": "REQUESTED", "source": "EMPTY", "drift": "DETECTED"},
+      "expected": {"kind": "SKIPPED", "code": "PROACTIVE_NO_SOURCE", "sourceCalls": 1, "driftCalls": 0}
+    },
+    {
+      "id": "fixed-local-source-failure-is-stable-and-does-not-run-drift",
+      "group": "source",
+      "input": {"gate": "REQUESTED", "source": "THROW", "drift": "DETECTED"},
+      "expected": {"kind": "SKIPPED", "code": "PROACTIVE_SOURCE_INVALID", "sourceCalls": 1, "driftCalls": 0}
+    },
+    {
+      "id": "fixed-local-source-never-escapes-into-the-projection",
+      "group": "source",
+      "input": {"gate": "REQUESTED", "source": "ITEM", "drift": "CLEAN"},
+      "expected": {"kind": "SKIPPED", "code": "PROACTIVE_NO_DRIFT", "sourceCalls": 1, "driftCalls": 1, "leaksSourceText": false}
+    },
+    {
+      "id": "clean-drift-is-a-safe-skip",
+      "group": "drift",
+      "input": {"gate": "REQUESTED", "source": "ITEM", "drift": "CLEAN"},
+      "expected": {"kind": "SKIPPED", "code": "PROACTIVE_NO_DRIFT", "sourceCalls": 1, "driftCalls": 1}
+    },
+    {
+      "id": "detected-drift-is-only-pending-approval",
+      "group": "drift",
+      "input": {"gate": "REQUESTED", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "PENDING_APPROVAL", "sourceCalls": 1, "driftCalls": 1, "externalDelivery": false, "transportAuthorized": false}
+    },
+    {
+      "id": "drift-failure-is-stable-and-never-pending-approval",
+      "group": "drift",
+      "input": {"gate": "REQUESTED", "source": "ITEM", "drift": "THROW"},
+      "expected": {"kind": "SKIPPED", "code": "DRIFT_READ_ONLY", "sourceCalls": 1, "driftCalls": 1}
+    },
+    {
+      "id": "cancel-before-gate-performs-zero-local-work",
+      "group": "cancellation",
+      "input": {"cancel": "BEFORE", "gate": "REQUESTED", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "CANCELLED", "sourceCalls": 0, "driftCalls": 0, "auditEvents": 0}
+    },
+    {
+      "id": "cancel-during-source-prevents-drift-and-pending-approval",
+      "group": "cancellation",
+      "input": {"gate": "REQUESTED", "source": "CANCEL", "drift": "DETECTED"},
+      "expected": {"kind": "CANCELLED", "sourceCalls": 1, "driftCalls": 0}
+    },
+    {
+      "id": "cancelled-drift-never-produces-delivery-or-memory-work",
+      "group": "cancellation",
+      "input": {"gate": "REQUESTED", "source": "ITEM", "drift": "CANCELLED"},
+      "expected": {"kind": "CANCELLED", "sourceCalls": 1, "driftCalls": 1, "externalDelivery": false, "memoryMutations": 0}
+    },
+    {
+      "id": "pending-approval-projection-contains-no-source-or-drift-text",
+      "group": "projection",
+      "input": {"gate": "REQUESTED", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "PENDING_APPROVAL", "leaksSourceText": false, "leaksDriftText": false}
+    },
+    {
+      "id": "audit-records-only-safe-action-and-code-projections",
+      "group": "audit",
+      "input": {"gate": "REQUESTED", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "PENDING_APPROVAL", "actions": ["GATE", "SOURCE", "DRIFT", "PROJECTION"], "leaksSourceText": false, "leaksDriftText": false}
+    }
+  ]
+}

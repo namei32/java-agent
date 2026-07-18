@@ -79,6 +79,12 @@
       "source": "java-contract"
     },
     {
+      "id": "proactive/r14-read-only-proactive-decision-v1",
+      "path": "proactive/r14-read-only-proactive-decision-v1.json",
+      "sha256": "f6e966974c1ef747dea46986700033e1784e84a5c7ba0a3730b1590d9b8d61a6",
+      "source": "java-contract"
+    },
+    {
       "id": "cutover/cutover-runtime-v1",
       "path": "cutover/cutover-runtime-v1.json",
       "sha256": "38a10ed29a8f6dc6ad7381bec4234e960b62d4420736a4703ddfaca70eba2c5a",
