@@ -1,10 +1,10 @@
 # R6 渠道、消息总线与控制面总体工作计划
 
-- 状态：已批准；R6.1–R6.2 已合入 `main`，R6.3 已通过本地与 PR #6 远程离线门禁
+- 状态：已批准；R6.1–R6.4 已合入 `main`，R6.5 后端 G0–G10 与本地 Review 修复已通过阶段门禁，Draft PR #9 等待推送/Ready 授权
 - 日期：2026-07-15
 - 阶段：R6
 - 批准记录：用户要求完整实现本计划；各子阶段仍须先冻结对应 Contract、Spec、ADR 和实施计划，真实网络、Secret 与付费 Smoke 保留独立授权门禁
-- 功能基线：R6.1 已通过 PR #4 并以 `a77b088` 合入 `main`；R6.2 已通过 PR #5 三套远程 CI 并以 `7e73712` 合入 `main`
+- 功能基线：R6.1–R6.4 分别通过 PR #4–#7 合入；R6.4 合并后聚焦 CI 稳定性修复又通过 PR #8，以 `67f16a5` 作为 R6.5 基线
 - Python 参考：`bus/`、`bootstrap/channel_host.py`、`bootstrap/channels.py`、`agent/provider.py` 和 Dashboard API
 - 关联 Roadmap：[Java 重写 Roadmap](../roadmap/java-rewrite-roadmap.md)
 - R6.1 Contract：[版本化渠道消息与流式运行时契约](../contracts/versioned-channel-message-runtime.md)
@@ -65,9 +65,9 @@ R6 完成不等于 Python 全部渠道、插件或主动能力已经迁移。Sch
 | --- | --- | --- | --- |
 | R6.1 | 版本化 Message Contract Runtime | 已完成并合入 `main` | Java-owned Fixture、消息值、唯一终态、取消原因、有界背压、安全终态投影 |
 | R6.2 | 本地 CLI 与 Provider Streaming | 已完成并通过 PR #5 合入 `main` | 供应商无关流式 Port、Spring AI Adapter、本地 CLI、取消与提交隔离 |
-| R6.3 | Channel Host 与首个真实渠道 | 本地与 PR #6 远程离线门禁已验证；真实 Smoke 待授权 | 统一宿主、身份路由、Telegram 私聊文本、网络生命周期 |
-| R6.4 | 渠道幂等、可靠投递与恢复 | 本地与 PR #7 远程离线门禁已完成；Review 待执行 | 入站去重、投递状态、崩溃恢复和有界重试 |
-| R6.5 | Dashboard 与最小控制面 | 总体范围已批准，待子阶段 Contract | 安全状态、事件流和活动 Turn 取消 |
+| R6.3 | Channel Host 与首个真实渠道 | 已通过 PR #6 合入 `main`；真实 Smoke 待授权 | 统一宿主、身份路由、Telegram 私聊文本、网络生命周期 |
+| R6.4 | 渠道幂等、可靠投递与恢复 | 已通过 PR #7 合入 `main`；PR #8 修复合并后 CI 观察竞态 | 入站去重、投递状态、崩溃恢复和有界重试 |
+| R6.5 | Dashboard 与最小控制面 | 后端 G0–G10 与本地 Review 修复已通过阶段门禁；PR #9 待推送和 Ready 授权 | 默认关闭的 Loopback 安全状态、SSE 和活动 Telegram Turn 取消；前端待 G11 批准 |
 | R6.6 | 阶段总验收与灰度 | 待前序完成 | Golden、故障/压力、安全审计、Runbook 和回退 |
 
 ## 4. R6.1：版本化 Message Contract Runtime
@@ -271,7 +271,7 @@ R6.3 离线门禁；真实渠道 Smoke 和部署仍待独立授权。
 
 R6.4 是条件阶段。只有 R6.3 证明进程重启和平台重复投递需要持久状态后才实施；它涉及新 SQLite Schema，必须先批准 Schema、迁移、备份和回退 Contract。
 
-2026-07-16 用户已批准独立 `workspace/channels/channel-ledger.db`、渠道实例分区、Inbox/Turn Claim、事务 Outbox、Telegram Receipt、`UNKNOWN`、恢复/清理和回退的 [Contract](../contracts/channel-reliable-delivery.md)、[ADR-0010](../adr/0010-use-dedicated-sqlite-channel-ledger.md)、[设计](../specs/2026-07-16-channel-reliable-delivery-design.md)与[连续 TDD 计划](2026-07-16-channel-reliable-delivery-implementation.md)。F1–F13 的本地离线实现、故障矩阵、Compat 和临时数据库回退演练已完成，并通过 PR #7 远程三套门禁；Review/合并待执行，真实 Telegram 仍未授权。
+2026-07-16 用户已批准独立 `workspace/channels/channel-ledger.db`、渠道实例分区、Inbox/Turn Claim、事务 Outbox、Telegram Receipt、`UNKNOWN`、恢复/清理和回退的 [Contract](../contracts/channel-reliable-delivery.md)、[ADR-0010](../adr/0010-use-dedicated-sqlite-channel-ledger.md)、[设计](../specs/2026-07-16-channel-reliable-delivery-design.md)与[连续 TDD 计划](2026-07-16-channel-reliable-delivery-implementation.md)。F1–F13、Review 修复、故障矩阵、Compat 和临时数据库回退演练已完成，并通过 PR #7 合入 `main`；合并后 CI 观察竞态由不改生产语义的 PR #8 修复，主分支三套门禁全绿。真实 Telegram 仍未授权。
 
 ### Task F0：冻结幂等和恢复语义
 
@@ -314,6 +314,10 @@ R6.4 退出门禁：重复投递、并发竞争、发送后崩溃、提交前崩
 ## 8. R6.5：Dashboard 与最小控制面
 
 初始阶段保持现有 React/Vite 前端不变，先冻结 Java Control Plane API。未完成认证、TLS 和权限 Contract 前只允许 Loopback。
+
+2026-07-17 已批准 [Loopback 控制面 Contract](../contracts/loopback-control-plane.md)、[ADR-0011](../adr/0011-use-authenticated-sse-for-loopback-control-events.md)、[设计](../specs/2026-07-17-loopback-control-plane-design.md)和[连续 TDD 计划](2026-07-17-r6-loopback-control-plane-implementation.md)。V1 明确默认 Disabled、进程内 Bearer Session、Fetch SSE、无历史重放、独立有界 Subscriber，以及只管理 Servlet 模式中当前存活的 Telegram 普通/可靠 Turn。后端 G0–G10 已完成当前授权范围，Draft PR #9 首轮远程 CI 全绿；本地 Review 已补强 Forwarded 启动门禁、容量预约、稳定审计与共享关闭 Deadline，并通过阶段门禁，尚未推送或转 Ready。CLI、同步 `/api/v1/chat`、`EXECUTION_UNKNOWN`、远程控制和前端仍不在当前实现范围。
+
+本节的 G0–G4 只表达 R6.5 阶段级能力分解，不作为当前代码任务编号。实际执行状态、RED/GREEN 命令和提交边界统一以[详细实施计划](2026-07-17-r6-loopback-control-plane-implementation.md)的 G0–G12 为准。
 
 ### Task G0：冻结 API、安全和流协议
 
@@ -398,6 +402,7 @@ R6 总退出条件：
 - 每个可观察行为独立提交，避免把 Provider、CLI、真实渠道和 Dashboard 混入同一提交。
 - 子阶段完成后先跑本地阶段门禁，再推送、创建 Draft PR、跑远程 CI、Review 和合并。
 - 下一子阶段从最新 `main` 创建，不依赖未合并分支。
+- 从 2026-07-17 起，默认、`failure`、`compat` 与 `real-model-smoke` 使用互斥 Tag 集合；阶段需要完整离线证据时分别执行前三组，不再让 Profile 隐式重复默认回归。
 
 ## 11. 暂停与重新批准条件
 
@@ -415,7 +420,7 @@ R6 总退出条件：
 
 1. R6.1 已完成 PR、远程三套 CI 并合入 `main`。
 2. R6.2 已完成 Contract、ADR、Fixture、连续 TDD、本地/远程三套门禁，并通过 PR #5 合入 `main`。
-3. R6.3 Channel Host/Telegram 离线纵向切片已完成连续 TDD，并通过本地与 PR #6 默认、`failure`、`compat` 远程门禁。
+3. R6.3 Channel Host/Telegram 离线纵向切片已完成连续 TDD，并通过 PR #6 默认、`failure`、`compat` 远程门禁合入 `main`。
 4. 真实 Token、网络、费用和数据范围仍未获授权，因此真实 Telegram Smoke 必须保持禁用。
-5. R6.4 可靠投递已完成本地与 PR #7 远程默认、`failure`、`compat` 门禁；下一步是 Review 与合并决策，不实现自动重放或 Exactly Once。
-6. R6.4 Review 通过并合入后，从 R6.5 的 API、安全和流协议 Contract 开始；真实 Telegram Smoke 继续等待独立授权。
+5. R6.4 可靠投递已通过 PR #7 合入 `main`；聚焦 CI 稳定性修复 PR #8 和对应主分支默认、`failure`、`compat` 门禁全部通过，仍不实现自动重放或 Exactly Once。
+6. R6.5 后端 G0–G10 已完成默认关闭装配、Loopback 安全、状态/取消 API、认证 SSE、故障矩阵、Draft PR #9 和首轮远程 CI；本地 Review 修复及阶段门禁也已完成，等待推送/Ready 授权。后端合并前真实 Telegram Smoke、远程访问、CLI+Web 与前端继续冻结。

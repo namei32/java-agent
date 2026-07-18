@@ -55,6 +55,12 @@
       "source": "java-contract"
     },
     {
+      "id": "control-plane/loopback-control-plane-v1",
+      "path": "control-plane/loopback-control-plane-v1.json",
+      "sha256": "34ac5617ceecef59e6458eaea4fb48ad95a800c0af861a6baf3672981c9ce3f6",
+      "source": "java-contract"
+    },
+    {
       "id": "sqlite/session-store",
       "path": "sqlite/session-store.json",
       "sha256": "84e43ab7d89269c53a63d6909d562588208fd515c8f26f7db289bb58c63f7f10",

@@ -1,6 +1,7 @@
 package io.namei.agent.bootstrap.telegram;
 
 import io.namei.agent.application.MessageTurnService;
+import io.namei.agent.application.control.ActiveTurnObserver;
 import io.namei.agent.bootstrap.channel.ChannelAdapter;
 import io.namei.agent.bootstrap.channel.ChannelHost;
 import io.namei.agent.bootstrap.channel.reliability.ChannelReliabilityProperties;
@@ -116,8 +117,17 @@ public class TelegramChannelConfiguration {
       MessageTurnService turns,
       TelegramProperties properties,
       ChannelThreadStarter threadStarter,
-      ChannelSleeper sleeper) {
-    return new TelegramChannelAdapter(api, mapper, turns, properties, threadStarter, sleeper);
+      ChannelSleeper sleeper,
+      ObjectProvider<ActiveTurnObserver> activeTurnObservers) {
+    return new TelegramChannelAdapter(
+        api,
+        mapper,
+        turns,
+        properties,
+        threadStarter,
+        sleeper,
+        Clock.systemUTC(),
+        activeTurnObservers.getIfAvailable(ActiveTurnObserver::disabled));
   }
 
   @Bean
@@ -134,8 +144,17 @@ public class TelegramChannelConfiguration {
       TelegramChannelInstance instance,
       ChannelReliabilityRuntime runtime,
       ChannelThreadStarter threadStarter,
-      ChannelSleeper sleeper) {
+      ChannelSleeper sleeper,
+      ObjectProvider<ActiveTurnObserver> activeTurnObservers) {
     return new TelegramReliableChannelAdapter(
-        api, mapper, turns, properties, instance, runtime, threadStarter, sleeper);
+        api,
+        mapper,
+        turns,
+        properties,
+        instance,
+        runtime,
+        threadStarter,
+        sleeper,
+        activeTurnObservers.getIfAvailable(ActiveTurnObserver::disabled));
   }
 }

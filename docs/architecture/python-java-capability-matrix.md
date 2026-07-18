@@ -1,7 +1,7 @@
 # Python/Java 能力差距矩阵
 
 - 状态：当前事实
-- 最近更新：2026-07-16
+- 最近更新：2026-07-17
 - Python 基准：`/Users/namei/idea/agent/akashic-agent`
 
 ## 状态说明
@@ -20,7 +20,7 @@
 | 配置加载 | `agent/config.py`、`agent/config_models.py`、`config.example.toml` | `agent-bootstrap/.../config`、环境变量 | 完成 | 已实现批准范围内的只读 TOML/环境变量双模式、Golden、严格诊断和无副作用检查；Deferred 字段随能力迁移激活 | 中 |
 | 启动与装配 | `bootstrap/app.py`、`bootstrap/wiring.py` | `agent-bootstrap` | 部分 | 已装配配置兼容、HTTP 被动聊天、显式 Non-Web 本地 CLI、只读 Tool Loop、默认关闭的静态 MCP Runtime 和 Servlet `ChannelHost`/Telegram；后台主动能力待迁移 | 低 |
 | 入站 HTTP | Dashboard/Bootstrap API | `ChatController` | 完成 | 当前只支持同步 JSON API | 低 |
-| 消息总线 | `bus/` | `agent-kernel/.../channel`、`MessageTurnService`、`BoundedOutboundBuffer`、`LocalCliRunner`、`TelegramChannelAdapter` | 部分 | 版本化入站/出站、严格序号、唯一终态、取消、安全错误、有界背压、CLI 与 Telegram Adapter 已完成；缺持久投递和恢复 | 中 |
+| 消息总线 | `bus/` | `agent-kernel/.../channel`、`MessageTurnService`、`BoundedOutboundBuffer`、`LocalCliRunner`、Telegram Adapter/可靠协调器 | 部分 | 版本化入站/出站、严格序号、唯一终态、取消、有界背压、CLI、Telegram 及其持久 Inbox/Outbox/恢复已完成；缺其他渠道和跨节点总线 | 中 |
 | 被动轮次编排 | `agent/core/passive_turn.py`、`agent/turns/orchestrator.py` | `ChatService`、`ToolLoop`、`SafeChatUseCase` | 部分 | 请求—模型—只读工具—提交闭环与安全生命周期完成；完整 Python 事件总线未迁移 | 中 |
 | 历史选择 | `agent/policies/history_route.py`、被动支持代码 | `ConversationHistorySelector`、`ContextAssembler` | 部分 | 普通 user/assistant 与临时 Context Frame 顺序已有 Golden；缺 Proactive 与完整历史路由 | 中 |
 | Prompt 组装 | `agent/prompting/`、`agent/persona.py` | `ContextAssembler` | 部分 | 基础 Prompt、Self、长期记忆、近期语境和检索块共同投影已有 Golden；缺完整 Block、Persona、Token 预算 | 中 |
@@ -60,9 +60,9 @@
 | 能力 | Python 基准位置 | Java 位置 | 状态 | 主要差距/下一步 | 数据风险 |
 | --- | --- | --- | --- | --- | --- |
 | CLI/渠道宿主 | `bootstrap/channel_host.py`、`bootstrap/channels.py` | `agent-bootstrap/.../cli`、`channel`、`telegram` | 部分 | 显式 Non-Web CLI、通用 Host、Telegram 私聊与该渠道的持久恢复已离线验证；多渠道和主动宿主未迁移 | 中 |
-| Telegram 等渠道 | 渠道模块与 Bootstrap | `agent-bootstrap/.../channel`、`telegram` | 部分 | 数值 Allowlist、Long Polling、持久 Cursor/Claim、事务 Outbox、Receipt、429 有界重试、`UNKNOWN`、恢复与回退已通过本地及 PR #7 远程离线门禁；真实 Smoke 待授权 | 高 |
+| Telegram 等渠道 | 渠道模块与 Bootstrap | `agent-bootstrap/.../channel`、`telegram` | 部分 | 数值 Allowlist、Long Polling、持久 Cursor/Claim、事务 Outbox、Receipt、429 有界重试、`UNKNOWN`、恢复与回退已通过 PR #7 合入，PR #8 完成合并后 CI 稳定性修复；真实 Smoke 待授权 | 高 |
 | 流式输出 | Bus/Channel 生命周期事件 | Kernel Channel Contract、`BoundedOutboundBuffer`、`MessageTurnService`、Spring AI Streaming Adapter、`LocalCliRunner`、`TelegramTerminalRenderer` | 部分 | Provider Delta、Tool Loop 预览、权威完成、唯一终态、断开/背压、CLI 实时渲染、Telegram 终态投影与持久投递已完成；其他渠道与真实 Smoke 未覆盖 | 中 |
-| Dashboard API | `bootstrap/dashboard_api.py` | 仅 Actuator/Chat API | 部分 | 保留现有 React/Vite，逐接口兼容 | 中 |
+| Dashboard/控制面 API | `bootstrap/dashboard_api.py` | R6.5 后端已完成 Fixture、Registry、Event Hub、Telegram 接入、默认关闭 Spring 装配、Loopback Session、安全状态/取消 API、future-only SSE、安全审计和共享关闭 Deadline | 部分 | 本地 Review 修复已通过阶段门禁；Draft PR #9 待推送、远程 CI 和 Ready。前端、远程访问、CLI+Web、同步 Chat、历史/删除/Proactive/Plugin 不在当前范围 | 中 |
 | Scheduler | `agent/scheduler.py` | 无 | 未开始 | 需持久化、重启恢复、时区和幂等 | 高 |
 | Proactive | `agent/core/proactive_*`、`bootstrap/proactive.py` | 无 | 未开始 | 需来源、审批、限流和审计 | 极高 |
 | Drift | `agent/core/drift_turn.py`、`_handbook/drift-guide.md` | 无 | 未开始 | 需运行记录、预算、取消和回退 | 极高 |
@@ -75,14 +75,14 @@
 | --- | --- | --- |
 | Java 单元/集成测试 | 已建立默认、`failure`、`compat` Profile | 继续随能力扩展 |
 | Python SQLite 兼容夹具 | `sessions.db` 共同 Schema 已覆盖 | 语义记忆改为 Java 原生，不增加 `memory2.db` 兼容夹具 |
-| 跨语言/Java Contract Fixture | 已建立 Python/Java Golden；R4.2、R5.1、R6.1–R6.4 另由生产 Java 实现消费 Java-owned Memory、MCP、版本化渠道消息、Provider Streaming/CLI、Telegram 与可靠投递 Fixture，不运行 Python | 后续随新能力增加 Optimizer 和控制面 Contract |
+| 跨语言/Java Contract Fixture | 已建立 Python/Java Golden；R4.2、R5.1、R6.1–R6.4 另由生产 Java 实现消费 Java-owned Memory、MCP、版本化渠道消息、Provider Streaming/CLI、Telegram 与可靠投递 Fixture，不运行 Python | R6.5 的 48 Case Java-owned 控制面 Fixture 已由生产 Kernel Contract 消费；Optimizer 仍冻结 |
 | 真实模型 Smoke | Profile 已有，默认不执行；DeepSeek `deepseek-v4-flash` Tool Smoke 已于 2026-07-14 通过 | 其他 Provider/模型仍需逐组合授权验证；通过不自动启用部署 |
 | 真实工作区演练 | 未执行 | 只能在备份副本上先做只读差异，再做受控写入 |
 
 ## 当前优先级
 
-1. R6.1/R6.2 已完成并通过三套远程门禁；R6.3 Telegram 离线实现已在本地与 PR #6 通过三套门禁，真实 Smoke 继续等待独立授权。
+1. R6.1–R6.4 已合入 `main`；R6.5 后端 G0–G10 与本地高风险 Review 修复已通过阶段门禁，Draft PR #9 等待推送、远程 CI 和 Ready/合并批准。
 2. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
-5. R6.4 持久 Inbox/Delivery、幂等、恢复与回退已通过本地及 PR #7 远程三套离线门禁；Review 并合入后再按独立 Contract 进入 R6.5 控制面。R5.2 远程 MCP、真实渠道、插件和主动能力不因本阶段完成而获得授权。
+5. R6.4 已通过 PR #7 合入并由 PR #8 完成主分支 CI 稳定性修复；真实 Telegram、R5.2 远程 MCP、插件和主动能力不因合并获得授权。R6.5 后端合入前继续冻结远程访问、CLI+Web 和前端；合入后再为源码归属和 Node/静态托管编写 G11 Contract。

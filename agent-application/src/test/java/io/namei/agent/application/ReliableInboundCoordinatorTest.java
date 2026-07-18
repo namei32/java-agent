@@ -3,6 +3,8 @@ package io.namei.agent.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.namei.agent.application.control.ActiveTurnObserver;
+import io.namei.agent.application.control.ActiveTurnRegistry;
 import io.namei.agent.kernel.channel.InboundMessage;
 import io.namei.agent.kernel.channel.MessageContract;
 import io.namei.agent.kernel.channel.MessageRoute;
@@ -14,6 +16,8 @@ import io.namei.agent.kernel.channel.reliability.ChannelLedgerFailureKind;
 import io.namei.agent.kernel.channel.reliability.ChannelLedgerResult;
 import io.namei.agent.kernel.channel.reliability.DeliveryMessageType;
 import io.namei.agent.kernel.channel.reliability.InboxEventKind;
+import io.namei.agent.kernel.control.ControlCancelResult;
+import io.namei.agent.kernel.control.ControlTerminalKind;
 import io.namei.agent.kernel.port.ChannelLedgerPort;
 import java.time.Clock;
 import java.time.Duration;
@@ -29,6 +33,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class ReliableInboundCoordinatorTest {
@@ -290,6 +295,135 @@ class ReliableInboundCoordinatorTest {
   }
 
   @Test
+  void registersControlOnlyAfterClaimAndReusesTheReliableCancellationSource() throws Exception {
+    var ledger = new FakeLedger(new ArrayList<>());
+    var starter = new CapturingStarter(new ArrayList<>());
+    var registeredAfterClaim = new AtomicBoolean();
+    var entered = new CountDownLatch(1);
+    var released = new CountDownLatch(1);
+    var allowCompletion = new CountDownLatch(1);
+    var reference = controlRef(7);
+    var registry =
+        new ActiveTurnRegistry(
+            Clock.fixed(NOW, ZoneOffset.UTC), () -> reference, 1, Duration.ofMinutes(5), 1);
+    ActiveTurnObserver observer =
+        (channel, cancellation, startedAt) -> {
+          registeredAfterClaim.set(!ledger.starts.isEmpty());
+          return registry.register(channel, cancellation, startedAt);
+        };
+    ReliableTurnProcessor processor =
+        (context, cancellation) -> {
+          assertThat(context.controlRegistration().registered()).isTrue();
+          try (var ignored = cancellation.onCancellation(released::countDown)) {
+            entered.countDown();
+            await(released);
+            await(allowCompletion);
+          }
+        };
+    var coordinator = coordinator(ledger, starter, processor, SETTINGS, observer);
+    coordinator.handle(accepted("update-control", 0, "message-control", "session-control"));
+
+    Thread worker = Thread.ofVirtual().start(starter.removeNext());
+    entered.await();
+    int ledgerEventsBeforeCancel = ledger.events.size();
+
+    try {
+      assertThat(registeredAfterClaim).isTrue();
+      assertThat(registry.cancel(reference).result())
+          .isEqualTo(ControlCancelResult.CANCELLATION_REQUESTED);
+    } finally {
+      allowCompletion.countDown();
+    }
+    worker.join();
+
+    assertThat(ledger.events).hasSize(ledgerEventsBeforeCancel);
+    assertThat(registry.terminalKind(reference)).contains(ControlTerminalKind.SOURCE_ENDED);
+    assertThat(coordinator.activeTurnCount()).isZero();
+  }
+
+  @Test
+  void genericReliableCoordinatorUsesTheInstanceChannelForControlObservation() {
+    var ledger = new FakeLedger(new ArrayList<>());
+    var starter = new CapturingStarter(new ArrayList<>());
+    var observedChannel = new AtomicReference<String>();
+    ActiveTurnObserver observer =
+        (channel, cancellation, startedAt) -> {
+          observedChannel.set(channel);
+          return io.namei.agent.application.control.ActiveTurnRegistration.disabled();
+        };
+    var coordinator =
+        coordinator(ledger, starter, (context, cancellation) -> {}, SETTINGS, observer);
+    ChannelInstanceId matrixInstance = ChannelInstanceId.derive("matrix", "instance-test");
+    InboundMessage inbound =
+        new InboundMessage(
+            MessageContract.CURRENT_VERSION,
+            "message-matrix",
+            "mapper-turn",
+            "matrix:room",
+            new MessageRoute("matrix", "room"),
+            "sender",
+            "question",
+            NOW);
+
+    coordinator.handle(
+        ReliableInboundEvent.accepted(matrixInstance, "event-matrix", 0, "room", inbound));
+    starter.runNext();
+
+    assertThat(observedChannel).hasValue("matrix");
+  }
+
+  @Test
+  void observerFailureAndExecutionUnknownNeverChangeReliableProcessing() {
+    var healthyLedger = new FakeLedger(new ArrayList<>());
+    var healthyStarter = new CapturingStarter(new ArrayList<>());
+    var processorCalls = new AtomicInteger();
+    ActiveTurnObserver failingObserver =
+        (channel, cancellation, startedAt) -> {
+          throw new IllegalStateException("observer-secret");
+        };
+    var healthy =
+        coordinator(
+            healthyLedger,
+            healthyStarter,
+            (context, cancellation) -> processorCalls.incrementAndGet(),
+            SETTINGS,
+            failingObserver);
+
+    healthy.handle(accepted("update-observer", 0, "message-observer", "session-observer"));
+    healthyStarter.runNext();
+
+    assertThat(processorCalls).hasValue(1);
+    assertThat(healthy.activeTurnCount()).isZero();
+
+    var unknownLedger = new FakeLedger(new ArrayList<>());
+    unknownLedger.eventResults.add(
+        new ChannelLedgerResult.Event(
+            ChannelLedgerResult.InboxStatus.EXECUTION_UNKNOWN, "turn-unknown", 3, null, 1));
+    var unknownStarter = new CapturingStarter(new ArrayList<>());
+    var observerCalls = new AtomicInteger();
+    ActiveTurnObserver recordingObserver =
+        (channel, cancellation, startedAt) -> {
+          observerCalls.incrementAndGet();
+          return io.namei.agent.application.control.ActiveTurnRegistration.disabled();
+        };
+    var unknown =
+        coordinator(
+            unknownLedger,
+            unknownStarter,
+            (context, cancellation) -> {},
+            SETTINGS,
+            recordingObserver);
+
+    assertThat(
+            unknown
+                .handle(accepted("update-unknown", 0, "message-unknown", "session-unknown"))
+                .status())
+        .isEqualTo(ReliableInboundResult.Status.EXECUTION_UNKNOWN);
+    assertThat(observerCalls).hasValue(0);
+    assertThat(unknownStarter.calls).isZero();
+  }
+
+  @Test
   void mapsLedgerConflictCapacityAndUnavailableToStableChannelFailures() {
     var cases =
         Map.of(
@@ -374,9 +508,33 @@ class ReliableInboundCoordinatorTest {
         settings);
   }
 
+  private static ReliableInboundCoordinator coordinator(
+      FakeLedger ledger,
+      CapturingStarter starter,
+      ReliableTurnProcessor processor,
+      ReliableInboundSettings settings,
+      ActiveTurnObserver observer) {
+    var generated = new AtomicInteger();
+    return new ReliableInboundCoordinator(
+        ledger,
+        processor,
+        starter,
+        Clock.fixed(NOW, ZoneOffset.UTC),
+        () -> OWNER,
+        () -> "turn-generated-" + generated.incrementAndGet(),
+        settings,
+        observer);
+  }
+
   private static ReliableInboundEvent.Accepted accepted(
       String eventId, long sequence, String messageId, String sessionId) {
     return accepted(eventId, sequence, messageId, sessionId, "question");
+  }
+
+  private static io.namei.agent.kernel.control.ControlTurnRef controlRef(int lastByte) {
+    byte[] bytes = new byte[16];
+    bytes[15] = (byte) lastByte;
+    return io.namei.agent.kernel.control.ControlTurnRef.fromBytes(bytes);
   }
 
   private static ReliableInboundEvent.Accepted accepted(

@@ -11,6 +11,9 @@ import io.namei.agent.application.ChatResult;
 import io.namei.agent.application.ChatUseCase;
 import io.namei.agent.application.MessageTurnService;
 import io.namei.agent.application.TurnCancellation;
+import io.namei.agent.application.control.ActiveTurnObserver;
+import io.namei.agent.application.control.ActiveTurnRegistry;
+import io.namei.agent.application.control.ControlEventHub;
 import io.namei.agent.bootstrap.channel.ChannelState;
 import io.namei.agent.bootstrap.channel.reliability.ChannelReliabilityMode;
 import io.namei.agent.bootstrap.channel.reliability.ChannelReliabilityProperties;
@@ -22,6 +25,8 @@ import io.namei.agent.kernel.channel.reliability.ChannelFingerprint;
 import io.namei.agent.kernel.channel.reliability.ChannelInstanceId;
 import io.namei.agent.kernel.channel.reliability.ChannelLedgerCommand;
 import io.namei.agent.kernel.channel.reliability.InboxEventKind;
+import io.namei.agent.kernel.control.ControlCancelResult;
+import io.namei.agent.kernel.control.ControlTerminalKind;
 import io.namei.agent.kernel.error.TurnCancelledException;
 import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.MessageRole;
@@ -252,12 +257,57 @@ class TelegramReliableChannelAdapterTest {
     }
   }
 
+  @Test
+  void dashboardCancellationUsesReliableSourceAndPublishesOnlyCommittedTerminal() throws Exception {
+    Path workspace = temporaryDirectory.resolve("control-workspace");
+    var api = new ScriptedApi();
+    var chat = new CancellableChat();
+    var reference = controlRef(1);
+    var registry =
+        new ActiveTurnRegistry(Clock.systemUTC(), () -> reference, 1, Duration.ofMinutes(5), 1);
+    var hub = new ControlEventHub(registry, Clock.systemUTC(), 1, 4, Duration.ofMinutes(5));
+    api.enqueue(List.of(update(50, 5, "dashboard cancel")));
+    TelegramReliableChannelAdapter adapter =
+        adapter(workspace, api, chat, Set.of(10001L), registry);
+
+    try {
+      adapter.start();
+      assertThat(chat.started.await(2, TimeUnit.SECONDS)).isTrue();
+      await(() -> registry.snapshot().activeTurns().size() == 1, "可靠控制面注册");
+      var subscription = hub.subscribe(reference, "actor-test");
+
+      assertThat(registry.cancel(reference).result())
+          .isEqualTo(ControlCancelResult.CANCELLATION_REQUESTED);
+
+      await(() -> api.sends.contains(new Send(10001, "请求已取消（REQUESTED）")), "可靠取消投递");
+      var terminal = subscription.poll(Duration.ofSeconds(2)).orElseThrow();
+      assertThat(terminal.projection().type())
+          .isEqualTo(io.namei.agent.kernel.channel.OutboundMessageType.TURN_CANCELLED);
+      assertThat(registry.terminalKind(reference)).contains(ControlTerminalKind.CANCELLED);
+      assertThat(claimState(workspace.resolve("channels/channel-ledger.db")))
+          .isEqualTo("TERMINAL_RECORDED");
+    } finally {
+      adapter.close();
+      hub.close();
+      registry.close();
+    }
+  }
+
   private static TelegramReliableChannelAdapter adapter(Path workspace, ScriptedApi api) {
     return adapter(workspace, api, new AnsweringChat(), Set.of(10001L));
   }
 
   private static TelegramReliableChannelAdapter adapter(
       Path workspace, ScriptedApi api, ChatUseCase chat, Set<Long> allowed) {
+    return adapter(workspace, api, chat, allowed, ActiveTurnObserver.disabled());
+  }
+
+  private static TelegramReliableChannelAdapter adapter(
+      Path workspace,
+      ScriptedApi api,
+      ChatUseCase chat,
+      Set<Long> allowed,
+      ActiveTurnObserver observer) {
     var ids = new AtomicLong();
     var reliability =
         new ChannelReliabilityProperties(
@@ -271,7 +321,14 @@ class TelegramReliableChannelAdapterTest {
             new TelegramBotToken("123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZ_1234")),
         new ChannelReliabilityRuntime(workspace, reliability, Clock.systemUTC()),
         ChannelThreadStarter.virtualThreads(),
-        duration -> {});
+        duration -> {},
+        observer);
+  }
+
+  private static io.namei.agent.kernel.control.ControlTurnRef controlRef(int lastByte) {
+    byte[] bytes = new byte[16];
+    bytes[15] = (byte) lastByte;
+    return io.namei.agent.kernel.control.ControlTurnRef.fromBytes(bytes);
   }
 
   private static TelegramProperties telegramProperties(Set<Long> allowed) {

@@ -11,6 +11,7 @@ import io.namei.agent.application.ReliableInboundEvent;
 import io.namei.agent.application.ReliableInboundResult;
 import io.namei.agent.application.ReliableInboundSettings;
 import io.namei.agent.application.ReliableTurnStarter;
+import io.namei.agent.application.control.ActiveTurnObserver;
 import io.namei.agent.bootstrap.channel.ChannelAdapter;
 import io.namei.agent.bootstrap.channel.ChannelReliabilityStatus;
 import io.namei.agent.bootstrap.channel.ChannelState;
@@ -46,6 +47,7 @@ public final class TelegramReliableChannelAdapter implements ChannelAdapter {
   private final ChannelReliabilityRuntime runtime;
   private final ChannelThreadStarter threadStarter;
   private final ChannelSleeper sleeper;
+  private final ActiveTurnObserver activeTurnObserver;
   private final TelegramTerminalRenderer terminalProjector =
       new TelegramTerminalRenderer(new TelegramTextChunker());
   private final AtomicReference<ChannelState> state = new AtomicReference<>(ChannelState.NEW);
@@ -69,6 +71,28 @@ public final class TelegramReliableChannelAdapter implements ChannelAdapter {
       ChannelReliabilityRuntime runtime,
       ChannelThreadStarter threadStarter,
       ChannelSleeper sleeper) {
+    this(
+        api,
+        mapper,
+        turns,
+        properties,
+        instance,
+        runtime,
+        threadStarter,
+        sleeper,
+        ActiveTurnObserver.disabled());
+  }
+
+  public TelegramReliableChannelAdapter(
+      TelegramBotApi api,
+      TelegramUpdateMapper mapper,
+      MessageTurnService turns,
+      TelegramProperties properties,
+      TelegramChannelInstance instance,
+      ChannelReliabilityRuntime runtime,
+      ChannelThreadStarter threadStarter,
+      ChannelSleeper sleeper,
+      ActiveTurnObserver activeTurnObserver) {
     this.api = Objects.requireNonNull(api, "api");
     this.mapper = Objects.requireNonNull(mapper, "mapper");
     this.turns = Objects.requireNonNull(turns, "turns");
@@ -77,6 +101,7 @@ public final class TelegramReliableChannelAdapter implements ChannelAdapter {
     this.runtime = Objects.requireNonNull(runtime, "runtime");
     this.threadStarter = Objects.requireNonNull(threadStarter, "threadStarter");
     this.sleeper = Objects.requireNonNull(sleeper, "sleeper");
+    this.activeTurnObserver = Objects.requireNonNull(activeTurnObserver, "activeTurnObserver");
   }
 
   @Override
@@ -165,7 +190,8 @@ public final class TelegramReliableChannelAdapter implements ChannelAdapter {
                 runtime.properties().recoveryBatchSize(),
                 CHUNK_ALGORITHM,
                 new TelegramTextChunker().split(TelegramChannelAdapter.SESSION_BUSY_TEXT),
-                new TelegramTextChunker().split(TelegramChannelAdapter.NO_ACTIVE_TURN_TEXT)));
+                new TelegramTextChunker().split(TelegramChannelAdapter.NO_ACTIVE_TURN_TEXT)),
+            activeTurnObserver);
     try {
       worker.start();
     } catch (RuntimeException | Error failure) {

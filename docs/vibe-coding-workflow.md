@@ -77,6 +77,10 @@ Spec 批准前不得实现对应生产行为。
 
 只新增兼容性、端到端或验收测试而不修改生产行为时，不人为破坏实现制造 RED，只运行一次聚焦验收命令。
 
+测试保持一个可观察行为对应一个主要层级。相同输入分类和相同生产路径使用参数化 Case；只有
+Adapter Wiring、事务提交、并发竞态或安全信任边界不同，才在单元和集成层重复覆盖。聚焦命令应
+一次选择当前 Task 的全部目标类，避免按测试类重复启动 Maven。
+
 ## 6. 阶段门禁
 
 阶段门禁用于替代每个任务后的重复完整构建：
@@ -84,6 +88,10 @@ Spec 批准前不得实现对应生产行为。
 - Task 6 后：SQLite 模块验证、完整 Reactor、`failure` Profile。
 - Task 10 后：Spring AI 和 Bootstrap 模块验证、完整 Reactor、Kernel 依赖检查。
 - Task 13 后：完整 Reactor、`failure`、`compat`、架构、Secret、Workspace 和最终验收检查。
+
+四个测试集使用互斥口径：默认只运行常规回归，`failure` 只运行故障/竞态，`compat` 只运行
+Golden/Schema 兼容，`real-model-smoke` 只运行明确授权的真实模型 Smoke。阶段需要哪几类能力就
+分别执行哪几个集合；Profile 不再把默认测试作为隐式前置条件重复执行。
 
 阶段门禁流程：
 

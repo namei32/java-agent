@@ -2,11 +2,16 @@ package io.namei.agent.bootstrap.telegram;
 
 import io.namei.agent.application.BoundedOutboundBuffer;
 import io.namei.agent.application.MessageTurnService;
+import io.namei.agent.application.control.ActiveTurnObserver;
+import io.namei.agent.application.control.ActiveTurnRegistration;
+import io.namei.agent.application.control.ControlCancellationHandle;
+import io.namei.agent.application.control.ObservedOutboundMessageSink;
 import io.namei.agent.bootstrap.channel.ChannelAdapter;
 import io.namei.agent.bootstrap.channel.ChannelState;
 import io.namei.agent.bootstrap.channel.ChannelStatusSnapshot;
 import io.namei.agent.kernel.channel.InboundMessage;
 import io.namei.agent.kernel.channel.OutboundSequenceValidator;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.HashSet;
@@ -36,6 +41,8 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
   private final TelegramProperties properties;
   private final ChannelThreadStarter threadStarter;
   private final ChannelSleeper sleeper;
+  private final Clock clock;
+  private final ActiveTurnObserver activeTurnObserver;
   private final TelegramTextChunker chunker = new TelegramTextChunker();
   private final Semaphore turnPermits;
   private final ConcurrentHashMap<String, ActiveTelegramTurn> activeTurns =
@@ -59,12 +66,34 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
       TelegramProperties properties,
       ChannelThreadStarter threadStarter,
       ChannelSleeper sleeper) {
+    this(
+        api,
+        mapper,
+        turns,
+        properties,
+        threadStarter,
+        sleeper,
+        Clock.systemUTC(),
+        ActiveTurnObserver.disabled());
+  }
+
+  public TelegramChannelAdapter(
+      TelegramBotApi api,
+      TelegramUpdateMapper mapper,
+      MessageTurnService turns,
+      TelegramProperties properties,
+      ChannelThreadStarter threadStarter,
+      ChannelSleeper sleeper,
+      Clock clock,
+      ActiveTurnObserver activeTurnObserver) {
     this.api = Objects.requireNonNull(api, "api");
     this.mapper = Objects.requireNonNull(mapper, "mapper");
     this.turns = Objects.requireNonNull(turns, "turns");
     this.properties = Objects.requireNonNull(properties, "properties");
     this.threadStarter = Objects.requireNonNull(threadStarter, "threadStarter");
     this.sleeper = Objects.requireNonNull(sleeper, "sleeper");
+    this.clock = Objects.requireNonNull(clock, "clock");
+    this.activeTurnObserver = Objects.requireNonNull(activeTurnObserver, "activeTurnObserver");
     this.turnPermits = new Semaphore(properties.maxConcurrentTurns(), true);
   }
 
@@ -301,7 +330,6 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
       sendFixed(chatId, SESSION_BUSY_TEXT);
       return TurnStartResult.BUSY;
     }
-
     try {
       Thread worker =
           Objects.requireNonNull(
@@ -345,7 +373,11 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
 
   private void produce(ActiveTelegramTurn active) {
     try {
-      turns.process(active.inbound(), active.buffer(), active.buffer().cancellation());
+      active.controlRegistration(registerControl(active.buffer()));
+      turns.process(
+          active.inbound(),
+          new ObservedOutboundMessageSink(active.buffer(), active.controlRegistration()),
+          active.buffer().cancellation());
     } catch (Throwable failure) {
       // Consumer detects an absent terminal and fails closed; exception text is deliberately
       // dropped.
@@ -444,7 +476,23 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
       return;
     }
     activeTurns.remove(active.inbound().sessionId(), active);
+    try {
+      active.controlRegistration().closeWithoutTerminal();
+    } catch (RuntimeException ignored) {
+      // 控制观察失败不能改变 Telegram Turn 清理和许可释放。
+    }
     turnPermits.release();
+  }
+
+  private ActiveTurnRegistration registerControl(BoundedOutboundBuffer buffer) {
+    try {
+      ActiveTurnRegistration registration =
+          activeTurnObserver.register(
+              NAME, ControlCancellationHandle.from(buffer), clock.instant());
+      return registration == null ? ActiveTurnRegistration.disabled() : registration;
+    } catch (RuntimeException observerFailure) {
+      return ActiveTurnRegistration.disabled();
+    }
   }
 
   private static boolean retryable(TelegramApiException.Reason reason) {

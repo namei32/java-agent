@@ -1,6 +1,7 @@
 package io.namei.agent.bootstrap.telegram;
 
 import io.namei.agent.application.BoundedOutboundBuffer;
+import io.namei.agent.application.control.ActiveTurnRegistration;
 import io.namei.agent.kernel.channel.InboundMessage;
 import java.time.Duration;
 import java.util.Objects;
@@ -24,6 +25,7 @@ final class ActiveTelegramTurn {
   private final AtomicReference<StartupState> startupState =
       new AtomicReference<>(StartupState.PENDING);
   private final AtomicBoolean cleaned = new AtomicBoolean();
+  private volatile ActiveTurnRegistration controlRegistration = ActiveTurnRegistration.disabled();
   private volatile Thread worker;
   private volatile Thread producer;
 
@@ -46,6 +48,14 @@ final class ActiveTelegramTurn {
 
   BoundedOutboundBuffer buffer() {
     return buffer;
+  }
+
+  ActiveTurnRegistration controlRegistration() {
+    return controlRegistration;
+  }
+
+  void controlRegistration(ActiveTurnRegistration registration) {
+    controlRegistration = Objects.requireNonNull(registration, "registration");
   }
 
   void worker(Thread thread) {
