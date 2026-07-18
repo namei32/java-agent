@@ -18,7 +18,7 @@
 - 已完成：R6.2 Provider Streaming 与本地 CLI，包含纯 JDK 流式 Port、Application Delta/Tool Loop、Spring AI OpenAI-compatible SSE Adapter、有界 CLI、传输取消、提交隔离以及默认、`failure`、`compat` 最终门禁。
 - 已完成并合入 `main`：R6.3 Telegram Channel Host、JDK Bot API 长轮询、数值 Allowlist、终态合并、定向取消、有界网络/关闭和默认零网络装配已通过 PR #6；真实 Smoke 与部署仍未授权。
 - 已完成并合入 `main`：R6.4 独立 Java SQLite 渠道账本、Inbox/Turn Claim、事务 Outbox、Receipt、`UNKNOWN`、恢复、清理、容量门禁和备份/回退演练；PR #7 与合并后聚焦稳定性 PR #8 的远程三套门禁均通过，真实 Smoke 仍待授权。
-- 实施中：R6.5 默认关闭、仅 Loopback 的认证控制面已完成 G0–G4，包括 48 Case Java-owned Fixture、活动 Turn Registry、独立有界 Event Hub，以及 Telegram Volatile/SQLite Reliable 执行路径接入；下一步从 G5 实现默认关闭的 Spring 装配。
+- 实施中：R6.5 默认关闭、仅 Loopback 的认证控制面后端已完成 G0–G9，包括 48 Case Java-owned Fixture、活动 Turn Registry、独立有界 Event Hub、Telegram Volatile/SQLite Reliable 接入、进程内 Bearer Session、安全状态/取消 API、future-only SSE 和故障矩阵；本地严格阶段门禁全绿，当前进入 G10 Draft PR 与远程 CI。
 - 尚未覆盖：自动 Memory 写回/Optimizer、真实 Embedding/真实 Workspace 启用、可用的人类审批渠道、生产 Durable Ledger、真实副作用工具、真实 Telegram Smoke、经单独授权的真实 Provider 流式 Smoke、真实 MCP Server/Streamable HTTP、插件、主动任务、Drift 和 Subagent。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。
@@ -32,7 +32,7 @@
 5. 与当前变更相关的 `contracts/`、`specs/` 和 `plans/`。
 6. [本地开发运行手册](runbooks/local-development.md)。
 
-当前 Golden 资产从 [Python/Java Golden Test 夹具规范](contracts/golden-test-fixtures.md)进入，包含配置、历史、Prompt、只读 Context/Memory、SQLite、错误映射、Tool Loop、Tool Runtime 安全和 Approval/Side Effect 基准；R4.2、R5.1、R6.1、R6.2 与 R6.3 另有不依赖 Python 的 Java-owned Semantic Memory、MCP、版本化渠道消息、Provider Streaming/CLI 和 Telegram Channel Contract Fixture。
+当前 Golden 资产从 [Python/Java Golden Test 夹具规范](contracts/golden-test-fixtures.md)进入，包含配置、历史、Prompt、只读 Context/Memory、SQLite、错误映射、Tool Loop、Tool Runtime 安全和 Approval/Side Effect 基准；R4.2、R5.1、R6.1–R6.5 另有不依赖 Python 的 Java-owned Semantic Memory、MCP、版本化渠道消息、Provider Streaming/CLI、Telegram、可靠投递和 Loopback 控制面 Contract Fixture。
 配置迁移边界从 [Python/Java 配置兼容契约](contracts/python-java-configuration.md)进入，实际启动与检查命令见[本地开发运行手册](runbooks/local-development.md)。
 工具迁移边界从 [核心消息、生命周期与 Tool 契约](contracts/core-message-lifecycle-tool.md)进入。
 Tool Runtime 的模式、预算、校验、超时、取消和 Provider 发布门禁以 [Tool Runtime 安全契约](contracts/tool-runtime-safety.md)为准。
@@ -50,7 +50,7 @@ R6.3 的已实现边界见 [Telegram Channel Host 契约](contracts/telegram-cha
 
 R6.4 的已实现边界见 [渠道可靠投递、幂等与恢复契约](contracts/channel-reliable-delivery.md)、[ADR-0010](adr/0010-use-dedicated-sqlite-channel-ledger.md)、[设计](specs/2026-07-16-channel-reliable-delivery-design.md)、[实施计划](plans/2026-07-16-channel-reliable-delivery-implementation.md)和[备份/回退手册](runbooks/channel-ledger-backup-rollback.md)。本地自动化只使用临时 Java/SQLite 与 Loopback；不得自动重跑 Turn、重发 `UNKNOWN` 或访问真实 Telegram。远程 CI 不构成真实网络或部署授权。
 
-R6.5 的批准边界见 [Loopback 控制面契约](contracts/loopback-control-plane.md)、[ADR-0011](adr/0011-use-authenticated-sse-for-loopback-control-events.md)、[设计](specs/2026-07-17-loopback-control-plane-design.md)和[实施计划](plans/2026-07-17-r6-loopback-control-plane-implementation.md)。G0–G4 已完成，当前进入 G5；远程控制、CLI+Web、同步 Chat 取消、Ledger Reconcile、真实 Telegram 和 Python Dashboard 写接口继续冻结。
+R6.5 的批准边界见 [Loopback 控制面契约](contracts/loopback-control-plane.md)、[ADR-0011](adr/0011-use-authenticated-sse-for-loopback-control-events.md)、[设计](specs/2026-07-17-loopback-control-plane-design.md)和[实施计划](plans/2026-07-17-r6-loopback-control-plane-implementation.md)。后端 G0–G9 已完成并进入 G10 发布验收；远程控制、CLI+Web、同步 Chat 取消、Ledger Reconcile、真实 Telegram 和前端实现继续冻结，后端合入后才进入 G11 前端 Contract。
 
 ## 目录职责
 

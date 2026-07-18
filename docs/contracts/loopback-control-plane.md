@@ -1,6 +1,6 @@
 # Loopback 控制面、安全状态、事件流与活动 Turn 取消契约
 
-- 状态：已批准，实施中
+- 状态：已批准；后端已实现并完成本地离线验收
 - 契约版本：1
 - 日期：2026-07-17
 - 阶段：R6.5
@@ -13,7 +13,7 @@
 - 关联设计：[Loopback 控制面设计](../specs/2026-07-17-loopback-control-plane-design.md)
 - 实施计划：[R6.5 Loopback 控制面工作计划](../plans/2026-07-17-r6-loopback-control-plane-implementation.md)
 
-> 本契约只提议默认关闭、单 JVM、仅 Loopback 的 Java 控制面。它不授权公网或局域网暴露、反向代理、TLS 终止、远程身份、RBAC、真实用户数据、数据库 Reconcile、自动重跑 Turn、修改 Tool 权限或迁移 Python Dashboard 数据接口。
+> 本契约只定义默认关闭、单 JVM、仅 Loopback 的 Java 控制面后端。它不授权公网或局域网暴露、反向代理、TLS 终止、远程身份、RBAC、真实用户数据、数据库 Reconcile、自动重跑 Turn、修改 Tool 权限或迁移 Python Dashboard 数据接口。
 
 ## 1. 目的
 
