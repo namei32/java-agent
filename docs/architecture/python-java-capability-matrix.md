@@ -46,7 +46,7 @@
 
 | 能力 | Python 基准位置 | Java 位置 | 状态 | 主要差距/下一步 | 数据风险 |
 | --- | --- | --- | --- | --- | --- |
-| Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry`、`ToolCatalog`、`ApprovalInbox` | 部分 | Approval/副作用/幂等协议、整批门禁和生产 Deny All Framework 已实现；R11 B1 提供常驻/Deferred Catalog、Turn-scoped `tool_search`、确定性 CJK/精确检索和 Schema 逐轮投放；B2a 提供默认关闭的本地 SQLite Inbox、Loopback 单次决定和无执行边界，B2b 已验证 AES-GCM、v2 原子 Store、同库 `CONSUMED`/唯一 `RESERVED`、Ledger `UNKNOWN`/安全结果与 Session 条件提交。缺 Resume/Cancel、恢复编排与具体 Tool Contract | 中 |
+| Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry`、`ToolCatalog`、`ApprovalInbox` | 部分 | Approval/副作用/幂等协议、整批门禁和生产 Deny All Framework 已实现；R11 B1 提供常驻/Deferred Catalog、Turn-scoped `tool_search`、确定性 CJK/精确检索和 Schema 逐轮投放；B2a 提供默认关闭的本地 SQLite Inbox、Loopback 单次决定和无执行边界，B2b 已验证 AES-GCM、v2 原子 Store、同库 `CONSUMED`/唯一 `RESERVED`、Ledger `UNKNOWN`/安全结果与 Session 条件提交。恢复前仍缺版本化 Session Anchor：现有 Port 不能将结果安全附着到已结束 Pending Turn；其 Contract/ADR 已冻结。 |
 | Tool Loop | `agent/looping/`、`agent/tool_runtime.py` | `ToolLoop`、`ChatService`、`SideEffectBatchCoordinator` | 部分 | 有界顺序执行、安全预算、审批生命周期、一次性消费、幂等/UNKNOWN、提交边界和取消 Token 透传已完成；Telegram 断开已接入同一取消边界，生产仍无可执行副作用 | 高 |
 | 文件/Shell/Web 工具 | `agent/tools/` | `CurrentTimeTool`（仅时间） | 部分 | 仅完成无副作用时间工具；R3.2 批准不授权真实副作用，仍需逐工具 Capability Contract | 极高 |
 | Tool Hook | `agent/tool_hooks/` | R7 Kernel/Application Plugin Tap（已实现） | 部分 | V1 固定顺序、超时和异常隔离，只读投影；可变 Gate/副作用仍冻结 | 高 |

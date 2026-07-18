@@ -1,0 +1,78 @@
+# Pending Operation Session Anchor 与 Recovery Capability 契约
+
+- 状态：已冻结，待实现
+- 契约版本：1
+- 日期：2026-07-19
+- 阶段：R11 B2b / O6
+- 前置：[待审批 Tool Operation、参数胶囊与恢复安全契约](pending-tool-operation.md)
+- 关联 ADR：[ADR-0019：在恢复前冻结 Pending Operation 的 Session Anchor](../adr/0019-freeze-pending-operation-session-anchor-before-resume.md)
+
+> 本契约只冻结恢复所需的 Session Anchor 与测试边界。它不启用 Resume HTTP、Cancel HTTP、后台 Worker、
+>真实 Tool、网络、文件、Shell、消息发送或任何新的 Spring Bean。
+
+## 1. 不可跨越的前置条件
+
+`RESERVED`、`RUNNING`、`SUCCEEDED` 或 `COMMIT_UNREPORTED` 都不是执行授权。只有一个逐 Tool、显式启用且
+经过 Sandbox 验收的 Capability，才能在满足以下全部条件时调用 Invoker：
+
+1. 已从加密 Capsule 重新认证精确 Tool/Version/Risk/Arguments/Fingerprint/Boundary；
+2. 读取到版本化 Session Anchor，且该 Anchor 的 Operation Ref、Session、初始 Revision 和预期恢复 Revision
+   都一致；
+3. 新 Turn、取消、到期、终态 Operation 或既有 Ledger 不使 Anchor 失效；
+4. 在同一 `approval-inbox.db` 立即事务获得唯一 `RESERVED`，并先写 `RUNNING`；
+5. 在副作用成功后先写安全 `SUCCEEDED` Result，再以 Anchor 的条件追加语义提交 Conversation；
+6. Conversation 条件追加失败时只写 `COMMIT_UNREPORTED`，不重放 Invoker。
+
+没有 Capability 的注册、Key、Anchor、Session 条件 Port 或认证后的本机操作入口时，调用次数必须为零。
+
+## 2. Session Anchor 模型
+
+Anchor 是 `sessions.db` 中的版本化内部记录，不等于公开 Message、Approval 或 Capsule。至少绑定：
+
+| 字段 | 规则 |
+| --- | --- |
+| `anchorVersion` | 固定版本，未知版本 Fail Closed。 |
+| `operationRef` | 与 Pending Operation 相同的不透明 128-bit Ref；不在公开 JSON/日志回显。 |
+| `sessionId` | 仅存于 Session Store；不得复制到 Inbox/Capsule 明文。 |
+| `createdNextSequence` | 创建安全 Pending 投影前的 Cursor。 |
+| `resumeNextSequence` | 只允许在此 Cursor 未变化时追加恢复结果。 |
+| `state` | `PENDING_APPROVAL`、`CANCELLED`、`STALE_SESSION`、`COMMITTED` 或稳定终态；不可重开。 |
+| `projectionVersion` | 决定安全 Pending/完成投影模板；不含 Tool 参数或 Result 原文。 |
+
+Session Anchor 不保存原始 User Message、模型 Prompt、Tool Arguments、Approval/Fingerprint/幂等键、Secret、路径或
+异常。原始 Conversation 仍由现有 Message 表保存；Anchor 只承担顺序与恢复关联。
+
+## 3. 条件提交与优先级
+
+初始 Turn 必须通过一个新的 SQLite 原子 Port 写入“完整原始 Turn + 安全 Pending 投影 + Anchor”，并把
+`resumeNextSequence` 固定为写入后的 Cursor。现有 `appendTurnIfNextSequence` 不能代替它。
+
+恢复成功的 Conversation 更新必须由另一新 Port 在 `resumeNextSequence` 上 CAS，只追加版本化安全 Result 投影；
+它不能编辑、删除或补写 User Message。任意状态不匹配返回 `false`，不留下半个 Message 或 Anchor。
+
+优先级固定如下：
+
+1. 新 Turn/已变 Cursor 优先，Anchor 与 Operation 变为 `STALE_SESSION`，Invoker 零调用；
+2. 取消或到期在 `RUNNING` 前优先，Invoker 零调用；
+3. `UNKNOWN` 不追加 Conversation，不自动重试；
+4. `SUCCEEDED` 但 CAS 失败为 `COMMIT_UNREPORTED`，保留 Ledger 安全 Result，Invoker 零重放；
+5. 进程重启不自动争用 Anchor 或调用 Invoker。
+
+## 4. API 与 Capability 边界
+
+未来 API 只能是认证后的 Loopback 操作，且单次请求只接受不透明 `operationRef` 和固定 action；不接受 Tool 名称、
+Arguments、Result、Session、Cursor、风险、边界版本或模型文本。`resume`、`cancel`、`status` 必须各自有版本化
+Request/Response Fixture、速率限制、审计和稳定错误投影。
+
+每个 Capability 必须声明精确 Tool Name/Version、风险、Sandbox 边界版本、最小权限、参数 Schema、审批摘要、
+幂等派生、可保存的安全 Result、`UNKNOWN` 触发条件、回退与本地 Fake Invoker 演练。Capability 不能由模型、
+Config 字符串、Plugin 或 MCP 返回值动态创建。
+
+## 5. 验收顺序
+
+1. Java-owned `pending-operation-v1` 扩展 Anchor 创建、旧 Cursor、新 Turn、取消、成功提交、`UNKNOWN` 和
+   `COMMIT_UNREPORTED` Case；
+2. 在 `sessions.db` 实现 Anchor Schema、迁移、读写与两个条件 Port；
+3. 以本地 Fake Capability/Invoker 验证唯一 Reservation、零泄漏、零重放和崩溃矩阵；
+4. 再冻结认证 Loopback API；
+5. 最后逐 Tool 单独批准 Sandbox/Smoke；R11 全部完成后执行三套完整 Reactor 门禁。
