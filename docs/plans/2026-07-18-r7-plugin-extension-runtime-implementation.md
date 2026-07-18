@@ -1,6 +1,6 @@
 # R7 插件与扩展运行时实施计划
 
-- 状态：G0、P1、P2 已完成；等待 P3 连续 TDD
+- 状态：G0、P1、P2、P3 已完成；等待 P4 连续 TDD
 - 分支：`agent/r7-r9-runtime`
 - 前置：R6.5 已通过 PR #9 合入 `main`，主分支三套 CI 全绿
 
@@ -26,3 +26,10 @@ Tap SPI、调度器与隔离稳定码而编译失败，构成有效 RED。随后
 Dispatcher；同一目标命令 3/3 GREEN，覆盖 `(priority desc, pluginId asc)` 顺序、发布线程不直接调用、
 单 Plugin timeout 禁用、Runtime Failure 隔离以及审计不含原始 Plugin ID 或异常正文。命令：
 `./mvnw --batch-mode --no-transfer-progress -pl agent-application -am -Dtest=PluginTapDispatcherTest -Dsurefire.failIfNoSpecifiedTests=false test`。
+
+P3 证据（2026-07-18）：先添加 `JavaServicePluginDiscoveryTest`，目标 Maven 测试因缺少 `AgentPlugin`
+SPI、严格 Plugin Mode 和受信发现器而编译失败，构成有效 RED。随后以 `ServiceLoader` 的惰性 Supplier
+实现 classpath 发现；仅在 `JAVA_SERVICE` 且显式 allowlist 非空时读取 Provider，先固定 Manifest/Tap
+投影再校验重复和来源。相同目标命令 3/3 GREEN，证明 Disabled/空 allowlist 不实例化 Provider、结果遵循
+配置 ID 顺序、重复 ID 与错误 `EXTERNAL_STDIO` 来源均在激活前稳定拒绝。命令：
+`./mvnw --batch-mode --no-transfer-progress -pl agent-bootstrap -am -Dtest=JavaServicePluginDiscoveryTest -Dsurefire.failIfNoSpecifiedTests=false test`。
