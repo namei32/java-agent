@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 public final class ControlEventHub implements AutoCloseable {
   public static final int MAX_SUBSCRIBERS = 64;
   public static final int MAX_BUFFER_CAPACITY = 1024;
-  public static final Duration MAX_LIFETIME = Duration.ofMinutes(30);
+  public static final Duration MAX_LIFETIME = Duration.ofHours(1);
 
   private static final Pattern ACTOR_REF = Pattern.compile("[A-Za-z0-9_-]{1,128}");
 

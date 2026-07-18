@@ -38,6 +38,18 @@ agent:
     buffer-capacity: ${AGENT_CLI_BUFFER_CAPACITY:32}
     publish-timeout: ${AGENT_CLI_PUBLISH_TIMEOUT:2s}
     poll-timeout: ${AGENT_CLI_POLL_TIMEOUT:100ms}
+  control-plane:
+    mode: ${AGENT_CONTROL_PLANE_MODE:DISABLED}
+    session-ttl: ${AGENT_CONTROL_PLANE_SESSION_TTL:15m}
+    max-sessions: ${AGENT_CONTROL_PLANE_MAX_SESSIONS:4}
+    max-active-turns: ${AGENT_CONTROL_PLANE_MAX_ACTIVE_TURNS:128}
+    terminal-retention: ${AGENT_CONTROL_PLANE_TERMINAL_RETENTION:5m}
+    max-terminal-tombstones: ${AGENT_CONTROL_PLANE_MAX_TERMINAL_TOMBSTONES:1024}
+    max-subscribers: ${AGENT_CONTROL_PLANE_MAX_SUBSCRIBERS:8}
+    subscriber-buffer-capacity: ${AGENT_CONTROL_PLANE_SUBSCRIBER_BUFFER_CAPACITY:64}
+    heartbeat-interval: ${AGENT_CONTROL_PLANE_HEARTBEAT_INTERVAL:15s}
+    stream-max-lifetime: ${AGENT_CONTROL_PLANE_STREAM_MAX_LIFETIME:15m}
+    shutdown-timeout: ${AGENT_CONTROL_PLANE_SHUTDOWN_TIMEOUT:2s}
   channels:
     reliability:
       mode: ${AGENT_CHANNEL_RELIABILITY_MODE:DISABLED}
