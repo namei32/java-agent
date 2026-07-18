@@ -1,6 +1,6 @@
 # Pending Operation Session Anchor 与 Recovery Capability 契约
 
-- 状态：已冻结；A1–A6 的 Fixture、Anchor Model、初始 SQLite 原子写入、安全 Result 条件提交、测试专用 Fake Capability 演练与 Loopback Message Contract 已完成；生产恢复编排未实现
+- 状态：已冻结；A1–A7 的 Fixture、Anchor Model、初始 SQLite 原子写入、安全 Result 条件提交、测试专用 Fake Capability 演练与 Loopback Message Contract 已完成，且 R11 分支三套完整 Reactor 门禁已通过；生产恢复编排未实现
 - 契约版本：1
 - 日期：2026-07-19
 - 阶段：R11 B2b / O6
@@ -82,4 +82,5 @@ Config 字符串、Plugin 或 MCP 返回值动态创建。
 3. 已以只在测试源码显式构造的 Fake Capability/Invoker 验证精确 Anchor/Operation 绑定、唯一 Reservation、
    `RUNNING`/`SUCCEEDED`、`UNKNOWN`、`COMMIT_UNREPORTED` 和零重放；它没有生产类型、Bean 或路由；
 4. 已冻结认证 Loopback Resume/Cancel/Status Message Contract；默认与仅 Loopback Control Mode 时均不映射路由；
-5. 最后逐 Tool 单独批准 Sandbox/Smoke；R11 全部完成后执行三套完整 Reactor 门禁。
+5. 无执行安全基础已通过完整 `clean verify`、`-Pfailure verify`、`-Pcompat verify`；后续仍须逐 Tool
+   单独批准 Capability、Sandbox 与 Smoke。该阶段门禁不构成任何执行授权，也不表示 R11 已完成。

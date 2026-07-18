@@ -1,6 +1,6 @@
 # R11 B2b Pending Operation 设计
 
-- 状态：部分实现；无执行状态机、AES-GCM Capsule、SQLite v2 原子 Store、一次性 Reservation、Ledger 状态、Session 条件提交、Anchor 安全 Result 条件提交与测试专用 Fake Capability 演练已验证
+- 状态：部分实现；无执行状态机、AES-GCM Capsule、SQLite v2 原子 Store、一次性 Reservation、Ledger 状态、Session 条件提交、Anchor 安全 Result 条件提交与测试专用 Fake Capability 演练已验证；R11 分支的完整 `clean verify`、`-Pfailure verify`、`-Pcompat verify` 均通过
 - 日期：2026-07-18
 - Contract：[待审批 Tool Operation、参数胶囊与恢复安全契约](../contracts/pending-tool-operation.md)
 - ADR：[ADR-0018：待审批操作使用单一隔离事务存储](../adr/0018-use-single-transaction-pending-operation-store.md)

@@ -83,7 +83,7 @@
 ## 当前优先级
 
 1. R6.1–R6.5 已合入 `main`，PR #9 与主分支三套 CI 均通过；R7–R9 已完成当前 Java 实现并通过默认、`failure`、`compat` 阶段门禁，R9 只提供离线演练。R9 的忽略规则遗漏已由本地 `main` 的 `2ceb44b` 修复。
-2. R10 已完成并通过三套阶段门禁；R11 的 B1 Tool Catalog、B2a Local Approval Inbox 及 B2b Pending Operation 的无执行状态机、AES-GCM、v2 Store、`CONSUMED`/`RESERVED`、Ledger 终态、Session 条件提交、初始 Anchor 原子写入、安全 Result 条件提交和测试专用 Fake Capability 零重放演练已完成聚焦验证，Resume/Cancel/Status Message Contract 也已冻结；随后是生产恢复编排和逐工具 Capability Contract。
+2. R10 已完成并通过三套阶段门禁；R11 的 B1 Tool Catalog、B2a Local Approval Inbox 及 B2b Pending Operation 的无执行状态机、AES-GCM、v2 Store、`CONSUMED`/`RESERVED`、Ledger 终态、Session 条件提交、初始 Anchor 原子写入、安全 Result 条件提交和测试专用 Fake Capability 零重放演练已完成，R11 分支的默认、`failure`、`compat` 完整门禁均已通过；Resume/Cancel/Status Message Contract 也已冻结但零路由。随后才是生产恢复编排和逐工具 Capability Contract。
 3. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 4. R11–R15 的全量对齐顺序、Python 证据和完成标准见[Java / Akashic Agent 全量对齐计划](../plans/2026-07-18-java-parity-program.md)。
 5. 真实 Telegram、远程 MCP、真实 Python Plugin、主动外部源、真实 Workspace、部署与 Python 退役不因 R10 实施而获得授权。
