@@ -1,7 +1,7 @@
 # Python/Java 能力差距矩阵
 
 - 状态：当前事实
-- 最近更新：2026-07-17
+- 最近更新：2026-07-18
 - Python 基准：`/Users/namei/idea/agent/akashic-agent`
 
 ## 状态说明
@@ -67,6 +67,7 @@
 | Proactive | `agent/core/proactive_*`、`bootstrap/proactive.py` | R8 Proactive Gate/NoOp Planner（已实现） | 部分 | 默认 NoOp Delivery；外部源、真实推送、审批与网络冻结 | 极高 |
 | Drift | `agent/core/drift_turn.py`、`_handbook/drift-guide.md` | R8 只读 Drift（已实现） | 部分 | 有界安全摘要、预算/取消；Workspace 写入和网络冻结 | 极高 |
 | Subagent | `agent/subagent.py`、`agent/background/` | R8 受限 Subagent（已实现） | 部分 | 无 Tool/网络/权限继承，父取消/字符/时间预算已验证；不含 Peer Agent | 极高 |
+| 生产切换/退役 | Python 部署与数据目录 | R9 sandbox Cutover Contract、`SandboxCutoverAdapter`、离线 CLI/Runbook | 部分 | 已完成仅新建 sandbox 的备份、Manifest、差异、验证和回退检查点；真实数据、双写、部署、停止 Python 与退役仍需独立人工授权 | 极高 |
 | Peer Agent | `agent/peer_agent/` | 无 | 未开始 | 需身份、进程和远端信任边界 | 极高 |
 
 ## 兼容性测试差距
@@ -75,13 +76,13 @@
 | --- | --- | --- |
 | Java 单元/集成测试 | 已建立默认、`failure`、`compat` Profile | 继续随能力扩展 |
 | Python SQLite 兼容夹具 | `sessions.db` 共同 Schema 已覆盖 | 语义记忆改为 Java 原生，不增加 `memory2.db` 兼容夹具 |
-| 跨语言/Java Contract Fixture | 已建立 Python/Java Golden；R4.2、R5.1、R6.1–R6.4 另由生产 Java 实现消费 Java-owned Memory、MCP、版本化渠道消息、Provider Streaming/CLI、Telegram 与可靠投递 Fixture，不运行 Python | R6.5 的 48 Case Java-owned 控制面 Fixture 已由生产 Kernel Contract 消费；Optimizer 仍冻结 |
+| 跨语言/Java Contract Fixture | 已建立 Python/Java Golden；R4.2、R5.1、R6.1–R6.4 另由生产 Java 实现消费 Java-owned Memory、MCP、版本化渠道消息、Provider Streaming/CLI、Telegram 与可靠投递 Fixture，不运行 Python | R6.5 的 48 Case 控制面、R7 Plugin、R8 Proactive 与 R9 Cutover Java-owned Fixture 已由生产 Contract 或 Golden Manifest 消费；Optimizer 仍冻结 |
 | 真实模型 Smoke | Profile 已有，默认不执行；DeepSeek `deepseek-v4-flash` Tool Smoke 已于 2026-07-14 通过 | 其他 Provider/模型仍需逐组合授权验证；通过不自动启用部署 |
 | 真实工作区演练 | 未执行 | 只能在备份副本上先做只读差异，再做受控写入 |
 
 ## 当前优先级
 
-1. R6.1–R6.5 已合入 `main`，PR #9 与主分支三套 CI 均通过；R7/R8 已完成分支内实现与聚焦 TDD，正执行阶段门禁后进入 R9。
+1. R6.1–R6.5 已合入 `main`，PR #9 与主分支三套 CI 均通过；R7–R9 已完成当前 Java 实现并通过默认、`failure`、`compat` 阶段门禁，R9 只提供离线演练。
 2. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。

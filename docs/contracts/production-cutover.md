@@ -1,7 +1,7 @@
 # R9 生产切换、回退与 Python 退役契约
 
 - 阶段：R9
-- 状态：已冻结；默认 `PLAN_ONLY`，不授权真实切换
+- 状态：已实现并验证（仅离线 sandbox 演练）；不授权真实切换
 - 日期：2026-07-18
 - 关联 ADR：[ADR-0014：Python 退役前必须完成可回退演练](../adr/0014-require-rehearsal-before-python-retirement.md)
 - 关联设计：[R9 生产切换设计](../specs/2026-07-18-production-cutover-design.md)
@@ -16,9 +16,11 @@ Python 退役。
 
 ## 2. 模式与状态机
 
-`agent.cutover.mode` 严格为 `PLAN_ONLY|REHEARSAL`，默认 `PLAN_ONLY`。两种模式都禁止真实生产路径；
-`REHEARSAL` 只接受显式 `--sandbox-root` 下新建的脱敏副本，并要求该路径不等于配置 Workspace、仓库根、
-Home 或任何已存在生产目录。
+普通应用启动没有 R9 操作。R9 只有三个显式的预 Spring CLI：`cutover-plan`（`PLAN_ONLY`）、
+`cutover-rehearse`（`REHEARSAL`）和 `cutover-verify`；不存在可进入生产的配置模式或命令。
+`REHEARSAL` 只接受显式 `--sandbox-root=<new-sandbox>`：根目录必须先由 `cutover-plan` 新建并带有本地
+sandbox 标记，不得等于或包含配置 Workspace、仓库根、Home；输入目录和标记均不得是符号链接。演练还必须
+显式给出 `--offline-evidence`，否则停在 `DRAFT`。
 
 计划状态为：`DRAFT -> ELIGIBLE -> BACKED_UP -> REHEARSED -> READY -> CUTTING_OVER -> OBSERVING ->
 ROLLED_BACK|COMPLETED`。本实现只允许到 `READY`；`CUTTING_OVER`、`OBSERVING`、`COMPLETED` 需要一份
@@ -41,6 +43,6 @@ Runbook 必须以可验证的检查点定义：停止一个写入者、恢复备
 
 ## 5. 验收与暂停
 
-离线 Fixture 覆盖非法根目录拒绝、Manifest、漏文件、损坏备份、Schema/版本不兼容、差异阈值、幂等
-rehearsal 和 rollback 指令。R9 代码完成不等于已生产切换；真实切换、Secret、部署、网络 Smoke、写入真实
-Workspace 与 Python 退役必须由用户单独批准。
+Java-owned Fixture 固定模式、状态和稳定诊断；Adapter/Application/Bootstrap 测试覆盖非法根目录拒绝、
+未计划目录、符号链接与 allowlist、Manifest、备份损坏、差异阈值和离线命令。R9 代码完成不等于已生产切换；
+真实切换、Secret、部署、网络 Smoke、写入真实 Workspace 与 Python 退役必须由用户单独批准。

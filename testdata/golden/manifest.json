@@ -43,6 +43,12 @@
       "source": "java-contract"
     },
     {
+      "id": "cutover/cutover-runtime-v1",
+      "path": "cutover/cutover-runtime-v1.json",
+      "sha256": "38a10ed29a8f6dc6ad7381bec4234e960b62d4420736a4703ddfaca70eba2c5a",
+      "source": "java-contract"
+    },
+    {
       "id": "message-bus/versioned-channel-message",
       "path": "message-bus/versioned-channel-message.json",
       "sha256": "f002241efa99160e51dab971c544912594c40f10f4dbb7131fed07ee31d9acd4",

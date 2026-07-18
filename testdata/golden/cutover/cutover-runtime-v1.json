@@ -1,0 +1,24 @@
+{
+  "formatVersion": 1,
+  "suite": "cutover/cutover-runtime",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-18",
+    "adr": "docs/adr/0014-require-rehearsal-before-python-retirement.md",
+    "contract": "docs/contracts/production-cutover.md",
+    "spec": "docs/specs/2026-07-18-production-cutover-design.md"
+  },
+  "normalization": [],
+  "cases": [
+    {"id":"plan-only-draft","input":{"operation":"mode","mode":"PLAN_ONLY"},"expected":{"accepted":true}},
+    {"id":"rehearsal-draft","input":{"operation":"mode","mode":"REHEARSAL"},"expected":{"accepted":true}},
+    {"id":"lowercase-mode","input":{"operation":"mode","mode":"plan_only"},"expected":{"accepted":false,"code":"CUTOVER_CONTRACT_INVALID"}},
+    {"id":"missing-evidence","input":{"operation":"eligibility"},"expected":{"accepted":true,"eligible":false}},
+    {"id":"draft-to-eligible","input":{"operation":"transition","states":["ELIGIBLE"]},"expected":{"accepted":true}},
+    {"id":"eligible-to-backup","input":{"operation":"transition","states":["ELIGIBLE","BACKED_UP"]},"expected":{"accepted":true}},
+    {"id":"backup-to-rehearsed","input":{"operation":"transition","states":["ELIGIBLE","BACKED_UP","REHEARSED"]},"expected":{"accepted":true}},
+    {"id":"ready-after-rehearsal","input":{"operation":"transition","states":["ELIGIBLE","BACKED_UP","REHEARSED","READY"]},"expected":{"accepted":true}},
+    {"id":"ready-without-backup","input":{"operation":"transition","states":["ELIGIBLE","READY"]},"expected":{"accepted":false,"code":"CUTOVER_STATE_INVALID"}},
+    {"id":"cutting-over-is-forbidden","input":{"operation":"transition","states":["ELIGIBLE","BACKED_UP","REHEARSED","READY","CUTTING_OVER"]},"expected":{"accepted":false,"code":"CUTOVER_PRODUCTION_FORBIDDEN"}}
+  ]
+}

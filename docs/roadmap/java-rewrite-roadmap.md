@@ -28,9 +28,9 @@
 | R4 | 上下文与记忆 | R4.1、R4.2 已完成 | Java 原生显式记忆管理与语义检索闭环已通过最终门禁；自动写回/Optimizer 仍冻结 |
 | R5 | MCP 与外部工具 | R5.1 已完成 | 静态 stdio 只读 Client、工具发现/投影、取消、隔离和进程回收已验收；远程与副作用范围未开始 |
 | R6 | 渠道与控制面 | R6.1–R6.5 已合入 `main` | PR #9 与主分支三套 CI 均通过；前端仍待独立 Contract |
-| R7 | 插件与扩展兼容 | 代码完成，待本分支阶段门禁 | Java SPI、隔离 stdio Bridge、观察型 Hook 与默认关闭配置 |
-| R8 | 主动运行时 | 代码完成，待本分支阶段门禁 | SQLite Scheduler、hash-only allowlist、受限 Proactive/Drift/Subagent、NoOp Delivery |
-| R9 | 生产切换 | Contract/Spec/ADR/Plan 已冻结，等待 R8 阶段门禁 | sandbox 演练、备份、差异、回退与独立生产授权 |
+| R7 | 插件与扩展兼容 | 已实现并验证 | Java SPI、隔离 stdio Bridge、观察型 Hook 与默认关闭配置 |
+| R8 | 主动运行时 | 已实现并验证（受限范围） | SQLite Scheduler、hash-only allowlist、受限 Proactive/Drift/Subagent、NoOp Delivery |
+| R9 | 生产切换 | 已实现并验证（仅离线演练） | sandbox 演练、备份、差异、回退门禁与独立生产授权 |
 
 ## R0：治理、契约与跨语言基线
 
@@ -182,7 +182,7 @@ R5.1 最终门禁通过：默认 284 个测试（270 单元、14 集成）、`fa
 
 ## R6：渠道、消息总线与控制面
 
-状态：R6.1–R6.4 已实现、验证并合入 `main`；R6.4 合并后 CI 稳定性修复也已通过 PR #8 和主分支三套门禁；R6.5 后端 G0–G10 与本地高风险 Review 修复已通过阶段门禁，Draft PR #9 等待推送、远程 CI 和 Ready 授权。真实 Telegram Smoke 与前端仍待独立授权，R6 整体仍在进行中。
+状态：R6.1–R6.4 已实现、验证并合入 `main`；R6.4 合并后 CI 稳定性修复也已通过 PR #8 和主分支三套门禁；R6.5 后端 G0–G10 与本地高风险 Review 修复已通过阶段门禁，PR #9 与合并提交的主分支三套 CI 均已全绿。真实 Telegram Smoke 与前端仍待独立授权，R6 整体仍在进行中。
 
 R6.1 至 R6.6 的实施顺序见 [R6 渠道、消息总线与控制面总体工作计划](../plans/2026-07-15-r6-channel-message-control-plane-master-plan.md)。总体计划已批准并进入实施，后续子阶段仍须先分别冻结 Contract、Spec、ADR 和实施计划。
 
@@ -240,7 +240,7 @@ R6.3 没有读取真实 Token、连接 Telegram、处理真实用户数据或启
 
 ## R9：生产切换与 Python 退役
 
-步骤：
+R9 的离线实施已完成；以下生产动作仍须另行批准，不由代码、配置或 CI 自动触发：
 
 1. 在脱敏的工作区副本上完成全量只读演练和差异报告。
 2. 备份真实数据库、WAL/SHM、配置与 Markdown 记忆。
