@@ -301,6 +301,7 @@ class ReliableInboundCoordinatorTest {
     var registeredAfterClaim = new AtomicBoolean();
     var entered = new CountDownLatch(1);
     var released = new CountDownLatch(1);
+    var allowCompletion = new CountDownLatch(1);
     var reference = controlRef(7);
     var registry =
         new ActiveTurnRegistry(
@@ -316,6 +317,7 @@ class ReliableInboundCoordinatorTest {
           try (var ignored = cancellation.onCancellation(released::countDown)) {
             entered.countDown();
             await(released);
+            await(allowCompletion);
           }
         };
     var coordinator = coordinator(ledger, starter, processor, SETTINGS, observer);
@@ -325,9 +327,13 @@ class ReliableInboundCoordinatorTest {
     entered.await();
     int ledgerEventsBeforeCancel = ledger.events.size();
 
-    assertThat(registeredAfterClaim).isTrue();
-    assertThat(registry.cancel(reference).result())
-        .isEqualTo(ControlCancelResult.CANCELLATION_REQUESTED);
+    try {
+      assertThat(registeredAfterClaim).isTrue();
+      assertThat(registry.cancel(reference).result())
+          .isEqualTo(ControlCancelResult.CANCELLATION_REQUESTED);
+    } finally {
+      allowCompletion.countDown();
+    }
     worker.join();
 
     assertThat(ledger.events).hasSize(ledgerEventsBeforeCancel);
