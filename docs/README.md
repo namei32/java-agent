@@ -30,6 +30,7 @@
 - 已完成并验证：R12-S3 的[Plugin 生命周期只读映射](contracts/plugin-lifecycle-read-only-mapping.md)，以 API v2 `LIFECYCLE_TAP` 精确投影已支持的 Java Phase；旧 API v1 Wire 保持不变，外部 stdio Plugin 必须显式配置 `api-version: 2`。它仍默认 `DISABLED`、异步隔离，且不提供 Gate、Tool/Channel 注入、Python import 或真实外部 Plugin 启用。
 - 已完成并验证：R12-S4 的[按需只读 Skill 正文 Tool](contracts/read-only-skill-content-tool.md)，只在 Skill/Tool 双重 `READ_ONLY` 后作为 deferred `read_skill` 出现，须经当前 Turn `tool_search` 解锁；它只回送可用且已审计的无 frontmatter 正文，不暴露路径或执行任何 Skill。
 - 已完成并验证：R12-S5 的[当前 Scope 只读记忆召回 Tool](contracts/read-only-memory-recall-tool.md)，以三重默认关闭条件和当前 Turn `tool_search` 暴露受限 `recall_memory`；它只读取 Java Native 当前 Scope，结果不含 Session/Scope/模型/检索 trace，且没有写入或真实 Provider 启用。
+- 已完成：R14-P0 的[主动、自动记忆与 Peer 边界 Contract](contracts/r14-proactive-peer-automation-boundaries.md)，以 28 Case Fixture 固定 Scheduler/租约状态、本地 Fake Source、待审批 Delivery 投影、`NONE` Memory Mutation 和 `LOCAL_FAKE` Peer；它没有接线线程、数据库、网络、进程、投递或自动记忆。
 - 尚未覆盖：自动 Memory 写回/Optimizer、真实 Embedding/真实 Workspace 启用、可恢复 Pending Turn、生产 Durable Side Effect Ledger、真实副作用工具、真实 Telegram Smoke、经单独授权的真实 Provider 流式 Smoke、真实 MCP Server/Streamable HTTP，以及任何真实生产切换。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。
@@ -79,6 +80,9 @@ R12-S5 的[当前 Scope 只读记忆召回 Tool](contracts/read-only-memory-reca
 `JAVA_NATIVE`、全局 `READ_ONLY` 与 `CURRENT_SCOPE_READ_ONLY` 同时成立时，`recall_memory` 才经当前 Turn `tool_search`
 作为 Deferred Tool 出现。它复用 Java 的 cosine/Hotness 稳定排序、先做类型过滤、限制候选/正文/Tool Result 预算，并把
 Embedding、Store、取消和内部失败收敛为稳定安全码；它不是 Python `memory2`、Keyword/RRF、时间线或写入 Tool 的对齐声明。
+R14-P0 的[主动、自动记忆与 Peer 边界 Contract](contracts/r14-proactive-peer-automation-boundaries.md)已作为下一阶段的
+离线前置完成：它只定义 Fixture/Kernel 值，不启动 R8 Scheduler，不接入 Source、Transport、Memory DML 或 Peer Process；
+P1–P5 与 R11-B2c 的副作用 Capability 继续按独立 Contract 推进。
 完整后续顺序见[Java / Akashic Agent 全量对齐计划](plans/2026-07-18-java-parity-program.md)。
 
 ## 目录职责

@@ -21,6 +21,9 @@ testdata/golden/
 ├── context/read-only-context-memory.json
 ├── memory/java-native-memory.json
 ├── mcp/java-mcp-client.json
+├── proactive/
+│   ├── proactive-runtime-v1.json
+│   └── r14-proactive-peer-automation-v1.json
 ├── message-bus/
 │   ├── versioned-channel-message.json
 │   └── provider-streaming-cli.json
@@ -65,7 +68,7 @@ testdata/golden/
 }
 ```
 
-Manifest 当前登记 33 个业务夹具。普通业务夹具固定：
+Manifest 当前登记 34 个业务夹具。普通业务夹具固定：
 
 - `formatVersion`：当前为 `1`。
 - `suite`：所属能力的稳定套件名。

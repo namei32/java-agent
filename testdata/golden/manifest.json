@@ -73,6 +73,12 @@
       "source": "java-contract"
     },
     {
+      "id": "proactive/r14-proactive-peer-automation-v1",
+      "path": "proactive/r14-proactive-peer-automation-v1.json",
+      "sha256": "14c026f1c388912ed134df9f5506faaf64c13b517852848af24fa0cafe991e72",
+      "source": "java-contract"
+    },
+    {
       "id": "cutover/cutover-runtime-v1",
       "path": "cutover/cutover-runtime-v1.json",
       "sha256": "38a10ed29a8f6dc6ad7381bec4234e960b62d4420736a4703ddfaca70eba2c5a",

@@ -1,0 +1,185 @@
+{
+  "formatVersion": 1,
+  "suite": "proactive/r14-proactive-peer-automation-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0027-freeze-r14-proactive-peer-automation-boundaries.md",
+    "contract": "docs/contracts/r14-proactive-peer-automation-boundaries.md",
+    "spec": "docs/specs/2026-07-19-r14-proactive-peer-automation-design.md"
+  },
+  "normalization": [],
+  "limits": {
+    "maxSourceTextCodePoints": 4000
+  },
+  "cases": [
+    {
+      "id": "scheduled-may-be-claimed",
+      "group": "scheduler-transition",
+      "input": {"from": "SCHEDULED", "to": "CLAIMED"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "claimed-may-become-running",
+      "group": "scheduler-transition",
+      "input": {"from": "CLAIMED", "to": "RUNNING"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "expired-running-lease-may-recover-to-scheduled",
+      "group": "scheduler-transition",
+      "input": {"from": "RUNNING", "to": "SCHEDULED"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "running-may-commit-terminal-success",
+      "group": "scheduler-transition",
+      "input": {"from": "RUNNING", "to": "SUCCEEDED"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "scheduled-claimed-and-running-may-cancel",
+      "group": "scheduler-transition",
+      "input": {"from": "RUNNING", "to": "CANCELLED"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "terminal-job-never-reopens",
+      "group": "scheduler-transition",
+      "input": {"from": "SUCCEEDED", "to": "RUNNING"},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "scheduled-job-cannot-skip-execution-state",
+      "group": "scheduler-transition",
+      "input": {"from": "SCHEDULED", "to": "SUCCEEDED"},
+      "expected": {"accepted": false}
+    },
+    {
+      "id": "fixed-local-source-accepts-a-bounded-projection",
+      "group": "source",
+      "input": {"kind": "FIXED_LOCAL", "sourceRef": "fixture-alert", "text": "temperature stable"},
+      "expected": {"accepted": true, "text": "temperature stable"}
+    },
+    {
+      "id": "source-normalizes-crlf-before-projection",
+      "group": "source",
+      "input": {"kind": "FIXED_LOCAL", "sourceRef": "fixture-alert", "text": "first\r\nsecond\rthird"},
+      "expected": {"accepted": true, "text": "first\nsecond\nthird"}
+    },
+    {
+      "id": "source-kind-is-strict-uppercase",
+      "group": "source",
+      "input": {"kind": "fixed_local", "sourceRef": "fixture-alert", "text": "safe"},
+      "expected": {"accepted": false, "code": "PROACTIVE_SOURCE_INVALID"}
+    },
+    {
+      "id": "network-source-is-not-an-r14-p0-source",
+      "group": "source",
+      "input": {"kind": "MCP", "sourceRef": "fixture-alert", "text": "safe"},
+      "expected": {"accepted": false, "code": "PROACTIVE_SOURCE_INVALID"}
+    },
+    {
+      "id": "source-rejects-url-bearing-text-before-a-network-contract-exists",
+      "group": "source",
+      "input": {"kind": "FIXED_LOCAL", "sourceRef": "fixture-alert", "text": "read https://example.test/feed"},
+      "expected": {"accepted": false, "code": "PROACTIVE_SOURCE_INVALID"}
+    },
+    {
+      "id": "source-rejects-control-characters",
+      "group": "source",
+      "input": {"kind": "FIXED_LOCAL", "sourceRef": "fixture-alert", "text": "bad\u0000text"},
+      "expected": {"accepted": false, "code": "PROACTIVE_SOURCE_INVALID"}
+    },
+    {
+      "id": "requested-decision-is-only-an-approval-pending-projection",
+      "group": "decision-delivery",
+      "input": {"decision": "REQUESTED"},
+      "expected": {"accepted": true, "disposition": "PENDING_APPROVAL", "externalDelivery": false}
+    },
+    {
+      "id": "skipped-decision-has-no-delivery-request",
+      "group": "decision-delivery",
+      "input": {"decision": "SKIP", "code": "PROACTIVE_COOLDOWN"},
+      "expected": {"accepted": true, "disposition": "NOT_REQUESTED", "externalDelivery": false}
+    },
+    {
+      "id": "r14-p0-never-authorizes-a-transport",
+      "group": "decision-delivery",
+      "input": {"decision": "REQUESTED"},
+      "expected": {"accepted": true, "transportAuthorized": false}
+    },
+    {
+      "id": "none-is-the-only-proactive-memory-mutation",
+      "group": "memory-mutation",
+      "input": {"kind": "NONE"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "memory-write-is-rejected-before-an-approved-capability-exists",
+      "group": "memory-mutation",
+      "input": {"kind": "WRITE"},
+      "expected": {"accepted": false, "code": "MEMORY_MUTATION_FORBIDDEN"}
+    },
+    {
+      "id": "memory-delete-is-rejected-before-an-approved-capability-exists",
+      "group": "memory-mutation",
+      "input": {"kind": "DELETE"},
+      "expected": {"accepted": false, "code": "MEMORY_MUTATION_FORBIDDEN"}
+    },
+    {
+      "id": "memory-mutation-kind-is-case-sensitive",
+      "group": "memory-mutation",
+      "input": {"kind": "none"},
+      "expected": {"accepted": false, "code": "MEMORY_MUTATION_FORBIDDEN"}
+    },
+    {
+      "id": "only-a-local-fake-peer-identity-is-representable-in-p0",
+      "group": "peer",
+      "input": {"trust": "LOCAL_FAKE", "peerRef": "peer-research"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "remote-peer-is-rejected-before-trust-and-network-contracts-exist",
+      "group": "peer",
+      "input": {"trust": "REMOTE", "peerRef": "peer-research"},
+      "expected": {"accepted": false, "code": "PEER_CONTRACT_INVALID"}
+    },
+    {
+      "id": "peer-ref-is-an-opaque-lowercase-reference",
+      "group": "peer",
+      "input": {"trust": "LOCAL_FAKE", "peerRef": "Peer-Research"},
+      "expected": {"accepted": false, "code": "PEER_CONTRACT_INVALID"}
+    },
+    {
+      "id": "peer-task-ref-is-opaque-and-bounded",
+      "group": "peer",
+      "input": {"taskRef": "peer-task-analysis-1"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "peer-task-ref-rejects-a-raw-url",
+      "group": "peer",
+      "input": {"taskRef": "https://peer.test/tasks/1"},
+      "expected": {"accepted": false, "code": "PEER_CONTRACT_INVALID"}
+    },
+    {
+      "id": "peer-succeeded-is-terminal",
+      "group": "peer",
+      "input": {"state": "SUCCEEDED"},
+      "expected": {"accepted": true, "terminal": true}
+    },
+    {
+      "id": "peer-running-is-not-terminal",
+      "group": "peer",
+      "input": {"state": "RUNNING"},
+      "expected": {"accepted": true, "terminal": false}
+    },
+    {
+      "id": "peer-state-is-strict-uppercase",
+      "group": "peer",
+      "input": {"state": "succeeded"},
+      "expected": {"accepted": false, "code": "PEER_CONTRACT_INVALID"}
+    }
+  ]
+}

@@ -150,6 +150,11 @@ Turn `tool_search` 发现；返回仅限 opaque ID、Java MemoryType、正文和
 不接受调用者 Scope/Session/模型参数，不写入，也不启用真实 Provider 或部署；`clean verify`、`-Pfailure verify` 和
 `-Pcompat verify` 已通过。
 
+R14-P0 已完成离线的[主动、自动记忆与 Peer 边界 Contract](docs/contracts/r14-proactive-peer-automation-boundaries.md)：
+28 个版本化 Fixture 场景冻结 Scheduler/租约状态、本地 Fake Source 净化、待审批 Delivery 投影、禁止自动 Memory Mutation
+和 `LOCAL_FAKE` Peer 引用。它不启动 Scheduler、不接线 Source/Transport/Peer Process，不访问数据库、网络或 Provider，
+也不改变 `AGENT_PROACTIVE_MODE=DISABLED` 默认；P1–P5 仍未实现。
+
 ## 数据安全
 
 会话数据库位于 `${AKASHIC_WORKSPACE}/sessions.db`。`AGENT_MEMORY_MODE=READ_ONLY` 只约束 Markdown Profile，不会把整个 Java 进程变成只读：聊天仍会写入会话 SQLite。`JAVA_NATIVE` 还会创建 `${AKASHIC_WORKSPACE}/memory/agent-memory.db`，并在写入与非空检索时调用 Embedding Provider。MCP 默认关闭；静态启用时子进程环境先清空再复制明确 Allowlist，配置与日志不得包含 Secret。所有模式都只能使用 Java 专用或测试 Workspace，禁止把 Java 指向真实 Python Workspace；Java 不读取、迁移或删除 `memory2.db`。首次让 Java 写入任何既有 Java 数据前，必须停止相关进程，并完整备份数据库及其 `-wal`/`-shm` 文件。

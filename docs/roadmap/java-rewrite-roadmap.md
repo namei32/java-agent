@@ -34,6 +34,9 @@
 | R10 | Prompt 编排与 Persona | 已实现并验证 | Java-owned Section/Fixture、context frame、注入时间/会话、固定预算裁剪、默认 `MINIMAL` 与 `AKASHIC_CORE` 接线；三套阶段门禁通过 |
 | R11 | Tool Catalog 与审批恢复安全基础 | 实施中（无执行） | Catalog、审批 Inbox、Pending Operation/Reservation/Ledger/Anchor Contract 已验证；生产恢复路由、Capability 与真实执行仍冻结 |
 | R12 | Skills、MCP 扩展、Plugin 生命周期与受限记忆召回 | S1–S5 已实现并验证 | 默认关闭的只读 Skill Catalog、API v2 生命周期 Tap、deferred `read_skill` 与当前 Scope `recall_memory` 已缩小 Python 差距；MCP Assets 是 Java-owned 扩展。Skill 执行、远程 MCP、可变生命周期和记忆写入仍未开始 |
+| R13 | 多渠道、Dashboard 与控制面 | 计划已冻结 | 现有离线 Loopback/Telegram 切片不等同于 IPC、QQ、Feishu、Dashboard 或前端；真实渠道、CLI+Web 和前端仍冻结 |
+| R14 | 主动、自动记忆与 Peer | P0 已完成；P1–P5 未开始 | 28 Case Fixture 与无执行 Kernel 边界固定状态、Fake Source、待审批投影、Memory 禁止和 Fake Peer；没有网络、进程、投递或自动写入 |
+| R15 | 生产迁移与 Python 退役 | 计划已冻结 | R9 只有 sandbox 演练；生产副本、灰度、回退、观察及 Python 退役均需另行授权 |
 
 ## R0：治理、契约与跨语言基线
 

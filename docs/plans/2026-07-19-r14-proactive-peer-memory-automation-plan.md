@@ -1,6 +1,6 @@
 # R14 主动运行、自动记忆与 Peer Agent 对齐计划
 
-- 状态：差距审计和计划已冻结；**未开始实现**
+- 状态：P0 已完成（离线 Fixture/Kernel 边界）；P1–P5 未开始
 - 日期：2026-07-19
 - Python 证据基线：`akashic-agent` 提交 `b65a5430e332c8733b981dfc2dfbc3eb1967e9ef`
 - Java 证据基线：`agent/r12-skill-catalog`，含 R8 本地 SQLite Proactive、只读 Drift 与隔离 Subagent
@@ -36,11 +36,15 @@ Python 还包括主动外部源和 MCP 读取、决策/投递链、自动 Memory
 
 ## 4. 解冻后的连续 TDD 顺序
 
-### P0：主动/Peer 版本化 Contract Fixture（RED）
+### P0：主动/Peer 版本化 Contract Fixture（RED → GREEN，已完成）
 
-把阶段切成独立 Fixture：Scheduler 状态、租约、取消、预算、关闭；Source 输入/净化；Decision 与 Delivery 边界；
-Memory Mutation；Peer 身份、任务引用和终态。Fixture 用固定 Clock、临时 Java SQLite、Fake Source/Transport/Process/Provider，
-不启动真实进程或网络。
+已增加 28 Case 的 `proactive/r14-proactive-peer-automation-v1` Fixture、Manifest Hash 和 Kernel consumer；详细边界见
+[R14 P0 Contract](../contracts/r14-proactive-peer-automation-boundaries.md)、[设计](../specs/2026-07-19-r14-proactive-peer-automation-design.md)
+与 ADR-0027。它固定 Scheduler 状态/租约恢复、本地 `FIXED_LOCAL` Source 净化、仅待审批的 Decision 投影、
+`NONE` Memory Mutation 及 `LOCAL_FAKE` Peer Identity/Task/Terminal。
+
+P0 不启动真实进程或网络，也不接线 Scheduler、Source、Transport、Provider、Memory DML 或 Tool。它是 P1–P4 的
+测试前置，而不是主动、自动记忆或 Peer 能力完成声明。
 
 ### P1：可审计的本地只读主动决策（GREEN）
 
@@ -76,4 +80,4 @@ R11-B2c Capability、幂等/Revision 和可恢复审计；先只用固定 Embedd
 - 失败测试必须覆盖：Disabled 零 I/O、拒绝未知模式、预算、取消、过期/租约、并发单获胜者、关闭、审计脱敏、`UNKNOWN` 和零重放。
 - R11-B2c 的首个生产 Capability 与 R13 的渠道身份 Contract 是 P2/P3/P5 的必要前置。R12-S5 仅在同一版本要
   向模型暴露 Java-native Memory Recall 时才是前置，不能被错误地当成自动写入的替代授权；前置未完成时 R14 仍保持
-  “未开始实现”。
+  P1–P5 未实现，P0 不扩大任何运行权限。
