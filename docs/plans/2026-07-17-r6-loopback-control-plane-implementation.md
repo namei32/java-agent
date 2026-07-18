@@ -1,6 +1,6 @@
 # R6.5 Loopback 控制面、安全状态、SSE 与活动 Turn 取消工作计划
 
-- 状态：G0–G6 已完成；下一步 G7
+- 状态：G0–G7 已完成；下一步 G8
 - 日期：2026-07-17
 - 分支：`agent/r6-control-plane-contract`
 - Worktree：`/Users/namei/idea/agent/java-agent-r6-control-plane`
@@ -371,7 +371,7 @@ Filter 回归 9 项、G5 配置回归 9 项也全部通过。阶段只执行 G6 
 
 ## 10. Task G7：Status、Turns 与 Cancel HTTP API
 
-状态：待实施。
+状态：已完成。
 
 先写：
 
@@ -400,6 +400,18 @@ RED/GREEN：
 ```
 
 预计提交：`feat: 暴露安全控制状态与目标取消`
+
+RED/GREEN 证据（2026-07-18）：先加入 Status Service、HTTP Controller 和 Cancellation IT，
+聚焦命令在测试编译阶段因响应模型、Service 与 Controller 缺失而失败。最小实现后同一命令执行
+4 项单元/HTTP 测试和 1 项集成测试全部通过。状态固定 V1 字段并按 Channel 名排序；单个 Adapter
+快照异常由 Host 隔离，控制面只降级为 `CONTROL_SNAPSHOT_UNAVAILABLE`。活动列表只投影安全
+`turnRef`、Channel、状态、时间、Sequence 与订阅数，Registry 已保证时间/引用稳定排序。
+
+取消 API 只解析 canonical 128-bit Ref 并调用已有 Cancellation Handle：首次 `202`、重复或既有
+原因/终态 `200`、未知 `404`；畸形引用稳定 `400`。集成测试初始化真实 SQLite Channel Ledger，
+对取消前后数据库字节做相等断言，同时确认现有 Source 的最终原因是 `REQUESTED`，证明控制入口
+没有 Ledger 写路径。聚焦 `verify`、Failsafe、Spotless 与 `git diff --check` 全部通过；没有执行
+严格全门禁、真实渠道、外网、Secret、用户工作区或前端。
 
 ## 11. Task G8：认证 SSE 纵向切片
 

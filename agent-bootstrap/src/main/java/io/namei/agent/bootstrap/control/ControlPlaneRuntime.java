@@ -54,6 +54,10 @@ public final class ControlPlaneRuntime implements ActiveTurnObserver, AutoClosea
     return eventHub;
   }
 
+  public boolean isClosed() {
+    return closed.get();
+  }
+
   @Override
   public void close() {
     if (closed.compareAndSet(false, true)) {

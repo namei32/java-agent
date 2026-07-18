@@ -1,6 +1,7 @@
 package io.namei.agent.bootstrap.control;
 
 import io.namei.agent.application.control.ControlTurnRefGenerator;
+import io.namei.agent.bootstrap.channel.ChannelHost;
 import java.time.Clock;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -100,5 +101,17 @@ public class ControlPlaneConfiguration {
       ObjectProvider<ObjectMapper> objectMappers) {
     return new ControlPlaneSecurityFilter(
         guard, sessions, audit, requestIds, objectMappers.getIfAvailable(ObjectMapper::new));
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = PREFIX, name = "mode", havingValue = "LOOPBACK")
+  ControlPlaneStatusService controlPlaneStatusService(
+      ObjectProvider<Clock> clocks,
+      ObjectProvider<ChannelHost> hosts,
+      ControlPlaneRuntime runtime,
+      ControlPlaneProperties properties) {
+    ChannelHost host = hosts.getIfAvailable(() -> new ChannelHost(java.util.List.of()));
+    return new ControlPlaneStatusService(
+        clocks.getIfAvailable(Clock::systemUTC), host, runtime, properties);
   }
 }
