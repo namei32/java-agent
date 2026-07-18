@@ -48,7 +48,7 @@ class ApprovalInboxGoldenTest {
     assertThat(fixture.path("formatVersion").asInt()).isEqualTo(1);
     assertThat(fixture.path("source").asText()).isEqualTo("java-contract");
     assertThat(fixture.path("contract").asText()).isEqualTo("tool-approval-inbox-v1");
-    assertThat(fixture.path("cases").size()).isEqualTo(28);
+    assertThat(fixture.path("cases").size()).isEqualTo(29);
     for (JsonNode testCase : fixture.path("cases")) {
       verify(testCase.path("id").asText());
     }
@@ -169,6 +169,23 @@ class ApprovalInboxGoldenTest {
           }
         }
         assertThat(columns).doesNotContain("arguments");
+      }
+      case "persistence-hashes-binding-identifiers" -> {
+        InboxFixture fixture = inbox(id);
+        fixture.inbox().create(entry(12, id, ISSUED));
+        try (Connection connection = fixture.schema().openConnection();
+            var statement =
+                connection.prepareStatement(
+                    "SELECT session_binding, turn_id, call_id FROM approval_inbox_entries");
+            var rows = statement.executeQuery()) {
+          assertThat(rows.next()).isTrue();
+          assertThat(rows.getString("session_binding"))
+              .matches("[0-9a-f]{64}")
+              .isNotEqualTo("session-binding");
+          assertThat(rows.getString("turn_id")).matches("[0-9a-f]{64}").isNotEqualTo("turn-id");
+          assertThat(rows.getString("call_id")).matches("[0-9a-f]{64}").isNotEqualTo("call-id");
+          assertThat(rows.next()).isFalse();
+        }
       }
       case "disabled-mode-creates-no-store" ->
           assertThat(new ApprovalInboxProperties("DISABLED").mode())

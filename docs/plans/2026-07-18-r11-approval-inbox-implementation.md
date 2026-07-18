@@ -10,7 +10,7 @@
 
 ## 顺序
 
-1. **RED：Contract Fixture。** 新增 `testdata/golden/tools/approval-inbox-v1.json` 与 Manifest，覆盖 28 个 Java-owned 场景：Disabled、模式组合、创建、重启、严格 JSON、Actor、不透明 Ref、并发决定、到期、终态、事务失败、审计和零 Invoker。
+1. **RED：Contract Fixture。** 新增 `testdata/golden/tools/approval-inbox-v1.json` 与 Manifest，覆盖 29 个 Java-owned 场景：Disabled、模式组合、创建、重启、严格 JSON、Actor、不透明 Ref、并发决定、到期、终态、事务失败、原始绑定标识哈希化、审计和零 Invoker。
 2. **GREEN：Kernel/Application。** 增加受限 Inbox 模型、状态机、随机 Ref Generator 和 Port；单元测试先锁定状态机与无敏感 `toString`。
 3. **GREEN：SQLite。** 独立 Schema/Repository、版本校验、事务 CAS、惰性过期和重启测试；无 Arguments 列。
 4. **GREEN：Loopback API。** 新配置默认 Disabled；复用既有 Guard/Session/审计，新增列表和单决定端点；严格 DTO 与错误映射。

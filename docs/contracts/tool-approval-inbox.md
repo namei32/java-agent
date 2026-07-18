@@ -44,6 +44,7 @@ B2a 建立一个可由本机 Loopback Operator 查看并一次性决定的耐久
 | 字段 | 是否向 Operator 返回 | 规则 |
 | --- | --- | ---|
 | `approvalId`、Fingerprint、Arguments Hash、Idempotency Key | 否 | 仅耐久绑定/一致性检查，绝不在 HTTP、日志或普通审计中返回。 |
+| Session Binding、Turn ID、Call ID | 否 | SQLite 只保存以 `approval-inbox-binding-v1` 和用途域分隔后的 SHA-256 摘要；绝不保存原值，也不能将读回的摘要用作执行输入。 |
 | `approvalRef` | 是 | 至少 128 bit Base64URL 随机引用，不等于 Tool 或 Turn 标识。 |
 | Tool 名称、版本、有效风险 | 是 | 来自 Runtime 已验证定义；名称/版本受 Tool Contract 约束。 |
 | `summary` | 是 | 仅已被具体 Tool Contract 脱敏的最小摘要；不得是模型输入或执行参数。B2a 没有真实 Tool，因此仅 Fixture/Test 使用安全固定摘要。 |

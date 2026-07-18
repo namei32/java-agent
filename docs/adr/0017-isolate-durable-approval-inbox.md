@@ -10,7 +10,7 @@
 
 ## 决策
 
-使用 `approval-inbox.db` 的独立版本化 SQLite Schema 保存最小审批投影。它由 Application Port 抽象，并只在显式的本地 Loopback 模式下创建。控制 API 只暴露新的随机 `approvalRef` 和脱敏投影；不暴露 `approvalId`、Fingerprint、参数哈希、幂等键或关联 Turn。
+使用 `approval-inbox.db` 的独立版本化 SQLite Schema 保存最小审批投影。它由 Application Port 抽象，并只在显式的本地 Loopback 模式下创建。Session Binding、Turn ID 和 Call ID 只以带用途域分隔的 SHA-256 摘要持久化。控制 API 只暴露新的随机 `approvalRef` 和脱敏投影；不暴露 `approvalId`、Fingerprint、参数哈希、幂等键或关联 Turn。
 
 Operator Session 的随机 `actorRef` 仅记录本次本地决定的来源，不能视为账号、角色或授权委托。Inbox 决定不直接驱动 `ApprovalPort` 或 Tool 执行。
 

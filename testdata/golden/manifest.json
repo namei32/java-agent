@@ -135,7 +135,7 @@
     {
       "id": "tools/approval-inbox-v1",
       "path": "tools/approval-inbox-v1.json",
-      "sha256": "7bb140a4a280ea770f07f58234aee7003227bc34e6bffdd5e809ad1c6e7f98af",
+      "sha256": "4b01be2bf6c2fb82befbf14335d65ae4a15bee51bc59b17789e3f6b38c82927a",
       "source": "java-contract"
     },
     {

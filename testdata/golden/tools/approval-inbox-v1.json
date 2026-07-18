@@ -21,6 +21,7 @@
     {"id":"database-filename-is-isolated","expected":"approval-inbox.db"},
     {"id":"schema-rejects-unexpected-table","expected":"incompatible"},
     {"id":"schema-has-no-arguments-column","expected":"absent"},
+    {"id":"persistence-hashes-binding-identifiers","expected":"domain-separated-sha256"},
     {"id":"disabled-mode-creates-no-store","expected":"DISABLED"},
     {"id":"mode-is-case-sensitive","expected":"rejected"},
     {"id":"loopback-control-is-required","expected":"startup-failure"},

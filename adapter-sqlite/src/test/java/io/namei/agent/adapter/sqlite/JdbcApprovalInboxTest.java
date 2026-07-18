@@ -10,6 +10,7 @@ import io.namei.agent.kernel.approval.ApprovalRequest;
 import io.namei.agent.kernel.approval.ApprovalState;
 import io.namei.agent.kernel.tool.ToolRisk;
 import java.nio.file.Path;
+import java.sql.Connection;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.concurrent.CountDownLatch;
@@ -69,6 +70,28 @@ class JdbcApprovalInboxTest {
         .isEqualTo(ApprovalInboxResolutionStatus.EXPIRED);
     assertThat(inbox.list(ISSUED.plusSeconds(300), 64).getFirst().state())
         .isEqualTo(ApprovalState.EXPIRED);
+  }
+
+  @Test
+  void persistsOnlyDomainSeparatedHashesForSessionTurnAndCallBindings() throws Exception {
+    ApprovalInboxSchemaInitializer schema = schema();
+    schema.initialize();
+    JdbcApprovalInbox inbox = new JdbcApprovalInbox(schema);
+    inbox.create(pending("AQEBAQEBAQEBAQEBAQEBAQ", "approval-redacted-bindings"));
+
+    try (Connection connection = schema.openConnection();
+        var statement =
+            connection.prepareStatement(
+                "SELECT session_binding, turn_id, call_id FROM approval_inbox_entries");
+        var rows = statement.executeQuery()) {
+      assertThat(rows.next()).isTrue();
+      assertThat(rows.getString("session_binding"))
+          .matches("[0-9a-f]{64}")
+          .isNotEqualTo("session-binding");
+      assertThat(rows.getString("turn_id")).matches("[0-9a-f]{64}").isNotEqualTo("turn-id");
+      assertThat(rows.getString("call_id")).matches("[0-9a-f]{64}").isNotEqualTo("call-id");
+      assertThat(rows.next()).isFalse();
+    }
   }
 
   @Test

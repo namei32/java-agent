@@ -8,6 +8,9 @@ import io.namei.agent.application.ApprovalInboxResolution;
 import io.namei.agent.kernel.approval.ApprovalRequest;
 import io.namei.agent.kernel.approval.ApprovalState;
 import io.namei.agent.kernel.tool.ToolRisk;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -163,9 +166,9 @@ public final class JdbcApprovalInbox implements ApprovalInbox {
                 + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
       statement.setString(1, request.approvalId());
       statement.setString(2, entry.reference().value());
-      statement.setString(3, request.sessionBinding());
-      statement.setString(4, request.turnId());
-      statement.setString(5, request.callId());
+      statement.setString(3, storedBinding("session", request.sessionBinding()));
+      statement.setString(4, storedBinding("turn", request.turnId()));
+      statement.setString(5, storedBinding("call", request.callId()));
       statement.setString(6, request.toolName());
       statement.setString(7, request.toolVersion());
       statement.setString(8, request.risk().name());
@@ -297,5 +300,19 @@ public final class JdbcApprovalInbox implements ApprovalInbox {
       throw new IllegalArgumentException("审批主体引用无效");
     }
     return normalized;
+  }
+
+  private static String storedBinding(String purpose, String value) {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      digest.update("approval-inbox-binding-v1".getBytes(StandardCharsets.UTF_8));
+      digest.update((byte) 0);
+      digest.update(purpose.getBytes(StandardCharsets.UTF_8));
+      digest.update((byte) 0);
+      digest.update(value.getBytes(StandardCharsets.UTF_8));
+      return java.util.HexFormat.of().formatHex(digest.digest());
+    } catch (NoSuchAlgorithmException exception) {
+      throw new IllegalStateException("JDK 缺少 SHA-256", exception);
+    }
   }
 }
