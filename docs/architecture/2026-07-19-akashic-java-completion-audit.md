@@ -26,7 +26,7 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 
 | Python 已提交能力 | 证据位置 | Java 当前状态 | 对齐路径 |
 | --- | --- | --- | --- |
-| Skills 目录、frontmatter、工作区覆盖、依赖可用性、always 注入 | `agent/skills.py`、`agent/core/prompt_block.py`、`skills/*/SKILL.md` | Prompt 已预留 `SKILLS_CATALOG`/`ACTIVE_SKILLS`，但无 Catalog/Port/Adapter/Properties | R12-S1 只读 Catalog、可用性与 always 注入；按需正文/执行在后续切片 |
+| Skills 目录、frontmatter、工作区覆盖、依赖可用性、always 注入 | `agent/skills.py`、`agent/core/prompt_block.py`、`skills/*/SKILL.md` | R12-S1 已有 Kernel Catalog/Port、受限只读 Adapter、严格 Properties 和 `AKASHIC_CORE` Prompt 注入；默认关闭 | 按需正文/执行、动态下载与 Python import 仍须单独 Contract |
 | 文件、Shell、Web、消息、记忆、调度、Spawn、Peer、MCP 管理等 Tool | `agent/tools/*.py`、`agent/mcp/*`、`agent/peer_agent/*` | 仅 `current_time`、静态只读 MCP；R11 无执行恢复基础 | R11 按 Tool 逐一建立 Capability、Sandbox、Ledger、`UNKNOWN` 与 Smoke Contract；禁止批量放开 |
 | Provider 适配策略与 thinking/cache 细节 | `agent/provider.py`、`bootstrap/providers.py` | 一个 OpenAI-compatible Spring AI 适配器 | 逐 Provider 建立 Options/Message/Streaming Fixture；真实 Provider Smoke 仍独立批准 |
 | Resources/Prompts/Streamable HTTP MCP 与动态管理 | `agent/mcp/*.py`、`bootstrap/toolsets/mcp.py` | 静态 stdio、只读 `tools/list`/`tools/call` | R12-S2 先冻结远程认证、资源、Prompt、取消与隔离 Contract |
@@ -41,8 +41,9 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 
 1. **R11 B2c 仍未结束。** 恢复 Anchor、Reservation、Ledger 和 Message Contract 已有，但没有生产恢复器、
    认证 Resume/Cancel/Status 路由、获批 Capability 或真实执行。任何副作用 Tool 先经过独立 Contract。
-2. **R12-S1 Skills 可并行推进。** 它只读取受限 Java Skill Root、不会执行 Skill 文本、不会注册 Tool、不会
-   访问网络或写入 Workspace；默认 `DISABLED`。它填补 Prompt 已有插槽而不绕过 R11。
+2. **R12-S1 Skills 已完成并验证。** 它只读取受限 Java Skill Root、不会执行 Skill 文本、不会注册 Tool、不会
+   访问网络或写入 Workspace；默认 `DISABLED`。13 Case Fixture 及完整三套 Maven 门禁已通过；它不绕过 R11，
+   更不授权按需正文或执行。
 3. R12-S2 MCP 扩展与 S3 生命周期、R13 多渠道/控制面、R14 主动/Peer/自动记忆、R15 生产切换严格按顺序。
 
 “与 Akashic 一样完善”的完成条件是：本表每个条目都已由当前源码、版本化 Contract Fixture、对应失败路径

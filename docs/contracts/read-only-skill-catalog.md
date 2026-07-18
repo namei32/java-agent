@@ -1,7 +1,7 @@
 # R12-S1 只读 Skill Catalog 契约
 
 - 阶段：R12-S1
-- 状态：已冻结，实施中；默认 `DISABLED`
+- 状态：已实现并验证；默认 `DISABLED`
 - 日期：2026-07-19
 - Python 证据：`agent/skills.py`、`agent/core/prompt_block.py`、`skills/*/SKILL.md`
 - 关联 ADR：[ADR-0020：使用项目拥有的只读 Skill Catalog](../adr/0020-use-project-owned-read-only-skill-catalog.md)
@@ -54,6 +54,10 @@ Catalog 失败、路径违规、frontmatter 无效、预算超限或重复不会
 
 Java-owned Fixture 必须固定 Disabled 零 I/O、来源覆盖、排序、frontmatter、依赖可用性、XML 转义、always
 正文、预算、符号链接/越界拒绝和 Prompt 放置。测试只创建临时 Java Roots 与 Fake PATH/环境查询。
+
+实现证据（2026-07-19）：13 个 `skills/read-only-skill-catalog-v1` Java-owned Contract Case 已由
+`SkillCatalogContractTest` 消费；Adapter、Prompt、Properties 和 Bootstrap 测试覆盖上述边界。完整
+`clean verify`、`-Pfailure verify`、`-Pcompat verify` 已在 R12 专用分支通过。
 
 在实现按需 Skill 正文、`read_skill` Tool、脚本或任何真实资源之前，先冻结新的 Tool/Workspace/执行 Contract；
 R12-S1 全部门禁通过也不授予这些权限。

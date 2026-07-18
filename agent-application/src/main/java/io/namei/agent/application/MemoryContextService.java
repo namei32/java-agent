@@ -28,6 +28,7 @@ public final class MemoryContextService {
   private final PromptRuntimeSettings promptSettings;
   private final AkashicCorePromptRenderer coreRenderer;
   private final PromptOrchestrator promptOrchestrator;
+  private final SkillPromptService skillPrompts;
 
   public MemoryContextService(
       MemoryProfilePort profiles,
@@ -40,7 +41,8 @@ public final class MemoryContextService {
         maxContextCharacters,
         maxRetrievedCharacters,
         PromptRuntimeSettings.minimalDefaults(),
-        null);
+        null,
+        SkillPromptService.disabled());
   }
 
   public MemoryContextService(
@@ -50,6 +52,24 @@ public final class MemoryContextService {
       int maxRetrievedCharacters,
       PromptRuntimeSettings promptSettings,
       AkashicCorePromptRenderer coreRenderer) {
+    this(
+        profiles,
+        retrieval,
+        maxContextCharacters,
+        maxRetrievedCharacters,
+        promptSettings,
+        coreRenderer,
+        SkillPromptService.disabled());
+  }
+
+  public MemoryContextService(
+      MemoryProfilePort profiles,
+      MemoryRetrievalPort retrieval,
+      int maxContextCharacters,
+      int maxRetrievedCharacters,
+      PromptRuntimeSettings promptSettings,
+      AkashicCorePromptRenderer coreRenderer,
+      SkillPromptService skillPrompts) {
     this.profiles = Objects.requireNonNull(profiles, "profiles");
     this.retrieval = Objects.requireNonNull(retrieval, "retrieval");
     if (maxContextCharacters < 1 || maxRetrievedCharacters < 1) {
@@ -64,6 +84,7 @@ public final class MemoryContextService {
     }
     this.coreRenderer = coreRenderer;
     this.promptOrchestrator = new PromptOrchestrator();
+    this.skillPrompts = Objects.requireNonNull(skillPrompts, "skillPrompts");
   }
 
   public static MemoryContextService disabled() {
@@ -136,12 +157,15 @@ public final class MemoryContextService {
                 suppliedContext.sessionId());
     var sections =
         new ArrayList<PromptSection>(coreRenderer.render(promptSettings.mode(), turnContext));
+    SkillPromptSections skills = skillPrompts.render();
+    addSection(sections, PromptSectionId.SKILLS_CATALOG, skills.catalog());
     addSection(sections, PromptSectionId.SELF_MODEL, "## Akashic 自我认知\n\n" + profile.selfModel());
     addSection(
         sections,
         PromptSectionId.LONG_TERM_MEMORY,
         "## Long-term Memory\n" + profile.longTermMemory());
     addSection(sections, PromptSectionId.RECENT_CONTEXT, trimRecentTurns(profile.recentContext()));
+    addSection(sections, PromptSectionId.ACTIVE_SKILLS, skills.active());
     addSection(sections, PromptSectionId.RETRIEVED_MEMORY, retrievedMemory);
 
     PromptAssembly assembled =

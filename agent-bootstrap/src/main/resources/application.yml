@@ -32,6 +32,13 @@ agent:
     max-frame-tokens: ${AGENT_PROMPT_MAX_FRAME_TOKENS:100000}
     max-total-tokens: ${AGENT_PROMPT_MAX_TOTAL_TOKENS:200000}
     max-sections: ${AGENT_PROMPT_MAX_SECTIONS:9}
+  skills:
+    mode: ${AGENT_SKILLS_MODE:DISABLED}
+    builtin-root: ${AGENT_SKILLS_BUILTIN_ROOT:}
+    max-skills: ${AGENT_SKILLS_MAX_SKILLS:64}
+    max-file-bytes: ${AGENT_SKILLS_MAX_FILE_BYTES:65536}
+    max-catalog-code-points: ${AGENT_SKILLS_MAX_CATALOG_CODE_POINTS:32768}
+    max-active-code-points: ${AGENT_SKILLS_MAX_ACTIVE_CODE_POINTS:32768}
   history:
     max-messages: 40
     max-characters: 100000

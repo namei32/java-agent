@@ -1,0 +1,102 @@
+{
+  "formatVersion": 1,
+  "suite": "skills/read-only-skill-catalog-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0020-use-project-owned-read-only-skill-catalog.md",
+    "contract": "docs/contracts/read-only-skill-catalog.md",
+    "spec": "docs/specs/2026-07-19-r12-read-only-skill-catalog-design.md"
+  },
+  "normalization": [
+    "Skill 名称、来源、模式和字段大小写严格；不做宽松归一化",
+    "公开描述符不含文件路径、正文、环境变量值、PATH 或缺失依赖详情",
+    "active 正文必须对应同名、available=true、always=true 的描述符"
+  ],
+  "limits": {
+    "schemaVersion": 1,
+    "maxSkillNameCharacters": 63,
+    "maxDescriptionCodePoints": 512,
+    "maxSkillBodyCodePoints": 65536
+  },
+  "cases": [
+    {
+      "id": "builtin-descriptor-is-accepted",
+      "group": "descriptor",
+      "input": {"name": "calendar-scan", "description": "Calendar summary", "source": "BUILTIN", "available": true, "always": false},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "workspace-always-descriptor-is-accepted",
+      "group": "descriptor",
+      "input": {"name": "daily-rules", "description": "Daily rules", "source": "WORKSPACE", "available": true, "always": true},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "uppercase-name-is-rejected",
+      "group": "descriptor",
+      "input": {"name": "Calendar", "description": "Calendar summary", "source": "BUILTIN", "available": true, "always": false},
+      "expected": {"accepted": false, "code": "SKILL_CONTRACT_INVALID"}
+    },
+    {
+      "id": "empty-description-is-rejected",
+      "group": "descriptor",
+      "input": {"name": "calendar", "description": " ", "source": "BUILTIN", "available": true, "always": false},
+      "expected": {"accepted": false, "code": "SKILL_CONTRACT_INVALID"}
+    },
+    {
+      "id": "multiline-description-is-rejected",
+      "group": "descriptor",
+      "input": {"name": "calendar", "description": "line one\nline two", "source": "BUILTIN", "available": true, "always": false},
+      "expected": {"accepted": false, "code": "SKILL_CONTRACT_INVALID"}
+    },
+    {
+      "id": "unknown-source-is-rejected",
+      "group": "source",
+      "input": {"source": "builtin"},
+      "expected": {"accepted": false, "code": "SKILL_CONTRACT_INVALID"}
+    },
+    {
+      "id": "strict-read-only-mode-is-accepted",
+      "group": "mode",
+      "input": {"mode": "READ_ONLY"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "lowercase-mode-is-rejected",
+      "group": "mode",
+      "input": {"mode": "read_only"},
+      "expected": {"accepted": false, "code": "SKILL_CONTRACT_INVALID"}
+    },
+    {
+      "id": "active-content-matches-available-always-descriptor",
+      "group": "snapshot",
+      "input": {"available": true, "always": true, "active": true},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "active-content-for-unavailable-descriptor-is-rejected",
+      "group": "snapshot",
+      "input": {"available": false, "always": true, "active": true},
+      "expected": {"accepted": false, "code": "SKILL_CONTRACT_INVALID"}
+    },
+    {
+      "id": "active-content-for-non-always-descriptor-is-rejected",
+      "group": "snapshot",
+      "input": {"available": true, "always": false, "active": true},
+      "expected": {"accepted": false, "code": "SKILL_CONTRACT_INVALID"}
+    },
+    {
+      "id": "duplicate-descriptor-name-is-rejected",
+      "group": "snapshot",
+      "input": {"available": true, "always": false, "active": false, "duplicate": true},
+      "expected": {"accepted": false, "code": "SKILL_CONTRACT_INVALID"}
+    },
+    {
+      "id": "empty-disabled-snapshot-is-accepted",
+      "group": "port",
+      "input": {},
+      "expected": {"accepted": true, "descriptors": 0, "active": 0}
+    }
+  ]
+}

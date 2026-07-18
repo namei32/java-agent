@@ -15,7 +15,7 @@ R0–R9 已建立被动聊天、只读 Tool/MCP、SQLite、渠道可靠性、控
 | --- | --- | --- | --- | --- |
 | R10 | Prompt、Persona、时间、预算 | `agent/context.py`、`agent/core/prompt_block.py`、`agent/persona.py`、`prompts/agent.py` | Section/Frame/预算/裁剪有 Fixture，`AKASHIC_CORE` 可离线验收 | 已实现并验证 |
 | R11 | Tool Catalog、审批与逐工具 Capability | `agent/tool_bundles.py`、`agent/tools/*`、`agent/tool_runtime.py` | 可用人类审批、Durable Ledger、每个副作用 Tool 的幂等/UNKNOWN/沙箱 Contract | 实施中：B1 Catalog、B2a Inbox 与 B2b 的状态机、AES-GCM、v2 原子 Store、一次性 `CONSUMED`/`RESERVED`、Ledger 终态、Session 条件提交、初始 Anchor 原子写入、安全 Result 条件提交、测试专用 Fake Capability 零重放演练和 Resume/Cancel/Status Message Contract 已验证。没有生产恢复编排、路由、Capability 或真实执行 |
-| R12 | Skills、MCP 扩展与 Plugin 能力 | `agent/skills.py`、`agent/mcp/*`、`agent/plugins/*` | 受信 Skill Catalog/执行边界、MCP Resources/Prompts/Streamable HTTP、Plugin 生命周期兼容 | R12-S1 只读 Skill Catalog Contract/ADR/设计/计划已冻结，等待 TDD 实现；其余未开始 |
+| R12 | Skills、MCP 扩展与 Plugin 能力 | `agent/skills.py`、`agent/mcp/*`、`agent/plugins/*` | 受信 Skill Catalog/执行边界、MCP Resources/Prompts/Streamable HTTP、Plugin 生命周期兼容 | R12-S1 只读 Skill Catalog 已实现并通过三套门禁：显式 Root、Workspace 覆盖、依赖可用性与 `AKASHIC_CORE` always 注入；按需正文/执行、MCP 扩展和生命周期仍未开始 |
 | R13 | 多渠道、Dashboard 与控制面 | `infra/channels/*`、`bootstrap/dashboard_api.py` | 频道 Contract、真实渠道验收、前端/控制面完整 API 与安全边界 | 未开始 |
 | R14 | Peer、真实 Proactive/Drift 与 Memory 自动化 | `agent/peer_agent/*`、`agent/core/proactive_*`、`core/memory/*` | 身份/信任、外部源、写入许可、审计、预算、恢复与回退契约 | 未开始 |
 | R15 | 生产迁移与 Python 退役 | `bootstrap/*`、部署资产 | 真实副本验证、演练、灰度、观察、回退与逐项书面授权 | 未开始 |

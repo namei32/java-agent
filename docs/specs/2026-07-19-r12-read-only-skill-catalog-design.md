@@ -1,6 +1,6 @@
 # R12-S1 只读 Skill Catalog 设计
 
-- 状态：已冻结，实施中
+- 状态：已实现并验证
 - 日期：2026-07-19
 - Contract：[只读 Skill Catalog 契约](../contracts/read-only-skill-catalog.md)
 - ADR：[ADR-0020](../adr/0020-use-project-owned-read-only-skill-catalog.md)
@@ -35,3 +35,9 @@ Disabled 可以证明零 I/O，且 Prompt 编译不依赖文件系统。
 
 S1 Fixture/Kernel RED-GREEN；S2 Adapter 路径/解析/覆盖；S3 Prompt XML/always/预算；S4 Properties/Bootstrap
 Disabled；S5 Chat 注入；S6 failure/compat 与完整阶段门禁。每段先写可失败测试，再实现最小生产代码。
+
+## 实施结果
+
+S1–S6 均已完成。实现保留 Kernel Port 与值对象、Workspace 只读 Adapter、Prompt 投影和 Spring
+Bootstrap 的分层；`DISABLED` 返回空 Port，`MINIMAL` 不查询 Catalog，只有 `AKASHIC_CORE` 投影已启用的
+Catalog/always 正文。实现不提供 `read_skill`、脚本执行、Tool 注册或网络访问。

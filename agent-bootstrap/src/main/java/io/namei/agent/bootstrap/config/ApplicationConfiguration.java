@@ -12,6 +12,9 @@ import io.namei.agent.adapter.sqlite.JdbcJavaMemoryStore;
 import io.namei.agent.adapter.sqlite.JdbcSessionRepository;
 import io.namei.agent.adapter.sqlite.SqliteSchemaInitializer;
 import io.namei.agent.adapter.workspace.MarkdownMemoryProfileAdapter;
+import io.namei.agent.adapter.workspace.MarkdownSkillCatalogAdapter;
+import io.namei.agent.adapter.workspace.SkillCatalogLimits;
+import io.namei.agent.adapter.workspace.SkillRequirementChecker;
 import io.namei.agent.application.AkashicCorePromptRenderer;
 import io.namei.agent.application.ApprovalPort;
 import io.namei.agent.application.ChatService;
@@ -30,6 +33,7 @@ import io.namei.agent.application.SemanticMemoryRetrievalAdapter;
 import io.namei.agent.application.SemanticMemoryRetrievalSettings;
 import io.namei.agent.application.SessionExecutionGate;
 import io.namei.agent.application.SideEffectLedger;
+import io.namei.agent.application.SkillPromptService;
 import io.namei.agent.application.ToolCatalog;
 import io.namei.agent.application.ToolCatalogEntry;
 import io.namei.agent.application.ToolCatalogSource;
@@ -66,6 +70,8 @@ import io.namei.agent.kernel.port.MemoryRetrievalPort;
 import io.namei.agent.kernel.port.SessionRepository;
 import io.namei.agent.kernel.port.Tool;
 import io.namei.agent.kernel.port.TurnLifecycleObserver;
+import io.namei.agent.kernel.skill.SkillCatalogMode;
+import io.namei.agent.kernel.skill.SkillCatalogPort;
 import io.namei.agent.kernel.tool.ToolRisk;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -93,6 +99,7 @@ import org.springframework.core.io.Resource;
 @EnableConfigurationProperties({
   AgentProperties.class,
   PromptProperties.class,
+  SkillProperties.class,
   McpProperties.class,
   CliProperties.class,
   PluginProperties.class,
@@ -252,12 +259,22 @@ public class ApplicationConfiguration {
         new MemoryDeleteService(store, clock));
   }
 
-  @Bean
   MemoryContextService memoryContextService(
       MemoryProfilePort profiles,
       MemoryRetrievalPort retrieval,
       AgentProperties properties,
       PromptProperties promptProperties) {
+    return memoryContextService(
+        profiles, retrieval, properties, promptProperties, SkillPromptService.disabled());
+  }
+
+  @Bean
+  MemoryContextService memoryContextService(
+      MemoryProfilePort profiles,
+      MemoryRetrievalPort retrieval,
+      AgentProperties properties,
+      PromptProperties promptProperties,
+      SkillPromptService skillPrompts) {
     return new MemoryContextService(
         profiles,
         retrieval,
@@ -265,7 +282,26 @@ public class ApplicationConfiguration {
         properties.memory().maxRetrievedCharacters(),
         new PromptRuntimeSettings(
             promptProperties.mode(), promptProperties.budget(), promptProperties.zoneId()),
-        AkashicCorePromptRenderer.fromClasspath());
+        AkashicCorePromptRenderer.fromClasspath(),
+        skillPrompts);
+  }
+
+  @Bean
+  SkillCatalogPort skillCatalogPort(AgentProperties agentProperties, SkillProperties properties) {
+    if (properties.mode() == SkillCatalogMode.DISABLED) {
+      return SkillCatalogPort.disabled();
+    }
+    return new MarkdownSkillCatalogAdapter(
+        properties.builtinRoot().orElse(null),
+        agentProperties.workspace().resolve("skills"),
+        SkillRequirementChecker.system(),
+        new SkillCatalogLimits(properties.maxSkills(), properties.maxFileBytes()));
+  }
+
+  @Bean
+  SkillPromptService skillPromptService(SkillCatalogPort catalog, SkillProperties properties) {
+    return new SkillPromptService(
+        catalog, properties.maxCatalogCodePoints(), properties.maxActiveCodePoints());
   }
 
   @Bean

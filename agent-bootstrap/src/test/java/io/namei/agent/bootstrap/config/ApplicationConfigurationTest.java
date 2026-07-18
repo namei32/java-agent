@@ -139,6 +139,19 @@ class ApplicationConfigurationTest {
   }
 
   @Test
+  void disabledSkillCatalogDoesNotReadOrCreateTheWorkspaceRoot() {
+    Path workspace = tempDir.resolve("skill-workspace-must-remain-missing");
+    var properties = new AgentProperties(workspace, null, null, null, null, null);
+    var skills = new SkillProperties("DISABLED", "", 64, 65_536, 32_768, 32_768);
+
+    var catalog = new ApplicationConfiguration().skillCatalogPort(properties, skills);
+
+    assertThat(catalog.snapshot().descriptors()).isEmpty();
+    assertThat(catalog.snapshot().activeContents()).isEmpty();
+    assertThat(workspace).doesNotExist();
+  }
+
+  @Test
   void createsDedicatedWorkspaceAndWiresOfflineChatUseCase() throws Exception {
     Path workspace = tempDir.resolve("java-workspace");
     var properties =
