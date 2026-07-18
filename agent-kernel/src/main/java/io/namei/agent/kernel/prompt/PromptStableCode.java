@@ -1,0 +1,9 @@
+package io.namei.agent.kernel.prompt;
+
+public enum PromptStableCode {
+  PROMPT_CONTRACT_INVALID,
+  PROMPT_MODE_INVALID,
+  PROMPT_BUDGET_EXHAUSTED,
+  PROMPT_SECTION_UNAVAILABLE,
+  PROMPT_CONTEXT_INVALID
+}

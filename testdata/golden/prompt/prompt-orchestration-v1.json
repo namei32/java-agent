@@ -1,0 +1,30 @@
+{
+  "formatVersion": 1,
+  "suite": "prompt/prompt-orchestration",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-18",
+    "adr": "docs/adr/0015-use-versioned-prompt-section-model.md",
+    "contract": "docs/contracts/prompt-orchestration.md",
+    "spec": "docs/specs/2026-07-18-prompt-orchestration-design.md"
+  },
+  "normalization": [],
+  "cases": [
+    {"id":"identity-system","group":"section-id","input":{"id":"identity"},"expected":{"accepted":true,"placement":"SYSTEM","priority":10,"trimAllowed":false}},
+    {"id":"behavior-system","group":"section-id","input":{"id":"behavior_rules"},"expected":{"accepted":true,"placement":"SYSTEM","priority":15,"trimAllowed":false}},
+    {"id":"skills-system","group":"section-id","input":{"id":"skills_catalog"},"expected":{"accepted":true,"placement":"SYSTEM","priority":20,"trimAllowed":true}},
+    {"id":"recent-frame","group":"section-id","input":{"id":"recent_context"},"expected":{"accepted":true,"placement":"CONTEXT_FRAME","priority":45,"trimAllowed":false}},
+    {"id":"retrieved-frame","group":"section-id","input":{"id":"retrieved_memory"},"expected":{"accepted":true,"placement":"CONTEXT_FRAME","priority":55,"trimAllowed":true}},
+    {"id":"uppercase-section-rejected","group":"section-id","input":{"id":"IDENTITY"},"expected":{"accepted":false,"code":"PROMPT_CONTRACT_INVALID"}},
+    {"id":"unknown-section-rejected","group":"section-id","input":{"id":"persona"},"expected":{"accepted":false,"code":"PROMPT_CONTRACT_INVALID"}},
+    {"id":"minimal-mode","group":"mode","input":{"mode":"MINIMAL"},"expected":{"accepted":true}},
+    {"id":"akashic-core-mode","group":"mode","input":{"mode":"AKASHIC_CORE"},"expected":{"accepted":true}},
+    {"id":"lowercase-mode-rejected","group":"mode","input":{"mode":"minimal"},"expected":{"accepted":false,"code":"PROMPT_MODE_INVALID"}},
+    {"id":"valid-frame-section","group":"section","input":{"id":"retrieved_memory","placement":"CONTEXT_FRAME","content":"[memory-1] Java Agent"},"expected":{"accepted":true}},
+    {"id":"wrong-section-placement-rejected","group":"section","input":{"id":"recent_context","placement":"SYSTEM","content":"recent"},"expected":{"accepted":false,"code":"PROMPT_CONTRACT_INVALID"}},
+    {"id":"blank-section-rejected","group":"section","input":{"id":"identity","placement":"SYSTEM","content":"  "},"expected":{"accepted":false,"code":"PROMPT_CONTRACT_INVALID"}},
+    {"id":"valid-budget","group":"budget","input":{"maxSystemTokens":120,"maxFrameTokens":80,"maxTotalTokens":200,"maxSections":9},"expected":{"accepted":true}},
+    {"id":"total-smaller-than-parts-rejected","group":"budget","input":{"maxSystemTokens":120,"maxFrameTokens":80,"maxTotalTokens":199,"maxSections":9},"expected":{"accepted":false,"code":"PROMPT_CONTRACT_INVALID"}},
+    {"id":"unbounded-budget-rejected","group":"budget","input":{"maxSystemTokens":100001,"maxFrameTokens":80,"maxTotalTokens":100081,"maxSections":9},"expected":{"accepted":false,"code":"PROMPT_CONTRACT_INVALID"}}
+  ]
+}

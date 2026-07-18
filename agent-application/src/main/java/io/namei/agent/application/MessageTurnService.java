@@ -9,14 +9,21 @@ import java.util.Objects;
 public final class MessageTurnService {
   private final ChatUseCase chat;
   private final OutboundMessageObserver observer;
+  private final PromptTurnContextFactory promptContexts;
 
   public MessageTurnService(ChatUseCase chat) {
-    this(chat, OutboundMessageObserver.noop());
+    this(chat, OutboundMessageObserver.noop(), null);
   }
 
   public MessageTurnService(ChatUseCase chat, OutboundMessageObserver observer) {
+    this(chat, observer, null);
+  }
+
+  public MessageTurnService(
+      ChatUseCase chat, OutboundMessageObserver observer, PromptTurnContextFactory promptContexts) {
     this.chat = Objects.requireNonNull(chat, "chat");
     this.observer = Objects.requireNonNull(observer, "observer");
+    this.promptContexts = promptContexts;
   }
 
   public OutboundMessage process(
@@ -32,10 +39,7 @@ public final class MessageTurnService {
         throw new TurnCancelledException("当前 Turn 已取消");
       }
       ChatResult result =
-          chat.chat(
-              new ChatCommand(inbound.sessionId(), inbound.content()),
-              cancellation,
-              delta -> sink.publish(sequence.delta(delta)));
+          chat.chat(command(inbound), cancellation, delta -> sink.publish(sequence.delta(delta)));
       if (result == null || !inbound.sessionId().equals(result.sessionId())) {
         throw new IllegalStateException("Chat Result 与入站 Session 不一致");
       }
@@ -53,6 +57,17 @@ public final class MessageTurnService {
       sink.publish(terminal);
       return observed(terminal);
     }
+  }
+
+  private ChatCommand command(InboundMessage inbound) {
+    if (promptContexts == null) {
+      return new ChatCommand(inbound.sessionId(), inbound.content());
+    }
+    return new ChatCommand(
+        inbound.sessionId(),
+        inbound.content(),
+        promptContexts.create(
+            inbound.occurredAt(), inbound.route().channel(), inbound.sessionId()));
   }
 
   private OutboundMessage observed(OutboundMessage terminal) {

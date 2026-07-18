@@ -177,7 +177,8 @@ class ApplicationConfigurationTest {
             configuration.memoryContextService(
                 configuration.memoryProfilePort(properties),
                 io.namei.agent.kernel.port.MemoryRetrievalPort.disabled(),
-                properties),
+                properties,
+                new PromptProperties("MINIMAL", "UTC", 100_000, 100_000, 200_000, 9)),
             io.namei.agent.adapter.mcp.McpRuntimes.disabled(),
             properties,
             "test-model",

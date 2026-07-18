@@ -13,6 +13,12 @@
       "source": "python-reference"
     },
     {
+      "id": "prompt/prompt-orchestration-v1",
+      "path": "prompt/prompt-orchestration-v1.json",
+      "sha256": "9bd808776d01076d7fdec8f07ef62ed0c10ab12956d23bf900ae2550e39f1704",
+      "source": "java-contract"
+    },
+    {
       "id": "context/read-only-context-memory",
       "path": "context/read-only-context-memory.json",
       "sha256": "db9057d25a21cde40885e7787c3f81f23a698d032090bf4a0f6008c2b25e23dc",
@@ -138,6 +144,7 @@
       "agent/core/passive_turn.py": "6c3af88ddd875b4f41ba4221d1974f4142a03dc65a7c3bd7a57a872f4a6fdf5b",
       "agent/core/prompt_block.py": "9b98e99ebf50e0e4884aa25ccf3cbe5fae0f50ea2a01b693af3b54694e96be15",
       "agent/memory.py": "3652c3e8a49f0410efb35f715f0ea510325999ddc0b6d5467ed4b37705435ff6",
+      "agent/persona.py": "ccadf8c1d59ffa79b02aab73928e002451d9e23cf8a11994d9ae3f0438b26b8f",
       "agent/prompting/assembler.py": "6ba792d100c88d1f3b7e2059928d1392e70d6f269f897f76a97ff24e0dfe078f",
       "agent/prompting/budget.py": "f3ce28d8d3f13ceb8398456051abbe352d40b765a112c8f10b83d40b328376fe",
       "agent/provider.py": "06f5fffcdf9f81db83ab8cf801c119e6980779611541a390cde65b9205d84c36",
@@ -154,6 +161,7 @@
       "core/memory/markdown.py": "f5ae4dbc98f20eb94b753dd72d9f2f44db7be81bd9425efd960585b38f09ce25",
       "proactive_v2/config.py": "a91c05b9186c23f5fbfa4570ea8deca642f4a8d3c7132259c46431ad9d10a268",
       "proactive_v2/config_loader.py": "2c5d79ac52fd29c595a07ea7f6db6c3be7f63c188054e5773fcfbc7224a949e5",
+      "prompts/agent.py": "ac25cd9a1aa6cf840a47690d139565028a12a483d6931abbfe0ab33b36f43411",
       "session/manager.py": "d2f232ecfb437bd78ebb0cf4d5050f75f135e12fb60933efceacf473fc26f973",
       "session/store.py": "7be4bcd5f6f4ea8fd3fd85c2d9ec86d5ef38e218fc47d9c775bb2a28ab8e2c18"
     }

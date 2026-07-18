@@ -18,12 +18,12 @@
 | 能力 | Python 基准位置 | Java 位置 | 状态 | 主要差距/下一步 | 数据风险 |
 | --- | --- | --- | --- | --- | --- |
 | 配置加载 | `agent/config.py`、`agent/config_models.py`、`config.example.toml` | `agent-bootstrap/.../config`、环境变量 | 完成 | 已实现批准范围内的只读 TOML/环境变量双模式、Golden、严格诊断和无副作用检查；Deferred 字段随能力迁移激活 | 中 |
-| 启动与装配 | `bootstrap/app.py`、`bootstrap/wiring.py` | `agent-bootstrap` | 部分 | 已装配配置兼容、HTTP 被动聊天、显式 Non-Web 本地 CLI、只读 Tool Loop、默认关闭的静态 MCP Runtime 和 Servlet `ChannelHost`/Telegram；后台主动能力待迁移 | 低 |
+| 启动与装配 | `bootstrap/app.py`、`bootstrap/wiring.py` | `agent-bootstrap` | 部分 | 已装配配置兼容、HTTP 被动聊天、显式 Non-Web 本地 CLI、只读 Tool Loop、默认关闭的静态 MCP/Plugin/Proactive Runtime 和 Servlet `ChannelHost`/Telegram；R10 已接入默认 `MINIMAL`/显式 `AKASHIC_CORE` Prompt，Skills、更多渠道与生产配置待迁移 | 低 |
 | 入站 HTTP | Dashboard/Bootstrap API | `ChatController` | 完成 | 当前只支持同步 JSON API | 低 |
 | 消息总线 | `bus/` | `agent-kernel/.../channel`、`MessageTurnService`、`BoundedOutboundBuffer`、`LocalCliRunner`、Telegram Adapter/可靠协调器 | 部分 | 版本化入站/出站、严格序号、唯一终态、取消、有界背压、CLI、Telegram 及其持久 Inbox/Outbox/恢复已完成；缺其他渠道和跨节点总线 | 中 |
 | 被动轮次编排 | `agent/core/passive_turn.py`、`agent/turns/orchestrator.py` | `ChatService`、`ToolLoop`、`SafeChatUseCase` | 部分 | 请求—模型—只读工具—提交闭环与安全生命周期完成；完整 Python 事件总线未迁移 | 中 |
 | 历史选择 | `agent/policies/history_route.py`、被动支持代码 | `ConversationHistorySelector`、`ContextAssembler` | 部分 | 普通 user/assistant 与临时 Context Frame 顺序已有 Golden；缺 Proactive 与完整历史路由 | 中 |
-| Prompt 组装 | `agent/prompting/`、`agent/persona.py` | `ContextAssembler` | 部分 | 基础 Prompt、Self、长期记忆、近期语境和检索块共同投影已有 Golden；缺完整 Block、Persona、Token 预算 | 中 |
+| Prompt 组装 | `agent/prompting/`、`agent/persona.py`、`prompts/agent.py` | `PromptOrchestrator`、`AkashicCorePromptRenderer`、`MemoryContextService` | 部分 | R10 已实现并通过三套门禁：版本化 Block、System/Frame 固定位置、classpath Core Persona、时间/会话 envelope、code point 预算和整体裁剪；Skill Catalog、动态 Persona 与完整 Python 行为规则仍在后续阶段 | 中 |
 | 模型调用 | `agent/provider.py` | `adapter-spring-ai` | 部分 | OpenAI-compatible 同步文本、Tool Call 和 SSE 文本流已完成；Provider Options/模型配置保留，空闲超时、损坏流和定向传输取消有本地 HTTP 验收；缺多 Provider 策略及经授权的真实外部流式 Smoke | 低 |
 | 失败语义 | `agent/core/runtime_support.py`、错误上下文 | `ToolLoop`、`SafeChatUseCase`、`MessageTurnService`、HTTP/CLI/Telegram 映射 | 部分 | 模型、只读工具、迭代/流预算、提交、CLI 和 Telegram 终态/网络错误已映射为稳定安全码；缺副作用工具错误契约 | 低 |
 | 会话内并发 | Python Chat Lane/队列 | `KeyedSessionExecutionGate`、`TurnCancellationSource`、`BoundedOutboundBuffer`、`LocalCliRunner`、`TelegramChannelAdapter` | 部分 | 单 JVM 同会话串行、取消 First Writer Wins、有界背压、CLI/Telegram 断开与关闭、Provider 取消已完成；缺跨进程租约 | 中 |
@@ -39,8 +39,8 @@
 | Markdown 记忆 | `agent/memory.py`、`core/memory/markdown.py` | `adapter-workspace`、`MemoryContextService` | 部分 | 三个固定 Profile 的严格 UTF-8 只读投影、上限和零写入已实现；真实 Workspace 与任何写回仍冻结 | 极高 |
 | Java 原生语义记忆 | Python `memory2/` 仅作历史参考，旧数据不迁移 | Kernel Memory 协议、`JdbcJavaMemoryStore`、`SpringAiEmbeddingAdapter`、Memory Application/HTTP、Bootstrap | 完成 | J1 至 J12 已完成：独立 V1 库、显式 Write/List/Delete、幂等、物理删除、Embedding、检索、默认关闭装配和三套最终门禁均已验收；自动写回/Optimizer 属于未来新范围，仍冻结 | 高 |
 | 检索管线 | `agent/retrieval/` | `SemanticMemoryRetrievalAdapter`、`SemanticMemorySearch`、`MemoryInjectionFormatter`、`MemoryContextService` | 部分 | 当前 User 的 Scope/cosine/Hotness/Top-K/字符预算与 Chat Frame 复用已实现；缺 Keyword/RRF、Rewrite/HyDE、跨 Session 身份与 Token 预算 | 中 |
-| 上下文预算 | `agent/prompting/budget.py` | 字符/消息上限 | 部分 | 缺 Token 估算、Block 优先级和压缩策略 | 中 |
-| Persona/身份 | `agent/persona.py` | 固定 System Prompt | 部分 | 缺工作区 Persona 加载与兼容规则 | 中 |
+| 上下文预算 | `agent/prompting/budget.py` | `PromptBudget`、`PromptTrimPlan`、`PromptOrchestrator` | 部分 | 已实现 code point/token 估算、固定 Block 优先级和整段裁剪；尚未实现 Python 的动态压缩/缓存或 Provider tokenizer | 中 |
+| Persona/身份 | `agent/persona.py`、`prompts/agent.py` | classpath `akashic-core-*.md`、`AkashicCorePromptRenderer` | 部分 | 已有 Java-owned Core Persona 与受限行为规则；工作区动态 Persona、完整 Skill/Tool 路由规则与未批准输入仍不加载 | 中 |
 
 ## 工具与扩展
 
@@ -52,7 +52,7 @@
 | Tool Hook | `agent/tool_hooks/` | R7 Kernel/Application Plugin Tap（已实现） | 部分 | V1 固定顺序、超时和异常隔离，只读投影；可变 Gate/副作用仍冻结 | 高 |
 | Tool Bundle/Search | `agent/tool_bundles.py`、`tool_search.py` | 无 | 未开始 | 在基础 Tool Loop 稳定后迁移 | 中 |
 | MCP | `agent/mcp/`、`bootstrap/toolsets/mcp.py` | `adapter-mcp`、Bootstrap `McpRuntime` 装配 | 部分 | R5.1 已完成静态 stdio、官方 SDK 隔离、分页发现、稳定命名、安全 Schema、只读调用、Wire Cancellation、Stale/单次重连和进程回收；缺 Streamable HTTP/OAuth、Resources/Prompts、真实 Server Smoke、动态 Catalog 与副作用能力 | 高 |
-| Skills | `agent/skills.py` | 无 | 未开始 | 明确技能文件格式及 Java/进程外执行边界 | 中 |
+| Skills | `agent/skills.py` | R10 只读 Catalog Port（计划） | 未开始 | R10 先冻结 Prompt Catalog 边界；完整技能发现、依赖检查、读取与执行进入 R12 | 中 |
 | Plugins | `agent/plugins/` | R7 Java SPI + 隔离 stdio Bridge（已实现） | 部分 | 默认关闭、无真实 Python import、无 Tool/Channel 注入；不承诺运行时猴子补丁 | 高 |
 
 ## 渠道、控制面与后台能力
@@ -82,8 +82,8 @@
 
 ## 当前优先级
 
-1. R6.1–R6.5 已合入 `main`，PR #9 与主分支三套 CI 均通过；R7–R9 已完成当前 Java 实现并通过默认、`failure`、`compat` 阶段门禁，R9 只提供离线演练。
-2. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
-3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
-4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
-5. 真实 Telegram、R5.2 远程 MCP、真实 Python Plugin、主动外部源、真实 Workspace、部署与 Python 退役不因 R7–R9 实施而获得授权。R9 只先完成 sandbox 演练与回退门禁，真实切换另行确认。
+1. R6.1–R6.5 已合入 `main`，PR #9 与主分支三套 CI 均通过；R7–R9 已完成当前 Java 实现并通过默认、`failure`、`compat` 阶段门禁，R9 只提供离线演练。R9 的忽略规则遗漏已由本地 `main` 的 `2ceb44b` 修复。
+2. R10 已完成并通过三套阶段门禁；下一步进入 R11 Tool Catalog、可用审批和逐工具 Capability Contract。
+3. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
+4. R11–R15 的全量对齐顺序、Python 证据和完成标准见[Java / Akashic Agent 全量对齐计划](../plans/2026-07-18-java-parity-program.md)。
+5. 真实 Telegram、远程 MCP、真实 Python Plugin、主动外部源、真实 Workspace、部署与 Python 退役不因 R10 实施而获得授权。

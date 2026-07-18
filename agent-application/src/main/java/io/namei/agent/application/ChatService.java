@@ -301,10 +301,12 @@ public final class ChatService implements ChatUseCase {
           memoryContext.assemble(
               systemPrompt,
               sessionBinding,
+              command.sessionId(),
               snapshot.messages(),
               historySelector.select(snapshot.messages(), limits),
               user,
-              clock.instant());
+              clock.instant(),
+              command.promptTurnContext());
       var messages = new ArrayList<ModelMessage>(assembled.messages());
       OffsetDateTime userAt = OffsetDateTime.now(clock);
       var context = new SideEffectBatchCoordinator.Context(sessionBinding, ids.newTurnId());

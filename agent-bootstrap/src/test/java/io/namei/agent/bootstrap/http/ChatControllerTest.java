@@ -14,6 +14,7 @@ import io.namei.agent.application.ChatCommand;
 import io.namei.agent.application.ChatResult;
 import io.namei.agent.application.ChatUseCase;
 import io.namei.agent.application.MemoryContextUnavailableException;
+import io.namei.agent.application.PromptTurnContextFactory;
 import io.namei.agent.application.SessionLockTimeoutException;
 import io.namei.agent.application.SideEffectStateUnknownException;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
@@ -25,6 +26,10 @@ import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.MessageRole;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -67,6 +72,31 @@ class ChatControllerTest {
         .andExpect(jsonPath("$.message.content").value("回答"));
 
     assertThat(useCase.command).isEqualTo(new ChatCommand("demo", "问题"));
+  }
+
+  @Test
+  void attachesTrustedHttpPromptMetadataOnlyWhenTheConfiguredFactoryIsPresent() throws Exception {
+    mvc =
+        standaloneSetup(
+                new ChatController(
+                    useCase,
+                    new PromptTurnContextFactory(
+                        Clock.fixed(Instant.parse("2026-07-18T13:14:15Z"), ZoneOffset.UTC),
+                        ZoneId.of("Asia/Shanghai"))))
+            .setControllerAdvice(new ApiExceptionHandler())
+            .build();
+
+    mvc.perform(
+            post("/api/v1/chat")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"sessionId\":\"demo\",\"message\":\"问题\"}"))
+        .andExpect(status().isOk());
+
+    assertThat(useCase.command.promptTurnContext().channel()).isEqualTo("http");
+    assertThat(useCase.command.promptTurnContext().sessionId()).isEqualTo("demo");
+    assertThat(useCase.command.promptTurnContext().requestTime())
+        .isEqualTo(Instant.parse("2026-07-18T13:14:15Z"));
+    assertThat(useCase.command.promptTurnContext().zoneId()).isEqualTo(ZoneId.of("Asia/Shanghai"));
   }
 
   @Test

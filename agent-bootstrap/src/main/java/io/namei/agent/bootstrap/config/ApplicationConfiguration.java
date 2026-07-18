@@ -12,6 +12,7 @@ import io.namei.agent.adapter.sqlite.JdbcJavaMemoryStore;
 import io.namei.agent.adapter.sqlite.JdbcSessionRepository;
 import io.namei.agent.adapter.sqlite.SqliteSchemaInitializer;
 import io.namei.agent.adapter.workspace.MarkdownMemoryProfileAdapter;
+import io.namei.agent.application.AkashicCorePromptRenderer;
 import io.namei.agent.application.ApprovalPort;
 import io.namei.agent.application.ChatService;
 import io.namei.agent.application.ChatUseCase;
@@ -22,6 +23,8 @@ import io.namei.agent.application.MemoryQueryService;
 import io.namei.agent.application.MemoryWriteService;
 import io.namei.agent.application.MessageTurnService;
 import io.namei.agent.application.ModelStreamingSettings;
+import io.namei.agent.application.PromptRuntimeSettings;
+import io.namei.agent.application.PromptTurnContextFactory;
 import io.namei.agent.application.SecureIdGenerator;
 import io.namei.agent.application.SemanticMemoryRetrievalAdapter;
 import io.namei.agent.application.SemanticMemoryRetrievalSettings;
@@ -85,6 +88,7 @@ import org.springframework.core.io.Resource;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({
   AgentProperties.class,
+  PromptProperties.class,
   McpProperties.class,
   CliProperties.class,
   PluginProperties.class,
@@ -246,12 +250,23 @@ public class ApplicationConfiguration {
 
   @Bean
   MemoryContextService memoryContextService(
-      MemoryProfilePort profiles, MemoryRetrievalPort retrieval, AgentProperties properties) {
+      MemoryProfilePort profiles,
+      MemoryRetrievalPort retrieval,
+      AgentProperties properties,
+      PromptProperties promptProperties) {
     return new MemoryContextService(
         profiles,
         retrieval,
         properties.memory().maxContextCharacters(),
-        properties.memory().maxRetrievedCharacters());
+        properties.memory().maxRetrievedCharacters(),
+        new PromptRuntimeSettings(
+            promptProperties.mode(), promptProperties.budget(), promptProperties.zoneId()),
+        AkashicCorePromptRenderer.fromClasspath());
+  }
+
+  @Bean
+  PromptTurnContextFactory promptTurnContextFactory(PromptProperties properties) {
+    return new PromptTurnContextFactory(properties.zoneId());
   }
 
   @Bean(destroyMethod = "close")
@@ -326,8 +341,9 @@ public class ApplicationConfiguration {
   }
 
   @Bean
-  MessageTurnService messageTurnService(ChatUseCase chat, PluginRuntime plugins) {
-    return new MessageTurnService(chat, plugins.outboundMessageObserver());
+  MessageTurnService messageTurnService(
+      ChatUseCase chat, PluginRuntime plugins, PromptTurnContextFactory promptContexts) {
+    return new MessageTurnService(chat, plugins.outboundMessageObserver(), promptContexts);
   }
 
   @Bean

@@ -171,7 +171,9 @@ class CliBootstrapTest {
             configuration.memoryContextService(
                 configuration.memoryProfilePort(properties),
                 io.namei.agent.kernel.port.MemoryRetrievalPort.disabled(),
-                properties),
+                properties,
+                new io.namei.agent.bootstrap.config.PromptProperties(
+                    "MINIMAL", "UTC", 100_000, 100_000, 200_000, 9)),
             McpRuntimes.disabled(),
             properties,
             "test-model",

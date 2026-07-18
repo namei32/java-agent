@@ -20,6 +20,7 @@
 - 已完成并合入 `main`：R6.4 独立 Java SQLite 渠道账本、Inbox/Turn Claim、事务 Outbox、Receipt、`UNKNOWN`、恢复、清理、容量门禁和备份/回退演练；PR #7 与合并后聚焦稳定性 PR #8 的远程三套门禁均通过，真实 Smoke 仍待授权。
 - 已完成并合入 `main`：R6.5 默认关闭、仅 Loopback 的认证控制面后端 G0–G10，包括 48 Case Java-owned Fixture、活动 Turn Registry、独立有界 Event Hub、Telegram Volatile/SQLite Reliable 接入、进程内 Bearer Session、安全状态/取消 API、future-only SSE 和故障矩阵；PR #9 与合并提交 `dbaf272` 的主分支三套 CI 均全绿。
 - 已完成并验证：R7 受信 Java `ServiceLoader` SPI、隔离 stdio Plugin Bridge、观察型 Hook 与默认关闭装配；R8 本地 SQLite 租约 Scheduler、hash-only allowlist、受限 Proactive Gate/NoOp Delivery、只读 Drift、parent-bound Subagent、完成后安全 Plugin Tap 与默认关闭装配；R9 仅 sandbox 的状态/资格/备份 Manifest/差异、预 Spring CLI 和回退演练。三阶段均通过默认、`failure`、`compat` 门禁，且不访问真实网络、Provider、Telegram 或 Workspace 写入。
+- 已完成并验证：R10 的 Java-owned Prompt Fixture、版本化 Section/Frame、code point 预算及固定裁剪、classpath Akashic Core Persona、严格 `agent.prompt` Properties、HTTP/CLI/Telegram 可信时间/会话 Context 与只读 Memory 接线。默认继续为 `MINIMAL`；`AKASHIC_CORE` 必须显式启用；三套阶段门禁均已通过。
 - 尚未覆盖：自动 Memory 写回/Optimizer、真实 Embedding/真实 Workspace 启用、可用的人类审批渠道、生产 Durable Ledger、真实副作用工具、真实 Telegram Smoke、经单独授权的真实 Provider 流式 Smoke、真实 MCP Server/Streamable HTTP，以及任何真实生产切换。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。
@@ -54,6 +55,10 @@ R6.4 的已实现边界见 [渠道可靠投递、幂等与恢复契约](contract
 R6.5 的批准边界见 [Loopback 控制面契约](contracts/loopback-control-plane.md)、[ADR-0011](adr/0011-use-authenticated-sse-for-loopback-control-events.md)、[设计](specs/2026-07-17-loopback-control-plane-design.md)和[实施计划](plans/2026-07-17-r6-loopback-control-plane-implementation.md)。后端 G0–G10 和本地高风险 Review 修复均已完成并通过阶段门禁；PR #9 已合入 `main`，其后主分支三套 CI 已全绿。远程控制、CLI+Web、同步 Chat 取消、Ledger Reconcile、真实 Telegram 和前端实现继续冻结。
 
 R7–R9 已按用户授权完成并通过完整阶段门禁：R7 的[插件扩展契约](contracts/plugin-extension-runtime.md)、R8 的[主动运行时契约](contracts/proactive-runtime.md)和 R9 的[生产切换契约](contracts/production-cutover.md)共同固定默认关闭、无真实数据/网络/部署边界。R9 只达到“离线生产就绪”，真实生产切换仍需独立执行授权。
+
+R10 的[版本化 Prompt 编排、Persona 与预算契约](contracts/prompt-orchestration.md)已完成并验证。它以 Python 的 Prompt
+Block、Persona、时间和裁剪语义为基准，但不执行 Skill、真实 Tool 或真实渠道。
+完整后续顺序见[Java / Akashic Agent 全量对齐计划](plans/2026-07-18-java-parity-program.md)。
 
 ## 目录职责
 

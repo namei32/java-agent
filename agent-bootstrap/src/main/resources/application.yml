@@ -25,6 +25,13 @@ spring:
         timeout: ${AGENT_MODEL_TIMEOUT:60s}
 agent:
   workspace: ${AKASHIC_WORKSPACE:./workspace}
+  prompt:
+    mode: ${AGENT_PROMPT_MODE:MINIMAL}
+    zone-id: ${AGENT_PROMPT_ZONE_ID:UTC}
+    max-system-tokens: ${AGENT_PROMPT_MAX_SYSTEM_TOKENS:100000}
+    max-frame-tokens: ${AGENT_PROMPT_MAX_FRAME_TOKENS:100000}
+    max-total-tokens: ${AGENT_PROMPT_MAX_TOTAL_TOKENS:200000}
+    max-sections: ${AGENT_PROMPT_MAX_SECTIONS:9}
   history:
     max-messages: 40
     max-characters: 100000
