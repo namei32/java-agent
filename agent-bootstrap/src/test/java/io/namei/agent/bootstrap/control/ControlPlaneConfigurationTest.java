@@ -29,6 +29,10 @@ class ControlPlaneConfigurationTest {
               assertThat(context).hasNotFailed();
               assertThat(context).hasSingleBean(ControlPlaneRuntime.class);
               assertThat(context).hasSingleBean(ActiveTurnObserver.class);
+              assertThat(context).hasSingleBean(ControlStreamTracker.class);
+              assertThat(context).hasSingleBean(ControlPlaneShutdownCoordinator.class);
+              assertThat(context.getBean(ControlPlaneAuditSink.class))
+                  .isInstanceOf(SafeLoggingControlPlaneAuditSink.class);
               ControlPlaneRuntime runtime = context.getBean(ControlPlaneRuntime.class);
               assertThat(context.getBean(ActiveTurnObserver.class)).isSameAs(runtime);
               assertThat(runtime.eventHub().subscriberCount()).isZero();

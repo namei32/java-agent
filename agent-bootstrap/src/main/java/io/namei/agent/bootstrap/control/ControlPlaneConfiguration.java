@@ -61,13 +61,19 @@ public class ControlPlaneConfiguration {
   @ConditionalOnProperty(prefix = PREFIX, name = "mode", havingValue = "LOOPBACK")
   @ConditionalOnMissingBean(ControlPlaneAuditSink.class)
   ControlPlaneAuditSink controlPlaneAuditSink() {
-    return ControlPlaneAuditSink.disabled();
+    return new SafeLoggingControlPlaneAuditSink();
   }
 
   @Bean
   @ConditionalOnProperty(prefix = PREFIX, name = "mode", havingValue = "LOOPBACK")
   ControlPlaneAudit controlPlaneAudit(ObjectProvider<Clock> clocks, ControlPlaneAuditSink sink) {
     return new ControlPlaneAudit(clocks.getIfAvailable(Clock::systemUTC), sink);
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = PREFIX, name = "mode", havingValue = "LOOPBACK")
+  ControlStreamTracker controlStreamTracker() {
+    return new ControlStreamTracker();
   }
 
   @Bean(destroyMethod = "close")
@@ -83,6 +89,19 @@ public class ControlPlaneConfiguration {
         properties.sessionTtl(),
         properties.maxSessions(),
         runtime.eventHub()::closeActor);
+  }
+
+  @Bean(destroyMethod = "close")
+  @ConditionalOnProperty(prefix = PREFIX, name = "mode", havingValue = "LOOPBACK")
+  ControlPlaneShutdownCoordinator controlPlaneShutdownCoordinator(
+      ControlPlaneRuntime runtime,
+      OperatorSessionStore sessions,
+      ControlStreamTracker streams,
+      ControlPlaneProperties properties,
+      ControlPlaneAudit audit,
+      ObjectProvider<Clock> clocks) {
+    return new ControlPlaneShutdownCoordinator(
+        runtime, sessions, streams, properties, audit, clocks.getIfAvailable(Clock::systemUTC));
   }
 
   @Bean

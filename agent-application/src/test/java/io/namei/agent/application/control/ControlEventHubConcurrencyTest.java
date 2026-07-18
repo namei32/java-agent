@@ -81,8 +81,10 @@ class ControlEventHubConcurrencyTest {
         Thread.ofVirtual()
             .start(
                 () -> {
-                  entered.countDown();
-                  result.set(subscription.poll(Duration.ofSeconds(30)));
+                  try (subscription) {
+                    entered.countDown();
+                    result.set(subscription.poll(Duration.ofSeconds(30)));
+                  }
                 });
     entered.await();
     hub.closeActor("actor-a");

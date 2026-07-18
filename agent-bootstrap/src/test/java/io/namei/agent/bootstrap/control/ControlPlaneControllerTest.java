@@ -1,5 +1,6 @@
 package io.namei.agent.bootstrap.control;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -15,6 +16,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
@@ -49,14 +51,17 @@ class ControlPlaneControllerTest {
             1,
             runtime.eventHub()::closeActor);
     String token = sessions.create().accessToken();
+    var auditEvents = new ArrayList<ControlAuditEvent>();
+    var audit = new ControlPlaneAudit(Clock.fixed(NOW, ZoneOffset.UTC), auditEvents::add);
     var filter =
         new ControlPlaneSecurityFilter(
             new LoopbackRequestGuard(),
             sessions,
-            ControlPlaneAudit.disabled(),
+            audit,
             () -> "request-control-1",
             new ObjectMapper());
-    MockMvc mvc = standaloneSetup(new ControlPlaneController(service)).addFilters(filter).build();
+    MockMvc mvc =
+        standaloneSetup(new ControlPlaneController(service, audit)).addFilters(filter).build();
 
     mvc.perform(authenticated(get("/api/v1/control/status"), token))
         .andExpect(status().isOk())
@@ -81,6 +86,18 @@ class ControlPlaneControllerTest {
     mvc.perform(authenticated(post("/api/v1/control/turns/{turnRef}/cancel", turnRef), token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.result").value("ALREADY_REQUESTED"));
+    assertThat(auditEvents)
+        .filteredOn(event -> event.action().equals("TURN_CANCEL"))
+        .extracting(ControlAuditEvent::result)
+        .containsExactly("CANCELLATION_REQUESTED", "ALREADY_REQUESTED");
+    assertThat(auditEvents)
+        .filteredOn(event -> event.action().equals("TURN_CANCEL"))
+        .allSatisfy(
+            event -> {
+              assertThat(event.actorHash()).hasSize(22);
+              assertThat(event.turnHash()).hasSize(22).isNotEqualTo(turnRef);
+              assertThat(event.toString()).doesNotContain(turnRef, token);
+            });
   }
 
   @Test
@@ -109,7 +126,10 @@ class ControlPlaneControllerTest {
             ControlPlaneAudit.disabled(),
             () -> "request-control-2",
             new ObjectMapper());
-    MockMvc mvc = standaloneSetup(new ControlPlaneController(service)).addFilters(filter).build();
+    MockMvc mvc =
+        standaloneSetup(new ControlPlaneController(service, ControlPlaneAudit.disabled()))
+            .addFilters(filter)
+            .build();
 
     mvc.perform(
             authenticated(

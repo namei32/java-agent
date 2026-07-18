@@ -2,6 +2,7 @@ package io.namei.agent.bootstrap.control;
 
 import io.namei.agent.application.control.ControlSequencedEvent;
 import io.namei.agent.application.control.ControlSubscription;
+import io.namei.agent.application.control.ControlSubscriptionCloseReason;
 import io.namei.agent.application.control.ControlSubscriptionException;
 import io.namei.agent.kernel.control.ControlStableCode;
 import io.namei.agent.kernel.control.ControlTurnRef;
@@ -35,6 +36,7 @@ public final class ControlPlaneSseController {
   private final ControlPlaneAudit audit;
   private final ControlSseWriterFactory writers;
   private final ObjectMapper json;
+  private final ControlStreamTracker streams;
 
   public ControlPlaneSseController(
       ControlPlaneRuntime runtime,
@@ -43,7 +45,8 @@ public final class ControlPlaneSseController {
       Clock clock,
       ControlPlaneAudit audit,
       ControlSseWriterFactory writers,
-      ObjectMapper json) {
+      ObjectMapper json,
+      ControlStreamTracker streams) {
     this.runtime = Objects.requireNonNull(runtime, "runtime");
     this.properties = Objects.requireNonNull(properties, "properties");
     this.sessions = Objects.requireNonNull(sessions, "sessions");
@@ -51,6 +54,7 @@ public final class ControlPlaneSseController {
     this.audit = Objects.requireNonNull(audit, "audit");
     this.writers = Objects.requireNonNull(writers, "writers");
     this.json = Objects.requireNonNull(json, "json");
+    this.streams = Objects.requireNonNull(streams, "streams");
   }
 
   @GetMapping("/{turnRef}/events")
@@ -68,29 +72,55 @@ public final class ControlPlaneSseController {
       return;
     }
 
-    ControlSubscription subscription;
-    try {
-      subscription =
-          runtime.eventHub().subscribe(ControlTurnRef.parse(turnRef), principal.actorRef());
-    } catch (IllegalArgumentException invalidReference) {
-      writeError(response, 400, ControlStableCode.CONTROL_REQUEST_INVALID, requestId);
-      return;
-    } catch (ControlSubscriptionException rejected) {
-      writeSubscriptionError(response, rejected.reason(), requestId);
+    var streamLease = streams.open();
+    if (streamLease.isEmpty()) {
+      writeError(response, 503, ControlStableCode.CONTROL_SHUTTING_DOWN, requestId);
       return;
     }
+    try (var ignored = streamLease.orElseThrow()) {
+      ControlSubscription subscription;
+      try {
+        subscription =
+            runtime.eventHub().subscribe(ControlTurnRef.parse(turnRef), principal.actorRef());
+      } catch (IllegalArgumentException invalidReference) {
+        writeError(response, 400, ControlStableCode.CONTROL_REQUEST_INVALID, requestId);
+        return;
+      } catch (ControlSubscriptionException rejected) {
+        writeSubscriptionError(response, rejected.reason(), requestId);
+        return;
+      }
 
-    audit.record("STREAM_OPEN", "ACCEPTED", null, requestId, principal.actorRef(), turnRef, 1, 0);
-    try (subscription) {
-      ControlSseWriter writer = writers.open(response);
-      writer.opened(subscription.opening());
-      stream(subscription, writer, principal);
-    } catch (IOException writerFailure) {
-      // 连接已经建立，I/O 失败只关闭本订阅；不记录异常正文也不改写 JSON。
-    } finally {
-      audit.record(
-          "STREAM_CLOSE", "ACCEPTED", null, requestId, principal.actorRef(), turnRef, 1, 0);
+      audit.record("STREAM_OPEN", "ACCEPTED", null, requestId, principal.actorRef(), turnRef, 1, 0);
+      try (subscription) {
+        ControlSseWriter writer = writers.open(response);
+        writer.opened(subscription.opening());
+        stream(subscription, writer, principal);
+      } catch (IOException writerFailure) {
+        // 连接已经建立，I/O 失败只关闭本订阅；不记录异常正文也不改写 JSON。
+      } finally {
+        ControlSubscriptionCloseReason closeReason =
+            subscription.closeReason().orElse(ControlSubscriptionCloseReason.CLIENT_DISCONNECTED);
+        audit.record(
+            "STREAM_CLOSE",
+            closeReason.name(),
+            closeCode(closeReason),
+            requestId,
+            principal.actorRef(),
+            turnRef,
+            1,
+            0);
+      }
     }
+  }
+
+  private static ControlStableCode closeCode(ControlSubscriptionCloseReason reason) {
+    return switch (reason) {
+      case SLOW_CONSUMER -> ControlStableCode.CONTROL_SLOW_CONSUMER;
+      case LIFETIME_EXCEEDED -> ControlStableCode.CONTROL_STREAM_LIFETIME_EXCEEDED;
+      case SOURCE_ENDED -> ControlStableCode.CONTROL_SOURCE_ENDED;
+      case SHUTDOWN -> ControlStableCode.CONTROL_SHUTTING_DOWN;
+      case CLIENT_DISCONNECTED, SESSION_REVOKED, TERMINAL -> null;
+    };
   }
 
   private void stream(

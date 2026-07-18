@@ -21,9 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public final class ControlPlaneController {
   private final ControlPlaneStatusService control;
+  private final ControlPlaneAudit audit;
 
-  public ControlPlaneController(ControlPlaneStatusService control) {
+  public ControlPlaneController(ControlPlaneStatusService control, ControlPlaneAudit audit) {
     this.control = Objects.requireNonNull(control, "control");
+    this.audit = Objects.requireNonNull(audit, "audit");
   }
 
   @GetMapping("/status")
@@ -42,12 +44,15 @@ public final class ControlPlaneController {
     try {
       outcome = control.cancel(turnRef);
     } catch (IllegalArgumentException invalidReference) {
+      auditCancel(request, turnRef, "REJECTED", ControlStableCode.CONTROL_REQUEST_INVALID, 0);
       return ResponseEntity.badRequest()
           .body(
               ControlErrorResponse.of(
                   ControlStableCode.CONTROL_REQUEST_INVALID, requestId(request)));
     }
     if (outcome.result() == ControlCancelResult.NOT_FOUND) {
+      auditCancel(
+          request, turnRef, outcome.result().name(), ControlStableCode.CONTROL_TURN_NOT_FOUND, 0);
       return ResponseEntity.status(HttpStatus.NOT_FOUND)
           .body(
               ControlErrorResponse.of(
@@ -57,7 +62,33 @@ public final class ControlPlaneController {
         outcome.result() == ControlCancelResult.CANCELLATION_REQUESTED
             ? HttpStatus.ACCEPTED
             : HttpStatus.OK;
+    auditCancel(request, turnRef, outcome.result().name(), null, 1);
     return ResponseEntity.status(status).body(ControlCancelResponse.from(turnRef, outcome));
+  }
+
+  private void auditCancel(
+      HttpServletRequest request,
+      String turnRef,
+      String result,
+      ControlStableCode code,
+      long count) {
+    audit.record(
+        "TURN_CANCEL",
+        result,
+        code,
+        requestId(request),
+        principal(request).actorRef(),
+        turnRef,
+        count,
+        0);
+  }
+
+  private static OperatorSessionPrincipal principal(HttpServletRequest request) {
+    Object value = request.getAttribute(ControlPlaneSecurityFilter.PRINCIPAL_ATTRIBUTE);
+    if (value instanceof OperatorSessionPrincipal principal) {
+      return principal;
+    }
+    throw new IllegalStateException("控制面认证主体缺失");
   }
 
   private static String requestId(HttpServletRequest request) {

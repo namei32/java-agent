@@ -109,6 +109,30 @@ class ControlPlaneSecurityFilterTest {
   }
 
   @Test
+  void sessionCapacityReturnsTheStableTooManyRequestsEnvelope() throws Exception {
+    MockMvc mvc =
+        standaloneSetup(new ControlPlaneSessionController(sessions, ControlPlaneAudit.disabled()))
+            .addFilters(filter)
+            .build();
+    sessions.create();
+    sessions.create();
+
+    mvc.perform(
+            post("/api/v1/control/session")
+                .with(
+                    request -> {
+                      request.setRemoteAddr("127.0.0.1");
+                      request.setScheme("http");
+                      request.addHeader("Host", "127.0.0.1:8080");
+                      return request;
+                    }))
+        .andExpect(status().isTooManyRequests())
+        .andExpect(jsonPath("$.code").value("CONTROL_SESSION_CAPACITY_EXCEEDED"))
+        .andExpect(jsonPath("$.retryable").value(false))
+        .andExpect(jsonPath("$.requestId").value("server-request-1"));
+  }
+
+  @Test
   void validBearerPublishesOnlyPrincipalAndOverridesCallerRequestId() throws Exception {
     OperatorSessionCreated created = sessions.create();
     MockHttpServletRequest request = request("GET", "/api/v1/control/status");

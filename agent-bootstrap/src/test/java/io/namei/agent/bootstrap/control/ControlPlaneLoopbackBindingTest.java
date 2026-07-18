@@ -48,6 +48,23 @@ class ControlPlaneLoopbackBindingTest {
             });
   }
 
+  @Test
+  void rejectsForwardedHeaderTranslationBeforeRuntimeCreation() {
+    new WebApplicationContextRunner()
+        .withUserConfiguration(ControlPlaneConfiguration.class)
+        .withPropertyValues(
+            "agent.control-plane.mode=LOOPBACK",
+            "server.address=127.0.0.1",
+            "server.forward-headers-strategy=NATIVE")
+        .run(
+            context -> {
+              assertThat(context).hasFailed();
+              assertThat(context.getStartupFailure())
+                  .hasStackTraceContaining("controlPlaneLoopbackGuard")
+                  .hasStackTraceContaining("禁止转换 Forwarded Header");
+            });
+  }
+
   private static WebApplicationContextRunner webRunner(String address) {
     return new WebApplicationContextRunner()
         .withUserConfiguration(ControlPlaneConfiguration.class)

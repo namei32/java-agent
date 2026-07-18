@@ -16,5 +16,9 @@ final class ControlPlaneLoopbackGuard {
     if (!"127.0.0.1".equals(address) && !"::1".equals(address)) {
       throw new IllegalStateException("LOOPBACK 控制面要求 server.address 为字面 Loopback 地址");
     }
+    String forwardedStrategy = environment.getProperty("server.forward-headers-strategy", "NONE");
+    if (!"NONE".equalsIgnoreCase(forwardedStrategy)) {
+      throw new IllegalStateException("LOOPBACK 控制面禁止转换 Forwarded Header");
+    }
   }
 }

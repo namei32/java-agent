@@ -217,8 +217,8 @@ public final class ActiveTurnRegistry implements ActiveTurnObserver, AutoCloseab
     try {
       requireEventHub(hub);
       for (ControlSubscription subscription : hub.actorSubscriptionsLocked(actorRef)) {
-        detachSubscriptionLocked(
-            hub, subscription, ControlSubscriptionCloseReason.SESSION_REVOKED, false);
+        deactivateSubscriptionLocked(
+            subscription, ControlSubscriptionCloseReason.SESSION_REVOKED, false);
       }
     } finally {
       lock.unlock();
@@ -279,8 +279,8 @@ public final class ActiveTurnRegistry implements ActiveTurnObserver, AutoCloseab
         for (ControlSubscription subscription : List.copyOf(entry.subscriptions)) {
           if (subscription.offer(projection) == ControlSubscription.OfferResult.FULL) {
             eventHub.markSlowConsumerLocked();
-            detachSubscriptionLocked(
-                eventHub, subscription, ControlSubscriptionCloseReason.SLOW_CONSUMER, false);
+            deactivateSubscriptionLocked(
+                subscription, ControlSubscriptionCloseReason.SLOW_CONSUMER, false);
           }
         }
       }
@@ -343,10 +343,20 @@ public final class ActiveTurnRegistry implements ActiveTurnObserver, AutoCloseab
       return;
     }
     for (ControlSubscription subscription : List.copyOf(entry.subscriptions)) {
-      eventHub.detachLocked(subscription);
       entry.subscriptions.remove(subscription);
       subscription.closeFromOwner(reason, retainQueued);
     }
+  }
+
+  private void deactivateSubscriptionLocked(
+      ControlSubscription subscription,
+      ControlSubscriptionCloseReason reason,
+      boolean retainQueued) {
+    Entry entry = active.get(subscription.opening().turnRef());
+    if (entry != null) {
+      entry.subscriptions.remove(subscription);
+    }
+    subscription.closeFromOwner(reason, retainQueued);
   }
 
   private void detachSubscriptionLocked(

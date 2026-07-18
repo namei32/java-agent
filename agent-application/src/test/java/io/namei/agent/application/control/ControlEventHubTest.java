@@ -13,6 +13,8 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ControlEventHubTest {
   private static final Instant START = Instant.parse("2026-07-17T00:00:00Z");
@@ -109,6 +111,38 @@ class ControlEventHubTest {
             failure ->
                 assertThat(failure.reason())
                     .isEqualTo(ControlSubscriptionException.Reason.TURN_NOT_FOUND));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"TERMINAL", "SLOW_CONSUMER"})
+  void closingStreamKeepsItsCapacityReservationUntilTheRequestFinishes(String closeMode) {
+    int bufferCapacity = "TERMINAL".equals(closeMode) ? 2 : 1;
+    Fixture fixture = fixture(1, bufferCapacity, Duration.ofMinutes(5), ref(1), ref(2));
+    ActiveTurnRegistration first = fixture.register(new TurnCancellationSource());
+    ActiveTurnRegistration second = fixture.register(new TurnCancellationSource());
+    ControlSubscription closing =
+        fixture.hub.subscribe(first.turnRef().orElseThrow(), "actor-closing");
+
+    first.observe(ActiveTurnRegistryTest.started());
+    if ("TERMINAL".equals(closeMode)) {
+      first.observe(ActiveTurnRegistryTest.completed(1, "完成"));
+    } else {
+      first.observe(ActiveTurnRegistryTest.delta(1, "队列已满"));
+    }
+
+    assertThat(closing.isClosed()).isTrue();
+    assertThat(fixture.hub.subscriberCount()).isOne();
+    assertThatThrownBy(() -> fixture.hub.subscribe(second.turnRef().orElseThrow(), "actor-second"))
+        .isInstanceOfSatisfying(
+            ControlSubscriptionException.class,
+            failure ->
+                assertThat(failure.reason())
+                    .isEqualTo(ControlSubscriptionException.Reason.CAPACITY_EXCEEDED));
+
+    closing.close();
+
+    assertThat(fixture.hub.subscriberCount()).isZero();
+    fixture.hub.subscribe(second.turnRef().orElseThrow(), "actor-second").close();
   }
 
   @Test

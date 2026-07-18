@@ -129,15 +129,15 @@ public final class ControlSubscription implements AutoCloseable {
   boolean closeFromOwner(ControlSubscriptionCloseReason reason, boolean retainQueued) {
     lock.lock();
     try {
-      if (closeReason != null) {
-        return false;
+      boolean firstClose = closeReason == null;
+      if (firstClose) {
+        closeReason = Objects.requireNonNull(reason, "reason");
       }
-      closeReason = Objects.requireNonNull(reason, "reason");
       if (!retainQueued) {
         events.clear();
       }
       changed.signalAll();
-      return true;
+      return firstClose;
     } finally {
       lock.unlock();
     }

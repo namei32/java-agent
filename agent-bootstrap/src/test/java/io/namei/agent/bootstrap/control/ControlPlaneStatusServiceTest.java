@@ -6,6 +6,7 @@ import io.namei.agent.application.TurnCancellationSource;
 import io.namei.agent.application.control.ControlCancellationHandle;
 import io.namei.agent.bootstrap.channel.ChannelAdapter;
 import io.namei.agent.bootstrap.channel.ChannelHost;
+import io.namei.agent.bootstrap.channel.ChannelReliabilityStatus;
 import io.namei.agent.bootstrap.channel.ChannelState;
 import io.namei.agent.bootstrap.channel.ChannelStatusSnapshot;
 import io.namei.agent.kernel.channel.MessageRoute;
@@ -40,6 +41,15 @@ class ControlPlaneStatusServiceTest {
     earlier.observe(
         OutboundMessage.started(
             "raw-turn", "raw-session", new MessageRoute("telegram", "raw-route")));
+    for (int sequence = 1; sequence <= 3; sequence++) {
+      earlier.observe(
+          OutboundMessage.delta(
+              "raw-turn",
+              "raw-session",
+              new MessageRoute("telegram", "raw-route"),
+              sequence,
+              "message-body"));
+    }
 
     ControlStatusResponse status = service.status();
     ControlTurnsResponse turns = service.turns();
@@ -52,7 +62,7 @@ class ControlPlaneStatusServiceTest {
     assertThat(status.control().recentTerminalTombstones()).isZero();
     assertThat(status.control().subscriberBufferCapacity()).isEqualTo(64);
     assertThat(status.control().eventSubscribers()).isEqualTo(1);
-    assertThat(status.control().maxSubscriberQueueDepth()).isEqualTo(1);
+    assertThat(status.control().maxSubscriberQueueDepth()).isEqualTo(4);
     assertThat(status.channels())
         .extracting(ControlStatusResponse.Channel::name)
         .containsExactly("cli", "telegram");
@@ -60,6 +70,8 @@ class ControlPlaneStatusServiceTest {
         .extracting(ControlTurnsResponse.Item::turnRef)
         .containsExactly(
             earlier.turnRef().orElseThrow().value(), later.turnRef().orElseThrow().value());
+    assertThat(turns.items().getFirst().state()).isEqualTo("ACTIVE");
+    assertThat(turns.items().getFirst().lastSequence()).isEqualTo(3L);
     assertThat(turns.toString()).doesNotContain("raw-session", "raw-route", "message-body");
     subscription.close();
   }
@@ -82,6 +94,53 @@ class ControlPlaneStatusServiceTest {
     assertThat(response.channels().getLast().state()).isEqualTo("RUNNING");
   }
 
+  @Test
+  void keepsUnknownExecutionAsReliabilityCountWithoutCreatingAnActiveTurn() {
+    var reliability =
+        new ChannelReliabilityStatus(
+            ChannelReliabilityStatus.Mode.SQLITE,
+            ChannelReliabilityStatus.LedgerState.READY,
+            0,
+            1,
+            0,
+            "");
+    var host = new ChannelHost(List.of(new StubAdapter("telegram", false, reliability)));
+    host.start();
+    var service = service(host, runtime());
+
+    ControlStatusResponse status = service.status();
+
+    assertThat(status.control().activeTurns()).isZero();
+    assertThat(status.channels().getFirst().reliability().unknownExecutions()).isOne();
+    assertThat(service.turns().items()).isEmpty();
+  }
+
+  @Test
+  void reportsRegistrySaturationWithoutCancellingOrRejectingTheRunningTurn() {
+    ControlPlaneProperties properties = properties(1);
+    var next = new java.util.concurrent.atomic.AtomicInteger();
+    var runtime =
+        new ControlPlaneRuntime(
+            properties, Clock.fixed(NOW, ZoneOffset.UTC), () -> reference(next.incrementAndGet()));
+    var source = new TurnCancellationSource();
+    var first = runtime.register("telegram", ControlCancellationHandle.from(source), NOW);
+    var rejected =
+        runtime.register(
+            "telegram", ControlCancellationHandle.from(new TurnCancellationSource()), NOW);
+    var host = new ChannelHost(List.of());
+    host.start();
+
+    ControlStatusResponse status =
+        new ControlPlaneStatusService(Clock.fixed(NOW, ZoneOffset.UTC), host, runtime, properties)
+            .status();
+
+    assertThat(first.registered()).isTrue();
+    assertThat(rejected.registered()).isFalse();
+    assertThat(source.token().isCancellationRequested()).isFalse();
+    assertThat(status.control().state()).isEqualTo("DEGRADED");
+    assertThat(status.control().code()).isEqualTo("CONTROL_TURN_REGISTRY_SATURATED");
+  }
+
   private static ControlPlaneStatusService service(ChannelHost host, ControlPlaneRuntime runtime) {
     return new ControlPlaneStatusService(
         Clock.fixed(NOW, ZoneOffset.UTC), host, runtime, properties());
@@ -94,11 +153,15 @@ class ControlPlaneStatusServiceTest {
   }
 
   static ControlPlaneProperties properties() {
+    return properties(128);
+  }
+
+  private static ControlPlaneProperties properties(int maxActiveTurns) {
     return new ControlPlaneProperties(
         "LOOPBACK",
         java.time.Duration.ofMinutes(15),
         4,
-        128,
+        maxActiveTurns,
         java.time.Duration.ofMinutes(5),
         1024,
         8,
@@ -117,11 +180,17 @@ class ControlPlaneStatusServiceTest {
   private static final class StubAdapter implements ChannelAdapter {
     private final String name;
     private final boolean failSnapshot;
+    private final ChannelReliabilityStatus reliability;
     private ChannelState state = ChannelState.NEW;
 
     private StubAdapter(String name, boolean failSnapshot) {
+      this(name, failSnapshot, ChannelReliabilityStatus.disabled());
+    }
+
+    private StubAdapter(String name, boolean failSnapshot, ChannelReliabilityStatus reliability) {
       this.name = name;
       this.failSnapshot = failSnapshot;
+      this.reliability = reliability;
     }
 
     @Override
@@ -144,7 +213,7 @@ class ControlPlaneStatusServiceTest {
       if (failSnapshot) {
         throw new IllegalStateException("snapshot-secret");
       }
-      return new ChannelStatusSnapshot(name, state, "", 0, 0);
+      return new ChannelStatusSnapshot(name, state, "", 0, 0, reliability);
     }
 
     @Override

@@ -61,6 +61,21 @@ class ControlPlaneSseControllerTest {
     assertThat(fixture.runtime.eventHub().subscriberCount()).isZero();
   }
 
+  @Test
+  void rejectsNewStreamAfterCoordinatedShutdownBegins() throws Exception {
+    Fixture fixture = new Fixture();
+    fixture.streams.stopAccepting();
+    var response = new MockHttpServletResponse();
+
+    fixture.controller.events(fixture.turnRef, fixture.request(), response);
+
+    assertThat(response.getStatus()).isEqualTo(503);
+    assertThat(response.getContentType()).startsWith("application/json");
+    assertThat(response.getContentAsString()).contains("CONTROL_SHUTTING_DOWN", "request-sse-1");
+    assertThat(fixture.runtime.eventHub().subscriberCount()).isZero();
+    assertThat(fixture.streams.activeCount()).isZero();
+  }
+
   static final class Fixture {
     final ControlPlaneRuntime runtime = ControlPlaneStatusServiceTest.runtime();
     final io.namei.agent.application.TurnCancellationSource source =
@@ -80,6 +95,7 @@ class ControlPlaneSseControllerTest {
             runtime.eventHub()::closeActor);
     final OperatorSessionPrincipal principal;
     final ControlPlaneSseController controller;
+    final ControlStreamTracker streams = new ControlStreamTracker();
 
     Fixture() {
       OperatorSessionCreated created = sessions.create();
@@ -92,7 +108,8 @@ class ControlPlaneSseControllerTest {
               java.time.Clock.fixed(NOW, java.time.ZoneOffset.UTC),
               ControlPlaneAudit.disabled(),
               new ServletControlSseWriterFactory(new ObjectMapper()),
-              new ObjectMapper());
+              new ObjectMapper(),
+              streams);
     }
 
     MockHttpServletRequest request() {
