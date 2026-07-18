@@ -30,7 +30,7 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 | 文件、Shell、Web、消息、记忆、调度、Spawn、Peer、MCP 管理等 Tool | `agent/tools/*.py`、`agent/mcp/*`、`agent/peer_agent/*` | `current_time`、静态只读 MCP，及 R11-B3 默认关闭、独立 Root 的 `read_file`/`list_dir` | B3 已有路径/链接、严格 UTF-8、预算、Deferred Schema 与纵向失败测试；其余仍按 Tool 逐一建立 Capability、Sandbox、Ledger、`UNKNOWN` 与 Smoke Contract |
 | Provider 适配策略与 thinking/cache 细节 | `agent/provider.py`、`bootstrap/providers.py` | 一个 OpenAI-compatible Spring AI 适配器 | 逐 Provider 建立 Options/Message/Streaming Fixture；真实 Provider Smoke 仍独立批准 |
 | Resources/Prompts/Streamable HTTP MCP 与动态管理 | `agent/mcp/*.py`、`bootstrap/toolsets/mcp.py` | 静态 stdio、只读 `tools/list`/`tools/call`；R12-S2 已实现默认关闭的 `resources/list`/`prompts/list` 元数据目录与 Stale | 远程认证、正文读取/注入、Streamable HTTP、取消与隔离仍需后续 Contract |
-| Python Plugin 全生命周期、配置与 Tool Hook | `agent/plugins/*`、`agent/lifecycle/*` | Java ServiceLoader/stdio 观察型 Tap | R12-S3 补只读 lifecycle 映射；可变 Hook/动态 Python import 需要独立授权 |
+| Python Plugin 全生命周期、配置与 Tool Hook | `agent/plugins/*`、`agent/lifecycle/*` | Java ServiceLoader/stdio 观察型 Tap，含 API v2 Lifecycle Phase 映射 | R12-S3 已实现默认关闭的只读映射；可变 Hook/动态 Python import 需要独立授权 |
 | QQ/Feishu/IPC、完整 Channel Host | `infra/channels/*`、`plugins/qqbot`、`plugins/feishu` | CLI/Telegram 纵向切片 | R13 按渠道分别冻结身份、投递、恢复、真实 Smoke 与回退 |
 | Dashboard 会话/消息/记忆管理与前端 | `bootstrap/dashboard_api.py`、`frontend/` | 后端 Loopback 状态/取消，零前端 | R13 先固定 API Fixture，再实现安全前端/历史操作 |
 | 完整 Proactive v2、外部源、反馈、自动记忆/Optimizer | `proactive_v2/*`、`memory2/*`、`core/memory/*` | 安全 NoOp/只读/显式记忆 | R14 逐源、逐写入许可、审计、预算、恢复与回退；不得自动启用 |
@@ -46,7 +46,8 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
    更不授权按需正文或执行。
 3. **R11-B3 只读文件浏览已完成并验证。** 它只允许独立显式 Root 的受预算文本读取和一层目录投影，默认关闭且不使用
    `${agent.workspace}`；它不解决 B2c 恢复，也不授权写入、Shell、网络或真实 Workspace。
-4. R12-S2 的目录发现已完成；R12-S3 生命周期、R13 多渠道/控制面、R14 主动/Peer/自动记忆、R15 生产切换严格按顺序。
+4. R12-S2 的目录发现和 R12-S3 API v2 只读生命周期 Tap 均已完成并通过三套门禁；R13 多渠道/控制面、R14 主动/
+   Peer/自动记忆、R15 生产切换严格按顺序。
 
 “与 Akashic 一样完善”的完成条件是：本表每个条目都已由当前源码、版本化 Contract Fixture、对应失败路径
 测试和阶段门禁证实，或有用户批准的替代方案；真实网络、密钥、用户数据、生产写入和 Python 退役还必须额外

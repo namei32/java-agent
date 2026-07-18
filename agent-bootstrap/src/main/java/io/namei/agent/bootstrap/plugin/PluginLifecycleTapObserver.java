@@ -4,6 +4,7 @@ import io.namei.agent.application.plugin.PluginTapDispatcher;
 import io.namei.agent.kernel.lifecycle.TurnEventType;
 import io.namei.agent.kernel.lifecycle.TurnLifecycleEvent;
 import io.namei.agent.kernel.plugin.PluginCapability;
+import io.namei.agent.kernel.plugin.PluginLifecycleProjection;
 import io.namei.agent.kernel.plugin.PluginTapEvent;
 import io.namei.agent.kernel.plugin.PluginTapOutcome;
 import io.namei.agent.kernel.port.TurnLifecycleObserver;
@@ -23,9 +24,13 @@ final class PluginLifecycleTapObserver implements TurnLifecycleObserver {
   @Override
   public void onEvent(TurnLifecycleEvent event) {
     Objects.requireNonNull(event, "event");
+    publish(new PluginTapEvent(capability(event.type()), hash(event), outcome(event), null, 0));
+    PluginLifecycleProjection.project(event).ifPresent(this::publish);
+  }
+
+  private void publish(PluginTapEvent event) {
     try {
-      dispatcher.publish(
-          new PluginTapEvent(capability(event.type()), hash(event), outcome(event), null, 0));
+      dispatcher.publish(event);
     } catch (RuntimeException ignored) {
       // Plugin 可观测性不能改变已存在的 Chat/Tool 业务边界。
     }

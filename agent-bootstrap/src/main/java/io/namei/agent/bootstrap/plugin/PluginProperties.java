@@ -1,6 +1,7 @@
 package io.namei.agent.bootstrap.plugin;
 
 import io.namei.agent.kernel.plugin.PluginCapability;
+import io.namei.agent.kernel.plugin.PluginContract;
 import io.namei.agent.kernel.plugin.PluginId;
 import io.namei.agent.kernel.plugin.PluginKind;
 import io.namei.agent.kernel.plugin.PluginManifest;
@@ -107,31 +108,47 @@ public final class PluginProperties {
   }
 
   public record External(
-      String id, String version, List<String> command, List<String> capabilities) {
+      String id,
+      String version,
+      Integer apiVersion,
+      List<String> command,
+      List<String> capabilities) {
+    public External(String id, String version, List<String> command, List<String> capabilities) {
+      this(id, version, PluginContract.LEGACY_API_VERSION, command, capabilities);
+    }
+
+    @ConstructorBinding
     public External {
       PluginId.parse(id);
       if (version == null || version.isBlank() || version.length() > 64) {
         throw new IllegalArgumentException("external Plugin version 非法");
       }
+      apiVersion = apiVersion == null ? PluginContract.LEGACY_API_VERSION : apiVersion;
       command = List.copyOf(Objects.requireNonNull(command, "command"));
       capabilities = List.copyOf(Objects.requireNonNull(capabilities, "capabilities"));
       if (capabilities.isEmpty()) {
         throw new IllegalArgumentException("external Plugin 至少需要一个 Tap capability");
       }
+      validatedManifest(id, version, apiVersion, capabilities);
     }
 
     PluginManifest manifest() {
-      return new PluginManifest(
-          1,
-          PluginId.parse(id),
-          version,
-          1,
-          PluginKind.EXTERNAL_STDIO,
-          capabilities.stream().map(PluginCapability::valueOf).toList());
+      return validatedManifest(id, version, apiVersion, capabilities);
     }
 
     ExternalStdioCommand stdioCommand() {
       return new ExternalStdioCommand(command);
+    }
+
+    private static PluginManifest validatedManifest(
+        String id, String version, int apiVersion, List<String> capabilities) {
+      return new PluginManifest(
+          PluginContract.CURRENT_VERSION,
+          PluginId.parse(id),
+          version,
+          apiVersion,
+          PluginKind.EXTERNAL_STDIO,
+          capabilities.stream().map(PluginCapability::parse).toList());
     }
   }
 }

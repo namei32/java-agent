@@ -145,13 +145,13 @@
       "expected": {"accepted": false, "code": "PLUGIN_MANIFEST_INVALID"}
     },
     {
-      "id": "api-version-incompatible",
+      "id": "api-version-zero-incompatible",
       "group": "manifest",
       "input": {
         "schemaVersion": 1,
         "id": "calendar-observer",
         "version": "1",
-        "apiVersion": 2,
+        "apiVersion": 0,
         "kind": "JAVA_SERVICE",
         "capabilities": []
       },

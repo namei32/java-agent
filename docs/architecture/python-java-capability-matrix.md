@@ -53,7 +53,7 @@
 | Tool Bundle/Search | `agent/tool_bundles.py`、`tool_search.py` | `ToolCatalog`、`ToolCatalogSession`、`ToolRegistry` | 部分 | R11 B1 的 Java-owned Catalog/Fixture 已实现并验证：内置工具可常驻，静态只读 MCP 与 B3 Workspace Tools 可 deferred，并在当前 Turn 搜索后于下一模型请求投放 Schema；完整 Bundle、动态注册、权限策略与真实副作用仍在后续 B 阶段 | 中 |
 | MCP | `agent/mcp/`、`bootstrap/toolsets/mcp.py` | `adapter-mcp`、Bootstrap `McpRuntime` 装配 | 部分 | R5.1 已完成静态 stdio、官方 SDK 隔离、分页发现、稳定命名、安全 Schema、只读调用、Wire Cancellation、Stale/单次重连和进程回收；R12-S2 已补默认关闭的 Resources/Prompts 元数据目录、预算、失败隔离与 Stale。仍缺正文读取/注入、Streamable HTTP/OAuth、真实 Server Smoke、动态 Catalog 与副作用能力 | 高 |
 | Skills | `agent/skills.py`、`agent/core/prompt_block.py` | `agent-kernel/.../skill`、`MarkdownSkillCatalogAdapter`、`SkillPromptService`、`SkillProperties` | 部分 | R12-S1 已实现并验证默认关闭的只读 Catalog、Workspace 覆盖、依赖可用性、无路径 Prompt 投影和 always 注入；无 `read_skill`、按需正文、脚本执行、动态下载或 Python import | 中 |
-| Plugins | `agent/plugins/` | R7 Java SPI + 隔离 stdio Bridge（已实现） | 部分 | 默认关闭、无真实 Python import、无 Tool/Channel 注入；不承诺运行时猴子补丁 | 高 |
+| Plugins | `agent/plugins/` | R7 Java SPI + 隔离 stdio Bridge、R12-S3 API v2 `LIFECYCLE_TAP`（已实现） | 部分 | 默认关闭的精确只读 Phase/Hash/Outcome 观察已覆盖；无真实 Python import、无 Tool/Channel 注入、无可变 Gate，不承诺运行时猴子补丁 | 高 |
 
 ## 渠道、控制面与后台能力
 
@@ -83,7 +83,7 @@
 ## 当前优先级
 
 1. R6.1–R6.5 已合入 `main`，PR #9 与主分支三套 CI 均通过；R7–R9 已完成当前 Java 实现并通过默认、`failure`、`compat` 阶段门禁，R9 只提供离线演练。R9 的忽略规则遗漏已由本地 `main` 的 `2ceb44b` 修复。
-2. R10 已完成并通过三套阶段门禁；R11 的 B1 Tool Catalog、B2a Local Approval Inbox、B2b Pending Operation 的无执行状态机，以及 B3 默认关闭的独立 Root `read_file`/`list_dir` 已完成。B3 以 Fixture、Root/链接/编码/预算/排序测试和三套完整 Maven 门禁证明其只读范围；Resume/Cancel/Status Message Contract 仍冻结但零路由。R12-S1 只读 Skill Catalog 已实现并通过完整三套门禁，随后才是生产恢复编排、逐工具副作用 Capability 与其余 R12 Contract。
+2. R10 已完成并通过三套阶段门禁；R11 的 B1 Tool Catalog、B2a Local Approval Inbox、B2b Pending Operation 的无执行状态机，以及 B3 默认关闭的独立 Root `read_file`/`list_dir` 已完成。B3 以 Fixture、Root/链接/编码/预算/排序测试和三套完整 Maven 门禁证明其只读范围；Resume/Cancel/Status Message Contract 仍冻结但零路由。R12-S1 只读 Skill Catalog、S2 MCP Assets 目录和 S3 API v2 只读 Lifecycle Tap 已分别通过完整三套门禁，随后才是生产恢复编排、逐工具副作用 Capability 与其余 R12 Contract。
 3. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 4. R11–R15 的全量对齐顺序、Python 证据和完成标准见[Java / Akashic Agent 全量对齐计划](../plans/2026-07-18-java-parity-program.md)。
 5. 真实 Telegram、远程 MCP、真实 Python Plugin、主动外部源、真实 Workspace、部署与 Python 退役不因 R10 实施而获得授权。

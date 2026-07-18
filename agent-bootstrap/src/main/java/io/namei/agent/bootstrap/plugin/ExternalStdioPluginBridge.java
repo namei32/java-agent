@@ -78,6 +78,9 @@ public final class ExternalStdioPluginBridge implements PluginTap, AutoCloseable
     params.put("referenceHash", event.referenceHash());
     params.put("outcome", event.outcome().name());
     params.put("durationMillis", event.durationMillis());
+    if (event.capability() == PluginCapability.LIFECYCLE_TAP) {
+      params.put("phase", event.phase().name());
+    }
     if (event.code() != null) {
       params.put("code", event.code().name());
     }
@@ -167,7 +170,9 @@ public final class ExternalStdioPluginBridge implements PluginTap, AutoCloseable
         throw new IllegalArgumentException();
       }
       JsonNode capabilities = value.get("capabilities");
-      if (capabilities == null || !capabilities.isArray() || capabilities.size() > 3) {
+      if (capabilities == null
+          || !capabilities.isArray()
+          || capabilities.size() > PluginCapability.values().length) {
         throw new IllegalArgumentException();
       }
       var parsedCapabilities = new ArrayList<PluginCapability>(capabilities.size());
@@ -191,6 +196,7 @@ public final class ExternalStdioPluginBridge implements PluginTap, AutoCloseable
       case TURN_TAP -> "turn.tap";
       case TOOL_TAP -> "tool.tap";
       case PROACTIVE_TAP -> "proactive.tap";
+      case LIFECYCLE_TAP -> "lifecycle.tap";
     };
   }
 

@@ -45,7 +45,13 @@
     {
       "id": "plugins/plugin-extension-runtime-v1",
       "path": "plugins/plugin-extension-runtime-v1.json",
-      "sha256": "f62930f2b677df67460517e5b8812c74ab92fd1e7a445995e33185accf3d64bb",
+      "sha256": "f7c7551996789412af0e2a5dacba7c82c5d899415ecd77f3089ee25f433eae71",
+      "source": "java-contract"
+    },
+    {
+      "id": "plugins/lifecycle-tap-v2",
+      "path": "plugins/lifecycle-tap-v2.json",
+      "sha256": "669f0c367f0dd552129e61af092447c322932c7b18e0d43c6cffc4c1763824e4",
       "source": "java-contract"
     },
     {

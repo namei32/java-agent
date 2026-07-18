@@ -3,7 +3,8 @@ package io.namei.agent.kernel.plugin;
 public enum PluginCapability {
   TURN_TAP,
   TOOL_TAP,
-  PROACTIVE_TAP;
+  PROACTIVE_TAP,
+  LIFECYCLE_TAP;
 
   public static PluginCapability parse(String value) {
     try {

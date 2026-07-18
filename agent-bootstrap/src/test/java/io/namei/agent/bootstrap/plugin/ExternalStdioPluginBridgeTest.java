@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.namei.agent.kernel.plugin.PluginCapability;
 import io.namei.agent.kernel.plugin.PluginId;
 import io.namei.agent.kernel.plugin.PluginKind;
+import io.namei.agent.kernel.plugin.PluginLifecyclePhase;
 import io.namei.agent.kernel.plugin.PluginManifest;
 import io.namei.agent.kernel.plugin.PluginStableCode;
 import io.namei.agent.kernel.plugin.PluginTapEvent;
@@ -29,6 +30,14 @@ class ExternalStdioPluginBridgeTest {
           1,
           PluginKind.EXTERNAL_STDIO,
           List.of(PluginCapability.TURN_TAP));
+  private static final PluginManifest LIFECYCLE_MANIFEST =
+      new PluginManifest(
+          1,
+          PluginId.parse("lifecycle-observer"),
+          "2.0.0",
+          2,
+          PluginKind.EXTERNAL_STDIO,
+          List.of(PluginCapability.LIFECYCLE_TAP));
 
   @Test
   void performsHelloThenSendsOnlySafeTapProjectionWithMatchingRequestId() throws Exception {
@@ -57,6 +66,34 @@ class ExternalStdioPluginBridgeTest {
     assertThat(tap.path("params").has("referenceHash")).isTrue();
     assertThat(tap.path("params").has("prompt")).isFalse();
     assertThat(tap.path("params").has("sessionId")).isFalse();
+  }
+
+  @Test
+  void apiV2LifecycleTapUsesDedicatedMethodAndCarriesOnlyThePhaseProjection() throws Exception {
+    var transport =
+        new ScriptedTransport(
+            response("hello-1", Map.of("manifest", lifecycleManifestMap())),
+            response("tap-2", Map.of("accepted", true)));
+    var bridge =
+        ExternalStdioPluginBridge.start(
+            transport, LIFECYCLE_MANIFEST, limits(), new ScriptedRequestIds("hello-1", "tap-2"));
+
+    bridge.accept(
+        new PluginTapEvent(
+            PluginCapability.LIFECYCLE_TAP,
+            PluginLifecyclePhase.AFTER_TURN,
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            PluginTapOutcome.FAILED,
+            null,
+            12));
+
+    JsonNode tap = JSON.readTree(transport.requests.getLast());
+    assertThat(tap.path("method").asString()).isEqualTo("lifecycle.tap");
+    assertThat(tap.path("params").path("phase").asString()).isEqualTo("AFTER_TURN");
+    assertThat(tap.path("params").path("referenceHash").asString()).matches("[0-9a-f]{64}");
+    assertThat(tap.path("params").has("toolName")).isFalse();
+    assertThat(tap.path("params").has("sessionId")).isFalse();
+    assertThat(tap.path("params").has("prompt")).isFalse();
   }
 
   @Test
@@ -171,6 +208,22 @@ class ExternalStdioPluginBridgeTest {
         "EXTERNAL_STDIO",
         "capabilities",
         List.of("TURN_TAP"));
+  }
+
+  private static Map<String, Object> lifecycleManifestMap() {
+    return Map.of(
+        "schemaVersion",
+        1,
+        "id",
+        "lifecycle-observer",
+        "version",
+        "2.0.0",
+        "apiVersion",
+        2,
+        "kind",
+        "EXTERNAL_STDIO",
+        "capabilities",
+        List.of("LIFECYCLE_TAP"));
   }
 
   private static String response(String requestId, Map<String, Object> result) {

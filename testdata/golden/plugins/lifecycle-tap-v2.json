@@ -1,0 +1,114 @@
+{
+  "formatVersion": 1,
+  "suite": "plugins/lifecycle-tap-v2",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0023-add-read-only-plugin-lifecycle-tap-v2.md",
+    "contract": "docs/contracts/plugin-lifecycle-read-only-mapping.md",
+    "spec": "docs/specs/2026-07-19-r12-plugin-lifecycle-tap-design.md"
+  },
+  "normalization": [
+    "API v1 的 TURN_TAP、TOOL_TAP、PROACTIVE_TAP Wire 和次数不因 v2 Lifecycle Tap 改变",
+    "v2 Lifecycle Tap 只投影 phase、SHA-256 referenceHash、outcome、duration 和可选稳定码",
+    "未映射 Java 事件、Gate、Tool/Channel 注入、Python import、目录发现和副作用一律不由本契约启用"
+  ],
+  "cases": [
+    {
+      "id": "api-v1-keeps-legacy-turn-tap",
+      "group": "manifest",
+      "input": {"apiVersion": 1, "capabilities": ["TURN_TAP"]},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "api-v1-rejects-lifecycle-tap",
+      "group": "manifest",
+      "input": {"apiVersion": 1, "capabilities": ["LIFECYCLE_TAP"]},
+      "expected": {"accepted": false, "code": "PLUGIN_CAPABILITY_UNAVAILABLE"}
+    },
+    {
+      "id": "api-v2-accepts-lifecycle-tap",
+      "group": "manifest",
+      "input": {"apiVersion": 2, "capabilities": ["LIFECYCLE_TAP"]},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "api-v3-is-incompatible",
+      "group": "manifest",
+      "input": {"apiVersion": 3, "capabilities": ["LIFECYCLE_TAP"]},
+      "expected": {"accepted": false, "code": "PLUGIN_API_INCOMPATIBLE"}
+    },
+    {
+      "id": "api-v2-rejects-duplicate-capability",
+      "group": "manifest",
+      "input": {"apiVersion": 2, "capabilities": ["LIFECYCLE_TAP", "LIFECYCLE_TAP"]},
+      "expected": {"accepted": false, "code": "PLUGIN_MANIFEST_INVALID"}
+    },
+    {
+      "id": "turn-started-projects-before-turn",
+      "group": "projection",
+      "input": {"type": "TURN_STARTED"},
+      "expected": {"accepted": true, "phase": "BEFORE_TURN", "outcome": "ACCEPTED"}
+    },
+    {
+      "id": "model-requested-projects-before-reasoning",
+      "group": "projection",
+      "input": {"type": "MODEL_REQUESTED"},
+      "expected": {"accepted": true, "phase": "BEFORE_REASONING", "outcome": "ACCEPTED"}
+    },
+    {
+      "id": "model-completed-projects-after-reasoning",
+      "group": "projection",
+      "input": {"type": "MODEL_COMPLETED", "status": "FINAL"},
+      "expected": {"accepted": true, "phase": "AFTER_REASONING", "outcome": "COMPLETED"}
+    },
+    {
+      "id": "invalid-model-response-projects-failed-after-reasoning",
+      "group": "projection",
+      "input": {"type": "MODEL_COMPLETED", "status": "INVALID"},
+      "expected": {"accepted": true, "phase": "AFTER_REASONING", "outcome": "FAILED"}
+    },
+    {
+      "id": "tool-started-projects-before-tool-call",
+      "group": "projection",
+      "input": {"type": "TOOL_CALL_STARTED"},
+      "expected": {"accepted": true, "phase": "BEFORE_TOOL_CALL", "outcome": "ACCEPTED"}
+    },
+    {
+      "id": "tool-completed-projects-after-tool-result",
+      "group": "projection",
+      "input": {"type": "TOOL_CALL_COMPLETED"},
+      "expected": {"accepted": true, "phase": "AFTER_TOOL_RESULT", "outcome": "COMPLETED"}
+    },
+    {
+      "id": "turn-committed-projects-after-turn",
+      "group": "projection",
+      "input": {"type": "TURN_COMMITTED"},
+      "expected": {"accepted": true, "phase": "AFTER_TURN", "outcome": "COMPLETED"}
+    },
+    {
+      "id": "turn-failed-projects-failed-after-turn",
+      "group": "projection",
+      "input": {"type": "TURN_FAILED"},
+      "expected": {"accepted": true, "phase": "AFTER_TURN", "outcome": "FAILED"}
+    },
+    {
+      "id": "approval-request-is-not-a-lifecycle-phase",
+      "group": "projection",
+      "input": {"type": "APPROVAL_REQUESTED"},
+      "expected": {"accepted": true, "projected": false}
+    },
+    {
+      "id": "lifecycle-tap-requires-a-phase",
+      "group": "event",
+      "input": {"capability": "LIFECYCLE_TAP", "phase": "UNSPECIFIED"},
+      "expected": {"accepted": false, "code": "PLUGIN_PROTOCOL_INVALID"}
+    },
+    {
+      "id": "legacy-tap-cannot-carry-a-phase",
+      "group": "event",
+      "input": {"capability": "TURN_TAP", "phase": "BEFORE_TURN"},
+      "expected": {"accepted": false, "code": "PLUGIN_PROTOCOL_INVALID"}
+    }
+  ]
+}

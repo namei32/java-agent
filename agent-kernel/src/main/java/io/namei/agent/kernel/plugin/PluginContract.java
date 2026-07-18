@@ -6,7 +6,8 @@ import java.util.Objects;
 
 public final class PluginContract {
   public static final int CURRENT_VERSION = 1;
-  public static final int CURRENT_API_VERSION = 1;
+  public static final int LEGACY_API_VERSION = 1;
+  public static final int CURRENT_API_VERSION = 2;
   public static final int MAX_PLUGIN_ID_LENGTH = 63;
   public static final int MAX_VERSION_LENGTH = 64;
 
@@ -26,7 +27,7 @@ public final class PluginContract {
     if (schemaVersion != CURRENT_VERSION) {
       throw violation(PluginStableCode.PLUGIN_MANIFEST_INVALID);
     }
-    if (apiVersion != CURRENT_API_VERSION) {
+    if (apiVersion < LEGACY_API_VERSION || apiVersion > CURRENT_API_VERSION) {
       throw violation(PluginStableCode.PLUGIN_API_INCOMPATIBLE);
     }
     if (version.isBlank()
@@ -36,6 +37,9 @@ public final class PluginContract {
     }
     if (new HashSet<>(capabilities).size() != capabilities.size()) {
       throw violation(PluginStableCode.PLUGIN_MANIFEST_INVALID);
+    }
+    if (apiVersion < CURRENT_API_VERSION && capabilities.contains(PluginCapability.LIFECYCLE_TAP)) {
+      throw violation(PluginStableCode.PLUGIN_CAPABILITY_UNAVAILABLE);
     }
   }
 
