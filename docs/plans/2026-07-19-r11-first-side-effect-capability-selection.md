@@ -25,6 +25,17 @@
 而被视为已获执行授权；在用户明确批准下面的一条准确路径、风险和边界前，系统必须继续保持生产 Deny All、无
 Pending Recovery 路由、无 Worker、无 `forget_memory` Tool。
 
+## 可复查证据
+
+- Python `ForgetMemoryTool` 的参数、稳定去重和 JSON 投影见
+  `akashic-agent/agent/tools/forget_memory.py:13`、`:32`、`:48`、`:59`。
+- Python 基线测试证明它按批量 ID 查询并标记 `superseded`，并固定重复/缺失 ID 的结果顺序，见
+  `akashic-agent/tests/test_forget_memory_tool.py:15`、`:49`、`:73`。
+- Java 当前 `MemoryDeleteService` 强制 Session Scope、单 ID 和物理删除 Port，见
+  `agent-application/src/main/java/io/namei/agent/application/MemoryDeleteService.java:18`。
+- R4.2 的已批准契约明确排除了模型可调用 Memory Tool，并确认“旧记忆可丢弃”不等于运行时语义已获替代授权，见
+  [语义记忆契约](../contracts/semantic-memory-persistence-optimizer.md#2-已确认与待实现边界)。
+
 ## 已提交 Python 基线与候选筛选
 
 | Python Tool | 副作用/依赖 | 当前 Java 基础 | 本轮结论 |
