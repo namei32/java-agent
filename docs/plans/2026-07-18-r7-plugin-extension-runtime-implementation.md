@@ -1,6 +1,6 @@
 # R7 插件与扩展运行时实施计划
 
-- 状态：G0、P1 已完成；等待 P2 连续 TDD
+- 状态：G0、P1、P2 已完成；等待 P3 连续 TDD
 - 分支：`agent/r7-r9-runtime`
 - 前置：R6.5 已通过 PR #9 合入 `main`，主分支三套 CI 全绿
 
@@ -20,3 +20,9 @@ P1 证据（2026-07-18）：先添加 20 Case Java-owned Plugin Fixture 与 `Plu
 测试编译因缺少 Manifest、ID、Catalog、稳定码和违例类型失败，构成有效 RED。随后以纯 Kernel 值对象实现
 严格 ID、Manifest、能力 allowlist、重复 Catalog ID、稳定重试码与脱敏错误，同一目标命令 2/2 GREEN；
 `GoldenManifestTest` 在 `compat` Profile 复核 Fixture Hash 通过。
+
+P2 证据（2026-07-18）：先添加 `PluginTapDispatcherTest`，目标 Maven 测试因缺少不可变 Tap Event、
+Tap SPI、调度器与隔离稳定码而编译失败，构成有效 RED。随后实现无框架、可注入执行器和 Deadline 的
+Dispatcher；同一目标命令 3/3 GREEN，覆盖 `(priority desc, pluginId asc)` 顺序、发布线程不直接调用、
+单 Plugin timeout 禁用、Runtime Failure 隔离以及审计不含原始 Plugin ID 或异常正文。命令：
+`./mvnw --batch-mode --no-transfer-progress -pl agent-application -am -Dtest=PluginTapDispatcherTest -Dsurefire.failIfNoSpecifiedTests=false test`。
