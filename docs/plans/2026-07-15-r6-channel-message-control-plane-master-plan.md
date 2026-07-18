@@ -423,4 +423,4 @@ R6 总退出条件：
 3. R6.3 Channel Host/Telegram 离线纵向切片已完成连续 TDD，并通过 PR #6 默认、`failure`、`compat` 远程门禁合入 `main`。
 4. 真实 Token、网络、费用和数据范围仍未获授权，因此真实 Telegram Smoke 必须保持禁用。
 5. R6.4 可靠投递已通过 PR #7 合入 `main`；聚焦 CI 稳定性修复 PR #8 和对应主分支默认、`failure`、`compat` 门禁全部通过，仍不实现自动重放或 Exactly Once。
-6. R6.5 后端 G0–G10 已完成默认关闭装配、Loopback 安全、状态/取消 API、认证 SSE、故障矩阵、Draft PR #9 和首轮远程 CI；本地 Review 修复及阶段门禁也已完成，等待推送/Ready 授权。后端合并前真实 Telegram Smoke、远程访问、CLI+Web 与前端继续冻结。
+6. R6.5 后端 G0–G10、Review 修复与阶段门禁已通过 PR #9 合入 `main`；合并提交 `dbaf272` 的默认、`failure`、`compat` CI 全绿。真实 Telegram Smoke、远程访问、CLI+Web 与前端继续冻结，前端仍须独立 G11 Contract。

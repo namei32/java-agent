@@ -49,11 +49,11 @@
 | Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry` | 部分 | Approval/副作用/幂等协议、整批门禁和生产 Deny All Framework 已实现；缺真实 Approval Channel、Durable Ledger 和具体 Side Effect Tool Contract | 中 |
 | Tool Loop | `agent/looping/`、`agent/tool_runtime.py` | `ToolLoop`、`ChatService`、`SideEffectBatchCoordinator` | 部分 | 有界顺序执行、安全预算、审批生命周期、一次性消费、幂等/UNKNOWN、提交边界和取消 Token 透传已完成；Telegram 断开已接入同一取消边界，生产仍无可执行副作用 | 高 |
 | 文件/Shell/Web 工具 | `agent/tools/` | `CurrentTimeTool`（仅时间） | 部分 | 仅完成无副作用时间工具；R3.2 批准不授权真实副作用，仍需逐工具 Capability Contract | 极高 |
-| Tool Hook | `agent/tool_hooks/` | 无 | 未开始 | 定义顺序、异常和可变性边界 | 高 |
+| Tool Hook | `agent/tool_hooks/` | R7 Kernel/Application Plugin Tap（实施中） | 部分 | V1 固定顺序、超时和异常隔离，只读投影；可变 Gate/副作用仍冻结 | 高 |
 | Tool Bundle/Search | `agent/tool_bundles.py`、`tool_search.py` | 无 | 未开始 | 在基础 Tool Loop 稳定后迁移 | 中 |
 | MCP | `agent/mcp/`、`bootstrap/toolsets/mcp.py` | `adapter-mcp`、Bootstrap `McpRuntime` 装配 | 部分 | R5.1 已完成静态 stdio、官方 SDK 隔离、分页发现、稳定命名、安全 Schema、只读调用、Wire Cancellation、Stale/单次重连和进程回收；缺 Streamable HTTP/OAuth、Resources/Prompts、真实 Server Smoke、动态 Catalog 与副作用能力 | 高 |
 | Skills | `agent/skills.py` | 无 | 未开始 | 明确技能文件格式及 Java/进程外执行边界 | 中 |
-| Plugins | `agent/plugins/` | 无 | 未开始 | Java SPI + Python 进程外 Bridge；不承诺运行时猴子补丁 | 高 |
+| Plugins | `agent/plugins/` | R7 Java SPI + 隔离 stdio Bridge（实施中） | 部分 | 默认关闭、无真实 Python import、无 Tool/Channel 注入；不承诺运行时猴子补丁 | 高 |
 
 ## 渠道、控制面与后台能力
 
@@ -62,11 +62,11 @@
 | CLI/渠道宿主 | `bootstrap/channel_host.py`、`bootstrap/channels.py` | `agent-bootstrap/.../cli`、`channel`、`telegram` | 部分 | 显式 Non-Web CLI、通用 Host、Telegram 私聊与该渠道的持久恢复已离线验证；多渠道和主动宿主未迁移 | 中 |
 | Telegram 等渠道 | 渠道模块与 Bootstrap | `agent-bootstrap/.../channel`、`telegram` | 部分 | 数值 Allowlist、Long Polling、持久 Cursor/Claim、事务 Outbox、Receipt、429 有界重试、`UNKNOWN`、恢复与回退已通过 PR #7 合入，PR #8 完成合并后 CI 稳定性修复；真实 Smoke 待授权 | 高 |
 | 流式输出 | Bus/Channel 生命周期事件 | Kernel Channel Contract、`BoundedOutboundBuffer`、`MessageTurnService`、Spring AI Streaming Adapter、`LocalCliRunner`、`TelegramTerminalRenderer` | 部分 | Provider Delta、Tool Loop 预览、权威完成、唯一终态、断开/背压、CLI 实时渲染、Telegram 终态投影与持久投递已完成；其他渠道与真实 Smoke 未覆盖 | 中 |
-| Dashboard/控制面 API | `bootstrap/dashboard_api.py` | R6.5 后端已完成 Fixture、Registry、Event Hub、Telegram 接入、默认关闭 Spring 装配、Loopback Session、安全状态/取消 API、future-only SSE、安全审计和共享关闭 Deadline | 部分 | 本地 Review 修复已通过阶段门禁；Draft PR #9 待推送、远程 CI 和 Ready。前端、远程访问、CLI+Web、同步 Chat、历史/删除/Proactive/Plugin 不在当前范围 | 中 |
-| Scheduler | `agent/scheduler.py` | 无 | 未开始 | 需持久化、重启恢复、时区和幂等 | 高 |
-| Proactive | `agent/core/proactive_*`、`bootstrap/proactive.py` | 无 | 未开始 | 需来源、审批、限流和审计 | 极高 |
-| Drift | `agent/core/drift_turn.py`、`_handbook/drift-guide.md` | 无 | 未开始 | 需运行记录、预算、取消和回退 | 极高 |
-| Subagent | `agent/subagent.py`、`agent/background/` | 无 | 未开始 | 需资源上限、父子生命周期和结果协议 | 极高 |
+| Dashboard/控制面 API | `bootstrap/dashboard_api.py` | R6.5 后端已完成 Fixture、Registry、Event Hub、Telegram 接入、默认关闭 Spring 装配、Loopback Session、安全状态/取消 API、future-only SSE、安全审计和共享关闭 Deadline | 部分 | 已通过 PR #9 合入 `main`；前端、远程访问、CLI+Web、同步 Chat、历史/删除/Proactive/Plugin 不在当前范围 | 中 |
+| Scheduler | `agent/scheduler.py` | R8 SQLite Scheduler（待 R7） | 部分 | V1 固定 AT/EVERY、租约、恢复与幂等；cron/时区/集群冻结 | 高 |
+| Proactive | `agent/core/proactive_*`、`bootstrap/proactive.py` | R8 Proactive Gate/Planner（待 R7） | 部分 | 默认 NoOp Delivery；外部源、真实推送、审批与网络冻结 | 极高 |
+| Drift | `agent/core/drift_turn.py`、`_handbook/drift-guide.md` | R8 只读 Drift（待 R7） | 部分 | 预算/取消/审计；Workspace 写入和网络冻结 | 极高 |
+| Subagent | `agent/subagent.py`、`agent/background/` | R8 受限 Subagent（待 R7） | 部分 | 无 Tool/网络/权限继承；需资源与父子生命周期验证 | 极高 |
 | Peer Agent | `agent/peer_agent/` | 无 | 未开始 | 需身份、进程和远端信任边界 | 极高 |
 
 ## 兼容性测试差距
@@ -81,8 +81,8 @@
 
 ## 当前优先级
 
-1. R6.1–R6.4 已合入 `main`；R6.5 后端 G0–G10 与本地高风险 Review 修复已通过阶段门禁，Draft PR #9 等待推送、远程 CI 和 Ready/合并批准。
+1. R6.1–R6.5 已合入 `main`，PR #9 与主分支三套 CI 均通过；R7 Contract/Spec/ADR/Plan 已冻结并开始连续 TDD。
 2. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 3. Approval Channel、Durable Ledger 和真实副作用工具保持冻结，等重写主线进入相应阶段再恢复。
 4. 为计划启用 `READ_ONLY` 的每个 Provider/模型组合执行经授权的真实 Tool Smoke；未通过时保持 `DISABLED`。
-5. R6.4 已通过 PR #7 合入并由 PR #8 完成主分支 CI 稳定性修复；真实 Telegram、R5.2 远程 MCP、插件和主动能力不因合并获得授权。R6.5 后端合入前继续冻结远程访问、CLI+Web 和前端；合入后再为源码归属和 Node/静态托管编写 G11 Contract。
+5. 真实 Telegram、R5.2 远程 MCP、真实 Python Plugin、主动外部源、真实 Workspace、部署与 Python 退役不因 R7–R9 实施而获得授权。R9 只先完成 sandbox 演练与回退门禁，真实切换另行确认。
