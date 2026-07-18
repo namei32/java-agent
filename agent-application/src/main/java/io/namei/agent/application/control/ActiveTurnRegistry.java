@@ -235,6 +235,25 @@ public final class ActiveTurnRegistry implements ActiveTurnObserver, AutoCloseab
     }
   }
 
+  ControlEventHubSnapshot eventHubSnapshot(ControlEventHub hub) {
+    lock.lock();
+    try {
+      requireEventHub(hub);
+      int maxQueueDepth =
+          hub.subscriptionsLocked().stream()
+              .mapToInt(ControlSubscription::queueDepth)
+              .max()
+              .orElse(0);
+      return new ControlEventHubSnapshot(
+          hub.subscriberCountLocked(),
+          maxQueueDepth,
+          hub.bufferCapacityLocked(),
+          hub.slowConsumerDisconnectsLocked());
+    } finally {
+      lock.unlock();
+    }
+  }
+
   void closeEventHub(ControlEventHub hub) {
     lock.lock();
     try {
@@ -259,6 +278,7 @@ public final class ActiveTurnRegistry implements ActiveTurnObserver, AutoCloseab
       if (eventHub != null && !eventHub.isClosedLocked()) {
         for (ControlSubscription subscription : List.copyOf(entry.subscriptions)) {
           if (subscription.offer(projection) == ControlSubscription.OfferResult.FULL) {
+            eventHub.markSlowConsumerLocked();
             detachSubscriptionLocked(
                 eventHub, subscription, ControlSubscriptionCloseReason.SLOW_CONSUMER, false);
           }

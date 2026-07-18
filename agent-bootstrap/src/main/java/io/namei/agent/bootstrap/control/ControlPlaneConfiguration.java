@@ -114,4 +114,11 @@ public class ControlPlaneConfiguration {
     return new ControlPlaneStatusService(
         clocks.getIfAvailable(Clock::systemUTC), host, runtime, properties);
   }
+
+  @Bean
+  @ConditionalOnProperty(prefix = PREFIX, name = "mode", havingValue = "LOOPBACK")
+  @ConditionalOnMissingBean(ControlSseWriterFactory.class)
+  ControlSseWriterFactory controlSseWriterFactory(ObjectProvider<ObjectMapper> objectMappers) {
+    return new ServletControlSseWriterFactory(objectMappers.getIfAvailable(ObjectMapper::new));
+  }
 }

@@ -2,6 +2,7 @@ package io.namei.agent.bootstrap.control;
 
 import io.namei.agent.application.control.ActiveTurnRegistrySnapshot;
 import io.namei.agent.application.control.ControlCancellationOutcome;
+import io.namei.agent.application.control.ControlEventHubSnapshot;
 import io.namei.agent.bootstrap.channel.ChannelHost;
 import io.namei.agent.bootstrap.channel.ChannelReliabilityStatus;
 import io.namei.agent.bootstrap.channel.ChannelStatusSnapshot;
@@ -35,9 +36,11 @@ public final class ControlPlaneStatusService {
     Instant observedAt = clock.instant();
     ActiveTurnRegistrySnapshot registry;
     List<ChannelStatusSnapshot> snapshots;
+    ControlEventHubSnapshot events;
     try {
       registry = runtime.registry().snapshot();
       snapshots = host.snapshots();
+      events = runtime.eventHub().snapshot();
     } catch (RuntimeException unavailable) {
       return unavailable(observedAt);
     }
@@ -67,10 +70,10 @@ public final class ControlPlaneStatusService {
             code,
             registry.activeTurns().size(),
             registry.terminalTombstones(),
-            runtime.eventHub().subscriberCount(),
-            0,
-            properties.subscriberBufferCapacity(),
-            0),
+            events.subscriberCount(),
+            events.maxSubscriberQueueDepth(),
+            events.subscriberBufferCapacity(),
+            events.slowConsumerDisconnects()),
         channels);
   }
 

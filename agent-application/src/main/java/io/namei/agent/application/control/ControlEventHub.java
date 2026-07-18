@@ -27,6 +27,7 @@ public final class ControlEventHub implements AutoCloseable {
   private final Set<ControlSubscription> subscriptions = new HashSet<>();
   private final Map<String, Set<ControlSubscription>> byActor = new HashMap<>();
   private boolean closed;
+  private long slowConsumerDisconnects;
 
   public ControlEventHub(
       ActiveTurnRegistry registry,
@@ -63,6 +64,10 @@ public final class ControlEventHub implements AutoCloseable {
 
   public int subscriberCount() {
     return registry.subscriberCount(this);
+  }
+
+  public ControlEventHubSnapshot snapshot() {
+    return registry.eventHubSnapshot(this);
   }
 
   @Override
@@ -117,6 +122,20 @@ public final class ControlEventHub implements AutoCloseable {
 
   int subscriberCountLocked() {
     return subscriptions.size();
+  }
+
+  int bufferCapacityLocked() {
+    return bufferCapacity;
+  }
+
+  long slowConsumerDisconnectsLocked() {
+    return slowConsumerDisconnects;
+  }
+
+  void markSlowConsumerLocked() {
+    if (slowConsumerDisconnects < Long.MAX_VALUE) {
+      slowConsumerDisconnects++;
+    }
   }
 
   boolean isClosedLocked() {

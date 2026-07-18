@@ -8,6 +8,8 @@ import io.namei.agent.bootstrap.channel.ChannelAdapter;
 import io.namei.agent.bootstrap.channel.ChannelHost;
 import io.namei.agent.bootstrap.channel.ChannelState;
 import io.namei.agent.bootstrap.channel.ChannelStatusSnapshot;
+import io.namei.agent.kernel.channel.MessageRoute;
+import io.namei.agent.kernel.channel.OutboundMessage;
 import io.namei.agent.kernel.control.ControlTurnRef;
 import java.time.Clock;
 import java.time.Instant;
@@ -33,6 +35,11 @@ class ControlPlaneStatusServiceTest {
         runtime.register(
             "telegram", ControlCancellationHandle.from(new TurnCancellationSource()), NOW);
     var service = service(host, runtime);
+    var subscription =
+        runtime.eventHub().subscribe(earlier.turnRef().orElseThrow(), "actor-safe-reference");
+    earlier.observe(
+        OutboundMessage.started(
+            "raw-turn", "raw-session", new MessageRoute("telegram", "raw-route")));
 
     ControlStatusResponse status = service.status();
     ControlTurnsResponse turns = service.turns();
@@ -44,6 +51,8 @@ class ControlPlaneStatusServiceTest {
     assertThat(status.control().activeTurns()).isEqualTo(2);
     assertThat(status.control().recentTerminalTombstones()).isZero();
     assertThat(status.control().subscriberBufferCapacity()).isEqualTo(64);
+    assertThat(status.control().eventSubscribers()).isEqualTo(1);
+    assertThat(status.control().maxSubscriberQueueDepth()).isEqualTo(1);
     assertThat(status.channels())
         .extracting(ControlStatusResponse.Channel::name)
         .containsExactly("cli", "telegram");
@@ -52,6 +61,7 @@ class ControlPlaneStatusServiceTest {
         .containsExactly(
             earlier.turnRef().orElseThrow().value(), later.turnRef().orElseThrow().value());
     assertThat(turns.toString()).doesNotContain("raw-session", "raw-route", "message-body");
+    subscription.close();
   }
 
   @Test

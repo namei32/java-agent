@@ -11,7 +11,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 public final class ControlSubscription implements AutoCloseable {
-  public static final Duration MAX_POLL_TIMEOUT = Duration.ofSeconds(30);
+  public static final Duration MAX_POLL_TIMEOUT = Duration.ofSeconds(60);
 
   private final ControlEventHub owner;
   private final ControlStreamOpening opening;
@@ -145,6 +145,15 @@ public final class ControlSubscription implements AutoCloseable {
 
   String actorRef() {
     return actorRef;
+  }
+
+  int queueDepth() {
+    lock.lock();
+    try {
+      return events.size();
+    } finally {
+      lock.unlock();
+    }
   }
 
   private long boundedWaitNanos(Duration timeout, Instant now) {
