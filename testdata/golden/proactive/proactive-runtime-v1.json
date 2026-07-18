@@ -1,0 +1,29 @@
+{
+  "formatVersion": 1,
+  "suite": "proactive/proactive-runtime",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-18",
+    "adr": "docs/adr/0013-use-local-sqlite-leased-proactive-runtime.md",
+    "contract": "docs/contracts/proactive-runtime.md",
+    "spec": "docs/specs/2026-07-18-proactive-runtime-design.md"
+  },
+  "cases": [
+    {"id":"at-once","group":"schedule","input":{"kind":"AT","nextRunAt":"2026-07-20T00:00:00Z"},"expected":{"accepted":true}},
+    {"id":"every-minute","group":"schedule","input":{"kind":"EVERY","nextRunAt":"2026-07-20T00:00:00Z","everyMillis":60000},"expected":{"accepted":true}},
+    {"id":"at-with-interval","group":"schedule","input":{"kind":"AT","nextRunAt":"2026-07-20T00:00:00Z","everyMillis":60000},"expected":{"accepted":false,"code":"PROACTIVE_CONTRACT_INVALID"}},
+    {"id":"every-without-interval","group":"schedule","input":{"kind":"EVERY","nextRunAt":"2026-07-20T00:00:00Z"},"expected":{"accepted":false,"code":"PROACTIVE_CONTRACT_INVALID"}},
+    {"id":"every-too-short","group":"schedule","input":{"kind":"EVERY","nextRunAt":"2026-07-20T00:00:00Z","everyMillis":999},"expected":{"accepted":false,"code":"PROACTIVE_CONTRACT_INVALID"}},
+    {"id":"scheduled-job","group":"job","input":{"jobRef":"job-digest","schedule":{"kind":"AT","nextRunAt":"2026-07-20T00:00:00Z"},"targetHash":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","idempotencyKey":"abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789","state":"SCHEDULED","attempts":0,"maxAttempts":3},"expected":{"accepted":true}},
+    {"id":"job-ref-upper","group":"job","input":{"jobRef":"Job-Digest","schedule":{"kind":"AT","nextRunAt":"2026-07-20T00:00:00Z"},"targetHash":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","idempotencyKey":"abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789","state":"SCHEDULED","attempts":0,"maxAttempts":3},"expected":{"accepted":false,"code":"PROACTIVE_CONTRACT_INVALID"}},
+    {"id":"target-not-hash","group":"job","input":{"jobRef":"job-digest","schedule":{"kind":"AT","nextRunAt":"2026-07-20T00:00:00Z"},"targetHash":"target","idempotencyKey":"abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789","state":"SCHEDULED","attempts":0,"maxAttempts":3},"expected":{"accepted":false,"code":"PROACTIVE_CONTRACT_INVALID"}},
+    {"id":"attempts-exhausted","group":"job","input":{"jobRef":"job-digest","schedule":{"kind":"AT","nextRunAt":"2026-07-20T00:00:00Z"},"targetHash":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","idempotencyKey":"abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789","state":"SCHEDULED","attempts":4,"maxAttempts":3},"expected":{"accepted":false,"code":"PROACTIVE_BUDGET_EXHAUSTED"}},
+    {"id":"decision-requested","group":"decision","input":{"kind":"REQUESTED"},"expected":{"accepted":true}},
+    {"id":"decision-cooldown","group":"decision","input":{"kind":"SKIPPED","code":"PROACTIVE_COOLDOWN"},"expected":{"accepted":true}},
+    {"id":"decision-invalid-skip-code","group":"decision","input":{"kind":"SKIPPED","code":"PROACTIVE_TIMEOUT"},"expected":{"accepted":false,"code":"PROACTIVE_CONTRACT_INVALID"}},
+    {"id":"subagent-budget","group":"subagent","input":{"maxPromptCharacters":2000,"maxResultCharacters":4000,"maxSteps":3,"timeoutMillis":1000},"expected":{"accepted":true}},
+    {"id":"subagent-too-many-steps","group":"subagent","input":{"maxPromptCharacters":2000,"maxResultCharacters":4000,"maxSteps":9,"timeoutMillis":1000},"expected":{"accepted":false,"code":"SUBAGENT_BUDGET_EXHAUSTED"}},
+    {"id":"stable-code-timeout","group":"stable-code","input":{"code":"PROACTIVE_TIMEOUT"},"expected":{"accepted":true,"retryable":true}},
+    {"id":"stable-code-cooldown","group":"stable-code","input":{"code":"PROACTIVE_COOLDOWN"},"expected":{"accepted":true,"retryable":false}}
+  ]
+}

@@ -37,6 +37,12 @@
       "source": "java-contract"
     },
     {
+      "id": "proactive/proactive-runtime-v1",
+      "path": "proactive/proactive-runtime-v1.json",
+      "sha256": "d5850d7d58c3c61989a731ec5b6e91077b27a9f15ea277b31c2119fe9192e814",
+      "source": "java-contract"
+    },
+    {
       "id": "message-bus/versioned-channel-message",
       "path": "message-bus/versioned-channel-message.json",
       "sha256": "f002241efa99160e51dab971c544912594c40f10f4dbb7131fed07ee31d9acd4",
