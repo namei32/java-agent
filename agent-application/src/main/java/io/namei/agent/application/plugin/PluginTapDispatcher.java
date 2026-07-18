@@ -4,6 +4,7 @@ import io.namei.agent.kernel.plugin.PluginCatalog;
 import io.namei.agent.kernel.plugin.PluginId;
 import io.namei.agent.kernel.plugin.PluginStableCode;
 import io.namei.agent.kernel.plugin.PluginTapEvent;
+import io.namei.agent.kernel.plugin.PluginTapException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
@@ -102,6 +103,8 @@ public final class PluginTapDispatcher implements AutoCloseable {
       if (entry.state.get() == PluginRuntimeState.ACTIVE) {
         entry.binding.tap().accept(event);
       }
+    } catch (PluginTapException failure) {
+      fail(entry, failure.code());
     } catch (Exception failure) {
       fail(entry, PluginStableCode.PLUGIN_EXECUTION_FAILED);
     } finally {
