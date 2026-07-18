@@ -9,6 +9,10 @@ R0–R9 已建立被动聊天、只读 Tool/MCP、SQLite、渠道可靠性、控
 但还不能声称与 Akashic Agent 等价。Python 源码仍包含完整 Prompt/Persona/Skills、真实副作用工具、动态 Tool
 搜索、多个渠道、Dashboard、远程 MCP、Peer Agent、真实主动来源、自动 Memory/Optimizer 及部署退役流程。
 
+Tool 层不能只按“是否存在相似 Runtime”盘点：Python 注册的每一个 Tool 与 Java 当前 Schema、Scope、结果和风险边界
+的逐项差异见[Tool Capability 清单](../architecture/2026-07-19-python-tool-capability-parity-inventory.md)。该清单是 R11–R14
+的执行顺序补充，不授予任何副作用或网络权限。
+
 ## 后续顺序
 
 | 阶段 | 对齐主题 | Python 证据 | Java 完成标准 | 当前状态 |

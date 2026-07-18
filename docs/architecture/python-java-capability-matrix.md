@@ -44,6 +44,10 @@
 
 ## 工具与扩展
 
+Python Tool 的逐项名称、语义差异、Java Runtime/Tool 区分与依赖顺序见
+[Python Tool / Java Capability 逐项差距清单](2026-07-19-python-tool-capability-parity-inventory.md)。下表保留跨领域汇总，
+不以“已有 Runtime”替代模型可调用 Tool 的对齐证据。
+
 | 能力 | Python 基准位置 | Java 位置 | 状态 | 主要差距/下一步 | 数据风险 |
 | --- | --- | --- | --- | --- | --- |
 | Tool 协议与注册 | `agent/tools/base.py`、`registry.py` | `agent-kernel`、`ToolRegistry`、`ToolCatalog`、`ApprovalInbox` | 部分 | Approval/副作用/幂等协议、整批门禁和生产 Deny All Framework 已实现；R11 B1 提供常驻/Deferred Catalog、Turn-scoped `tool_search`、确定性 CJK/精确检索和 Schema 逐轮投放；B2a 提供默认关闭的本地 SQLite Inbox、Loopback 单次决定和无执行边界，B2b 已验证 AES-GCM、v2 原子 Store、同库 `CONSUMED`/唯一 `RESERVED`、Ledger `UNKNOWN`/安全结果、Session 条件提交、初始 Anchor 原子写入、安全 Result 的 Anchor 条件提交及测试专用 Fake Capability 零重放演练；B3 已添加默认关闭的独立 Root `read_file`/`list_dir`。Resume/Cancel/Status Message Contract 已冻结但零路由。仍缺生产 Ledger 恢复编排与具体副作用 Tool Contract。 |
