@@ -83,7 +83,7 @@
 ## 当前优先级
 
 1. R6.1–R6.5 已合入 `main`，PR #9 与主分支三套 CI 均通过；R7–R9 已完成当前 Java 实现并通过默认、`failure`、`compat` 阶段门禁，R9 只提供离线演练。R9 的忽略规则遗漏已由本地 `main` 的 `2ceb44b` 修复。
-2. R10 已完成并通过三套阶段门禁；R11 的 B1 Tool Catalog、B2a Local Approval Inbox、B2b Pending Operation 的无执行状态机，以及 B3 默认关闭的独立 Root `read_file`/`list_dir` 已完成。B3 以 Fixture、Root/链接/编码/预算/排序测试和三套完整 Maven 门禁证明其只读范围；Resume/Cancel/Status Message Contract 仍冻结但零路由。R12-S1 只读 Skill Catalog、S3 API v2 只读 Lifecycle Tap 和 S4 deferred `read_skill` 已分别通过完整三套门禁；S2 MCP Assets 目录是 Java-owned 扩展，不改变 Python MCP 对齐进度。下一实际主线是先取得首个副作用 Capability 的逐工具授权，再完成生产恢复编排。
+2. R10 已完成并通过三套阶段门禁；R11 的 B1 Tool Catalog、B2a Local Approval Inbox、B2b Pending Operation 的无执行状态机，以及 B3 默认关闭的独立 Root `read_file`/`list_dir` 已完成。B3 以 Fixture、Root/链接/编码/预算/排序测试和三套完整 Maven 门禁证明其只读范围；Resume/Cancel/Status Message Contract 仍冻结但零路由。R12-S1 只读 Skill Catalog、S3 API v2 只读 Lifecycle Tap 和 S4 deferred `read_skill` 已分别通过完整三套门禁；S2 MCP Assets 目录是 Java-owned 扩展，不改变 Python MCP 对齐进度。下一实际主线是先取得首个副作用 Capability 的逐工具授权，再完成生产恢复编排；候选与明确边界见[选择记录](../plans/2026-07-19-r11-first-side-effect-capability-selection.md)。
 3. 不回头迁移已明确丢弃的 Python 语义记忆；自动提取/Optimizer、真实 Workspace 和真实 Embedding 启用继续冻结。
 4. R11–R15 的全量对齐顺序、Python 证据和完成标准见[Java / Akashic Agent 全量对齐计划](../plans/2026-07-18-java-parity-program.md)。
 5. 真实 Telegram、远程 MCP、真实 Python Plugin、主动外部源、真实 Workspace、部署与 Python 退役不因 R10 实施而获得授权。

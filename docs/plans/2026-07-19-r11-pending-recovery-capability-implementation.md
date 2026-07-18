@@ -1,6 +1,6 @@
 # R11 O6 Pending Recovery Capability 实施计划
 
-- 状态：A1–A7 的 Anchor 写入、安全 Result 条件提交、测试专用 Fake Capability 演练和 Loopback Message Contract 已完成；R11 分支的完整 `clean verify`、`-Pfailure verify`、`-Pcompat verify` 均已通过；生产恢复编排未开始
+- 状态：A1–A7 的 Anchor 写入、安全 Result 条件提交、测试专用 Fake Capability 演练和 Loopback Message Contract 已完成；R11 分支的完整 `clean verify`、`-Pfailure verify`、`-Pcompat verify` 均已通过；生产恢复编排等待首个逐 Tool Capability 授权。候选与拟议 TDD 顺序见[首个副作用 Capability 候选与授权边界](2026-07-19-r11-first-side-effect-capability-selection.md)
 - 日期：2026-07-19
 - Contract：[Pending Operation Session Anchor 与 Recovery Capability 契约](../contracts/pending-operation-recovery-capability.md)
 - ADR：[ADR-0019：在恢复前冻结 Pending Operation 的 Session Anchor](../adr/0019-freeze-pending-operation-session-anchor-before-resume.md)
@@ -34,6 +34,12 @@
 7. **A7 阶段门禁（GREEN）。** A1–A6 完成后已在 `agent/r11-tool-capability` 工作树运行完整
    `clean verify`、`-Pfailure verify`、`-Pcompat verify`，三者均零失败。该证据只验收无执行安全基础；
    不启用恢复编排、HTTP 映射、Worker、Capability 或任何真实副作用。
+
+## 下一步（等待逐 Tool 授权）
+
+R11-B2c 不能先实现泛化“恢复器”再寻找执行对象：Capability 的精确 Tool/Version、风险、参数、Sandbox、
+`UNKNOWN` 和安全结果决定 Capsule 绑定、批准摘要和恢复语义。当前推荐的最小候选为 Java 原生记忆的
+`forget_memory`，但它会物理删除数据；在用户确认该范围前，保持本计划 A1–A7 的无执行结论。
 
 ## 明确不做
 
