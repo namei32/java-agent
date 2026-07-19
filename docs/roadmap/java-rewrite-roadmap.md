@@ -32,7 +32,7 @@
 | R8 | 主动运行时 | 已实现并验证（受限范围） | SQLite Scheduler、hash-only allowlist、受限 Proactive/Drift/Subagent、NoOp Delivery，以及默认关闭的活动 Job 安全只读检视 |
 | R9 | 生产切换 | 已实现并验证（仅离线演练） | sandbox 演练、备份、差异、回退门禁与独立生产授权 |
 | R10 | Prompt 编排、Persona 与 Provider 协议 | Prompt/Persona、Provider P0/P1/P3/P4 与受限 P2 已验证 | Java-owned Section/Fixture、context frame、注入时间/会话、固定预算裁剪、默认 `MINIMAL` 与 `AKASHIC_CORE` 接线均通过；Provider P0 已实现脱敏稳定失败分类，P1 已实现默认关闭的受信 Options，P2 已实现仅 `DEEPSEEK` + `SAFE_LOCAL` 的有界单轮 reasoning/Tool continuation，P3 已验证默认关闭的 Tool 前非流式上下文恢复，P4 已验证提交后匿名 cache prompt/hit 聚合；P2b 跨 Turn reasoning 历史与空占位符仍待数据保留/请求扩展 Contract |
-| R11 | Tool Catalog 与审批恢复安全基础 | 实施中（无执行） | Catalog、审批 Inbox、Pending Operation/Reservation/Ledger/Anchor Contract 已验证；生产恢复路由、Capability 与真实执行仍冻结 |
+| R11 | Tool Catalog 与审批恢复安全基础 | 实施中（首个默认关闭恢复切片完成） | Catalog、审批 Inbox、Pending Operation/Reservation/Ledger/Anchor Contract 已验证；B2c 已增加 Scope 软失效 Capability、严格本机 Resume/Cancel/Status 和 24 Case Fixture，但未注册 Tool/Chat、Worker 或真实数据执行 |
 | R12 | Skills、MCP 扩展、Plugin 生命周期与受限记忆召回 | S1–S5 已实现并验证 | 默认关闭的只读 Skill Catalog、API v2 生命周期 Tap、deferred `read_skill` 与当前 Scope `recall_memory` 已缩小 Python 差距；MCP Assets 是 Java-owned 扩展。经 ADR-0029 审计，Python 不存在待迁移的 Skill Runner；远程 MCP、可变生命周期和记忆写入仍未开始 |
 | R13 | 多渠道、Dashboard 与控制面 | C0 Contract 已冻结；运行时未开始 | 20 Case 的未来 Loopback 只读索引 Fixture 固定认证、最小投影、分页与脱敏，但没有 Controller、历史读取、IPC、QQ、Feishu、Dashboard 或前端；真实渠道、CLI+Web 和前端仍冻结 |
 | R14 | 主动、自动记忆与 Peer | P0、P1 已完成；P2–P5 未开始 | P0 的 28 Case 边界和 P1 的 15 Case 未接线 Gate/Fake Source/ReadOnly Drift 决策固定无正文 skip/pending/cancel；没有网络、进程、投递或自动写入 |
@@ -279,11 +279,11 @@ Tool 权限视为已迁移。
 
 ## R11：Tool Catalog、审批与逐工具 Capability
 
-状态：B1 Tool Catalog 与 B2a Local Approval Inbox Foundation 已实现并验证；B2b Pending Operation Contract 的无执行状态机、AES-GCM 参数胶囊、v2 原子 Store、同库 `CONSUMED`/唯一 `RESERVED`、并发单获胜者、Ledger 终态、Session 条件提交、初始 Session Anchor 原子写入、安全 Result 的 Anchor 条件提交、不可恢复 Cursor 拒绝、测试专用 Fake Capability 零重放演练与 54 场景 Fixture 已完成；B3 已实现默认关闭的独立 Root `read_file`/`list_dir`（严格路径/链接、UTF-8、预算、Unicode code-point 排序、Deferred Schema 与失败隔离）。B4 当前 Session 只读 `fetch_messages`/`search_messages` 已完成并通过默认、`failure`、`compat` 门禁：opaque `msg-v1:<seq>`、显式 Turn Scope、当前 Session SQLite 约束、deferred 解锁、预览/投影上限与默认关闭。Resume/Cancel/Status 的 24 场景 Loopback Message Contract 已冻结但零路由；生产恢复编排与真实副作用 Capability 尚未实现；R11 尚未完成。
+状态：B1 Tool Catalog 与 B2a Local Approval Inbox Foundation 已实现并验证；B2b Pending Operation Contract 的无执行状态机、AES-GCM 参数胶囊、v2 原子 Store、同库 `CONSUMED`/唯一 `RESERVED`、并发单获胜者、Ledger 终态、Session 条件提交、初始 Session Anchor 原子写入、安全 Result 的 Anchor 条件提交、不可恢复 Cursor 拒绝、测试专用 Fake Capability 零重放演练与 54 场景 Fixture 已完成；B3/B4 的只读 Tool 已完成。B2c 已实现默认关闭的 Scope 受限软失效 Capability、Capsule、Approval/Reservation、SQLite 恢复与取消、严格本机 Resume/Cancel/Status、Servlet 限制和 24 场景 Fixture 归属。它不注册 `forget_memory` Tool 或 Chat 生产器，不启动 Worker 或自动 Resume，也不执行真实数据；R11 仍未完成。
 
 B1 把 Python Registry 的“常驻工具—`tool_search`—本轮解锁—下一请求投放 Schema”共同投影迁移为 Java-owned Catalog。Catalog 的来源、风险、版本、可见性和搜索提示由受信注册固定；搜索结果只能缩小模型的未知工具范围，不能改变 Tool Runtime 的 Schema、预算、取消、审批或 Ledger 执行边界。静态只读 MCP 项在 Bootstrap 中作为 deferred Catalog 项投放，默认关闭和 R5.1 的连接/调用边界不变。
 
-R11 后续 B 阶段必须先按 ADR-0019 实现版本化 Session Anchor 与初始/恢复的条件 Conversation 提交，再把已实现的安全参数胶囊/一次性 Reservation/结果 Ledger 接入版本化 Resume/Cancel，最后对每一种真实副作用 Tool 单独建立 Capability/Sandbox/`UNKNOWN`/Smoke Contract。B2a 的 Inbox 只记录本机 Operator 的一次性决定；生产继续为 Deny All、Side Effect Ledger unavailable、`AGENT_TOOL_MODE=DISABLED`；不能将 B1/B2a 或 B2b Contract 描述为可用人类审批或真实副作用能力。
+R11 后续 B 阶段必须为 B2c 单独冻结 Tool Catalog 可见性、Chat Pending 投影与创建顺序；它不能复用泛化 Tool Loop 来同步批准或执行。之后每一种真实副作用 Tool 都需独立建立 Capability/Sandbox/`UNKNOWN`/Smoke Contract。B2a 的 Inbox 只记录本机 Operator 的一次性决定；默认部署继续为 Deny All 与 `AGENT_TOOL_MODE=DISABLED`，不能把已有 B2c 本地恢复切片描述为已开放的模型副作用能力。
 
 退出门禁：Catalog Fixture、Registry/Loop/Bootstrap 纵向测试和 R11 全部 B 阶段的三套门禁通过；每个真实副作用 Tool 具有独立批准的最小权限契约与回退演练。
 

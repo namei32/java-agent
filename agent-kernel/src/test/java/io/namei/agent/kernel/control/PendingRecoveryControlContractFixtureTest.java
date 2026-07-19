@@ -18,8 +18,7 @@ class PendingRecoveryControlContractFixtureTest {
   private static final ObjectMapper JSON = new ObjectMapper();
 
   @Test
-  void freezesTwentyFourPendingRecoveryControlCasesWithoutCreatingARuntimeSurface()
-      throws Exception {
+  void freezesTwentyFourPendingRecoveryControlCases() throws Exception {
     JsonNode fixture =
         JSON.readTree(goldenRoot().resolve("control-plane/pending-recovery-control-v1.json"));
     JsonNode cases = fixture.path("cases");

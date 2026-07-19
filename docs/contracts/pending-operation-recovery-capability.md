@@ -1,6 +1,6 @@
 # Pending Operation Session Anchor 与 Recovery Capability 契约
 
-- 状态：已冻结；A1–A7 的 Fixture、Anchor Model、初始 SQLite 原子写入、安全 Result 条件提交、测试专用 Fake Capability 演练与 Loopback Message Contract 已完成，且 R11 分支三套完整 Reactor 门禁已通过；首个获批 Capability 的生产恢复编排见 R11-B2c，尚未实现
+- 状态：已冻结；A1–A7 的 Fixture、Anchor Model、初始 SQLite 原子写入、安全 Result 条件提交、测试专用 Fake Capability 演练与 Loopback Message Contract 已完成。首个获批 Capability 的默认关闭生产恢复编排、严格本机控制路由和局部 SQLite 验证已由 R11-B2c 实现；它仍没有 Tool/Chat 生产器或自动 Resume
 - 契约版本：1
 - 日期：2026-07-19
 - 阶段：R11 B2b / O6

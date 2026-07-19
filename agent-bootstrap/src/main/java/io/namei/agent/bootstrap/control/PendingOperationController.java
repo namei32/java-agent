@@ -91,7 +91,7 @@ public final class PendingOperationController {
       PendingOperationControlOutcome outcome,
       PendingOperationReference reference) {
     return switch (outcome) {
-      case RESUMED, CANCELLED ->
+      case RESUMED, CANCELLED, ALREADY_TERMINAL ->
           successAfterAction(request, operationRef, action, outcome, reference);
       case NOT_FOUND -> missing(request, operationRef, action);
       case NOT_RESUMABLE ->
@@ -108,7 +108,7 @@ public final class PendingOperationController {
               action,
               ControlStableCode.PENDING_RECOVERY_UNKNOWN_REQUIRES_OPERATOR,
               outcome);
-      case NOT_CANCELLABLE, ALREADY_TERMINAL ->
+      case NOT_CANCELLABLE ->
           conflict(
               request,
               operationRef,

@@ -1,8 +1,8 @@
 # R11-B2c Scope 受限 Memory Forget Capability 设计
 
-- 状态：F1–F5 已完成；静态 Capability、认证 Capsule、Pending 创建、显式恢复、SQLite 取消、Loopback
-  控制面与默认关闭的 Servlet Bootstrap，以及失败/并发边界均已通过聚焦测试；Catalog/Chat 与 F6 阶段门禁
-  仍未完成
+- 状态：F1–F6 已完成；静态 Capability、认证 Capsule、Pending 创建、显式恢复、SQLite 取消、Loopback 控制面、
+  默认关闭的 Servlet Bootstrap、失败/并发边界与 24 Case 控制面 Fixture 均已通过聚焦测试和三套完整阶段门禁；
+  Catalog/Chat 仍未完成
 - 日期：2026-07-19
 - Contract：[获批的 Scope 受限 Memory Forget Capability](../contracts/approved-scope-bound-memory-forget.md)
 - ADR：[ADR-0035](../adr/0035-use-scope-bound-soft-supersede-for-memory-forget.md)

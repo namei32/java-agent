@@ -117,6 +117,26 @@ class PendingOperationControllerTest {
         .andExpect(jsonPath("$.reference").doesNotExist());
   }
 
+  @Test
+  void returnsTheCurrentSafeStatusForAnAlreadyTerminalCancel() throws Exception {
+    Store store = new Store(operation(PendingOperationState.SUCCEEDED));
+    store.cancelStatus = PendingOperationCancelStatus.ALREADY_TERMINAL;
+    MvcFixture fixture =
+        mvc(
+            store,
+            new Sessions(anchor()),
+            reference -> MemoryForgetRecoveryCoordinator.Outcome.NOT_STARTED);
+
+    fixture
+        .mvc()
+        .perform(authenticated(post(path("/cancel")), fixture.token()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.schemaVersion").value(1))
+        .andExpect(jsonPath("$.state").value("SUCCEEDED"))
+        .andExpect(jsonPath("$.approval").doesNotExist())
+        .andExpect(jsonPath("$.reference").doesNotExist());
+  }
+
   private static MvcFixture mvc(Store store, Sessions sessions, MemoryForgetRecovery recovery) {
     var service =
         new MemoryForgetControlService(store, sessions, recovery, Clock.fixed(NOW, ZoneOffset.UTC));

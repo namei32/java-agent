@@ -1,6 +1,6 @@
 # R11-B2c Scope 受限 Memory Forget Capability 实施计划
 
-- 状态：已获路径 A 批准；F1–F5 已完成，F6 阶段门禁与审计待执行；仍未注册 `forget_memory` Tool 或 Chat 接线
+- 状态：已获路径 A 批准；F1–F6 已完成，默认、`failure`、`compat` 三套完整阶段门禁已通过；仍未注册 `forget_memory` Tool 或 Chat 接线
 - 日期：2026-07-19
 - Contract：[获批的 Scope 受限 Memory Forget Capability](../contracts/approved-scope-bound-memory-forget.md)
 - Design：[R11-B2c 设计](../specs/2026-07-19-r11-memory-forget-capability-design.md)
@@ -21,9 +21,9 @@
    Key、Servlet 限制、三项模式前置与默认零 Bean/路由验证；并覆盖取消、过期、新 Turn、绑定不符、单获胜者、
    事务回滚、Anchor 故障与 Conversation CAS 失败。真实临时 SQLite 的 Resume/Cancel 竞争只允许一个终态路径，
    不重复已有 B2b Fixture 的同一并发矩阵。
-6. **F6 阶段门禁与审计**：更新 Golden manifest/SHA、矩阵、README、Runbook、Roadmap 与 Contract 状态，
-   然后一次运行 `clean verify`、`-Pfailure verify`、`-Pcompat verify`。三者通过前不合并、不推送，也不做
-   真实数据或网络 Smoke。
+6. **F6 阶段门禁与审计（已完成）**：验证 Golden manifest 的 43 个条目及 Pending Recovery Fixture SHA，补齐逐 Case
+   的生产/聚焦测试归属，并更新矩阵、README、Runbook、Roadmap 与 Contract 状态；`clean verify`、`-Pfailure verify`
+   与 `-Pcompat verify` 已全部通过。没有合并、推送、真实数据或网络 Smoke。
 
 每个切片先提交可复现 RED 证据，再以最小生产实现转 GREEN；格式、聚焦单元/模块测试在每个切片结束运行。
 完整三门禁只在 F6 执行，以避免重复耗时且不降低阶段验收。

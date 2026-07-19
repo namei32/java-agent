@@ -1,6 +1,6 @@
 # R11-B2c 首个副作用 Capability 候选、语义差异与授权边界
 
-- 状态：路径 A 已于 2026-07-19 获用户选择；实现尚未开始，当前仍为零生产路由、零 Capability、零 Tool 注册
+- 状态：路径 A 已于 2026-07-19 获用户选择；R11-B2c 的默认关闭本地 Capability、显式恢复、Loopback 控制路由和离线验证已完成；仍为零 Tool/Chat 注册、零 Worker 与零真实数据执行
 - 日期：2026-07-19
 - 前置：[Pending Operation Session Anchor 与 Recovery Capability 契约](../contracts/pending-operation-recovery-capability.md)
 - 关联：[R11 O6 Pending Recovery Capability 实施计划](2026-07-19-r11-pending-recovery-capability-implementation.md)
@@ -22,8 +22,9 @@
 运行时的删除、Scope 或结果语义。
 
 删除或失效用户记忆仍是副作用。它不能因为已有 SQLite Store、Fake Capability 或全局“重写 Python Agent”目标
-而被视为已获执行授权；在用户明确批准下面的一条准确路径、风险和边界前，系统必须继续保持生产 Deny All、无
-Pending Recovery 路由、无 Worker、无 `forget_memory` Tool。
+而被视为已获执行授权；在用户明确批准一条准确路径、风险和边界之前，系统必须保持生产 Deny All、无 Pending
+Recovery 路由、无 Worker、无 `forget_memory` Tool。路径 A 现已获批准并实现其默认关闭的本地恢复切片；其余
+Tool 仍保持这条限制。
 
 ## 可复查证据
 

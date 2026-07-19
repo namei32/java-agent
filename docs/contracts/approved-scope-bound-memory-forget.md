@@ -1,6 +1,6 @@
 # 获批的 Scope 受限 Memory Forget Capability 契约
 
-- 状态：已冻结，实施中；路径 A 于 2026-07-19 获用户批准
+- 状态：已冻结，F1–F6 本地实现与审计完成；路径 A 于 2026-07-19 获用户批准
 - 契约版本：1
 - 阶段：R11 B2c
 - 前置：[Pending Operation Session Anchor 与 Recovery Capability 契约](pending-operation-recovery-capability.md)
