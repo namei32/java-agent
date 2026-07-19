@@ -43,3 +43,14 @@ Fixture 的 6 个 Case 固定默认抑制、DeepSeek SAFE_LOCAL 允许、DashSco
 reasoning 丢弃和 16,384 code-point 边界。生产 Policy 消费全部 Case。Adapter/ToolLoop 测试覆盖同步、分段 SSE、
 `reasoning_content`、`<think>`、连续 Tool 调用只回放到对应下一请求、取消后零续轮/零持久化及模型/Tool Options 保留。
 全部测试只用 Fake 或 `127.0.0.1` Stub；不调用真实 Provider。完整默认、`failure`、`compat` 门禁作为本切片最终证据。
+
+## 5. 已知的 Python 历史语义差异（P2b，未实现）
+
+Akashic 的 `DeepSeekStrategy` 会在 thinking 请求中为缺失的历史 assistant `reasoning_content` 回填空字符串，并将非空
+reasoning 写入 Session history；其 `Session.get_history` 也会继续携带该字段。当前 Java P2 有意不实现这条路径：
+`ProviderReasoning` 只能跨越当前 Tool Call 到紧随的一次请求，随后即丢弃；Spring AI 2.0 只有 metadata 为非空文本时
+才会写 wire `reasoning_content`。
+
+因此 P2 是受限的即时 Tool continuation 对齐，不是 DeepSeek 的跨 Turn reasoning 历史兼容。若需要 P2b，必须先单独
+批准 reasoning 的会话保留、数据保留期、日志/导出/删除边界和 Spring AI 空字段的受控请求扩展；不能把它作为 P2 的
+隐式补丁或借由任意 Provider body 注入。
