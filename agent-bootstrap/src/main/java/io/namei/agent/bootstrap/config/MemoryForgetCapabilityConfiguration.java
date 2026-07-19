@@ -6,10 +6,15 @@ import io.namei.agent.adapter.sqlite.JdbcPendingOperationStore;
 import io.namei.agent.application.ApprovalInbox;
 import io.namei.agent.application.MemoryForgetCapability;
 import io.namei.agent.application.MemoryForgetControlService;
+import io.namei.agent.application.MemoryForgetPendingService;
+import io.namei.agent.application.MemoryForgetPendingToolset;
 import io.namei.agent.application.MemoryForgetRecoveryCoordinator;
 import io.namei.agent.application.PendingOperationKey;
 import io.namei.agent.application.PendingOperationKeyProvider;
 import io.namei.agent.application.PendingOperationStore;
+import io.namei.agent.application.SecureApprovalInboxReferenceGenerator;
+import io.namei.agent.application.SecureIdGenerator;
+import io.namei.agent.application.SecurePendingOperationReferenceGenerator;
 import io.namei.agent.bootstrap.control.ApprovalInboxMode;
 import io.namei.agent.bootstrap.control.ApprovalInboxProperties;
 import io.namei.agent.bootstrap.control.ControlPlaneMode;
@@ -21,6 +26,7 @@ import java.time.Clock;
 import java.util.Objects;
 import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -92,6 +98,40 @@ public class MemoryForgetCapabilityConfiguration {
       ObjectProvider<Clock> clocks) {
     return new MemoryForgetControlService(
         operations, sessions, recovery, clocks.getIfAvailable(Clock::systemUTC));
+  }
+
+  /**
+   * The Producer is deliberately narrower than the recovery path: it exists only when the global
+   * Tool Runtime independently opts into approval-required operation.
+   */
+  @Bean
+  @ConditionalOnProperty(prefix = PREFIX, name = "mode", havingValue = "LOOPBACK_APPROVAL")
+  @ConditionalOnExpression("'${agent.tools.mode:READ_ONLY}' == 'APPROVAL_REQUIRED'")
+  MemoryForgetPendingService memoryForgetPendingService(
+      PendingOperationStore operations,
+      SessionRepository sessions,
+      AgentProperties agentProperties,
+      ObjectProvider<Clock> clocks) {
+    if (agentProperties.tools().mode()
+        != io.namei.agent.application.ToolRuntimeMode.APPROVAL_REQUIRED) {
+      throw new IllegalStateException(
+          "Memory Forget Pending Producer 要求 APPROVAL_REQUIRED Tool Runtime");
+    }
+    return new MemoryForgetPendingService(
+        operations,
+        sessions,
+        new SecurePendingOperationReferenceGenerator(),
+        new SecureApprovalInboxReferenceGenerator(),
+        new SecureIdGenerator(),
+        clocks.getIfAvailable(Clock::systemUTC),
+        agentProperties.tools().approvalTimeout());
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = PREFIX, name = "mode", havingValue = "LOOPBACK_APPROVAL")
+  @ConditionalOnExpression("'${agent.tools.mode:READ_ONLY}' == 'APPROVAL_REQUIRED'")
+  MemoryForgetPendingToolset memoryForgetPendingToolset(MemoryForgetPendingService service) {
+    return MemoryForgetPendingToolset.enabled(service);
   }
 
   private static void requirePrerequisites(

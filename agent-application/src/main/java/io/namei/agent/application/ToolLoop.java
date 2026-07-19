@@ -14,6 +14,7 @@ import io.namei.agent.kernel.model.ToolResultMessage;
 import io.namei.agent.kernel.port.ChatModelPort;
 import io.namei.agent.kernel.tool.ToolResult;
 import io.namei.agent.kernel.tool.ToolResultStatus;
+import io.namei.agent.kernel.tool.ToolRisk;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ final class ToolLoop {
   private final ToolRuntimeSettings settings;
   private final SideEffectBatchCoordinator coordinator;
   private final ModelStreamingSettings streamingSettings;
+  private final MemoryForgetPendingProducer pendingProducer;
 
   ToolLoop(
       ChatModelPort model, ToolRegistry tools, LifecyclePublisher lifecycle, int maxIterations) {
@@ -71,7 +73,8 @@ final class ToolLoop {
         maxIterations,
         settings,
         coordinator,
-        ModelStreamingSettings.defaults());
+        ModelStreamingSettings.defaults(),
+        MemoryForgetPendingToolset.disabled());
   }
 
   ToolLoop(
@@ -82,6 +85,26 @@ final class ToolLoop {
       ToolRuntimeSettings settings,
       SideEffectBatchCoordinator coordinator,
       ModelStreamingSettings streamingSettings) {
+    this(
+        model,
+        tools,
+        lifecycle,
+        maxIterations,
+        settings,
+        coordinator,
+        streamingSettings,
+        MemoryForgetPendingToolset.disabled());
+  }
+
+  ToolLoop(
+      ChatModelPort model,
+      ToolRegistry tools,
+      LifecyclePublisher lifecycle,
+      int maxIterations,
+      ToolRuntimeSettings settings,
+      SideEffectBatchCoordinator coordinator,
+      ModelStreamingSettings streamingSettings,
+      MemoryForgetPendingToolset pendingToolset) {
     this.model = Objects.requireNonNull(model, "model");
     this.tools = Objects.requireNonNull(tools, "tools");
     this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle");
@@ -92,6 +115,7 @@ final class ToolLoop {
     this.settings = Objects.requireNonNull(settings, "settings");
     this.coordinator = Objects.requireNonNull(coordinator, "coordinator");
     this.streamingSettings = Objects.requireNonNull(streamingSettings, "streamingSettings");
+    this.pendingProducer = Objects.requireNonNull(pendingToolset, "pendingToolset").producer();
   }
 
   String complete(List<? extends ModelMessage> initialMessages) {
@@ -110,7 +134,15 @@ final class ToolLoop {
       List<? extends ModelMessage> initialMessages,
       TurnCancellation cancellation,
       SideEffectBatchCoordinator.Context context) {
-    return complete(initialMessages, cancellation, context, ToolInvocationContext.none(), null);
+    return finalContent(
+        completeResult(
+            initialMessages,
+            cancellation,
+            context,
+            ToolInvocationContext.none(),
+            null,
+            null,
+            null));
   }
 
   String complete(
@@ -118,7 +150,9 @@ final class ToolLoop {
       TurnCancellation cancellation,
       SideEffectBatchCoordinator.Context context,
       ToolInvocationContext invocationContext) {
-    return complete(initialMessages, cancellation, context, invocationContext, null, null);
+    return finalContent(
+        completeResult(
+            initialMessages, cancellation, context, invocationContext, null, null, null));
   }
 
   String complete(
@@ -127,8 +161,9 @@ final class ToolLoop {
       SideEffectBatchCoordinator.Context context,
       ToolInvocationContext invocationContext,
       ProviderTurnUsageCollector usageCollector) {
-    return complete(
-        initialMessages, cancellation, context, invocationContext, null, usageCollector);
+    return finalContent(
+        completeResult(
+            initialMessages, cancellation, context, invocationContext, null, usageCollector, null));
   }
 
   String completeStreaming(
@@ -146,13 +181,15 @@ final class ToolLoop {
       SideEffectBatchCoordinator.Context context,
       ToolInvocationContext invocationContext,
       ChatProgressListener progressListener) {
-    return complete(
-        initialMessages,
-        cancellation,
-        context,
-        invocationContext,
-        Objects.requireNonNull(progressListener, "progressListener"),
-        null);
+    return finalContent(
+        completeResult(
+            initialMessages,
+            cancellation,
+            context,
+            invocationContext,
+            Objects.requireNonNull(progressListener, "progressListener"),
+            null,
+            null));
   }
 
   String completeStreaming(
@@ -162,22 +199,74 @@ final class ToolLoop {
       ToolInvocationContext invocationContext,
       ChatProgressListener progressListener,
       ProviderTurnUsageCollector usageCollector) {
-    return complete(
+    return finalContent(
+        completeResult(
+            initialMessages,
+            cancellation,
+            context,
+            invocationContext,
+            Objects.requireNonNull(progressListener, "progressListener"),
+            usageCollector,
+            null));
+  }
+
+  ToolLoopCompletion completeForPendingTurn(
+      List<? extends ModelMessage> initialMessages,
+      TurnCancellation cancellation,
+      SideEffectBatchCoordinator.Context context,
+      ToolInvocationContext invocationContext,
+      MemoryForgetPendingTurnContext pendingTurnContext) {
+    return completeForPendingTurn(
+        initialMessages, cancellation, context, invocationContext, pendingTurnContext, null);
+  }
+
+  ToolLoopCompletion completeForPendingTurn(
+      List<? extends ModelMessage> initialMessages,
+      TurnCancellation cancellation,
+      SideEffectBatchCoordinator.Context context,
+      ToolInvocationContext invocationContext,
+      MemoryForgetPendingTurnContext pendingTurnContext,
+      ProviderTurnUsageCollector usageCollector) {
+    return completeResult(
+        initialMessages,
+        cancellation,
+        context,
+        invocationContext,
+        null,
+        usageCollector,
+        Objects.requireNonNull(pendingTurnContext, "pendingTurnContext"));
+  }
+
+  ToolLoopCompletion completeStreamingForPendingTurn(
+      List<? extends ModelMessage> initialMessages,
+      TurnCancellation cancellation,
+      SideEffectBatchCoordinator.Context context,
+      ToolInvocationContext invocationContext,
+      MemoryForgetPendingTurnContext pendingTurnContext,
+      ChatProgressListener progressListener,
+      ProviderTurnUsageCollector usageCollector) {
+    return completeResult(
         initialMessages,
         cancellation,
         context,
         invocationContext,
         Objects.requireNonNull(progressListener, "progressListener"),
-        usageCollector);
+        usageCollector,
+        Objects.requireNonNull(pendingTurnContext, "pendingTurnContext"));
   }
 
-  private String complete(
+  boolean pendingProducerEnabled() {
+    return pendingProducer.isEnabled();
+  }
+
+  private ToolLoopCompletion completeResult(
       List<? extends ModelMessage> initialMessages,
       TurnCancellation cancellation,
       SideEffectBatchCoordinator.Context context,
       ToolInvocationContext invocationContext,
       ChatProgressListener progressListener,
-      ProviderTurnUsageCollector usageCollector) {
+      ProviderTurnUsageCollector usageCollector,
+      MemoryForgetPendingTurnContext pendingTurnContext) {
     Objects.requireNonNull(cancellation, "cancellation");
     Objects.requireNonNull(context, "context");
     Objects.requireNonNull(invocationContext, "invocationContext");
@@ -202,7 +291,7 @@ final class ToolLoop {
       }
       if (!response.hasToolCalls()) {
         lifecycle.emit(TurnLifecycleEvent.modelCompleted(iteration, "FINAL"));
-        return response.content();
+        return new ToolLoopCompletion.Final(response.content());
       }
 
       if (settings.mode() == ToolRuntimeMode.DISABLED) {
@@ -220,6 +309,22 @@ final class ToolLoop {
       messages.add(
           new AssistantToolCallMessage(
               response.content(), response.toolCalls(), response.reasoning().orElse(null)));
+      if (containsMemoryForget(response.toolCalls())) {
+        ToolLoopCompletion pending =
+            createPendingIfRequested(
+                iteration,
+                response.toolCalls(),
+                cancellation,
+                catalogSession,
+                context,
+                pendingTurnContext,
+                messages);
+        if (pending != null) {
+          return pending;
+        }
+        toolExecuted = true;
+        continue;
+      }
       var results =
           coordinator.execute(
               context,
@@ -242,6 +347,74 @@ final class ToolLoop {
       }
     }
     throw new ToolLoopLimitExceededException("Tool Loop 超过最大迭代次数");
+  }
+
+  private ToolLoopCompletion createPendingIfRequested(
+      int iteration,
+      List<io.namei.agent.kernel.tool.ToolCall> calls,
+      TurnCancellation cancellation,
+      ToolCatalogSession catalogSession,
+      SideEffectBatchCoordinator.Context context,
+      MemoryForgetPendingTurnContext pendingTurnContext,
+      List<ModelMessage> messages) {
+    if (!pendingProducer.isEnabled()
+        || pendingTurnContext == null
+        || calls.size() != 1
+        || !context.turnId().equals(pendingTurnContext.turnId())) {
+      throw new InvalidModelResponseException("Memory Forget Pending Tool Call 不满足受限创建条件");
+    }
+    var call = calls.getFirst();
+    var prepared = tools.prepare(List.of(call), catalogSession).getFirst();
+    if (prepared.preflightFailure() != null
+        || prepared.definition() == null
+        || prepared.definition().risk() != ToolRisk.WRITE) {
+      throw new InvalidModelResponseException("Memory Forget Pending Tool Call 无效或不可见");
+    }
+    lifecycle.emit(TurnLifecycleEvent.toolStarted(iteration, call.id(), call.name()));
+    checkCancellation(cancellation);
+    boolean persistsPending =
+        !MemoryForgetCapability.normalizeArguments(call.arguments()).isEmpty();
+    if (persistsPending) {
+      lifecycle.emit(TurnLifecycleEvent.turnCommitting());
+    }
+    MemoryForgetPendingOutcome outcome;
+    try {
+      outcome = pendingProducer.create(pendingTurnContext, call);
+    } catch (RuntimeException failure) {
+      lifecycle.emit(
+          TurnLifecycleEvent.toolCompleted(
+              iteration, call.id(), call.name(), ToolResultStatus.ERROR));
+      throw failure;
+    }
+    if (outcome instanceof MemoryForgetPendingOutcome.ImmediateSuccess immediate) {
+      lifecycle.emit(
+          TurnLifecycleEvent.toolCompleted(
+              iteration, call.id(), call.name(), ToolResultStatus.SUCCESS));
+      messages.add(new ToolResultMessage(call, immediate.safeResult()));
+      return null;
+    }
+    if (outcome instanceof MemoryForgetPendingOutcome.Pending) {
+      lifecycle.emit(
+          TurnLifecycleEvent.toolCompleted(
+              iteration, call.id(), call.name(), ToolResultStatus.SUCCESS));
+      return new ToolLoopCompletion.Pending(
+          MemoryForgetPendingToolset.pendingAssistantProjection());
+    }
+    lifecycle.emit(
+        TurnLifecycleEvent.toolCompleted(
+            iteration, call.id(), call.name(), ToolResultStatus.ERROR));
+    throw new IllegalStateException("Memory Forget Pending Anchor 未能提交");
+  }
+
+  private static boolean containsMemoryForget(List<io.namei.agent.kernel.tool.ToolCall> calls) {
+    return calls.stream().anyMatch(call -> MemoryForgetCapability.TOOL_NAME.equals(call.name()));
+  }
+
+  private static String finalContent(ToolLoopCompletion completion) {
+    if (completion instanceof ToolLoopCompletion.Final finalCompletion) {
+      return finalCompletion.content();
+    }
+    throw new IllegalStateException("普通 Tool Loop 不能提交 Pending Turn");
   }
 
   private ChatModelResponse generate(

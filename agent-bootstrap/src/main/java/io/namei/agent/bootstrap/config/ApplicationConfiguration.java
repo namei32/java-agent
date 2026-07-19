@@ -27,6 +27,7 @@ import io.namei.agent.application.ConversationEvidenceToolset;
 import io.namei.agent.application.KeyedSessionExecutionGate;
 import io.namei.agent.application.MemoryContextService;
 import io.namei.agent.application.MemoryDeleteService;
+import io.namei.agent.application.MemoryForgetPendingToolset;
 import io.namei.agent.application.MemoryQueryService;
 import io.namei.agent.application.MemoryRecallContextFactory;
 import io.namei.agent.application.MemoryRecallToolset;
@@ -537,10 +538,104 @@ public class ApplicationConfiguration {
       MemoryRecallContextFactory memoryRecallContexts,
       ProactiveJobInspectionToolset proactiveInspectionTools,
       ContextLimitRecoveryProperties contextLimitRecoveryProperties,
+      ObjectProvider<MemoryForgetPendingToolset> pendingToolsets,
       AgentProperties properties,
       @Value("${spring.ai.openai.chat.model}") String modelName,
       @Value("${agent.compatibility.system-prompt-base64:}") String compatibilityPrompt,
       @Value("classpath:/prompts/system.md") Resource systemPrompt)
+      throws IOException {
+    return configuredChatUseCase(
+        sessions,
+        model,
+        gate,
+        lifecycleObserver,
+        approvalPort,
+        memoryContext,
+        mcpRuntime,
+        workspaceTools,
+        skillCatalog,
+        skillProperties,
+        conversationEvidenceTools,
+        conversationEvidenceContexts,
+        memoryRecallTools,
+        memoryRecallContexts,
+        proactiveInspectionTools,
+        contextLimitRecoveryProperties,
+        pendingToolsets.getIfAvailable(MemoryForgetPendingToolset::disabled),
+        properties,
+        modelName,
+        compatibilityPrompt,
+        systemPrompt);
+  }
+
+  ChatUseCase chatUseCase(
+      SessionRepository sessions,
+      ChatModelPort model,
+      SessionExecutionGate gate,
+      TurnLifecycleObserver lifecycleObserver,
+      ApprovalPort approvalPort,
+      MemoryContextService memoryContext,
+      McpRuntime mcpRuntime,
+      WorkspaceReadOnlyToolset workspaceTools,
+      SkillCatalogPort skillCatalog,
+      SkillProperties skillProperties,
+      ConversationEvidenceToolset conversationEvidenceTools,
+      ConversationEvidenceContextFactory conversationEvidenceContexts,
+      MemoryRecallToolset memoryRecallTools,
+      MemoryRecallContextFactory memoryRecallContexts,
+      ProactiveJobInspectionToolset proactiveInspectionTools,
+      ContextLimitRecoveryProperties contextLimitRecoveryProperties,
+      AgentProperties properties,
+      String modelName,
+      String compatibilityPrompt,
+      Resource systemPrompt)
+      throws IOException {
+    return configuredChatUseCase(
+        sessions,
+        model,
+        gate,
+        lifecycleObserver,
+        approvalPort,
+        memoryContext,
+        mcpRuntime,
+        workspaceTools,
+        skillCatalog,
+        skillProperties,
+        conversationEvidenceTools,
+        conversationEvidenceContexts,
+        memoryRecallTools,
+        memoryRecallContexts,
+        proactiveInspectionTools,
+        contextLimitRecoveryProperties,
+        MemoryForgetPendingToolset.disabled(),
+        properties,
+        modelName,
+        compatibilityPrompt,
+        systemPrompt);
+  }
+
+  private ChatUseCase configuredChatUseCase(
+      SessionRepository sessions,
+      ChatModelPort model,
+      SessionExecutionGate gate,
+      TurnLifecycleObserver lifecycleObserver,
+      ApprovalPort approvalPort,
+      MemoryContextService memoryContext,
+      McpRuntime mcpRuntime,
+      WorkspaceReadOnlyToolset workspaceTools,
+      SkillCatalogPort skillCatalog,
+      SkillProperties skillProperties,
+      ConversationEvidenceToolset conversationEvidenceTools,
+      ConversationEvidenceContextFactory conversationEvidenceContexts,
+      MemoryRecallToolset memoryRecallTools,
+      MemoryRecallContextFactory memoryRecallContexts,
+      ProactiveJobInspectionToolset proactiveInspectionTools,
+      ContextLimitRecoveryProperties contextLimitRecoveryProperties,
+      MemoryForgetPendingToolset pendingToolset,
+      AgentProperties properties,
+      String modelName,
+      String compatibilityPrompt,
+      Resource systemPrompt)
       throws IOException {
     String prompt = systemPrompt(compatibilityPrompt, systemPrompt);
     ToolCatalog tools =
@@ -552,7 +647,8 @@ public class ApplicationConfiguration {
             skillProperties,
             conversationEvidenceTools,
             memoryRecallTools,
-            proactiveInspectionTools);
+            proactiveInspectionTools,
+            pendingToolset);
     var toolSettings =
         new ToolRuntimeSettings(
             properties.tools().mode(),
@@ -584,7 +680,9 @@ public class ApplicationConfiguration {
                 properties.model().maxDeltaEvents(), properties.model().maxDeltaCodePoints()),
             conversationEvidenceContexts,
             memoryRecallContexts,
-            contextLimitRecoveryProperties.toPolicy());
+            contextLimitRecoveryProperties.toPolicy(),
+            io.namei.agent.kernel.port.ProviderUsageObserver.disabled(),
+            pendingToolset);
     return new SafeChatUseCase(service, Clock.systemUTC());
   }
 
@@ -777,6 +875,28 @@ public class ApplicationConfiguration {
       ConversationEvidenceToolset conversationEvidenceTools,
       MemoryRecallToolset memoryRecallTools,
       ProactiveJobInspectionToolset proactiveInspectionTools) {
+    return configuredToolCatalog(
+        properties,
+        mcpRuntime,
+        workspaceTools,
+        skillCatalog,
+        skillProperties,
+        conversationEvidenceTools,
+        memoryRecallTools,
+        proactiveInspectionTools,
+        MemoryForgetPendingToolset.disabled());
+  }
+
+  ToolCatalog configuredToolCatalog(
+      AgentProperties properties,
+      McpRuntime mcpRuntime,
+      WorkspaceReadOnlyToolset workspaceTools,
+      SkillCatalogPort skillCatalog,
+      SkillProperties skillProperties,
+      ConversationEvidenceToolset conversationEvidenceTools,
+      MemoryRecallToolset memoryRecallTools,
+      ProactiveJobInspectionToolset proactiveInspectionTools,
+      MemoryForgetPendingToolset pendingToolset) {
     Objects.requireNonNull(properties, "properties");
     Objects.requireNonNull(mcpRuntime, "mcpRuntime");
     Objects.requireNonNull(workspaceTools, "workspaceTools");
@@ -785,6 +905,7 @@ public class ApplicationConfiguration {
     Objects.requireNonNull(conversationEvidenceTools, "conversationEvidenceTools");
     Objects.requireNonNull(memoryRecallTools, "memoryRecallTools");
     Objects.requireNonNull(proactiveInspectionTools, "proactiveInspectionTools");
+    Objects.requireNonNull(pendingToolset, "pendingToolset");
     Tool skillTool = readSkillTool(properties, skillCatalog, skillProperties);
     if (properties.tools().mode() == ToolRuntimeMode.DISABLED) {
       return new ToolCatalog(List.of());
@@ -841,6 +962,20 @@ public class ApplicationConfiguration {
               ToolCatalogSource.BUILTIN,
               "",
               List.of("计划", "调度", "proactive", "任务")));
+    }
+    for (Tool tool : pendingToolset.tools()) {
+      if (properties.tools().mode() != ToolRuntimeMode.APPROVAL_REQUIRED
+          || tool.definition().risk() != ToolRisk.WRITE) {
+        throw new IllegalStateException(
+            "Memory Forget Pending Producer 只能在 APPROVAL_REQUIRED 中注册固定 WRITE Tool");
+      }
+      tools.add(
+          new ToolCatalogEntry(
+              tool,
+              ToolCatalogVisibility.DEFERRED,
+              ToolCatalogSource.BUILTIN,
+              "",
+              List.of("遗忘", "记忆", "forget", "memory")));
     }
     for (Tool tool : workspaceTools.tools()) {
       if (tool.definition().risk() != ToolRisk.READ_ONLY) {

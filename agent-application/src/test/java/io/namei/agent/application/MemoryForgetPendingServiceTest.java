@@ -121,6 +121,21 @@ class MemoryForgetPendingServiceTest {
     assertThat(sessions.events).isEmpty();
   }
 
+  @Test
+  void producerBuildsTheFixedPendingProjectionBeforeDelegatingToTheBoundService() {
+    var store = new RecordingStore();
+    var sessions = new RecordingSessions();
+    var producer = MemoryForgetPendingToolset.enabled(service(store, sessions)).producer();
+
+    MemoryForgetPendingOutcome outcome = producer.create(context(), nonEmptyCall());
+
+    assertThat(outcome).isInstanceOf(MemoryForgetPendingOutcome.Pending.class);
+    assertThat(store.events).containsExactly("create");
+    assertThat(sessions.events).containsExactly("append-pending");
+    assertThat(sessions.pendingTurn.assistant().content())
+        .isEqualTo(MemoryForgetPendingToolset.pendingAssistantProjection());
+  }
+
   private static MemoryForgetPendingService service(
       RecordingStore store, RecordingSessions sessions) {
     return new MemoryForgetPendingService(
@@ -149,6 +164,17 @@ class MemoryForgetPendingServiceTest {
 
   private static ToolCall nonEmptyCall() {
     return new ToolCall("call-1", "forget_memory", Map.of("ids", List.of("memory-a")));
+  }
+
+  private static MemoryForgetPendingTurnContext context() {
+    OffsetDateTime at = OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC);
+    return new MemoryForgetPendingTurnContext(
+        "session-java-memory-001",
+        0,
+        "turn-1",
+        new ChatMessage(MessageRole.USER, "请遗忘记忆"),
+        at,
+        CLOCK);
   }
 
   private static final class FixedIds implements IdGenerator {
@@ -254,6 +280,7 @@ class MemoryForgetPendingServiceTest {
     private boolean appendResult = true;
     private RuntimeException failure;
     private PendingTurnAnchor anchor;
+    private PersistedTurn pendingTurn;
 
     @Override
     public SessionSnapshot load(String sessionId) {
@@ -273,6 +300,7 @@ class MemoryForgetPendingServiceTest {
         throw failure;
       }
       anchor = value;
+      this.pendingTurn = pendingTurn;
       return appendResult;
     }
 

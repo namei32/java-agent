@@ -547,6 +547,55 @@ public final class ChatService implements ChatUseCase {
       MemoryRecallContextFactory memoryRecallContexts,
       ContextLimitRecoveryPolicy contextLimitRecovery,
       ProviderUsageObserver providerUsageObserver) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
+        catalog,
+        maxIterations,
+        observer,
+        toolSettings,
+        approvals,
+        ledger,
+        ids,
+        approvalTimeout,
+        memoryContext,
+        streamingSettings,
+        conversationEvidenceContexts,
+        memoryRecallContexts,
+        contextLimitRecovery,
+        providerUsageObserver,
+        MemoryForgetPendingToolset.disabled());
+  }
+
+  /** Production-only composition constructor for the dedicated Pending Producer path. */
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
+      ToolCatalog catalog,
+      int maxIterations,
+      TurnLifecycleObserver observer,
+      ToolRuntimeSettings toolSettings,
+      ApprovalPort approvals,
+      SideEffectLedger ledger,
+      IdGenerator ids,
+      Duration approvalTimeout,
+      MemoryContextService memoryContext,
+      ModelStreamingSettings streamingSettings,
+      ConversationEvidenceContextFactory conversationEvidenceContexts,
+      MemoryRecallContextFactory memoryRecallContexts,
+      ContextLimitRecoveryPolicy contextLimitRecovery,
+      ProviderUsageObserver providerUsageObserver,
+      MemoryForgetPendingToolset pendingToolset) {
     this.sessions = Objects.requireNonNull(sessions, "sessions");
     this.historySelector = Objects.requireNonNull(historySelector, "historySelector");
     this.limits = Objects.requireNonNull(limits, "limits");
@@ -583,7 +632,8 @@ public final class ChatService implements ChatUseCase {
             maxIterations,
             toolSettings,
             coordinator,
-            streamingSettings);
+            streamingSettings,
+            pendingToolset);
   }
 
   @Override
@@ -624,17 +674,26 @@ public final class ChatService implements ChatUseCase {
       var invocationContext = conversationEvidenceContexts.forSession(command.sessionId());
       invocationContext = memoryRecallContexts.forSessionBinding(sessionBinding, invocationContext);
       var usageCollector = new ProviderTurnUsageCollector();
-      var finalContent =
+      ToolLoopCompletion completion =
           completeWithContextLimitRecovery(
               command,
               snapshot.messages(),
+              snapshot.nextSequence(),
               user,
+              userAt,
               sessionBinding,
               context,
               invocationContext,
               cancellation,
               progressListener,
               usageCollector);
+      if (completion instanceof ToolLoopCompletion.Pending pending) {
+        var assistant = new ChatMessage(MessageRole.ASSISTANT, pending.assistantProjection());
+        lifecycle.emit(TurnLifecycleEvent.turnCommitted());
+        publishProviderUsage(usageCollector);
+        return new ChatResult(command.sessionId(), assistant);
+      }
+      String finalContent = ((ToolLoopCompletion.Final) completion).content();
       if (finalContent.isBlank()) {
         throw new InvalidModelResponseException("模型返回了空响应");
       }
@@ -652,10 +711,12 @@ public final class ChatService implements ChatUseCase {
     }
   }
 
-  private String completeWithContextLimitRecovery(
+  private ToolLoopCompletion completeWithContextLimitRecovery(
       ChatCommand command,
       List<ChatMessage> fullHistory,
+      long expectedNextSequence,
       ChatMessage user,
+      OffsetDateTime userAt,
       String sessionBinding,
       SideEffectBatchCoordinator.Context context,
       ToolInvocationContext invocationContext,
@@ -681,13 +742,37 @@ public final class ChatService implements ChatUseCase {
               plan.trimPlan());
       var messages = new ArrayList<ModelMessage>(assembled.messages());
       try {
+        if (!toolLoop.pendingProducerEnabled()) {
+          String finalContent =
+              progressListener == null
+                  ? toolLoop.complete(
+                      messages, cancellation, context, invocationContext, usageCollector)
+                  : toolLoop.completeStreaming(
+                      messages,
+                      cancellation,
+                      context,
+                      invocationContext,
+                      progressListener,
+                      usageCollector);
+          return new ToolLoopCompletion.Final(finalContent);
+        }
+        var pendingTurnContext =
+            new MemoryForgetPendingTurnContext(
+                command.sessionId(), expectedNextSequence, context.turnId(), user, userAt, clock);
         return progressListener == null
-            ? toolLoop.complete(messages, cancellation, context, invocationContext, usageCollector)
-            : toolLoop.completeStreaming(
+            ? toolLoop.completeForPendingTurn(
                 messages,
                 cancellation,
                 context,
                 invocationContext,
+                pendingTurnContext,
+                usageCollector)
+            : toolLoop.completeStreamingForPendingTurn(
+                messages,
+                cancellation,
+                context,
+                invocationContext,
+                pendingTurnContext,
                 progressListener,
                 usageCollector);
       } catch (ContextLimitRecoveryCandidateException candidate) {

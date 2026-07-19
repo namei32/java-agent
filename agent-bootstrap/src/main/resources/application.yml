@@ -157,6 +157,11 @@ agent:
       max-injected-characters: ${AGENT_MEMORY_RETRIEVAL_MAX_INJECTED_CHARACTERS:6000}
   memory-recall:
     mode: ${AGENT_MEMORY_RECALL_MODE:DISABLED}
+  capabilities:
+    memory-forget:
+      mode: ${AGENT_MEMORY_FORGET_MODE:DISABLED}
+      capsule-key-id: ${AGENT_MEMORY_FORGET_CAPSULE_KEY_ID:}
+      capsule-key-base64: ${AGENT_MEMORY_FORGET_CAPSULE_KEY_BASE64:}
   tool-loop:
     max-iterations: ${AGENT_TOOL_MAX_ITERATIONS:6}
   tools:

@@ -10,8 +10,11 @@ import io.namei.agent.adapter.sqlite.JdbcPendingOperationStore;
 import io.namei.agent.application.ApprovalInbox;
 import io.namei.agent.application.MemoryForgetCapability;
 import io.namei.agent.application.MemoryForgetControlService;
+import io.namei.agent.application.MemoryForgetPendingService;
+import io.namei.agent.application.MemoryForgetPendingToolset;
 import io.namei.agent.application.MemoryForgetRecoveryCoordinator;
 import io.namei.agent.application.PendingOperationKeyProvider;
+import io.namei.agent.application.ToolRuntimeMode;
 import io.namei.agent.bootstrap.control.ApprovalInboxProperties;
 import io.namei.agent.bootstrap.control.ControlPlaneAudit;
 import io.namei.agent.bootstrap.control.ControlPlaneMode;
@@ -50,6 +53,8 @@ class MemoryForgetCapabilityConfigurationTest {
               assertThat(context).doesNotHaveBean(AesGcmPendingOperationCapsuleCipher.class);
               assertThat(context).doesNotHaveBean(JdbcPendingOperationStore.class);
               assertThat(context).doesNotHaveBean(MemoryForgetCapability.class);
+              assertThat(context).doesNotHaveBean(MemoryForgetPendingService.class);
+              assertThat(context).doesNotHaveBean(MemoryForgetPendingToolset.class);
               assertThat(context).doesNotHaveBean(MemoryForgetRecoveryCoordinator.class);
               assertThat(context).doesNotHaveBean(MemoryForgetControlService.class);
               assertThat(context).doesNotHaveBean(PendingOperationController.class);
@@ -156,13 +161,60 @@ class MemoryForgetCapabilityConfigurationTest {
     assertThat(database).isRegularFile();
   }
 
+  @Test
+  void approvalRequiredToolModeWiresTheDedicatedPendingProducerButNoWorkerOrGenericInvoker() {
+    Path database = tempDir.resolve("approval-inbox.db");
+    var schema = new ApprovalInboxSchemaInitializer(database, 5_000);
+    schema.initialize();
+    new WebApplicationContextRunner()
+        .withUserConfiguration(MemoryForgetCapabilityConfiguration.class)
+        .withBean(
+            AgentProperties.class,
+            () ->
+                agentProperties(
+                    tempDir, MemoryRuntimeMode.JAVA_NATIVE, ToolRuntimeMode.APPROVAL_REQUIRED))
+        .withBean(ApprovalInboxProperties.class, () -> new ApprovalInboxProperties("LOOPBACK"))
+        .withBean(ControlPlaneProperties.class, () -> controls(ControlPlaneMode.LOOPBACK))
+        .withBean(ApprovalInboxSchemaInitializer.class, () -> schema)
+        .withBean(ApprovalInbox.class, () -> new JdbcApprovalInbox(schema))
+        .withBean(
+            MemorySoftForgetPort.class,
+            () ->
+                command -> {
+                  throw new AssertionError();
+                })
+        .withBean(SessionRepository.class, EmptySessions::new)
+        .withPropertyValues(
+            "agent.capabilities.memory-forget.mode=LOOPBACK_APPROVAL",
+            "agent.capabilities.memory-forget.capsule-key-id=test-key",
+            "agent.capabilities.memory-forget.capsule-key-base64=" + key(),
+            "agent.approval-inbox.mode=LOOPBACK",
+            "agent.control-plane.mode=LOOPBACK",
+            "agent.tools.mode=APPROVAL_REQUIRED")
+        .run(
+            context -> {
+              assertThat(context).hasNotFailed();
+              assertThat(context).hasSingleBean(MemoryForgetPendingService.class);
+              assertThat(context).hasSingleBean(MemoryForgetPendingToolset.class);
+              assertThat(context.getBean(MemoryForgetPendingToolset.class).tools())
+                  .extracting(tool -> tool.definition().name())
+                  .containsExactly("forget_memory");
+            });
+  }
+
   private static AgentProperties agentProperties(Path workspace, MemoryRuntimeMode mode) {
+    return agentProperties(workspace, mode, ToolRuntimeMode.READ_ONLY);
+  }
+
+  private static AgentProperties agentProperties(
+      Path workspace, MemoryRuntimeMode mode, ToolRuntimeMode toolMode) {
     return new AgentProperties(
         workspace,
         null,
         null,
         null,
-        null,
+        new AgentProperties.Tools(
+            toolMode, 8, 16, Duration.ofSeconds(5), 32, 16_384, 20_000, Duration.ofMinutes(5)),
         new AgentProperties.Memory(mode, 65_536, 100_000, 20_000, null, null));
   }
 

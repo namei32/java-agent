@@ -1,0 +1,98 @@
+{
+  "formatVersion": 1,
+  "suite": "tools/memory-forget-pending-producer-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0035-use-scope-bound-soft-supersede-for-memory-forget.md",
+    "contract": "docs/contracts/approved-scope-bound-memory-forget.md",
+    "spec": "docs/specs/2026-07-19-r11-memory-forget-pending-producer-design.md",
+    "plan": "docs/plans/2026-07-19-r11-memory-forget-tool-chat-pending-producer-plan.md"
+  },
+  "normalization": ["java-string-strip", "drop-blank", "stable-deduplicate"],
+  "defaults": {
+    "tool": "forget_memory",
+    "version": "java-memory-forget-v1",
+    "pendingAssistantProjection": "记忆遗忘请求正在等待本机审批。"
+  },
+  "cases": [
+    {
+      "id": "producer-default-disabled-has-zero-catalog-and-zero-io",
+      "group": "activation",
+      "input": {"toolMode": "DISABLED", "capabilityMode": "DISABLED"},
+      "expected": {"catalogEntries": 0, "pendingOperations": 0, "invocations": 0}
+    },
+    {
+      "id": "producer-requires-approval-required-and-all-existing-loopback-prerequisites",
+      "group": "activation",
+      "input": {"toolMode": "APPROVAL_REQUIRED", "capabilityMode": "LOOPBACK_APPROVAL"},
+      "expected": {"visibility": "DEFERRED", "risk": "WRITE", "source": "BUILTIN"}
+    },
+    {
+      "id": "producer-is-visible-only-after-tool-search-on-the-next-model-request",
+      "group": "catalog",
+      "input": {"query": "遗忘 记忆"},
+      "expected": {"initialDefinitions": ["current_time", "tool_search"], "nextDefinitions": ["current_time", "tool_search", "forget_memory"]}
+    },
+    {
+      "id": "producer-rejects-search-and-forget-in-the-same-model-batch",
+      "group": "catalog",
+      "input": {"calls": ["tool_search", "forget_memory"]},
+      "expected": {"pendingOperations": 0, "approvals": 0, "anchors": 0, "invocations": 0}
+    },
+    {
+      "id": "producer-rejects-multiple-or-mixed-tool-calls",
+      "group": "batch",
+      "input": {"calls": ["forget_memory", "current_time"]},
+      "expected": {"pendingOperations": 0, "approvals": 0, "anchors": 0, "invocations": 0}
+    },
+    {
+      "id": "producer-schema-allows-only-ids-array",
+      "group": "schema",
+      "input": {"ids": ["memory-a"]},
+      "expected": {"required": ["ids"], "additionalProperties": false}
+    },
+    {
+      "id": "producer-invalid-schema-or-hidden-call-fails-closed",
+      "group": "schema",
+      "input": {"arguments": {"ids": "memory-a"}},
+      "expected": {"pendingOperations": 0, "approvals": 0, "anchors": 0, "invocations": 0}
+    },
+    {
+      "id": "producer-empty-normalized-ids-is-immediate-safe-success",
+      "group": "normalization",
+      "input": {"ids": [" ", ""]},
+      "expected": {"pendingOperations": 0, "approvals": 0, "anchors": 0, "toolResult": "SAFE_EMPTY"}
+    },
+    {
+      "id": "producer-creates-one-bound-pending-and-terminates-with-fixed-projection",
+      "group": "pending",
+      "input": {"ids": [" memory-a ", "memory-b", "memory-a"]},
+      "expected": {"pendingOperations": 1, "approvals": 1, "capsules": 1, "anchors": 1, "invocations": 0, "toolResultsSentToModel": 0, "secondModelRequests": 0, "assistantProjection": "记忆遗忘请求正在等待本机审批。"}
+    },
+    {
+      "id": "producer-creates-operation-approval-and-capsule-before-session-anchor",
+      "group": "ordering",
+      "input": {"ids": ["memory-a"]},
+      "expected": {"operationStoreBeforeAnchor": true, "atomicOperationApprovalCapsule": true}
+    },
+    {
+      "id": "producer-anchor-cas-loss-stales-operation-and-commits-no-projection",
+      "group": "failure",
+      "input": {"anchor": "CAS_LOST"},
+      "expected": {"state": "STALE_SESSION", "pendingProjectionCommitted": false, "invocations": 0}
+    },
+    {
+      "id": "producer-operation-store-failure-writes-no-anchor-or-execution-right",
+      "group": "failure",
+      "input": {"operationStore": "FAIL"},
+      "expected": {"anchors": 0, "invocations": 0}
+    },
+    {
+      "id": "producer-does-not-resume-poll-or-invoke-before-local-approval",
+      "group": "boundary",
+      "input": {"ids": ["memory-a"]},
+      "expected": {"resumeCalls": 0, "workerStarts": 0, "invocations": 0}
+    }
+  ]
+}
