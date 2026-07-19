@@ -1,0 +1,90 @@
+{
+  "formatVersion": 1,
+  "suite": "proactive/r14-local-proactive-preparation-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0040-restrict-r14-p2-to-local-candidate-and-fake-delivery-preparation.md",
+    "contract": "docs/contracts/r14-p2-local-proactive-preparation.md",
+    "spec": "docs/specs/2026-07-19-r14-p2-local-proactive-preparation-design.md"
+  },
+  "normalization": [],
+  "defaults": {
+    "sourceText": "local proactive source body must stay private",
+    "driftText": "private drift summary must stay private"
+  },
+  "cases": [
+    {
+      "id": "cancel-before-gate-performs-zero-work",
+      "group": "cancellation",
+      "input": {"cancel": "BEFORE", "gate": "REQUESTED", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "CANCELLED", "sourceCalls": 0, "driftCalls": 0, "auditEvents": 0, "candidate": false}
+    },
+    {
+      "id": "expired-lease-short-circuits-gate-source-and-drift",
+      "group": "lease",
+      "input": {"lease": "EXPIRED", "gate": "REQUESTED", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "SKIPPED", "code": "PROACTIVE_LEASE_LOST", "sourceCalls": 0, "driftCalls": 0, "candidate": false}
+    },
+    {
+      "id": "disabled-gate-never-loads-local-source",
+      "group": "gate",
+      "input": {"gate": "PROACTIVE_DISABLED", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "SKIPPED", "code": "PROACTIVE_DISABLED", "sourceCalls": 0, "driftCalls": 0, "candidate": false}
+    },
+    {
+      "id": "empty-local-source-skips-without-drift",
+      "group": "source",
+      "input": {"gate": "REQUESTED", "source": "EMPTY", "drift": "DETECTED"},
+      "expected": {"kind": "SKIPPED", "code": "PROACTIVE_NO_SOURCE", "sourceCalls": 1, "driftCalls": 0, "candidate": false}
+    },
+    {
+      "id": "source-failure-is-stable-and-does-not-create-candidate",
+      "group": "source",
+      "input": {"gate": "REQUESTED", "source": "THROW", "drift": "DETECTED"},
+      "expected": {"kind": "SKIPPED", "code": "PROACTIVE_SOURCE_INVALID", "sourceCalls": 1, "driftCalls": 0, "candidate": false}
+    },
+    {
+      "id": "source-cancellation-prevents-drift-and-candidate",
+      "group": "cancellation",
+      "input": {"gate": "REQUESTED", "source": "CANCEL", "drift": "DETECTED"},
+      "expected": {"kind": "CANCELLED", "sourceCalls": 1, "driftCalls": 0, "candidate": false}
+    },
+    {
+      "id": "clean-drift-is-safe-skip",
+      "group": "drift",
+      "input": {"gate": "REQUESTED", "source": "ITEM", "drift": "CLEAN"},
+      "expected": {"kind": "SKIPPED", "code": "PROACTIVE_NO_DRIFT", "sourceCalls": 1, "driftCalls": 1, "candidate": false}
+    },
+    {
+      "id": "drift-failure-is-stable-and-never-produces-candidate",
+      "group": "drift",
+      "input": {"gate": "REQUESTED", "source": "ITEM", "drift": "THROW"},
+      "expected": {"kind": "SKIPPED", "code": "DRIFT_READ_ONLY", "sourceCalls": 1, "driftCalls": 1, "candidate": false}
+    },
+    {
+      "id": "cancelled-drift-never-produces-candidate",
+      "group": "cancellation",
+      "input": {"gate": "REQUESTED", "source": "ITEM", "drift": "CANCELLED"},
+      "expected": {"kind": "CANCELLED", "sourceCalls": 1, "driftCalls": 1, "candidate": false}
+    },
+    {
+      "id": "detected-drift-creates-only-a-private-local-candidate",
+      "group": "candidate",
+      "input": {"gate": "REQUESTED", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "CANDIDATE_READY", "sourceCalls": 1, "driftCalls": 1, "candidate": true, "externalDelivery": false, "transportAuthorized": false, "memoryMutations": 0}
+    },
+    {
+      "id": "candidate-projection-never-leaks-source-or-drift-text",
+      "group": "projection",
+      "input": {"gate": "REQUESTED", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "CANDIDATE_READY", "candidate": true, "leaksSourceText": false, "leaksDriftText": false}
+    },
+    {
+      "id": "safe-audit-records-only-stage-and-stable-code",
+      "group": "audit",
+      "input": {"gate": "REQUESTED", "source": "ITEM", "drift": "DETECTED"},
+      "expected": {"kind": "CANDIDATE_READY", "candidate": true, "actions": ["GATE", "SOURCE", "DRIFT", "PROJECTION"], "leaksSourceText": false, "leaksDriftText": false}
+    }
+  ]
+}

@@ -121,6 +121,12 @@
       "source": "java-contract"
     },
     {
+      "id": "proactive/r14-local-proactive-preparation-v1",
+      "path": "proactive/r14-local-proactive-preparation-v1.json",
+      "sha256": "3ae7a09eab794fd22f7212e1d8fa05f2aac4f9789037ff834d075a6d231f0004",
+      "source": "java-contract"
+    },
+    {
       "id": "cutover/cutover-runtime-v1",
       "path": "cutover/cutover-runtime-v1.json",
       "sha256": "38a10ed29a8f6dc6ad7381bec4234e960b62d4420736a4703ddfaca70eba2c5a",

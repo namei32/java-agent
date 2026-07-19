@@ -28,7 +28,7 @@ Tool 层不能只按“是否存在相似 Runtime”盘点：Python 注册的每
 | Tool 与审批安全 | Catalog、Deferred Tool、Approval Inbox、Capsule、Reservation、Ledger、Anchor、首个 `forget_memory` 链 | 其他写 Tool、真实审批操作与 Sandbox | C3-F2/F3/M0 已完成；不自动扩展为新写 API，未来入口须建立新的目标 Ref/请求/数据权限 Contract |
 | 扩展与外部资产 | 只读 MCP、Skill Catalog/Content、Plugin 生命周期 Tap | 远程 MCP、可变 Plugin、脚本/网络执行 | 维持只读和默认关闭；逐能力评审外部访问 |
 | 控制面与渠道 | Loopback 状态/取消/SSE、控制索引、零正文历史、Telegram 离线链 | 管理写入、前端、多渠道与真实渠道 Smoke | C3 已选择首项写 Capability；前端、真实 Telegram 和远程访问继续冻结 |
-| 主动运行与交付 | 受限 Scheduler/Drift/Subagent、只读主动决策、sandbox 切换演练 | 外部源、自动 Memory、Peer、真实生产迁移 | 先冻结每一类外部输入/副作用 Contract，再考虑接线 |
+| 主动运行与交付 | 受限 Scheduler/Drift/Subagent、只读主动决策、P2-A 本地候选准备、sandbox 切换演练 | 外部源、审批 Pending、自动 Memory、Peer、真实生产迁移 | P2-A 保持未接线且没有投递；先冻结每一类外部输入/副作用 Contract，再考虑接线 |
 
 ## 阶段索引（按实施顺序）
 

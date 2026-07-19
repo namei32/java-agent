@@ -1,6 +1,6 @@
 # R14 主动运行、自动记忆与 Peer Agent 对齐计划
 
-- 状态：P0、P1 已完成（离线边界与未接线只读决策）；P2–P5 未开始
+- 状态：P0、P1 与 P2-A 已完成（离线边界、未接线只读决策与本地候选准备）；P2-B–P5 未开始
 - 日期：2026-07-19
 - Python 证据基线：`akashic-agent` 提交 `b65a5430e332c8733b981dfc2dfbc3eb1967e9ef`
 - Java 证据基线：`agent/r12-skill-catalog`，含 R8 本地 SQLite Proactive、只读 Drift 与隔离 Subagent
@@ -59,10 +59,14 @@ Fake Source 与现有 ReadOnlyDriftRunner，只输出 SKIPPED(code)、PENDING_AP
 进程或 Peer。PENDING_APPROVAL 没有 Approval request、Capsule、Ledger、Outbox、Receipt 或执行权；R8 已有
 Lease recovery、崩溃和关闭测试保持所有权。它是 P2–P4 的局部安全基础，而不是 Python proactive_v2 对齐完成声明。
 
-### P2：外部 Source 与主动投递（GREEN，逐项）
+### P2：外部 Source 与主动投递（分段；P2-A 已完成）
 
-每个 Source 独立定义 allowlist、DNS/私网防护、重定向、身份、缓存、正文/费用预算、脱敏审计和失败码。每个
-Delivery Channel 独立定义目标绑定、Outbox/Receipt、幂等、Approval、`UNKNOWN` 与恢复。先通过本地 Fake Transport，
+P2-A 已实现未接线的本地候选准备器：它在一个同步调用内重复 Gate、`FIXED_LOCAL` Fake Source 和只读 Drift，只有检测
+到 Drift 才保留脱敏候选供未来同包 Producer 消费；公开结果不含正文、目标或引用，也不创建 Approval、Pending、Capsule、
+Ledger、Outbox、Receipt 或 Delivery。12 Case Java-owned Fixture 已消费；它不是外部 Source 或主动投递实现。
+
+P2-B 以后，每个 Source 独立定义 allowlist、DNS/私网防护、重定向、身份、缓存、正文/费用预算、脱敏审计和失败码；
+每个 Delivery Channel 独立定义目标绑定、Outbox/Receipt、幂等、Approval、`UNKNOWN` 与恢复。先通过本地 Fake Transport，
 再由用户单独批准真实网络/渠道 Smoke。
 
 ### P3：Java-native 自动记忆与 Optimizer（GREEN，逐 Mutation）
