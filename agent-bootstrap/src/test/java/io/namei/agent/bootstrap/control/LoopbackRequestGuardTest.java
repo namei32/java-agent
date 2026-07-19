@@ -53,6 +53,23 @@ class LoopbackRequestGuardTest {
   }
 
   @Test
+  void allowsQueryOnlyForTheReadOnlyIndexCandidate() {
+    MockHttpServletRequest index =
+        request("GET", "/api/v1/control/index", "127.0.0.1", "127.0.0.1:8080", null);
+    index.setQueryString("pageSize=20&cursor=AAAAAAAAAAAAAAAAAAAAAA");
+
+    assertThatCode(() -> guard.validate(index)).doesNotThrowAnyException();
+
+    MockHttpServletRequest status =
+        request("GET", "/api/v1/control/status", "127.0.0.1", "127.0.0.1:8080", null);
+    status.setQueryString("pageSize=20");
+    assertRejected(status, ControlStableCode.CONTROL_REQUEST_INVALID);
+    assertRejected(
+        request("POST", "/api/v1/control/index", "127.0.0.1", "127.0.0.1:8080", null),
+        ControlStableCode.CONTROL_REQUEST_INVALID);
+  }
+
+  @Test
   void rejectsRemoteEvenWhenForwardedClaimsLoopback() {
     MockHttpServletRequest request =
         request("GET", "/api/v1/control/status", "192.0.2.10", "127.0.0.1:8080", null);

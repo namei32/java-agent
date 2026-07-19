@@ -14,22 +14,43 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 public final class ControlPlaneStatusService {
+  private static final int DEFAULT_INDEX_PAGE_SIZE = 20;
+  private static final int MAXIMUM_INDEX_PAGE_SIZE = 50;
+  private static final Pattern INDEX_CURSOR = Pattern.compile("(?:|[A-Za-z0-9_-]{22})");
+
   private final Clock clock;
   private final ChannelHost host;
   private final ControlPlaneRuntime runtime;
   private final ControlPlaneProperties properties;
+  private final ControlIndexCursorStore indexCursors;
 
   public ControlPlaneStatusService(
       Clock clock,
       ChannelHost host,
       ControlPlaneRuntime runtime,
       ControlPlaneProperties properties) {
+    this(
+        clock,
+        host,
+        runtime,
+        properties,
+        new ControlIndexCursorStore(clock, ControlRandomSource.secure()));
+  }
+
+  ControlPlaneStatusService(
+      Clock clock,
+      ChannelHost host,
+      ControlPlaneRuntime runtime,
+      ControlPlaneProperties properties,
+      ControlIndexCursorStore indexCursors) {
     this.clock = Objects.requireNonNull(clock, "clock");
     this.host = Objects.requireNonNull(host, "host");
     this.runtime = Objects.requireNonNull(runtime, "runtime");
     this.properties = Objects.requireNonNull(properties, "properties");
+    this.indexCursors = Objects.requireNonNull(indexCursors, "indexCursors");
   }
 
   public ControlStatusResponse status() {
@@ -81,6 +102,52 @@ public final class ControlPlaneStatusService {
     return ControlTurnsResponse.from(clock.instant(), runtime.registry().snapshot());
   }
 
+  public ControlIndexResponse index(int pageSize, String cursor, String actorRef) {
+    requireIndexRequest(pageSize, cursor);
+    Instant observedAt = clock.instant();
+    ActiveTurnRegistrySnapshot registry;
+    List<ChannelStatusSnapshot> snapshots;
+    try {
+      registry = runtime.registry().snapshot();
+      snapshots = host.snapshots();
+    } catch (RuntimeException unavailable) {
+      return indexUnavailable(observedAt);
+    }
+    if (snapshots.stream().anyMatch(ControlPlaneStatusService::snapshotUnavailable)) {
+      return indexUnavailable(observedAt);
+    }
+    List<ControlIndexResponse.Channel> channels =
+        snapshots.stream()
+            .sorted(Comparator.comparing(ChannelStatusSnapshot::name))
+            .map(snapshot -> indexChannel(snapshot, registry))
+            .toList();
+    List<ControlIndexResponse.Turn> candidates;
+    if (cursor.isEmpty()) {
+      candidates =
+          registry.activeTurns().stream()
+              .map(ControlPlaneStatusService::indexTurn)
+              .sorted(Comparator.comparing(ControlIndexResponse.Turn::turnRef))
+              .toList();
+    } else {
+      candidates =
+          indexCursors
+              .take(cursor, actorRef)
+              .orElseThrow(() -> new IllegalArgumentException("控制索引游标无效或已失效"));
+    }
+    int end = Math.min(pageSize, candidates.size());
+    List<ControlIndexResponse.Turn> turns = candidates.subList(0, end);
+    String nextCursor = indexCursors.issue(actorRef, candidates.subList(end, candidates.size()));
+    IndexState state = indexState(registry);
+    return new ControlIndexResponse(
+        ControlPlaneContract.CURRENT_VERSION,
+        observedAt,
+        state.state(),
+        state.code(),
+        channels,
+        turns,
+        nextCursor);
+  }
+
   public ControlCancellationOutcome cancel(String reference) {
     return runtime.registry().cancel(ControlTurnRef.parse(reference));
   }
@@ -101,6 +168,65 @@ public final class ControlPlaneStatusService {
             0),
         List.of());
   }
+
+  private static ControlIndexResponse indexUnavailable(Instant observedAt) {
+    return new ControlIndexResponse(
+        ControlPlaneContract.CURRENT_VERSION,
+        observedAt,
+        "DEGRADED",
+        ControlStableCode.CONTROL_SNAPSHOT_UNAVAILABLE.name(),
+        List.of(),
+        List.of(),
+        "");
+  }
+
+  private ControlIndexResponse.Channel indexChannel(
+      ChannelStatusSnapshot snapshot, ActiveTurnRegistrySnapshot registry) {
+    int activeTurns =
+        Math.toIntExact(
+            registry.activeTurns().stream()
+                .filter(turn -> snapshot.name().equals(turn.channel()))
+                .count());
+    return new ControlIndexResponse.Channel(
+        snapshot.name(),
+        snapshot.state().name(),
+        activeTurns,
+        snapshot.reliability().unknownExecutions());
+  }
+
+  private static ControlIndexResponse.Turn indexTurn(
+      io.namei.agent.application.control.ActiveTurnSnapshot snapshot) {
+    return new ControlIndexResponse.Turn(
+        snapshot.turnRef().value(),
+        snapshot.channel(),
+        snapshot.state().name(),
+        snapshot.lastSequence());
+  }
+
+  private IndexState indexState(ActiveTurnRegistrySnapshot registry) {
+    if (runtime.isClosed()) {
+      return new IndexState("SHUTTING_DOWN", ControlStableCode.CONTROL_SHUTTING_DOWN.name());
+    }
+    if (registry.saturated()) {
+      return new IndexState("DEGRADED", ControlStableCode.CONTROL_TURN_REGISTRY_SATURATED.name());
+    }
+    return new IndexState("READY", "");
+  }
+
+  private static void requireIndexRequest(int pageSize, String cursor) {
+    if (pageSize < 1 || pageSize > MAXIMUM_INDEX_PAGE_SIZE) {
+      throw new IllegalArgumentException("控制索引分页大小无效");
+    }
+    if (cursor == null || !INDEX_CURSOR.matcher(cursor).matches()) {
+      throw new IllegalArgumentException("控制索引游标格式无效");
+    }
+  }
+
+  static int defaultIndexPageSize() {
+    return DEFAULT_INDEX_PAGE_SIZE;
+  }
+
+  private record IndexState(String state, String code) {}
 
   private static ControlStatusResponse.Channel channel(ChannelStatusSnapshot snapshot) {
     ChannelReliabilityStatus reliability = snapshot.reliability();

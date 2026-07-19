@@ -14,10 +14,10 @@ public final class LoopbackRequestGuard {
   private static final Pattern LOCALHOST = Pattern.compile("localhost(?::[1-9][0-9]{0,4})?");
   private static final Pattern TURN_REF = Pattern.compile("[A-Za-z0-9_-]{22}");
   private static final String PENDING_OPERATION_PREFIX = "/api/v1/control/pending-operations";
+  private static final String READ_ONLY_INDEX_PATH = "/api/v1/control/index";
 
   public void validate(HttpServletRequest request) {
-    if (!approvedShape(request.getMethod(), request.getRequestURI())
-        || request.getQueryString() != null) {
+    if (!approvedShape(request.getMethod(), request.getRequestURI()) || !allowsQuery(request)) {
       reject(requestInvalidCode(request.getRequestURI()), 400);
     }
     if (!allowsDecisionBody(request)) {
@@ -38,6 +38,15 @@ public final class LoopbackRequestGuard {
     }
   }
 
+  private static boolean allowsQuery(HttpServletRequest request) {
+    if (request.getQueryString() == null) {
+      return true;
+    }
+    return "GET".equals(request.getMethod())
+        && READ_ONLY_INDEX_PATH.equals(request.getRequestURI())
+        && !request.getQueryString().isEmpty();
+  }
+
   private static boolean approvedShape(String method, String path) {
     if ("POST".equals(method) || "DELETE".equals(method)) {
       if ("/api/v1/control/session".equals(path)) {
@@ -45,7 +54,9 @@ public final class LoopbackRequestGuard {
       }
     }
     if ("GET".equals(method)) {
-      if ("/api/v1/control/status".equals(path) || "/api/v1/control/turns".equals(path)) {
+      if ("/api/v1/control/status".equals(path)
+          || "/api/v1/control/turns".equals(path)
+          || READ_ONLY_INDEX_PATH.equals(path)) {
         return true;
       }
       if ("/api/v1/control/approvals".equals(path)) {

@@ -116,6 +116,96 @@ class ControlPlaneStatusServiceTest {
   }
 
   @Test
+  void projectsMinimalSortedReadOnlyIndexWithAnOpaqueContinuation() {
+    assertThat(ControlPlaneStatusService.defaultIndexPageSize()).isEqualTo(20);
+    var reliability =
+        new ChannelReliabilityStatus(
+            ChannelReliabilityStatus.Mode.SQLITE,
+            ChannelReliabilityStatus.LedgerState.READY,
+            0,
+            1,
+            0,
+            "");
+    var host =
+        new ChannelHost(
+            List.of(
+                new StubAdapter("telegram", false, reliability), new StubAdapter("cli", false)));
+    host.start();
+    var runtime = runtime();
+    var first =
+        runtime.register("cli", ControlCancellationHandle.from(new TurnCancellationSource()), NOW);
+    var second =
+        runtime.register(
+            "telegram",
+            ControlCancellationHandle.from(new TurnCancellationSource()),
+            NOW.minusSeconds(1));
+    var terminal =
+        runtime.register(
+            "telegram",
+            ControlCancellationHandle.from(new TurnCancellationSource()),
+            NOW.minusSeconds(2));
+    first.observe(
+        OutboundMessage.started(
+            "raw-turn-secret",
+            "raw-session-secret",
+            new MessageRoute("telegram", "raw-route-secret")));
+    first.observe(
+        OutboundMessage.delta(
+            "raw-turn-secret",
+            "raw-session-secret",
+            new MessageRoute("telegram", "raw-route-secret"),
+            1,
+            "private message body"));
+    terminal.closeWithoutTerminal();
+    var service = service(host, runtime);
+
+    ControlIndexResponse firstPage = service.index(1, "", "AAAAAAAAAAAAAAAAAAAAAA");
+    ControlIndexResponse secondPage =
+        service.index(50, firstPage.nextCursor(), "AAAAAAAAAAAAAAAAAAAAAA");
+
+    assertThat(firstPage.schemaVersion()).isEqualTo(1);
+    assertThat(firstPage.state()).isEqualTo("READY");
+    assertThat(firstPage.code()).isEmpty();
+    assertThat(firstPage.channels())
+        .extracting(ControlIndexResponse.Channel::channel)
+        .containsExactly("cli", "telegram");
+    assertThat(firstPage.channels().getLast().unknownExecutionCount()).isEqualTo(1);
+    assertThat(firstPage.turns())
+        .containsExactly(
+            new ControlIndexResponse.Turn(
+                first.turnRef().orElseThrow().value(), "cli", "ACTIVE", 1L));
+    assertThat(firstPage.nextCursor()).matches("[A-Za-z0-9_-]{22}");
+    assertThat(secondPage.turns())
+        .containsExactly(
+            new ControlIndexResponse.Turn(
+                second.turnRef().orElseThrow().value(), "telegram", "ACTIVE", null));
+    assertThat(secondPage.nextCursor()).isEmpty();
+    assertThat(firstPage.toString())
+        .doesNotContain(
+            "raw-turn-secret",
+            "raw-session-secret",
+            "raw-route-secret",
+            "private message body",
+            "AAAAAAAAAAAAAAAAAAAAAA");
+  }
+
+  @Test
+  void convertsAnUnavailableSnapshotToAStableRedactedIndex() {
+    var host = new ChannelHost(List.of(new StubAdapter("telegram", true)));
+    host.start();
+
+    ControlIndexResponse response =
+        service(host, runtime()).index(20, "", "AAAAAAAAAAAAAAAAAAAAAA");
+
+    assertThat(response.state()).isEqualTo("DEGRADED");
+    assertThat(response.code()).isEqualTo("CONTROL_SNAPSHOT_UNAVAILABLE");
+    assertThat(response.channels()).isEmpty();
+    assertThat(response.turns()).isEmpty();
+    assertThat(response.nextCursor()).isEmpty();
+    assertThat(response.toString()).doesNotContain("snapshot-secret");
+  }
+
+  @Test
   void reportsRegistrySaturationWithoutCancellingOrRejectingTheRunningTurn() {
     ControlPlaneProperties properties = properties(1);
     var next = new java.util.concurrent.atomic.AtomicInteger();

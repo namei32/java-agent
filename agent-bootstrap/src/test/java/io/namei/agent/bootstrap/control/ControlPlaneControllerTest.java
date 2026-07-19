@@ -79,6 +79,38 @@ class ControlPlaneControllerTest {
                     org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("telegram:raw"))));
 
+    mvc.perform(authenticated(get("/api/v1/control/index"), token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.schemaVersion").value(1))
+        .andExpect(jsonPath("$.state").value("READY"))
+        .andExpect(jsonPath("$.turns[0].turnRef").value(turnRef))
+        .andExpect(jsonPath("$.turns[0].lastSequence").doesNotExist())
+        .andExpect(jsonPath("$.actor").doesNotExist())
+        .andExpect(jsonPath("$.nextCursor").value(""));
+    mvc.perform(
+            authenticated(
+                get("/api/v1/control/index").queryParam("sessionId", "telegram:raw-session-secret"),
+                token))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CONTROL_REQUEST_INVALID"));
+    mvc.perform(authenticated(get("/api/v1/control/index").queryParam("pageSize", "51"), token))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CONTROL_REQUEST_INVALID"));
+    mvc.perform(
+            authenticated(
+                get("/api/v1/control/index").queryParam("cursor", "telegram:raw-session-secret"),
+                token))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CONTROL_REQUEST_INVALID"));
+    mvc.perform(
+            authenticated(
+                get("/api/v1/control/index").queryParam("content", "private message body"), token))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CONTROL_REQUEST_INVALID"));
+    mvc.perform(authenticated(get("/api/v1/control/index").queryParam("pageSize", "1", "2"), token))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CONTROL_REQUEST_INVALID"));
+
     mvc.perform(authenticated(post("/api/v1/control/turns/{turnRef}/cancel", turnRef), token))
         .andExpect(status().isAccepted())
         .andExpect(jsonPath("$.result").value("CANCELLATION_REQUESTED"))

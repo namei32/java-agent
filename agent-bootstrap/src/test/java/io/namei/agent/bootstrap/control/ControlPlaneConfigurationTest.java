@@ -17,10 +17,21 @@ class ControlPlaneConfigurationTest {
   private static final Instant NOW = Instant.parse("2026-07-18T00:00:00Z");
 
   @Test
+  void disabledModeDoesNotCreateTheReadOnlyIndexController() {
+    new WebApplicationContextRunner()
+        .withUserConfiguration(ControlPlaneConfiguration.class, ControlPlaneController.class)
+        .run(
+            context -> {
+              assertThat(context).hasNotFailed();
+              assertThat(context).doesNotHaveBean(ControlPlaneController.class);
+            });
+  }
+
+  @Test
   void loopbackCreatesOneRuntimeAndPublishesItAsTheProductionObserver() {
     ControlTurnRef reference = reference(1);
     new WebApplicationContextRunner()
-        .withUserConfiguration(ControlPlaneConfiguration.class)
+        .withUserConfiguration(ControlPlaneConfiguration.class, ControlPlaneController.class)
         .withBean(Clock.class, () -> Clock.fixed(NOW, ZoneOffset.UTC))
         .withBean(ControlTurnRefGenerator.class, () -> () -> reference)
         .withPropertyValues("agent.control-plane.mode=LOOPBACK", "server.address=127.0.0.1")
@@ -28,6 +39,7 @@ class ControlPlaneConfigurationTest {
             context -> {
               assertThat(context).hasNotFailed();
               assertThat(context).hasSingleBean(ControlPlaneRuntime.class);
+              assertThat(context).hasSingleBean(ControlPlaneController.class);
               assertThat(context).hasSingleBean(ActiveTurnObserver.class);
               assertThat(context).hasSingleBean(ControlStreamTracker.class);
               assertThat(context).hasSingleBean(ControlPlaneShutdownCoordinator.class);

@@ -34,7 +34,7 @@
 | R10 | Prompt 编排、Persona 与 Provider 协议 | Prompt/Persona、Provider P0/P1/P3/P4 与受限 P2 已验证 | Java-owned Section/Fixture、context frame、注入时间/会话、固定预算裁剪、默认 `MINIMAL` 与 `AKASHIC_CORE` 接线均通过；Provider P0 已实现脱敏稳定失败分类，P1 已实现默认关闭的受信 Options，P2 已实现仅 `DEEPSEEK` + `SAFE_LOCAL` 的有界单轮 reasoning/Tool continuation，P3 已验证默认关闭的 Tool 前非流式上下文恢复，P4 已验证提交后匿名 cache prompt/hit 聚合；P2b 跨 Turn reasoning 历史与空占位符仍待数据保留/请求扩展 Contract |
 | R11 | Tool Catalog 与审批恢复安全基础 | 实施中（首个默认关闭恢复切片完成） | Catalog、审批 Inbox、Pending Operation/Reservation/Ledger/Anchor Contract 已验证；B2c 已增加 Scope 软失效 Capability、严格本机 Resume/Cancel/Status 和 24 Case Fixture，但未注册 Tool/Chat、Worker 或真实数据执行 |
 | R12 | Skills、MCP 扩展、Plugin 生命周期与受限记忆召回 | S1–S5 已实现并验证 | 默认关闭的只读 Skill Catalog、API v2 生命周期 Tap、deferred `read_skill` 与当前 Scope `recall_memory` 已缩小 Python 差距；MCP Assets 是 Java-owned 扩展。经 ADR-0029 审计，Python 不存在待迁移的 Skill Runner；远程 MCP、可变生命周期和记忆写入仍未开始 |
-| R13 | 多渠道、Dashboard 与控制面 | C0 Contract 已冻结；运行时未开始 | 20 Case 的未来 Loopback 只读索引 Fixture 固定认证、最小投影、分页与脱敏，但没有 Controller、历史读取、IPC、QQ、Feishu、Dashboard 或前端；真实渠道、CLI+Web 和前端仍冻结 |
+| R13 | 多渠道、Dashboard 与控制面 | C0–C1 已完成；C2–C5 未开始 | 20 Case Fixture 已由默认关闭的本机 `GET /api/v1/control/index` 消费：既有 Loopback/Bearer 后仅投影活动 Turn/渠道健康、20/50 分页与一次性 opaque cursor。没有历史读取、IPC、QQ、Feishu、Dashboard、前端、真实渠道或 CLI+Web；它们继续冻结或待单独批准 |
 | R14 | 主动、自动记忆与 Peer | P0、P1 已完成；P2–P5 未开始 | P0 的 28 Case 边界和 P1 的 15 Case 未接线 Gate/Fake Source/ReadOnly Drift 决策固定无正文 skip/pending/cancel；没有网络、进程、投递或自动写入 |
 | R15 | 生产迁移与 Python 退役 | 计划已冻结 | R9 只有 sandbox 演练；生产副本、灰度、回退、观察及 Python 退役均需另行授权 |
 

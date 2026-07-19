@@ -4,7 +4,9 @@ import io.namei.agent.application.control.ControlCancellationOutcome;
 import io.namei.agent.kernel.control.ControlCancelResult;
 import io.namei.agent.kernel.control.ControlStableCode;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
@@ -36,6 +38,20 @@ public final class ControlPlaneController {
   @GetMapping("/turns")
   ControlTurnsResponse turns() {
     return control.turns();
+  }
+
+  @GetMapping("/index")
+  ResponseEntity<?> index(HttpServletRequest request) {
+    try {
+      IndexQuery query = IndexQuery.parse(request);
+      return ResponseEntity.ok(
+          control.index(query.pageSize(), query.cursor(), principal(request).actorRef()));
+    } catch (IllegalArgumentException invalid) {
+      return ResponseEntity.badRequest()
+          .body(
+              ControlErrorResponse.of(
+                  ControlStableCode.CONTROL_REQUEST_INVALID, requestId(request)));
+    }
   }
 
   @PostMapping("/turns/{turnRef}/cancel")
@@ -97,5 +113,38 @@ public final class ControlPlaneController {
       return requestId;
     }
     throw new IllegalStateException("控制面请求 ID 缺失");
+  }
+
+  private record IndexQuery(int pageSize, String cursor) {
+    private static final Set<String> ALLOWED_PARAMETERS = Set.of("pageSize", "cursor");
+
+    static IndexQuery parse(HttpServletRequest request) {
+      Map<String, String[]> parameters = request.getParameterMap();
+      if (!ALLOWED_PARAMETERS.containsAll(parameters.keySet())) {
+        throw new IllegalArgumentException("控制索引包含未批准的查询参数");
+      }
+      String pageSize = one(parameters, "pageSize");
+      String cursor = one(parameters, "cursor");
+      if (pageSize == null) {
+        return new IndexQuery(
+            ControlPlaneStatusService.defaultIndexPageSize(), cursor == null ? "" : cursor);
+      }
+      try {
+        return new IndexQuery(Integer.parseInt(pageSize), cursor == null ? "" : cursor);
+      } catch (NumberFormatException invalid) {
+        throw new IllegalArgumentException("控制索引分页大小格式无效", invalid);
+      }
+    }
+
+    private static String one(Map<String, String[]> parameters, String name) {
+      String[] values = parameters.get(name);
+      if (values == null) {
+        return null;
+      }
+      if (values.length != 1 || values[0] == null || values[0].isEmpty()) {
+        throw new IllegalArgumentException("控制索引查询参数无效");
+      }
+      return values[0];
+    }
   }
 }

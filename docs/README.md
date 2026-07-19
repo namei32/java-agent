@@ -33,7 +33,7 @@
 - 已完成并验证：R12-S5 的[当前 Scope 只读记忆召回 Tool](contracts/read-only-memory-recall-tool.md)，以三重默认关闭条件和当前 Turn `tool_search` 暴露受限 `recall_memory`；它只读取 Java Native 当前 Scope，结果不含 Session/Scope/模型/检索 trace，且没有写入或真实 Provider 启用。
 - 已完成：R14-P0 的[主动、自动记忆与 Peer 边界 Contract](contracts/r14-proactive-peer-automation-boundaries.md)，以 28 Case Fixture 固定 Scheduler/租约状态、本地 Fake Source、待审批 Delivery 投影、`NONE` Memory Mutation 和 `LOCAL_FAKE` Peer；它没有接线线程、数据库、网络、进程、投递或自动记忆。
 - 已完成：R14-P1 的[本地只读主动决策 Contract](contracts/r14-read-only-proactive-decision.md)，以 15 Case Fixture 和 failure 测试串联 Gate、Fake Source、只读 Drift 与无正文 skip/pending/cancel 投影；它不创建审批、投递、记忆写入或任何 Bootstrap Runtime。
-- 已冻结：R13-C0 的[Loopback 只读控制索引 Contract](contracts/r13-read-only-control-index.md)及 20 Case Fixture，规定未来索引的认证、最小投影、排序、分页、opaque cursor 与脱敏；当前零 Controller、Route、历史读取、前端或写入。
+- 已完成：R13-C1 的本机[Loopback 只读控制索引](contracts/r13-read-only-control-index.md)，以 20 Case Fixture 为边界，仅在既有 `LOOPBACK`/Bearer/Servlet 条件下提供 `GET /api/v1/control/index`。它只投影活动 Turn 与渠道健康，使用内存一次性 opaque cursor；没有历史读取、前端、远程访问、真实 Telegram、SQLite 写入或控制面写入。C2–C5 仍待单独批准。
 - 尚未覆盖：自动 Memory 写回/Optimizer、真实 Embedding/真实 Workspace 启用、可恢复 Pending Turn、生产 Durable Side Effect Ledger、真实副作用工具、真实 Telegram Smoke、经单独授权的真实 Provider 流式 Smoke、真实 MCP Server/Streamable HTTP，以及任何真实生产切换。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。
