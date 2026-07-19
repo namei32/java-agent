@@ -37,6 +37,12 @@
       "source": "java-contract"
     },
     {
+      "id": "provider/r10-provider-options-v1",
+      "path": "provider/r10-provider-options-v1.json",
+      "sha256": "3cd79d71f1317e6abad90664bb8182423cd93acb6acc271bd638aaa272271c30",
+      "source": "java-contract"
+    },
+    {
       "id": "context/read-only-context-memory",
       "path": "context/read-only-context-memory.json",
       "sha256": "db9057d25a21cde40885e7787c3f81f23a698d032090bf4a0f6008c2b25e23dc",

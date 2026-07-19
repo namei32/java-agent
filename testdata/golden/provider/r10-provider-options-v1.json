@@ -1,0 +1,92 @@
+{
+  "cases": [
+    {
+      "expected": {"extraBody": null, "outcome": "APPLIED", "reasoningEffort": null},
+      "id": "disabled-profile-is-inert",
+      "input": {
+        "hasToolSchema": false,
+        "profile": "DISABLED",
+        "reasoningEffort": "NONE",
+        "thinkingMode": "DISABLED"
+      }
+    },
+    {
+      "expected": {"extraBody": null, "outcome": "APPLIED", "reasoningEffort": "high"},
+      "id": "deepseek-text-reasoning-effort-is-allowlisted",
+      "input": {
+        "hasToolSchema": false,
+        "profile": "DEEPSEEK",
+        "reasoningEffort": "HIGH",
+        "thinkingMode": "DISABLED"
+      }
+    },
+    {
+      "expected": {
+        "extraBody": {"thinking": {"type": "enabled"}},
+        "outcome": "APPLIED",
+        "reasoningEffort": null
+      },
+      "id": "deepseek-text-thinking-is-a-fixed-body",
+      "input": {
+        "hasToolSchema": false,
+        "profile": "DEEPSEEK",
+        "reasoningEffort": "NONE",
+        "thinkingMode": "ENABLED"
+      }
+    },
+    {
+      "expected": {
+        "extraBody": {"enable_thinking": true},
+        "outcome": "APPLIED",
+        "reasoningEffort": null
+      },
+      "id": "dashscope-text-thinking-is-a-fixed-body",
+      "input": {
+        "hasToolSchema": false,
+        "profile": "DASHSCOPE",
+        "reasoningEffort": "NONE",
+        "thinkingMode": "ENABLED"
+      }
+    },
+    {
+      "expected": {"extraBody": {}, "outcome": "APPLIED", "reasoningEffort": null},
+      "id": "tool-schema-forces-zero-provider-option-injection",
+      "input": {
+        "hasToolSchema": true,
+        "profile": "DEEPSEEK",
+        "reasoningEffort": "HIGH",
+        "thinkingMode": "ENABLED"
+      }
+    },
+    {
+      "expected": {"outcome": "REJECTED"},
+      "id": "dashscope-rejects-reasoning-effort",
+      "input": {
+        "hasToolSchema": false,
+        "profile": "DASHSCOPE",
+        "reasoningEffort": "HIGH",
+        "thinkingMode": "ENABLED"
+      }
+    },
+    {
+      "expected": {"outcome": "REJECTED"},
+      "id": "lowercase-profile-is-rejected-instead-of-normalized",
+      "input": {
+        "hasToolSchema": false,
+        "profile": "deepseek",
+        "reasoningEffort": "NONE",
+        "thinkingMode": "ENABLED"
+      }
+    }
+  ],
+  "contractEvidence": {
+    "adr": "docs/adr/0032-use-explicit-text-only-trusted-provider-options.md",
+    "approvedOn": "2026-07-19",
+    "contract": "docs/contracts/r10-trusted-provider-options.md",
+    "spec": "docs/specs/2026-07-19-r10-provider-options-decision.md"
+  },
+  "formatVersion": 1,
+  "normalization": [],
+  "source": "java-contract",
+  "suite": "provider/r10-provider-options-v1"
+}

@@ -31,8 +31,10 @@ import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -62,6 +64,83 @@ class SpringAiChatModelAdapterTest {
     assertThat(chatModel.lastPrompt().getInstructions())
         .extracting(message -> message.getText())
         .containsExactly("系统", "问题", "历史回答");
+  }
+
+  @Test
+  void appliesTrustedProviderOptionsOnlyToTextRequests() {
+    var configured =
+        OpenAiChatOptions.builder()
+            .model("provider-model")
+            .temperature(0.25)
+            .customHeaders(Map.of("X-Existing", "preserved"))
+            .build();
+    var chatModel =
+        new StubChatModel(
+            ignored -> new ChatResponse(List.of(new Generation(new AssistantMessage("完成")))),
+            configured);
+    var adapter =
+        new SpringAiChatModelAdapter(
+            chatModel,
+            16_384,
+            java.time.Duration.ofSeconds(1),
+            null,
+            TrustedProviderOptions.parse("DEEPSEEK", "ENABLED", "HIGH"));
+
+    adapter.generate(request());
+
+    assertThat(chatModel.lastPrompt().getOptions())
+        .isInstanceOfSatisfying(
+            OpenAiChatOptions.class,
+            options -> {
+              assertThat(options.getModel()).isEqualTo("provider-model");
+              assertThat(options.getTemperature()).isEqualTo(0.25);
+              assertThat(options.getCustomHeaders()).containsEntry("X-Existing", "preserved");
+              assertThat(options.getReasoningEffort()).isEqualTo("high");
+              assertThat(options.getExtraBody())
+                  .isEqualTo(Map.of("thinking", Map.of("type", "enabled")));
+            });
+  }
+
+  @Test
+  void toolSchemaSuppressesTrustedProviderOptionsWhilePreservingModelHeadersAndCallbacks() {
+    var configured =
+        OpenAiChatOptions.builder()
+            .model("provider-model")
+            .temperature(0.25)
+            .customHeaders(Map.of("X-Existing", "preserved"))
+            .reasoningEffort("unsafe")
+            .extraBody(Map.of("unsafe", true))
+            .build();
+    var chatModel =
+        new StubChatModel(
+            ignored -> new ChatResponse(List.of(new Generation(new AssistantMessage("完成")))),
+            configured);
+    var adapter =
+        new SpringAiChatModelAdapter(
+            chatModel,
+            16_384,
+            java.time.Duration.ofSeconds(1),
+            null,
+            TrustedProviderOptions.parse("DASHSCOPE", "ENABLED", "NONE"));
+    var definition =
+        new ToolDefinition(
+            "lookup", "查询", Map.of("type", "object", "properties", Map.of()), ToolRisk.READ_ONLY);
+
+    adapter.generate(
+        new ChatModelRequest(
+            List.of(new ChatMessage(MessageRole.USER, "问题")), List.of(definition)));
+
+    assertThat(chatModel.lastPrompt().getOptions())
+        .isInstanceOfSatisfying(
+            OpenAiChatOptions.class,
+            options -> {
+              assertThat(options.getModel()).isEqualTo("provider-model");
+              assertThat(options.getTemperature()).isEqualTo(0.25);
+              assertThat(options.getCustomHeaders()).containsEntry("X-Existing", "preserved");
+              assertThat(options.getReasoningEffort()).isNull();
+              assertThat(options.getExtraBody()).isEmpty();
+              assertThat(options.getToolCallbacks()).singleElement();
+            });
   }
 
   @Test
@@ -345,16 +424,27 @@ class SpringAiChatModelAdapterTest {
 
   private static final class StubChatModel implements ChatModel {
     private final Function<Prompt, ChatResponse> response;
+    private final ChatOptions options;
     private Prompt lastPrompt;
 
     private StubChatModel(Function<Prompt, ChatResponse> response) {
+      this(response, null);
+    }
+
+    private StubChatModel(Function<Prompt, ChatResponse> response, ChatOptions options) {
       this.response = response;
+      this.options = options;
     }
 
     @Override
     public ChatResponse call(Prompt prompt) {
       lastPrompt = prompt;
       return response.apply(prompt);
+    }
+
+    @Override
+    public ChatOptions getOptions() {
+      return options;
     }
 
     private Prompt lastPrompt() {

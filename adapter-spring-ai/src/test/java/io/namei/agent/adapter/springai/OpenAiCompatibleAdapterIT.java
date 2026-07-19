@@ -67,10 +67,13 @@ class OpenAiCompatibleAdapterIT {
   }
 
   @Test
-  void callsLocalOpenAiCompatibleEndpoint() {
+  void callsLocalOpenAiCompatibleEndpoint() throws Exception {
     SERVER.respond(200, OpenAiStubServer.successBody("回答"));
 
     assertThat(model.generate(request()).content()).isEqualTo("回答");
+    var request = JSON.readTree(SERVER.requestBodies().getFirst());
+    assertThat(request.has("reasoning_effort")).isFalse();
+    assertThat(request.has("thinking")).isFalse();
   }
 
   @Test

@@ -70,6 +70,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
   private final int maxArgumentBytes;
   private final Duration streamIdleTimeout;
   private final OpenAiStreamCancellationRegistry streamCancellationRegistry;
+  private final TrustedProviderOptions trustedProviderOptions;
 
   public SpringAiChatModelAdapter(ChatModel chatModel) {
     this(chatModel, 16_384, DEFAULT_STREAM_IDLE_TIMEOUT);
@@ -81,7 +82,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
 
   public SpringAiChatModelAdapter(
       ChatModel chatModel, int maxArgumentBytes, Duration streamIdleTimeout) {
-    this(chatModel, maxArgumentBytes, streamIdleTimeout, null);
+    this(chatModel, maxArgumentBytes, streamIdleTimeout, null, TrustedProviderOptions.disabled());
   }
 
   SpringAiChatModelAdapter(
@@ -89,6 +90,20 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
       int maxArgumentBytes,
       Duration streamIdleTimeout,
       OpenAiStreamCancellationRegistry streamCancellationRegistry) {
+    this(
+        chatModel,
+        maxArgumentBytes,
+        streamIdleTimeout,
+        streamCancellationRegistry,
+        TrustedProviderOptions.disabled());
+  }
+
+  SpringAiChatModelAdapter(
+      ChatModel chatModel,
+      int maxArgumentBytes,
+      Duration streamIdleTimeout,
+      OpenAiStreamCancellationRegistry streamCancellationRegistry,
+      TrustedProviderOptions trustedProviderOptions) {
     this.chatModel = Objects.requireNonNull(chatModel, "chatModel");
     if (maxArgumentBytes < 1) {
       throw new IllegalArgumentException("Tool Arguments 字节上限必须大于零");
@@ -99,6 +114,8 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     }
     this.streamIdleTimeout = streamIdleTimeout;
     this.streamCancellationRegistry = streamCancellationRegistry;
+    this.trustedProviderOptions =
+        Objects.requireNonNull(trustedProviderOptions, "trustedProviderOptions");
   }
 
   @Override
@@ -182,22 +199,23 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
       List<Message> instructions,
       List<ToolDefinition> definitions,
       Map<String, String> transportHeaders) {
-    if (definitions.isEmpty()) {
-      if (transportHeaders.isEmpty()) {
-        return new Prompt(instructions);
-      }
+    var configuredOptions = chatModel.getOptions();
+    boolean needsTrustedTextOptions =
+        configuredOptions instanceof OpenAiChatOptions && trustedProviderOptions.isEnabled();
+    if (definitions.isEmpty() && transportHeaders.isEmpty() && !needsTrustedTextOptions) {
+      return new Prompt(instructions);
     }
     List<ToolCallback> callbacks =
         definitions.stream().<ToolCallback>map(SchemaOnlyToolCallback::new).toList();
-    var configuredOptions = chatModel.getOptions();
     ToolCallingChatOptions options;
     if (configuredOptions instanceof OpenAiChatOptions openAiOptions) {
+      var trustedOptions = trustedProviderOptions.apply(openAiOptions, !definitions.isEmpty());
       var headers = new LinkedHashMap<String, String>();
-      if (openAiOptions.getCustomHeaders() != null) {
-        headers.putAll(openAiOptions.getCustomHeaders());
+      if (trustedOptions.getCustomHeaders() != null) {
+        headers.putAll(trustedOptions.getCustomHeaders());
       }
       headers.putAll(transportHeaders);
-      options = openAiOptions.mutate().customHeaders(headers).toolCallbacks(callbacks).build();
+      options = trustedOptions.mutate().customHeaders(headers).toolCallbacks(callbacks).build();
     } else {
       options =
           configuredOptions instanceof ToolCallingChatOptions toolOptions

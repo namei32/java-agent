@@ -58,6 +58,10 @@ agent:
     stream-idle-timeout: ${AGENT_MODEL_STREAM_IDLE_TIMEOUT:30s}
     max-delta-events: ${AGENT_MODEL_MAX_DELTA_EVENTS:2048}
     max-delta-code-points: ${AGENT_MODEL_MAX_DELTA_CODE_POINTS:32000}
+    provider-options:
+      profile: ${AGENT_MODEL_PROVIDER_OPTIONS_PROFILE:DISABLED}
+      thinking-mode: ${AGENT_MODEL_PROVIDER_OPTIONS_THINKING_MODE:DISABLED}
+      reasoning-effort: ${AGENT_MODEL_PROVIDER_OPTIONS_REASONING_EFFORT:NONE}
   context-limit-recovery:
     mode: ${AGENT_CONTEXT_LIMIT_RECOVERY_MODE:DISABLED}
   cli:

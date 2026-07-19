@@ -158,6 +158,11 @@ Prompt/History 候选顺序和去重；生产 Policy 必须逐 Case 消费。它
 零命中、跨 Tool Loop 的有效 pair 累加，以及缺失 pair 不伪造为零且不阻断其余有效 pair。它只含三项聚合整数；生产
 Adapter/Turn collector 不得读取 native Usage、缓存键、模型/会话/请求标识、内容或 Provider payload。
 
+`provider/r10-provider-options-v1.json` 是 Java-owned P1 Contract Fixture，固定默认零注入、DeepSeek effort、
+DeepSeek/DashScope 的固定 thinking body、任何 Tool Schema 时的显式清除，以及非法 Profile/effort 组合拒绝。`null`
+代表根本未发送 Provider body，`{}` 只代表含 Tool Schema 时刻意清空已有 body；两者不能混淆。它不接受 URL 推断、
+Python TOML 或任意 `extra_body`。
+
 ## 4. 非确定字段
 
 | 字段 | 处理方式 |
@@ -189,9 +194,9 @@ Adapter/Turn collector 不得读取 native Usage、缓存键、模型/会话/请
 2. 记录 Python HEAD 和参考文件 SHA-256。
 3. 在临时目录运行，不读取真实工作区。
 4. 原子替换由其管理的夹具；不得修改错误迁移契约夹具。
-5. 为生成器管理的 Python 参考夹具生成校验和；人工维护的迁移契约和 26 个 `java-contract` 夹具必须继续保留在最终 Manifest 中。
+5. 为生成器管理的 Python 参考夹具生成校验和；人工维护的迁移契约和 27 个 `java-contract` 夹具必须继续保留在最终 Manifest 中。
 
-当前最终 Manifest 共登记 38 个夹具。Python 生成器不拥有 Java Memory、MCP、Provider 失败/上下文恢复/缓存观察、两个 Message Bus、Telegram、可靠投递、Loopback 控制面、Plugin、Proactive、Cutover、Prompt 编排、Tool Catalog、Approval Inbox 和 Pending Operation 等 Java-owned Fixture；重新生成后，维护者必须保留这些条目并按实际内容同步 SHA-256，再运行 `compat`。禁止因生成器输出而静默移除 Java-owned Contract。
+当前最终 Manifest 共登记 39 个夹具。Python 生成器不拥有 Java Memory、MCP、Provider 失败/受信 Options/上下文恢复/缓存观察、两个 Message Bus、Telegram、可靠投递、Loopback 控制面、Plugin、Proactive、Cutover、Prompt 编排、Tool Catalog、Approval Inbox 和 Pending Operation 等 Java-owned Fixture；重新生成后，维护者必须保留这些条目并按实际内容同步 SHA-256，再运行 `compat`。禁止因生成器输出而静默移除 Java-owned Contract。
 
 Java 验证命令：
 

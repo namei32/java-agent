@@ -20,9 +20,19 @@ public class SpringAiAdapterConfiguration {
       ChatModel chatModel,
       OpenAiStreamCancellationRegistry streamCancellationRegistry,
       @Value("${agent.tools.max-argument-bytes:16384}") int maxArgumentBytes,
-      @Value("${agent.model.stream-idle-timeout:30s}") String streamIdleTimeout) {
+      @Value("${agent.model.stream-idle-timeout:30s}") String streamIdleTimeout,
+      @Value("${agent.model.provider-options.profile:DISABLED}") String providerOptionsProfile,
+      @Value("${agent.model.provider-options.thinking-mode:DISABLED}")
+          String providerOptionsThinkingMode,
+      @Value("${agent.model.provider-options.reasoning-effort:NONE}")
+          String providerOptionsReasoningEffort) {
     return new SpringAiChatModelAdapter(
-        chatModel, maxArgumentBytes, parseDuration(streamIdleTimeout), streamCancellationRegistry);
+        chatModel,
+        maxArgumentBytes,
+        parseDuration(streamIdleTimeout),
+        streamCancellationRegistry,
+        TrustedProviderOptions.parse(
+            providerOptionsProfile, providerOptionsThinkingMode, providerOptionsReasoningEffort));
   }
 
   private static Duration parseDuration(String configured) {

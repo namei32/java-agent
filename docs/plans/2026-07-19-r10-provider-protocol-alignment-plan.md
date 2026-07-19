@@ -1,6 +1,6 @@
 # R10 Provider 协议、失败语义与思考数据对齐计划
 
-- 状态：P0、P3、P4 已完成并离线验证；P1、P2 未开始
+- 状态：P0、P1、P3、P4 已完成并离线验证；P2 未开始
 - 日期：2026-07-19
 - Python 证据基线：`akashic-agent` 提交 `b65a5430e332c8733b981dfc2dfbc3eb1967e9ef`
 - Java 证据基线：`agent/r12-skill-catalog`，含 Spring AI OpenAI-compatible 同步/流式 Adapter
@@ -49,12 +49,15 @@ Failure Code。9 个生产消费的 Fixture Case 覆盖同步与流式、嵌套 
 P0 不能实现 Python 的“裁剪后自动重试”，不能新建 Provider Profile、不能设置 thinking、不能存储 Usage，且不改变
 默认 Provider 配置。
 
-### P1：受信 Provider Options 映射（已审计，等待运行语义选择）
+### P1：受信 Provider Options 映射（已实现并验证）
 
-P0 全绿后已完成 P1 审计，详见[受信 Provider Options 决策记录](../specs/2026-07-19-r10-provider-options-decision.md)。必须先
-选择“继续冻结”、“仅无 Tool 的文本轮次发送受信请求”或“先完成 P2 后完整支持”。无论选择哪一项，Java 都只接受小型、严格
-allowlisted 的 Java Properties 映射；每个 strategy 必须有本地请求 JSON Fixture、未知键拒绝、默认零注入、模型/Options
-类型保留和取消测试。任意原样转发 `extra_body`、从 Python TOML 激活私有参数或真实 Provider Smoke 都不在本切片。
+已选择并实现方案 B，详见[受信 Provider Options 决策记录](../specs/2026-07-19-r10-provider-options-decision.md)和
+[Contract](../contracts/r10-trusted-provider-options.md)。严格 Java-native `agent.model.provider-options.*` 默认
+`DISABLED`；`DEEPSEEK` 只允许固定 thinking body 和/或 `low|medium|high` effort，`DASHSCOPE` 只允许固定
+`enable_thinking=true`。未知/空白/无效组合在 Bean 创建时拒绝，Python TOML 的 thinking/effort/`extra_body` 仍是
+Deferred。只有无 Tool Schema 的同步/流式文本请求会注入这些字段；任一 Tool Schema 都清除 Provider options，同时保留
+模型、温度、Headers 与 Callback。7 场景 Fixture 已由生产 Policy 消费，本地 Stub 已验证 JSON 和默认零注入；默认、
+`failure`、`compat` 三套完整门禁均通过。它仍不保留 reasoning，也不实现 Python 的 Tool-thinking 续轮。
 
 ### P2：Thinking 与 Tool continuation 数据（需显式数据保留决策）
 
@@ -86,5 +89,5 @@ Usage，也不能以 Python Dashboard 为由扩展 Web API、前端、SQLite 或
   错误协议扩展，不构成对 P1–P4 的完成声明。
 - 只有已由生产代码消费、Manifest SHA 校验通过的 Fixture 才是验收证据；单纯解析 JSON 不足以声明完成。
 - 每个切片同一提交更新本计划、能力矩阵、完成度审计、Golden 清单和 HTTP/Channel Contract（如果稳定码增加）。
-- P1、P2 保持未开始；P4 是受限匿名观测，不构成 Python Dashboard/诊断 UI 对齐或真实 Provider Smoke 授权。真实
-  Provider Smoke 仍为独立运行授权。
+- 只剩 P2 未开始；P1 的文本子集与 P4 的受限匿名观测均不构成 Python Dashboard/诊断 UI、完整 Tool-thinking 或真实
+  Provider Smoke 授权。真实 Provider Smoke 仍为独立运行授权。
