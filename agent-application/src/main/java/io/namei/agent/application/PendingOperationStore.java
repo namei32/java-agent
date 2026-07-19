@@ -32,6 +32,17 @@ public interface PendingOperationStore {
   }
 
   /**
+   * Terminally stales an unconsumed operation after its separate Session Pending CAS did not
+   * commit. A false result means no pending operation remained eligible to stale.
+   */
+  default boolean markStaleSessionIfPending(
+      PendingOperationReference reference, Instant observedAt) {
+    Objects.requireNonNull(reference, "reference");
+    Objects.requireNonNull(observedAt, "observedAt");
+    throw new UnsupportedOperationException("Pending Operation Store 不支持 Session 过时固化");
+  }
+
+  /**
    * Atomically consumes an already-approved Inbox record, advances its operation to {@code
    * CONSUMING}, and creates the only durable side-effect Reservation.
    *

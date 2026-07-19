@@ -106,6 +106,36 @@ public final class JdbcPendingOperationStore implements PendingOperationStore {
   }
 
   @Override
+  public boolean markStaleSessionIfPending(
+      PendingOperationReference reference, Instant observedAt) {
+    Objects.requireNonNull(reference, "reference");
+    Objects.requireNonNull(observedAt, "observedAt");
+    try (var connection = schema.openConnection()) {
+      return ApprovalInboxSchemaInitializer.immediateTransaction(
+          connection,
+          () -> {
+            StoredOperationState stored = findState(connection, reference);
+            if (stored == null
+                || (stored.operationState() != PendingOperationState.PENDING_APPROVAL
+                    && stored.operationState() != PendingOperationState.APPROVED_PENDING_RESUME)) {
+              return false;
+            }
+            updateOperationState(
+                connection,
+                reference,
+                stored.operationState(),
+                PendingOperationState.STALE_SESSION,
+                observedAt);
+            return true;
+          });
+    } catch (PendingOperationStoreException exception) {
+      throw exception;
+    } catch (SQLException | RuntimeException exception) {
+      throw new PendingOperationStoreException(exception);
+    }
+  }
+
+  @Override
   public PendingOperationReservation reserveApproved(
       PendingOperationReference reference, Instant observedAt) {
     Objects.requireNonNull(reference, "reference");

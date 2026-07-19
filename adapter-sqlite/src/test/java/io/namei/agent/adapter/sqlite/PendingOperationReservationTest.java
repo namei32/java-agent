@@ -109,6 +109,26 @@ class PendingOperationReservationTest {
   }
 
   @Test
+  void terminallyStalesAnUnconsumedOperationWhenItsSeparateSessionCasCannotCommit()
+      throws Exception {
+    ApprovalInboxSchemaInitializer schema = schema();
+    schema.initialize();
+    JdbcPendingOperationStore store = create(store(schema));
+    approve(schema);
+
+    assertThat(store.markStaleSessionIfPending(operation().reference(), ISSUED.plusSeconds(2)))
+        .isTrue();
+    assertThat(store.markStaleSessionIfPending(operation().reference(), ISSUED.plusSeconds(3)))
+        .isFalse();
+    assertThat(store.find(operation().reference()))
+        .hasValueSatisfying(
+            value -> assertThat(value.state()).isEqualTo(PendingOperationState.STALE_SESSION));
+    assertThat(store.reserveApproved(operation().reference(), ISSUED.plusSeconds(4)).status())
+        .isEqualTo(PendingOperationReservationStatus.STALE_SESSION);
+    assertDatabaseState(schema, "APPROVED", "STALE_SESSION", 0);
+  }
+
+  @Test
   void aRepeatedReservationNeverCreatesAnotherLedgerEntryOrAnExecutionRight() throws Exception {
     ApprovalInboxSchemaInitializer schema = schema();
     schema.initialize();

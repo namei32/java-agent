@@ -12,8 +12,9 @@
 2. **F2 Memory Schema V2 RED→GREEN（已完成）**：先让 V1→V2、备份失败、未知 Schema、状态过滤和再激活 Case
    失败；实现 V2 migration/validator 与 SQLite SoftForget Store。只用临时数据库。
 3. **F3 Capability 与 Pending 编排 RED→GREEN（进行中）**：实现静态 Descriptor、Capsule 绑定、内部操作键、
-   Approval/Anchor/Reservation/`RUNNING`/安全结果。不引入泛化任意 Tool 执行器。当前已完成恢复半程；创建
-   Pending 投影与受控 Catalog 接线仍留在本切片后续工作。
+   Approval/Anchor/Reservation/`RUNNING`/安全结果。不引入泛化任意 Tool 执行器。当前已完成静态恢复器和
+   Pending 创建器；受控 Catalog/Chat 接线仍留在本切片后续工作。创建顺序固定为 Operation Store 原子创建、
+   Session Pending CAS、CAS 失败固化 `STALE_SESSION`；不引入跨库事务或自动重试。
 4. **F4 Loopback Resume/Cancel/Status RED→GREEN**：仅实现现有 R11 消息 Contract 的认证本机映射；验证
    无 Body/Query、默认零路由、模式组合、脱敏、无 Worker 和 `UNKNOWN`/`COMMIT_UNREPORTED` 停机。
 5. **F5 失败与并发 RED→GREEN**：覆盖取消、过期、新 Turn、绑定不符、单获胜者、事务回滚、关闭/中断和

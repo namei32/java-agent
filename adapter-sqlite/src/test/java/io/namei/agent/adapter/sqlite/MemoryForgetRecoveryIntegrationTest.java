@@ -2,19 +2,18 @@ package io.namei.agent.adapter.sqlite;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.namei.agent.application.ApprovalFingerprint;
 import io.namei.agent.application.ApprovalInboxDecision;
-import io.namei.agent.application.ApprovalInboxEntry;
 import io.namei.agent.application.ApprovalInboxReference;
+import io.namei.agent.application.IdGenerator;
 import io.namei.agent.application.MemoryForgetCapability;
+import io.namei.agent.application.MemoryForgetPendingOutcome;
+import io.namei.agent.application.MemoryForgetPendingRequest;
+import io.namei.agent.application.MemoryForgetPendingService;
 import io.namei.agent.application.MemoryForgetRecoveryCoordinator;
-import io.namei.agent.application.PendingOperation;
-import io.namei.agent.application.PendingOperationCapsule;
 import io.namei.agent.application.PendingOperationKey;
 import io.namei.agent.application.PendingOperationKeyProvider;
 import io.namei.agent.application.PendingOperationReference;
 import io.namei.agent.application.PendingOperationState;
-import io.namei.agent.kernel.approval.ApprovalRequest;
 import io.namei.agent.kernel.memory.EmbeddingVector;
 import io.namei.agent.kernel.memory.MemoryScope;
 import io.namei.agent.kernel.memory.MemorySourceKind;
@@ -22,15 +21,17 @@ import io.namei.agent.kernel.memory.MemoryType;
 import io.namei.agent.kernel.memory.MemoryWriteCommand;
 import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.MessageRole;
-import io.namei.agent.kernel.model.PendingTurnAnchor;
 import io.namei.agent.kernel.model.PersistedTurn;
 import io.namei.agent.kernel.tool.SideEffectExecutionState;
-import io.namei.agent.kernel.tool.ToolRisk;
+import io.namei.agent.kernel.tool.ToolCall;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.Test;
@@ -47,7 +48,7 @@ class MemoryForgetRecoveryIntegrationTest {
   @TempDir Path tempDir;
 
   @Test
-  void commitsOneApprovedScopeBoundForgetThroughAuthenticatedCapsuleAndNeverReplaysIt() {
+  void createsThenCommitsOneApprovedScopeBoundForgetAndNeverReplaysIt() {
     JdbcJavaMemoryStore memory = memoryStore();
     memory.upsert(seedMemory());
 
@@ -57,32 +58,48 @@ class MemoryForgetRecoveryIntegrationTest {
     JdbcPendingOperationStore operations =
         new JdbcPendingOperationStore(
             inboxSchema, new AesGcmPendingOperationCapsuleCipher(keyProvider()));
-    PendingOperation operation = operation();
-    operations.create(operation, inbox(operation), capsule(operation));
-    new JdbcApprovalInbox(inboxSchema)
-        .resolve(
-            inbox(operation).reference(), ApprovalInboxDecision.APPROVED, "local-operator", NOW);
-
     SqliteSchemaInitializer sessionSchema =
         new SqliteSchemaInitializer(tempDir.resolve("sessions.db"), 5_000);
     sessionSchema.initialize();
     JdbcSessionRepository sessions = new JdbcSessionRepository(sessionSchema);
-    PendingTurnAnchor anchor =
-        PendingTurnAnchor.pending(OPERATION_REF, SESSION, 0, "memory-forget-pending-projection-v1");
-    assertThat(sessions.appendPendingTurnIfNextSequence(pendingTurn(), anchor)).isTrue();
+    MemoryForgetPendingService pendingService =
+        new MemoryForgetPendingService(
+            operations,
+            sessions,
+            () -> PendingOperationReference.of(OPERATION_REF),
+            () -> ApprovalInboxReference.of("AQEBAQEBAQEBAQEBAQEBAQ"),
+            new FixedIds(),
+            CLOCK,
+            Duration.ofMinutes(5));
+    MemoryForgetPendingOutcome.Pending pending =
+        (MemoryForgetPendingOutcome.Pending)
+            pendingService.create(
+                new MemoryForgetPendingRequest(
+                    SESSION,
+                    0,
+                    "turn-id",
+                    new ToolCall(
+                        "call-id",
+                        "forget_memory",
+                        Map.of("ids", List.of(" memory-a ", "missing", "memory-a"))),
+                    pendingTurn()));
+
+    new JdbcApprovalInbox(inboxSchema)
+        .resolve(
+            pending.approvalReference(), ApprovalInboxDecision.APPROVED, "local-operator", NOW);
 
     MemoryForgetRecoveryCoordinator coordinator =
         new MemoryForgetRecoveryCoordinator(
             operations, sessions, new MemoryForgetCapability(memory, CLOCK), CLOCK);
 
-    assertThat(coordinator.resume(operation.reference()))
+    assertThat(coordinator.resume(pending.reference()))
         .isEqualTo(MemoryForgetRecoveryCoordinator.Outcome.COMMITTED);
     assertThat(memory.list(SCOPE, 100)).isEmpty();
     assertThat(memory.candidateCount(SCOPE)).isZero();
-    assertThat(operations.find(operation.reference()))
+    assertThat(operations.find(pending.reference()))
         .hasValueSatisfying(
             value -> assertThat(value.state()).isEqualTo(PendingOperationState.SUCCEEDED));
-    assertThat(operations.findLedger(operation.reference()))
+    assertThat(operations.findLedger(pending.reference()))
         .hasValueSatisfying(
             value -> {
               assertThat(value.state()).isEqualTo(SideEffectExecutionState.SUCCEEDED);
@@ -99,7 +116,7 @@ class MemoryForgetRecoveryIntegrationTest {
         .extracting(ChatMessage::content)
         .contains("已完成获批的记忆遗忘操作。");
 
-    assertThat(coordinator.resume(operation.reference()))
+    assertThat(coordinator.resume(pending.reference()))
         .isEqualTo(MemoryForgetRecoveryCoordinator.Outcome.NOT_STARTED);
     assertThat(memory.list(SCOPE, 100)).isEmpty();
   }
@@ -128,41 +145,6 @@ class MemoryForgetRecoveryIntegrationTest {
         NOW);
   }
 
-  private static PendingOperation operation() {
-    String arguments = "{\"ids\":[\" memory-a \",\"missing\",\"memory-a\"]}";
-    ApprovalRequest request =
-        new ApprovalRequest(
-            "approval-id",
-            ApprovalFingerprint.sessionBinding(SESSION),
-            "turn-id",
-            "call-id",
-            "forget_memory",
-            "java-memory-forget-v1",
-            ToolRisk.WRITE,
-            ApprovalFingerprint.argumentsHashJson(arguments),
-            "idempotency-key",
-            "受控记忆遗忘",
-            NOW.minusSeconds(1),
-            NOW.plusSeconds(300),
-            ApprovalRequest.FINGERPRINT_VERSION,
-            "a".repeat(64));
-    return PendingOperation.pending(
-        PendingOperationReference.of(OPERATION_REF), request, 2, NOW.minusSeconds(1));
-  }
-
-  private static ApprovalInboxEntry inbox(PendingOperation operation) {
-    return ApprovalInboxEntry.pending(
-        ApprovalInboxReference.of("AQEBAQEBAQEBAQEBAQEBAQ"), operation.approval());
-  }
-
-  private static PendingOperationCapsule capsule(PendingOperation operation) {
-    return PendingOperationCapsule.forOperation(
-        operation,
-        SESSION,
-        "{\"ids\":[\" memory-a \",\"missing\",\"memory-a\"]}",
-        MemoryForgetCapability.EXECUTION_BOUNDARY_VERSION);
-  }
-
   private static PersistedTurn pendingTurn() {
     OffsetDateTime at = OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC);
     return new PersistedTurn(
@@ -188,5 +170,22 @@ class MemoryForgetRecoveryIntegrationTest {
         return key.keyId().equals(keyId) ? Optional.of(key) : Optional.empty();
       }
     };
+  }
+
+  private static final class FixedIds implements IdGenerator {
+    @Override
+    public String newTurnId() {
+      return "unused-turn-id";
+    }
+
+    @Override
+    public String newApprovalId() {
+      return "approval-id";
+    }
+
+    @Override
+    public String newIdempotencyKey() {
+      return "idempotency-key";
+    }
   }
 }

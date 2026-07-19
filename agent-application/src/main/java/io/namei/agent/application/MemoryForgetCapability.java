@@ -60,7 +60,7 @@ public final class MemoryForgetCapability {
   boolean accepts(PendingOperation operation, PendingOperationCapsule capsule) {
     try {
       requireBound(operation, capsule);
-      assertSafeResultBudget(normalizedIds(capsule));
+      assertSafeResultBudget(normalizeArguments(capsule.toToolCall().arguments()));
       return true;
     } catch (IllegalArgumentException | IllegalStateException exception) {
       return false;
@@ -70,7 +70,7 @@ public final class MemoryForgetCapability {
   /** Invokes only the narrow soft-forget port after the recovery coordinator has reserved it. */
   ToolResult invoke(PendingOperation operation, PendingOperationCapsule capsule) {
     requireBound(operation, capsule);
-    List<String> ids = normalizedIds(capsule);
+    List<String> ids = normalizeArguments(capsule.toToolCall().arguments());
     assertSafeResultBudget(ids);
     if (ids.isEmpty()) {
       return ToolResult.success(render(MemoryForgetResult.empty()));
@@ -105,9 +105,8 @@ public final class MemoryForgetCapability {
     }
   }
 
-  private static List<String> normalizedIds(PendingOperationCapsule capsule) {
-    Map<String, Object> arguments =
-        CanonicalArguments.parseJsonObject(capsule.canonicalArgumentsJson());
+  static List<String> normalizeArguments(Map<String, Object> arguments) {
+    Objects.requireNonNull(arguments, "arguments");
     if (arguments.size() != 1 || !arguments.containsKey("ids")) {
       throw new IllegalArgumentException("Forget 参数必须只包含 ids");
     }
@@ -123,6 +122,23 @@ public final class MemoryForgetCapability {
       strings.add(id);
     }
     return MemoryForgetCommand.normalizeIds(strings);
+  }
+
+  static String canonicalArgumentsJson(List<String> ids) {
+    Objects.requireNonNull(ids, "ids");
+    List<String> normalized = MemoryForgetCommand.normalizeIds(ids);
+    if (!normalized.equals(ids)) {
+      throw new IllegalArgumentException("Forget 参数必须已完成规范化和稳定去重");
+    }
+    return "{\"ids\":" + renderIds(normalized) + "}";
+  }
+
+  static ToolResult immediateSuccess() {
+    return ToolResult.success(render(MemoryForgetResult.empty()));
+  }
+
+  static void requireSafeResultBudget(List<String> ids) {
+    assertSafeResultBudget(ids);
   }
 
   private static void assertSafeResultBudget(List<String> ids) {

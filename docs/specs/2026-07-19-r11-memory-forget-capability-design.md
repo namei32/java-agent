@@ -1,6 +1,6 @@
 # R11-B2c Scope 受限 Memory Forget Capability 设计
 
-- 状态：F1/F2 已完成；F3 的静态 Capability、认证 Capsule 读取与显式恢复器已实现并通过临时 SQLite 纵向测试；创建 Pending 投影、Catalog/Bootstrap 和控制面仍未实现
+- 状态：F1/F2 已完成；F3 的静态 Capability、认证 Capsule 读取、Pending 创建器与显式恢复器已实现并通过临时 SQLite 纵向测试；Catalog/Chat、Bootstrap 和控制面仍未实现
 - 日期：2026-07-19
 - Contract：[获批的 Scope 受限 Memory Forget Capability](../contracts/approved-scope-bound-memory-forget.md)
 - ADR：[ADR-0035](../adr/0035-use-scope-bound-soft-supersede-for-memory-forget.md)
@@ -20,6 +20,10 @@ F3 的生产恢复器不是泛化 Tool 执行器：它只接受 `forget_memory` 
 `PendingOperationStore` 边界取得短生命周期 Capsule。它以 Operation Ref 派生内部 Mutation Key，以 Capsule
 的 Session 派生 Scope，并以固定、无参数的 Assistant 完成投影提交 Anchor；Memory 的安全 JSON Result 只进入
 已受 Ledger 大小限制的安全结果字段。
+
+F3 的创建器先完成同库的 Inbox/Operation/Capsule 原子写入，再以 Session Cursor CAS 写 Pending Turn/Anchor，
+不宣称跨库事务。Session CAS 不成功或 Session 写入故障后，创建器只会尝试将仍未消费的 Operation 固化为
+`STALE_SESSION`；它不会创建第二个 Operation、重放写入或执行 Capability。Store 创建失败则 Session 零写入。
 
 ## 2. Kernel 模型
 
