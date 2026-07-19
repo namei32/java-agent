@@ -9,6 +9,7 @@ import ch.qos.logback.core.read.ListAppender;
 import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.ChatModelRequest;
 import io.namei.agent.kernel.model.MessageRole;
+import io.namei.agent.kernel.model.PendingTurnAnchor;
 import io.namei.agent.kernel.model.PersistedTurn;
 import io.namei.agent.kernel.model.SessionSnapshot;
 import io.namei.agent.kernel.port.ChatModelPort;
@@ -120,6 +121,34 @@ class ObservedPortsTest {
     assertThat(log)
         .contains("databaseLatencyMs", "outcome=\"success\"", "errorCode=\"none\"")
         .doesNotContain("private-session", "SECRET-QUESTION", "SECRET-ANSWER", "2026-07-13T08:00");
+  }
+
+  @Test
+  void delegatesPendingAnchorCancellationInsteadOfFallingBackToThePortDefault() {
+    PendingTurnAnchor anchor =
+        PendingTurnAnchor.pending(
+            "AAAAAAAAAAAAAAAAAAAAAA", "private-session", 0, "memory-forget-projection-v1");
+    var calls = new int[1];
+    SessionRepository delegate =
+        new SessionRepository() {
+          @Override
+          public SessionSnapshot load(String sessionId) {
+            return new SessionSnapshot(sessionId, List.of(), 0);
+          }
+
+          @Override
+          public void appendTurn(String sessionId, PersistedTurn turn) {}
+
+          @Override
+          public boolean cancelPendingTurnAnchorIfMatches(PendingTurnAnchor value) {
+            calls[0]++;
+            return anchor.equals(value);
+          }
+        };
+
+    assertThat(new ObservedSessionRepository(delegate).cancelPendingTurnAnchorIfMatches(anchor))
+        .isTrue();
+    assertThat(calls[0]).isOne();
   }
 
   private static String capture(Class<?> loggerType, Runnable action) {

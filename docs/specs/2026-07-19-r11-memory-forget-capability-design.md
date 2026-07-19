@@ -1,6 +1,8 @@
 # R11-B2c Scope 受限 Memory Forget Capability 设计
 
-- 状态：F1/F2 已完成；F3 的静态 Capability、认证 Capsule 读取、Pending 创建器与显式恢复器已实现并通过临时 SQLite 纵向测试；Catalog/Chat、Bootstrap 和控制面仍未实现
+- 状态：F1–F5 已完成；静态 Capability、认证 Capsule、Pending 创建、显式恢复、SQLite 取消、Loopback
+  控制面与默认关闭的 Servlet Bootstrap，以及失败/并发边界均已通过聚焦测试；Catalog/Chat 与 F6 阶段门禁
+  仍未完成
 - 日期：2026-07-19
 - Contract：[获批的 Scope 受限 Memory Forget Capability](../contracts/approved-scope-bound-memory-forget.md)
 - ADR：[ADR-0035](../adr/0035-use-scope-bound-soft-supersede-for-memory-forget.md)
@@ -50,8 +52,9 @@ F3 的创建器先完成同库的 Inbox/Operation/Capsule 原子写入，再以 
 ## 4. Bootstrap 与控制面
 
 新增严格枚举 `MemoryForgetCapabilityMode { DISABLED, LOOPBACK_APPROVAL }`。配置类不得用宽松字符串
-或默认兜底开启。Bean 仅在 Contract 的四项前置均满足时装配；否则 Tool Catalog、Pending Store 开启状态和
-Controller 映射不能间接使 Tool 可见。
+或默认兜底开启。Bean 仅在 Servlet 运行时且 Contract 的四项前置均满足时装配；否则 Tool Catalog、Pending
+Store 开启状态和 Controller 映射不能间接使 Tool 可见。`capsule-key-id` 与规范标准 Base64 的 AES-256
+`capsule-key-base64` 只在显式 `LOOPBACK_APPROVAL` 下解码，所有 `toString()`、审计与响应均排除密钥。
 
 既有 `pending-operations/{operationRef}` Loopback Contract 的 Resume/Cancel/Status 消息将由这个首个
 Capability 实现消费，复用其认证、Host、Origin、`no-store`、审计和严格无 Body/Query 约束。它不是

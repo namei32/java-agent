@@ -6,10 +6,12 @@ import io.namei.agent.application.ApprovalInboxDecision;
 import io.namei.agent.application.ApprovalInboxReference;
 import io.namei.agent.application.IdGenerator;
 import io.namei.agent.application.MemoryForgetCapability;
+import io.namei.agent.application.MemoryForgetControlService;
 import io.namei.agent.application.MemoryForgetPendingOutcome;
 import io.namei.agent.application.MemoryForgetPendingRequest;
 import io.namei.agent.application.MemoryForgetPendingService;
 import io.namei.agent.application.MemoryForgetRecoveryCoordinator;
+import io.namei.agent.application.PendingOperationControlOutcome;
 import io.namei.agent.application.PendingOperationKey;
 import io.namei.agent.application.PendingOperationKeyProvider;
 import io.namei.agent.application.PendingOperationReference;
@@ -33,6 +35,10 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -119,6 +125,92 @@ class MemoryForgetRecoveryIntegrationTest {
     assertThat(coordinator.resume(pending.reference()))
         .isEqualTo(MemoryForgetRecoveryCoordinator.Outcome.NOT_STARTED);
     assertThat(memory.list(SCOPE, 100)).isEmpty();
+  }
+
+  @Test
+  void concurrentResumeAndCancelLeaveOneTerminalPathAndNeverDoubleExecute() throws Exception {
+    JdbcJavaMemoryStore memory = memoryStore();
+    memory.upsert(seedMemory());
+    ApprovalInboxSchemaInitializer inboxSchema =
+        new ApprovalInboxSchemaInitializer(tempDir.resolve("race/approval-inbox.db"), 5_000);
+    inboxSchema.initialize();
+    JdbcPendingOperationStore operations =
+        new JdbcPendingOperationStore(
+            inboxSchema, new AesGcmPendingOperationCapsuleCipher(keyProvider()));
+    SqliteSchemaInitializer sessionSchema =
+        new SqliteSchemaInitializer(tempDir.resolve("race/sessions.db"), 5_000);
+    sessionSchema.initialize();
+    JdbcSessionRepository sessions = new JdbcSessionRepository(sessionSchema);
+    MemoryForgetPendingOutcome.Pending pending =
+        (MemoryForgetPendingOutcome.Pending)
+            new MemoryForgetPendingService(
+                    operations,
+                    sessions,
+                    () -> PendingOperationReference.of(OPERATION_REF),
+                    () -> ApprovalInboxReference.of("AQEBAQEBAQEBAQEBAQEBAQ"),
+                    new FixedIds(),
+                    CLOCK,
+                    Duration.ofMinutes(5))
+                .create(
+                    new MemoryForgetPendingRequest(
+                        SESSION,
+                        0,
+                        "turn-id",
+                        new ToolCall(
+                            "call-id", "forget_memory", Map.of("ids", List.of("memory-a"))),
+                        pendingTurn()));
+    new JdbcApprovalInbox(inboxSchema)
+        .resolve(
+            pending.approvalReference(), ApprovalInboxDecision.APPROVED, "local-operator", NOW);
+    MemoryForgetControlService control =
+        new MemoryForgetControlService(
+            operations,
+            sessions,
+            new MemoryForgetRecoveryCoordinator(
+                operations, sessions, new MemoryForgetCapability(memory, CLOCK), CLOCK),
+            CLOCK);
+    CyclicBarrier start = new CyclicBarrier(2);
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      var resume =
+          executor.submit(
+              () -> {
+                start.await();
+                return control.resume(pending.reference());
+              });
+      var cancel =
+          executor.submit(
+              () -> {
+                start.await();
+                return control.cancel(pending.reference());
+              });
+
+      PendingOperationControlOutcome resumeOutcome = resume.get(10, TimeUnit.SECONDS);
+      PendingOperationControlOutcome cancelOutcome = cancel.get(10, TimeUnit.SECONDS);
+      if (resumeOutcome == PendingOperationControlOutcome.RESUMED) {
+        assertThat(cancelOutcome)
+            .isIn(
+                PendingOperationControlOutcome.NOT_CANCELLABLE,
+                PendingOperationControlOutcome.ALREADY_TERMINAL);
+        assertThat(operations.find(pending.reference()))
+            .hasValueSatisfying(
+                value -> assertThat(value.state()).isEqualTo(PendingOperationState.SUCCEEDED));
+        assertThat(operations.findLedger(pending.reference()))
+            .hasValueSatisfying(
+                value -> assertThat(value.state()).isEqualTo(SideEffectExecutionState.SUCCEEDED));
+        assertThat(memory.list(SCOPE, 100)).isEmpty();
+      } else {
+        assertThat(resumeOutcome).isEqualTo(PendingOperationControlOutcome.NOT_RESUMABLE);
+        assertThat(cancelOutcome).isEqualTo(PendingOperationControlOutcome.CANCELLED);
+        assertThat(operations.find(pending.reference()))
+            .hasValueSatisfying(
+                value -> assertThat(value.state()).isEqualTo(PendingOperationState.CANCELLED));
+        assertThat(operations.findLedger(pending.reference())).isEmpty();
+        assertThat(memory.list(SCOPE, 100)).hasSize(1);
+      }
+    } finally {
+      executor.shutdownNow();
+    }
   }
 
   private JdbcJavaMemoryStore memoryStore() {

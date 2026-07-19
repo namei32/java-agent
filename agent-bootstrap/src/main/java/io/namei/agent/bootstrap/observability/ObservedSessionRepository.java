@@ -53,6 +53,11 @@ public final class ObservedSessionRepository implements SessionRepository {
   }
 
   @Override
+  public boolean cancelPendingTurnAnchorIfMatches(PendingTurnAnchor anchor) {
+    return observe(() -> delegate.cancelPendingTurnAnchorIfMatches(anchor));
+  }
+
+  @Override
   public boolean appendPendingResolutionIfAnchorMatches(
       PendingTurnAnchor anchor, PendingTurnResolution resolution) {
     return observe(() -> delegate.appendPendingResolutionIfAnchorMatches(anchor, resolution));

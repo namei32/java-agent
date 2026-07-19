@@ -1,6 +1,7 @@
 package io.namei.agent.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.namei.agent.kernel.approval.ApprovalRequest;
 import io.namei.agent.kernel.model.PendingTurnAnchor;
@@ -65,6 +66,22 @@ class MemoryForgetControlServiceTest {
     assertThat(service.cancel(PendingOperationReference.of(REF)))
         .isEqualTo(PendingOperationControlOutcome.NOT_CANCELLABLE);
     assertThat(sessions.cancelCalls).isOne();
+  }
+
+  @Test
+  void anchorFailureCannotRestoreTheAlreadyCancelledExecutionRight() {
+    var store = new Store(operation(PendingOperationState.PENDING_APPROVAL));
+    var sessions = new Sessions(anchor());
+    sessions.failFind = true;
+    var recovery = new CountingRecovery(MemoryForgetRecoveryCoordinator.Outcome.COMMITTED);
+    var service = service(store, sessions, recovery);
+
+    assertThatThrownBy(() -> service.cancel(PendingOperationReference.of(REF)))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(store.operation.state()).isEqualTo(PendingOperationState.CANCELLED);
+    assertThat(service.resume(PendingOperationReference.of(REF)))
+        .isEqualTo(PendingOperationControlOutcome.NOT_RESUMABLE);
+    assertThat(recovery.calls).isZero();
   }
 
   private static MemoryForgetControlService service(Store store, Sessions sessions) {
@@ -141,6 +158,11 @@ class MemoryForgetControlServiceTest {
     public PendingOperationCancelStatus cancelIfUnconsumed(
         PendingOperationReference reference, Instant observedAt) {
       cancelCalls++;
+      if (cancelStatus == PendingOperationCancelStatus.CANCELLED) {
+        operation =
+            operation.transitionTo(
+                PendingOperationState.CANCELLED, operation.stateChangedAt().plusSeconds(1));
+      }
       return cancelStatus;
     }
 
@@ -189,6 +211,7 @@ class MemoryForgetControlServiceTest {
   private static final class Sessions implements SessionRepository {
     private PendingTurnAnchor anchor;
     private int cancelCalls;
+    private boolean failFind;
 
     private Sessions(PendingTurnAnchor anchor) {
       this.anchor = anchor;
@@ -206,6 +229,9 @@ class MemoryForgetControlServiceTest {
 
     @Override
     public Optional<PendingTurnAnchor> findPendingTurnAnchor(String operationReference) {
+      if (failFind) {
+        throw new IllegalStateException("session unavailable");
+      }
       return Optional.of(anchor);
     }
 
