@@ -283,7 +283,7 @@ Tool 权限视为已迁移。
 
 B1 把 Python Registry 的“常驻工具—`tool_search`—本轮解锁—下一请求投放 Schema”共同投影迁移为 Java-owned Catalog。Catalog 的来源、风险、版本、可见性和搜索提示由受信注册固定；搜索结果只能缩小模型的未知工具范围，不能改变 Tool Runtime 的 Schema、预算、取消、审批或 Ledger 执行边界。静态只读 MCP 项在 Bootstrap 中作为 deferred Catalog 项投放，默认关闭和 R5.1 的连接/调用边界不变。
 
-R11 后续 B 阶段必须为 B2c 单独冻结 Tool Catalog 可见性、Chat Pending 投影与创建顺序；它不能复用泛化 Tool Loop 来同步批准或执行。之后每一种真实副作用 Tool 都需独立建立 Capability/Sandbox/`UNKNOWN`/Smoke Contract。B2a 的 Inbox 只记录本机 Operator 的一次性决定；默认部署继续为 Deny All 与 `AGENT_TOOL_MODE=DISABLED`，不能把已有 B2c 本地恢复切片描述为已开放的模型副作用能力。
+R11 后续 B 阶段按[B2c Tool/Chat Pending 生产器实施提案](../plans/2026-07-19-r11-memory-forget-tool-chat-pending-producer-plan.md)单独冻结并授权 Tool Catalog 可见性、Chat Pending 投影与创建顺序；它不能复用泛化 Tool Loop 来同步批准或执行。之后每一种真实副作用 Tool 都需独立建立 Capability/Sandbox/`UNKNOWN`/Smoke Contract。B2a 的 Inbox 只记录本机 Operator 的一次性决定；默认部署继续为 Deny All 与 `AGENT_TOOL_MODE=DISABLED`，不能把已有 B2c 本地恢复切片描述为已开放的模型副作用能力。
 
 退出门禁：Catalog Fixture、Registry/Loop/Bootstrap 纵向测试和 R11 全部 B 阶段的三套门禁通过；每个真实副作用 Tool 具有独立批准的最小权限契约与回退演练。
 

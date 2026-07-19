@@ -4,6 +4,7 @@
 - 日期：2026-07-19
 - Contract：[获批的 Scope 受限 Memory Forget Capability](../contracts/approved-scope-bound-memory-forget.md)
 - Design：[R11-B2c 设计](../specs/2026-07-19-r11-memory-forget-capability-design.md)
+- 后续提案：[Tool/Chat Pending 生产器实施提案](2026-07-19-r11-memory-forget-tool-chat-pending-producer-plan.md)
 
 ## 连续 TDD 切片
 
@@ -32,3 +33,5 @@
 
 完成仅表示本地默认关闭 Capability 已经通过 Fixture 和三套离线门禁。它不表示可访问真实 Telegram、
 网络、生产数据或旧 Python memory，也不授权后续 `memorize`、文件、Shell 或消息写入。
+
+模型可见性和 Pending 创建仍是独立阶段，见[Tool/Chat Pending 生产器实施提案](2026-07-19-r11-memory-forget-tool-chat-pending-producer-plan.md)。
