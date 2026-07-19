@@ -9,30 +9,56 @@ final class TrustedProviderOptions {
   private final Profile profile;
   private final ThinkingMode thinkingMode;
   private final ReasoningEffort reasoningEffort;
+  private final ReasoningContinuationMode reasoningContinuationMode;
 
   private TrustedProviderOptions(
-      Profile profile, ThinkingMode thinkingMode, ReasoningEffort reasoningEffort) {
+      Profile profile,
+      ThinkingMode thinkingMode,
+      ReasoningEffort reasoningEffort,
+      ReasoningContinuationMode reasoningContinuationMode) {
     this.profile = profile;
     this.thinkingMode = thinkingMode;
     this.reasoningEffort = reasoningEffort;
+    this.reasoningContinuationMode = reasoningContinuationMode;
   }
 
   static TrustedProviderOptions disabled() {
     return new TrustedProviderOptions(
-        Profile.DISABLED, ThinkingMode.DISABLED, ReasoningEffort.NONE);
+        Profile.DISABLED,
+        ThinkingMode.DISABLED,
+        ReasoningEffort.NONE,
+        ReasoningContinuationMode.DISABLED);
   }
 
   static TrustedProviderOptions parse(
       String configuredProfile, String configuredThinkingMode, String configuredReasoningEffort) {
+    return parse(
+        configuredProfile,
+        configuredThinkingMode,
+        configuredReasoningEffort,
+        ReasoningContinuationMode.DISABLED.name());
+  }
+
+  static TrustedProviderOptions parse(
+      String configuredProfile,
+      String configuredThinkingMode,
+      String configuredReasoningEffort,
+      String configuredReasoningContinuationMode) {
     var profile = Profile.parse(configuredProfile, "agent.model.provider-options.profile");
     var thinkingMode =
         ThinkingMode.parse(configuredThinkingMode, "agent.model.provider-options.thinking-mode");
     var reasoningEffort =
         ReasoningEffort.parse(
             configuredReasoningEffort, "agent.model.provider-options.reasoning-effort");
+    var reasoningContinuationMode =
+        ReasoningContinuationMode.parse(
+            configuredReasoningContinuationMode, "agent.model.reasoning-continuation.mode");
     if (profile == Profile.DISABLED) {
       if (thinkingMode != ThinkingMode.DISABLED || reasoningEffort != ReasoningEffort.NONE) {
         throw new IllegalArgumentException("禁用 Provider Options 时不能设置 thinking 或 reasoning effort");
+      }
+      if (reasoningContinuationMode != ReasoningContinuationMode.DISABLED) {
+        throw new IllegalArgumentException("禁用 Provider Options 时不能启用 reasoning continuation");
       }
       return disabled();
     }
@@ -43,7 +69,12 @@ final class TrustedProviderOptions {
     } else if (thinkingMode == ThinkingMode.DISABLED && reasoningEffort == ReasoningEffort.NONE) {
       throw new IllegalArgumentException("DEEPSEEK 必须显式启用 thinking 或 reasoning effort");
     }
-    return new TrustedProviderOptions(profile, thinkingMode, reasoningEffort);
+    if (reasoningContinuationMode == ReasoningContinuationMode.SAFE_LOCAL
+        && profile != Profile.DEEPSEEK) {
+      throw new IllegalArgumentException("SAFE_LOCAL reasoning continuation 只允许 DEEPSEEK");
+    }
+    return new TrustedProviderOptions(
+        profile, thinkingMode, reasoningEffort, reasoningContinuationMode);
   }
 
   OpenAiChatOptions apply(OpenAiChatOptions configured, boolean hasToolSchema) {
@@ -51,7 +82,7 @@ final class TrustedProviderOptions {
       return configured;
     }
     var builder = configured.mutate();
-    if (hasToolSchema) {
+    if (hasToolSchema && !allowsToolThinking()) {
       return builder.reasoningEffort(null).extraBody(Map.of()).build();
     }
     if (reasoningEffort != ReasoningEffort.NONE) {
@@ -70,6 +101,15 @@ final class TrustedProviderOptions {
 
   boolean isEnabled() {
     return profile != Profile.DISABLED;
+  }
+
+  boolean allowsToolThinking() {
+    return profile == Profile.DEEPSEEK
+        && reasoningContinuationMode == ReasoningContinuationMode.SAFE_LOCAL;
+  }
+
+  boolean allowsReasoningContinuation() {
+    return allowsToolThinking();
   }
 
   private enum Profile {
@@ -109,6 +149,15 @@ final class TrustedProviderOptions {
 
     private static ReasoningEffort parse(String value, String field) {
       return parseEnum(ReasoningEffort.class, value, field);
+    }
+  }
+
+  private enum ReasoningContinuationMode {
+    DISABLED,
+    SAFE_LOCAL;
+
+    private static ReasoningContinuationMode parse(String value, String field) {
+      return parseEnum(ReasoningContinuationMode.class, value, field);
     }
   }
 

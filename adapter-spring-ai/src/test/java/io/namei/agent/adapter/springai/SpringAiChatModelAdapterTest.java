@@ -10,6 +10,7 @@ import io.namei.agent.kernel.model.AssistantToolCallMessage;
 import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.ChatModelRequest;
 import io.namei.agent.kernel.model.MessageRole;
+import io.namei.agent.kernel.model.ProviderReasoning;
 import io.namei.agent.kernel.model.ToolResultMessage;
 import io.namei.agent.kernel.tool.ToolCall;
 import io.namei.agent.kernel.tool.ToolDefinition;
@@ -282,6 +283,61 @@ class SpringAiChatModelAdapterTest {
     assertThat(response.content()).isEmpty();
     assertThat(response.toolCalls())
         .containsExactly(new ToolCall("call-1", "lookup", Map.of("city", "上海")));
+  }
+
+  @Test
+  void stripsEmbeddedReasoningAndCarriesItOnlyForSafeLocalToolContinuation() {
+    var call = new ToolCall("call-1", "lookup", Map.of());
+    var output =
+        AssistantMessage.builder()
+            .content("<think>仅供 Provider 使用</think>正在查询")
+            .toolCalls(List.of(new AssistantMessage.ToolCall("call-1", "function", "lookup", "{}")))
+            .build();
+    var chatModel = new StubChatModel(prompt -> new ChatResponse(List.of(new Generation(output))));
+    var adapter =
+        new SpringAiChatModelAdapter(
+            chatModel,
+            16_384,
+            java.time.Duration.ofSeconds(1),
+            null,
+            TrustedProviderOptions.parse("DEEPSEEK", "ENABLED", "NONE", "SAFE_LOCAL"));
+
+    var first = adapter.generate(request());
+
+    assertThat(first.content()).isEqualTo("正在查询");
+    assertThat(first.reasoning()).contains(ProviderReasoning.from("仅供 Provider 使用").orElseThrow());
+
+    adapter.generate(
+        new ChatModelRequest(
+            List.of(
+                new ChatMessage(MessageRole.USER, "问题"),
+                new AssistantToolCallMessage(
+                    first.content(), List.of(call), first.reasoning().orElseThrow()),
+                new ToolResultMessage(call.id(), call.name(), ToolResultStatus.SUCCESS, "结果"))));
+
+    assertThat(chatModel.lastPrompt().getInstructions().get(1))
+        .isInstanceOfSatisfying(
+            AssistantMessage.class,
+            message ->
+                assertThat(message.getMetadata())
+                    .containsEntry("reasoningContent", "仅供 Provider 使用"));
+  }
+
+  @Test
+  void stripsEmbeddedReasoningFromFinalTextWithoutRetainingIt() {
+    var output = new AssistantMessage("<think>不能离开 Provider 边界</think>最终回答");
+    var adapter =
+        new SpringAiChatModelAdapter(
+            new StubChatModel(prompt -> new ChatResponse(List.of(new Generation(output)))),
+            16_384,
+            java.time.Duration.ofSeconds(1),
+            null,
+            TrustedProviderOptions.parse("DEEPSEEK", "ENABLED", "NONE", "SAFE_LOCAL"));
+
+    var response = adapter.generate(request());
+
+    assertThat(response.content()).isEqualTo("最终回答");
+    assertThat(response.reasoning()).isEmpty();
   }
 
   @Test

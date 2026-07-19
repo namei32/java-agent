@@ -25,14 +25,19 @@ public class SpringAiAdapterConfiguration {
       @Value("${agent.model.provider-options.thinking-mode:DISABLED}")
           String providerOptionsThinkingMode,
       @Value("${agent.model.provider-options.reasoning-effort:NONE}")
-          String providerOptionsReasoningEffort) {
+          String providerOptionsReasoningEffort,
+      @Value("${agent.model.reasoning-continuation.mode:DISABLED}")
+          String reasoningContinuationMode) {
     return new SpringAiChatModelAdapter(
         chatModel,
         maxArgumentBytes,
         parseDuration(streamIdleTimeout),
         streamCancellationRegistry,
         TrustedProviderOptions.parse(
-            providerOptionsProfile, providerOptionsThinkingMode, providerOptionsReasoningEffort));
+            providerOptionsProfile,
+            providerOptionsThinkingMode,
+            providerOptionsReasoningEffort,
+            reasoningContinuationMode));
   }
 
   private static Duration parseDuration(String configured) {

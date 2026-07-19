@@ -1,0 +1,44 @@
+{
+  "cases": [
+    {
+      "expected": {"allowToolThinking": false, "configurationAccepted": true, "replayCodePoints": 0},
+      "id": "disabled-never-replays",
+      "input": {"hasToolCalls": true, "mode": "DISABLED", "profile": "DEEPSEEK", "reasoningCodePoints": 8}
+    },
+    {
+      "expected": {"allowToolThinking": true, "configurationAccepted": true, "replayCodePoints": 8},
+      "id": "safe-local-deepseek-replays-bounded-tool-reasoning",
+      "input": {"hasToolCalls": true, "mode": "SAFE_LOCAL", "profile": "DEEPSEEK", "reasoningCodePoints": 8}
+    },
+    {
+      "expected": {"allowToolThinking": true, "configurationAccepted": true, "replayCodePoints": 16384},
+      "id": "safe-local-accepts-exact-reasoning-boundary",
+      "input": {"hasToolCalls": true, "mode": "SAFE_LOCAL", "profile": "DEEPSEEK", "reasoningCodePoints": 16384}
+    },
+    {
+      "expected": {"allowToolThinking": true, "configurationAccepted": true, "replayCodePoints": 0},
+      "id": "safe-local-drops-oversized-reasoning-without-disabling-tool-request",
+      "input": {"hasToolCalls": true, "mode": "SAFE_LOCAL", "profile": "DEEPSEEK", "reasoningCodePoints": 16385}
+    },
+    {
+      "expected": {"allowToolThinking": false, "configurationAccepted": false, "replayCodePoints": 0},
+      "id": "dashscope-stays-suppressed-even-in-safe-local-mode",
+      "input": {"hasToolCalls": true, "mode": "SAFE_LOCAL", "profile": "DASHSCOPE", "reasoningCodePoints": 8}
+    },
+    {
+      "expected": {"allowToolThinking": true, "configurationAccepted": true, "replayCodePoints": 0},
+      "id": "final-text-never-replays-reasoning",
+      "input": {"hasToolCalls": false, "mode": "SAFE_LOCAL", "profile": "DEEPSEEK", "reasoningCodePoints": 8}
+    }
+  ],
+  "contractEvidence": {
+    "adr": "docs/adr/0033-replay-bounded-provider-reasoning-only-within-one-tool-loop.md",
+    "approvedOn": "2026-07-19",
+    "contract": "docs/contracts/r10-reasoning-tool-continuation.md",
+    "spec": "docs/specs/2026-07-19-r10-reasoning-tool-continuation-design.md"
+  },
+  "formatVersion": 1,
+  "normalization": [],
+  "source": "java-contract",
+  "suite": "provider/r10-reasoning-tool-continuation-v1"
+}

@@ -43,6 +43,12 @@
       "source": "java-contract"
     },
     {
+      "id": "provider/r10-reasoning-tool-continuation-v1",
+      "path": "provider/r10-reasoning-tool-continuation-v1.json",
+      "sha256": "0ef467a510e0636a1f209d3ae8f0734012182caaa0ba3bd2c27d32853b815da2",
+      "source": "java-contract"
+    },
+    {
       "id": "context/read-only-context-memory",
       "path": "context/read-only-context-memory.json",
       "sha256": "db9057d25a21cde40885e7787c3f81f23a698d032090bf4a0f6008c2b25e23dc",

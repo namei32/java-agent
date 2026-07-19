@@ -33,15 +33,18 @@ base URL 或 provider 名猜测 Profile。
 | `DEEPSEEK` | `DISABLED` | `LOW`/`MEDIUM`/`HIGH` | 仅顶层 `reasoning_effort=low|medium|high` |
 | `DASHSCOPE` | `ENABLED` | `NONE` | `enable_thinking=true` |
 
-任何 Tool Schema（即使该轮最终不执行 Tool）都必须清除 reasoning effort 和 Provider extra body。模型、温度、已有
-Headers、stream transport header 与 SchemaOnly Tool Callback 必须保持；非 `OpenAiChatOptions` 不获得通用 Options
-替换或注入。同步和流式文本请求使用同一映射。
+任何 Tool Schema（即使该轮最终不执行 Tool）都必须清除 reasoning effort 和 Provider extra body。唯一例外是已由
+[R10-P2](r10-reasoning-tool-continuation.md) 显式启用的 `DEEPSEEK` + `SAFE_LOCAL`：为使其同轮 Tool continuation
+可用，可保留本表的固定 DeepSeek thinking/effort。`DASHSCOPE` 始终清除。模型、温度、已有 Headers、stream transport
+header 与 SchemaOnly Tool Callback 必须保持；非 `OpenAiChatOptions` 不获得通用 Options 替换或注入。同步和流式文本请求
+使用同一映射。
 
 ## 3. 禁止项与 P2 边界
 
 禁止传递任意 `extra_body`/metadata/header/cache key/用户文本/未知键；不得读取或输出 `reasoning_content`、`<think>`、
-native Usage 或 Provider fields。P1 不写 SQLite、日志、Prompt、Channel、HTTP/CLI，也不重试或改变取消。P2 前，Tool
-续轮一律不携带 reasoning；因此 Tool Schema 抑制是正确性边界，而不是临时兼容开关。
+native Usage 或 Provider fields。P1 不写 SQLite、日志、Prompt、Channel、HTTP/CLI，也不重试或改变取消。P2 仅以其
+Contract 所列的单轮、内存 `reasoningContent` metadata 例外解除 DeepSeek 的 Tool Schema 抑制；它不是可持久化或通用
+Provider fields 开关。
 
 ## 4. 验收
 

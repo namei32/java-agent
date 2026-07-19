@@ -31,7 +31,7 @@
 | R7 | 插件与扩展兼容 | 已实现并验证 | Java SPI、隔离 stdio Bridge、观察型 Hook 与默认关闭配置 |
 | R8 | 主动运行时 | 已实现并验证（受限范围） | SQLite Scheduler、hash-only allowlist、受限 Proactive/Drift/Subagent、NoOp Delivery |
 | R9 | 生产切换 | 已实现并验证（仅离线演练） | sandbox 演练、备份、差异、回退门禁与独立生产授权 |
-| R10 | Prompt 编排、Persona 与 Provider 协议 | Prompt/Persona、Provider P0/P1/P3/P4 已验证 | Java-owned Section/Fixture、context frame、注入时间/会话、固定预算裁剪、默认 `MINIMAL` 与 `AKASHIC_CORE` 接线均通过；Provider P0 已实现脱敏稳定失败分类，P1 已实现默认关闭、无 Tool 文本的受信 Options，P3 已验证默认关闭的 Tool 前非流式上下文恢复，P4 已验证提交后匿名 cache prompt/hit 聚合；thinking/Tool continuation（P2）仍未开始 |
+| R10 | Prompt 编排、Persona 与 Provider 协议 | Prompt/Persona、Provider P0–P4 已验证 | Java-owned Section/Fixture、context frame、注入时间/会话、固定预算裁剪、默认 `MINIMAL` 与 `AKASHIC_CORE` 接线均通过；Provider P0 已实现脱敏稳定失败分类，P1 已实现默认关闭的受信 Options，P2 已实现仅 `DEEPSEEK` + `SAFE_LOCAL` 的有界单轮 reasoning/Tool continuation，P3 已验证默认关闭的 Tool 前非流式上下文恢复，P4 已验证提交后匿名 cache prompt/hit 聚合 |
 | R11 | Tool Catalog 与审批恢复安全基础 | 实施中（无执行） | Catalog、审批 Inbox、Pending Operation/Reservation/Ledger/Anchor Contract 已验证；生产恢复路由、Capability 与真实执行仍冻结 |
 | R12 | Skills、MCP 扩展、Plugin 生命周期与受限记忆召回 | S1–S5 已实现并验证 | 默认关闭的只读 Skill Catalog、API v2 生命周期 Tap、deferred `read_skill` 与当前 Scope `recall_memory` 已缩小 Python 差距；MCP Assets 是 Java-owned 扩展。经 ADR-0029 审计，Python 不存在待迁移的 Skill Runner；远程 MCP、可变生命周期和记忆写入仍未开始 |
 | R13 | 多渠道、Dashboard 与控制面 | 计划已冻结 | 现有离线 Loopback/Telegram 切片不等同于 IPC、QQ、Feishu、Dashboard 或前端；真实渠道、CLI+Web 和前端仍冻结 |

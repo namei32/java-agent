@@ -14,6 +14,7 @@ import io.namei.agent.kernel.model.ChatModelRequest;
 import io.namei.agent.kernel.model.ChatModelResponse;
 import io.namei.agent.kernel.model.ModelMessage;
 import io.namei.agent.kernel.model.ProviderCacheUsage;
+import io.namei.agent.kernel.model.ProviderReasoning;
 import io.namei.agent.kernel.model.ToolResultMessage;
 import io.namei.agent.kernel.port.ChatModelPort;
 import io.namei.agent.kernel.port.ChatModelStreamObserver;
@@ -31,11 +32,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -55,6 +59,10 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
   private static final Duration DEFAULT_STREAM_IDLE_TIMEOUT = Duration.ofSeconds(30);
   private static final int MAX_STREAM_TOOL_CALLS = 128;
   private static final int MAX_FAILURE_CAUSES = 32;
+  private static final String THINK_OPEN = "<think>";
+  private static final String THINK_CLOSE = "</think>";
+  private static final Pattern COMPLETE_THINK_SEGMENT =
+      Pattern.compile("(?s)" + Pattern.quote(THINK_OPEN) + "(.*?)" + Pattern.quote(THINK_CLOSE));
   private static final List<String> SAFETY_MARKERS =
       List.of("data_inspection_failed", "content_filter", "content_policy_violation");
   private static final List<String> CONTEXT_LIMIT_MARKERS =
@@ -131,13 +139,19 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
       }
 
       var output = response.getResult().getOutput();
-      String text = output.getText();
       var toolCalls = parseToolCalls(output.getToolCalls());
+      var projection = projectReasoning(output);
+      String text = projection.content();
       if ((text == null || text.isBlank()) && toolCalls.isEmpty()) {
         throw new InvalidModelResponseException("模型返回了空响应");
       }
       return new ChatModelResponse(
-          text == null ? "" : text.strip(), toolCalls, cacheUsage(response));
+          text == null ? "" : text.strip(),
+          toolCalls,
+          cacheUsage(response),
+          toolCalls.isEmpty() || !trustedProviderOptions.allowsReasoningContinuation()
+              ? null
+              : projection.reasoning().orElse(null));
     } catch (InvalidModelResponseException exception) {
       throw exception;
     } catch (RuntimeException exception) {
@@ -245,7 +259,12 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
                           call.name(),
                           JSON.writeValueAsString(call.arguments())))
               .toList();
-      return AssistantMessage.builder().content(assistant.content()).toolCalls(calls).build();
+      var builder = AssistantMessage.builder().content(assistant.content()).toolCalls(calls);
+      assistant
+          .reasoning()
+          .ifPresent(
+              reasoning -> builder.properties(Map.of("reasoningContent", reasoning.content())));
+      return builder.build();
     }
     if (message instanceof ToolResultMessage result) {
       var response =
@@ -266,6 +285,134 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
           .toList();
     } catch (RuntimeException exception) {
       throw new InvalidModelResponseException("模型 Tool Call 格式无效");
+    }
+  }
+
+  private ReasoningProjection projectReasoning(AssistantMessage output) {
+    String original = output.getText() == null ? "" : output.getText();
+    var embedded = stripEmbeddedReasoning(original);
+    return new ReasoningProjection(
+        embedded.content(), reasoningFromMetadata(output).or(() -> embedded.reasoning()));
+  }
+
+  private static Optional<ProviderReasoning> reasoningFromMetadata(AssistantMessage output) {
+    if (output.getMetadata() == null) {
+      return Optional.empty();
+    }
+    Object candidate = output.getMetadata().get("reasoningContent");
+    return candidate instanceof String raw ? ProviderReasoning.from(raw) : Optional.empty();
+  }
+
+  private static ReasoningProjection stripEmbeddedReasoning(String content) {
+    Matcher matcher = COMPLETE_THINK_SEGMENT.matcher(content);
+    if (!matcher.find()) {
+      int opening = content.indexOf(THINK_OPEN);
+      if (opening >= 0) {
+        // An unclosed thought is provider-private by default. Keep only the text preceding it.
+        return new ReasoningProjection(content.substring(0, opening), Optional.empty());
+      }
+      if (content.contains(THINK_CLOSE)) {
+        return new ReasoningProjection(content.replace(THINK_CLOSE, ""), Optional.empty());
+      }
+      return new ReasoningProjection(content, Optional.empty());
+    }
+    String rawReasoning = matcher.group(1);
+    int firstEnd = matcher.end();
+    String visible = matcher.replaceAll("");
+    // More than one segment is not a stable continuation protocol. Suppress every segment but
+    // never concatenate or replay an ambiguous provider thought.
+    boolean exactlyOne = !COMPLETE_THINK_SEGMENT.matcher(content.substring(firstEnd)).find();
+    return new ReasoningProjection(
+        visible, exactlyOne ? ProviderReasoning.from(rawReasoning) : Optional.empty());
+  }
+
+  private record ReasoningProjection(String content, Optional<ProviderReasoning> reasoning) {
+    private ReasoningProjection {
+      content = content == null ? "" : content;
+      reasoning = Objects.requireNonNull(reasoning, "reasoning");
+    }
+  }
+
+  /**
+   * Removes provider-private {@code <think>} content before a delta reaches any observer. It also
+   * preserves at most one bounded, fully closed segment for the in-memory Tool continuation.
+   */
+  private static final class ReasoningDeltaProjector {
+    private static final int MAX_REASONING_CHARS = ProviderReasoning.MAX_CODE_POINTS * 2;
+
+    private final StringBuilder openingCandidate = new StringBuilder();
+    private final StringBuilder closingCandidate = new StringBuilder();
+    private final StringBuilder completedReasoning = new StringBuilder();
+    private boolean insideReasoning;
+    private boolean reasoningOverflow;
+    private int completedSegments;
+
+    private String accept(String delta) {
+      var visible = new StringBuilder();
+      for (int index = 0; index < delta.length(); index++) {
+        char character = delta.charAt(index);
+        if (insideReasoning) {
+          acceptReasoningCharacter(character);
+        } else {
+          acceptVisibleCharacter(character, visible);
+        }
+      }
+      return visible.toString();
+    }
+
+    private void acceptVisibleCharacter(char character, StringBuilder visible) {
+      openingCandidate.append(character);
+      while (!THINK_OPEN.startsWith(openingCandidate.toString())) {
+        visible.append(openingCandidate.charAt(0));
+        openingCandidate.deleteCharAt(0);
+      }
+      if (openingCandidate.toString().equals(THINK_OPEN)) {
+        openingCandidate.setLength(0);
+        closingCandidate.setLength(0);
+        insideReasoning = true;
+      }
+    }
+
+    private void acceptReasoningCharacter(char character) {
+      closingCandidate.append(character);
+      if (THINK_CLOSE.startsWith(closingCandidate.toString())) {
+        if (closingCandidate.toString().equals(THINK_CLOSE)) {
+          closingCandidate.setLength(0);
+          insideReasoning = false;
+          completedSegments++;
+        }
+        return;
+      }
+      appendReasoning(closingCandidate);
+      closingCandidate.setLength(0);
+    }
+
+    private void appendReasoning(CharSequence fragment) {
+      if (reasoningOverflow) {
+        return;
+      }
+      if ((long) completedReasoning.length() + fragment.length() > MAX_REASONING_CHARS) {
+        reasoningOverflow = true;
+        completedReasoning.setLength(0);
+        return;
+      }
+      completedReasoning.append(fragment);
+    }
+
+    private String finishVisible() {
+      if (insideReasoning) {
+        return "";
+      }
+      String visible = openingCandidate.toString();
+      openingCandidate.setLength(0);
+      return visible;
+    }
+
+    private Optional<ProviderReasoning> reasoning() {
+      if (insideReasoning || reasoningOverflow || completedSegments != 1) {
+        return Optional.empty();
+      }
+      return ProviderReasoning.from(completedReasoning.toString());
     }
   }
 
@@ -410,7 +557,9 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     private final ChatModelStreamObserver observer;
     private final StringBuilder content = new StringBuilder();
     private final LinkedHashMap<String, ToolCall> toolCalls = new LinkedHashMap<>();
+    private final ReasoningDeltaProjector reasoningProjector = new ReasoningDeltaProjector();
     private ProviderCacheUsage cacheUsage;
+    private ProviderReasoning metadataReasoning;
     private final CompletableFuture<ChatModelResponse> completion = new CompletableFuture<>();
     private final AtomicBoolean done = new AtomicBoolean();
     private final AtomicReference<RuntimeException> projectFailure = new AtomicReference<>();
@@ -458,12 +607,21 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
           if (done.get()) {
             return;
           }
+          appendVisible(reasoningProjector.finishVisible());
           String finalContent = content.toString().strip();
           if (finalContent.isBlank() && toolCalls.isEmpty()) {
             throw new InvalidModelResponseException("模型返回了空响应");
           }
           response =
-              new ChatModelResponse(finalContent, List.copyOf(toolCalls.values()), cacheUsage);
+              new ChatModelResponse(
+                  finalContent,
+                  List.copyOf(toolCalls.values()),
+                  cacheUsage,
+                  toolCalls.isEmpty() || !trustedProviderOptions.allowsReasoningContinuation()
+                      ? null
+                      : (metadataReasoning != null
+                          ? metadataReasoning
+                          : reasoningProjector.reasoning().orElse(null)));
           if (!done.compareAndSet(false, true)) {
             return;
           }
@@ -497,19 +655,14 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
         throw new InvalidModelResponseException("模型流响应缺少 Generation");
       }
       var output = generation.getOutput();
+      reasoningFromMetadata(output).ifPresent(reasoning -> metadataReasoning = reasoning);
       var incomingCacheUsage = cacheUsage(response);
       if (incomingCacheUsage != null) {
         cacheUsage = incomingCacheUsage;
       }
       String delta = output.getText();
       if (delta != null && !delta.isEmpty()) {
-        observer.onContentDelta(delta);
-        int deltaCodePoints = delta.codePointCount(0, delta.length());
-        if ((long) contentCodePoints + deltaCodePoints > MessageContract.MAX_CONTENT_CHARACTERS) {
-          throw new InvalidModelResponseException("模型流文本超过聚合上限");
-        }
-        content.append(delta);
-        contentCodePoints += deltaCodePoints;
+        appendVisible(reasoningProjector.accept(delta));
       }
       List<AssistantMessage.ToolCall> rawToolCalls = output.getToolCalls();
       int incomingToolCalls = rawToolCalls == null ? 0 : rawToolCalls.size();
@@ -521,6 +674,19 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
           throw new InvalidModelResponseException("模型流包含重复 Tool Call");
         }
       }
+    }
+
+    private void appendVisible(String delta) {
+      if (delta.isEmpty()) {
+        return;
+      }
+      int deltaCodePoints = delta.codePointCount(0, delta.length());
+      if ((long) contentCodePoints + deltaCodePoints > MessageContract.MAX_CONTENT_CHARACTERS) {
+        throw new InvalidModelResponseException("模型流文本超过聚合上限");
+      }
+      observer.onContentDelta(delta);
+      content.append(delta);
+      contentCodePoints += deltaCodePoints;
     }
 
     private void cancelFromSignal() {

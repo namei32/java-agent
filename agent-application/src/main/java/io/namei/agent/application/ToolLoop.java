@@ -217,7 +217,9 @@ final class ToolLoop {
         throw new ToolCallLimitExceededException("Tool Call 超过安全上限");
       }
       totalCalls += callsInResponse;
-      messages.add(new AssistantToolCallMessage(response.content(), response.toolCalls()));
+      messages.add(
+          new AssistantToolCallMessage(
+              response.content(), response.toolCalls(), response.reasoning().orElse(null)));
       var results =
           coordinator.execute(
               context,

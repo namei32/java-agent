@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.namei.agent.kernel.error.InvalidModelResponseException;
 import io.namei.agent.kernel.error.ToolLoopLimitExceededException;
+import io.namei.agent.kernel.error.TurnCancelledException;
 import io.namei.agent.kernel.history.ConversationHistorySelector;
 import io.namei.agent.kernel.history.HistoryLimits;
 import io.namei.agent.kernel.lifecycle.TurnLifecycleEvent;
@@ -12,6 +13,7 @@ import io.namei.agent.kernel.model.AssistantToolCallMessage;
 import io.namei.agent.kernel.model.ChatModelRequest;
 import io.namei.agent.kernel.model.ChatModelResponse;
 import io.namei.agent.kernel.model.PersistedTurn;
+import io.namei.agent.kernel.model.ProviderReasoning;
 import io.namei.agent.kernel.model.SessionSnapshot;
 import io.namei.agent.kernel.model.ToolResultMessage;
 import io.namei.agent.kernel.port.ChatModelPort;
@@ -120,6 +122,66 @@ class ToolLoopTest {
         .containsExactly(ToolResultStatus.ERROR, ToolResultStatus.ERROR);
     assertThat(model.requests.get(1).messages().toString()).doesNotContain(privateFailure);
     assertThat(repository.appended).hasSize(1);
+  }
+
+  @Test
+  void keepsProviderReasoningOnlyInTheImmediateToolContinuation() {
+    String privateReasoning = "provider-private-reasoning";
+    var repository = new RecordingRepository();
+    var model =
+        new ScriptedModel(
+            new ChatModelResponse(
+                "查询中",
+                List.of(new ToolCall("call-1", "lookup", Map.of())),
+                null,
+                ProviderReasoning.from(privateReasoning).orElseThrow()),
+            new ChatModelResponse("最终回答"));
+    var events = new ArrayList<TurnLifecycleEvent>();
+    var service =
+        service(
+            repository, model, List.of(tool("lookup", "结果", new ArrayList<>())), 3, events::add);
+
+    service.chat(new ChatCommand("demo", "问题"));
+
+    var continuation =
+        model.requests.get(1).messages().stream()
+            .filter(AssistantToolCallMessage.class::isInstance)
+            .map(AssistantToolCallMessage.class::cast)
+            .findFirst()
+            .orElseThrow();
+    assertThat(continuation.reasoning())
+        .contains(ProviderReasoning.from(privateReasoning).orElseThrow());
+    assertThat(repository.appended.toString()).doesNotContain(privateReasoning);
+    assertThat(events.toString()).doesNotContain(privateReasoning);
+  }
+
+  @Test
+  void cancellationAfterReasoningToolResponsePreventsContinuationAndPersistence() {
+    String privateReasoning = "provider-private-reasoning";
+    var repository = new RecordingRepository();
+    var cancellation = new TurnCancellationSource();
+    var calls = new java.util.concurrent.atomic.AtomicInteger();
+    ChatModelPort model =
+        request -> {
+          calls.incrementAndGet();
+          cancellation.cancel();
+          return new ChatModelResponse(
+              "查询中",
+              List.of(new ToolCall("call-1", "lookup", Map.of())),
+              null,
+              ProviderReasoning.from(privateReasoning).orElseThrow());
+        };
+    var events = new ArrayList<TurnLifecycleEvent>();
+    var service =
+        service(
+            repository, model, List.of(tool("lookup", "结果", new ArrayList<>())), 3, events::add);
+
+    assertThatThrownBy(() -> service.chat(new ChatCommand("demo", "问题"), cancellation.token()))
+        .isInstanceOf(TurnCancelledException.class);
+
+    assertThat(calls).hasValue(1);
+    assertThat(repository.appended).isEmpty();
+    assertThat(events.toString()).doesNotContain(privateReasoning);
   }
 
   @Test

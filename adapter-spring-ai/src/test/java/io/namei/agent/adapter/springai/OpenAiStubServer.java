@@ -95,6 +95,23 @@ final class OpenAiStubServer implements AutoCloseable {
         .formatted(callId, toolName, arguments.replace("\"", "\\\""));
   }
 
+  static String toolCallBodyWithReasoning(
+      String callId, String toolName, String arguments, String reasoningContent) {
+    return """
+    {"id":"chatcmpl-tool","object":"chat.completion","created":1,"model":"test-model",
+     "choices":[{"index":0,"message":{"role":"assistant","content":null,
+     "reasoning_content":"%s",
+     "tool_calls":[{"id":"%s","type":"function","function":{"name":"%s","arguments":"%s"}}]},
+     "finish_reason":"tool_calls"}],
+     "usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}
+    """
+        .formatted(
+            reasoningContent.replace("\\", "\\\\").replace("\"", "\\\""),
+            callId,
+            toolName,
+            arguments.replace("\"", "\\\""));
+  }
+
   static String textDelta(String content) {
     return """
     {"id":"chatcmpl-stream","object":"chat.completion.chunk","created":1,"model":"test-model",

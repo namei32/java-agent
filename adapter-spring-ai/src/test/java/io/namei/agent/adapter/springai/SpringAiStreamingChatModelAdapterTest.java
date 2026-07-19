@@ -15,6 +15,7 @@ import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.ChatModelRequest;
 import io.namei.agent.kernel.model.ChatModelResponse;
 import io.namei.agent.kernel.model.MessageRole;
+import io.namei.agent.kernel.model.ProviderReasoning;
 import io.namei.agent.kernel.tool.ToolCall;
 import io.namei.agent.kernel.tool.ToolDefinition;
 import io.namei.agent.kernel.tool.ToolRisk;
@@ -93,6 +94,34 @@ class SpringAiStreamingChatModelAdapterTest {
         .containsExactly(
             new ToolCall("call-1", "lookup", Map.of("city", "上海")),
             new ToolCall("call-2", "clock", Map.of()));
+  }
+
+  @Test
+  void suppressesSplitReasoningDeltasAndRetainsOnlyTheToolContinuationValue() {
+    var chatModel =
+        new StreamingStubChatModel(
+            null,
+            ignored ->
+                Flux.just(
+                    response("<thi"),
+                    response("nk>Provider 私有推理</th"),
+                    response("ink>可见"),
+                    toolResponse("call-1", "lookup", "{}")));
+    var deltas = new ArrayList<String>();
+    var adapter =
+        new SpringAiChatModelAdapter(
+            chatModel,
+            16_384,
+            Duration.ofSeconds(1),
+            null,
+            TrustedProviderOptions.parse("DEEPSEEK", "ENABLED", "NONE", "SAFE_LOCAL"));
+
+    ChatModelResponse result =
+        adapter.generate(request(List.of()), deltas::add, CancellationSignal.none());
+
+    assertThat(deltas).containsExactly("可见");
+    assertThat(result.content()).isEqualTo("可见");
+    assertThat(result.reasoning()).contains(ProviderReasoning.from("Provider 私有推理").orElseThrow());
   }
 
   @Test

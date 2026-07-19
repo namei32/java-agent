@@ -62,6 +62,8 @@ agent:
       profile: ${AGENT_MODEL_PROVIDER_OPTIONS_PROFILE:DISABLED}
       thinking-mode: ${AGENT_MODEL_PROVIDER_OPTIONS_THINKING_MODE:DISABLED}
       reasoning-effort: ${AGENT_MODEL_PROVIDER_OPTIONS_REASONING_EFFORT:NONE}
+    reasoning-continuation:
+      mode: ${AGENT_MODEL_REASONING_CONTINUATION_MODE:DISABLED}
   context-limit-recovery:
     mode: ${AGENT_CONTEXT_LIMIT_RECOVERY_MODE:DISABLED}
   cli:
