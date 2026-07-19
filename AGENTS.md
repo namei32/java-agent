@@ -118,13 +118,13 @@
 
 - R13-C2-A 已完成：它只可暴露进程内、TTL/容量受限的终态元数据目录；不得把 C2-A 的 Tombstone、`historyRef`
   或 cursor 重新解释为 Session、持久化历史或正文详情的授权。
-- R13-C2-B 当前只完成决策门禁，运行时实现仍冻结。开始 C2-B1 前，必须在
-  `docs/contracts/r13-c2-b-history-decision-gate.md` 中由用户明确确认 B0-D1 至 B0-D6：数据范围、角色/正文预算、
-  Retention、actor/Scope 映射、Route/分页形状与审计。
+- R13-C2-B 的 B0-D1 至 B0-D6 已按
+  `docs/contracts/r13-c2-b-history-decision-gate.md` 确认；实现只能使用其中的单一当前 Scope、无正文、24 小时、
+  60 秒一次性 Ref/Cursor、固定分页和 hash-safe 审计。任何扩大范围都必须重新取得用户确认。
 - C2-B 的永久禁止字段是 Tool 参数/结果、reasoning、Provider payload、Memory、Approval/Capsule/Ledger、附件、
   token、actor、SQLite 路径、异常文本和内部 `turnRef`。无法证明 Scope、schema 或 role 时必须 Fail Closed。
-- 在 C2-B 被逐项批准前，禁止读取 `sessions.db`、用户/Python 数据、Memory、Channel Ledger、真实渠道或网络；禁止新增
-  详情 Route、Port、Adapter、Fixture、DML、Worker、SSE、前端或 CLI+Web。
+- C2-B 自动化只能使用临时 Java SQLite/Fake；禁止读取用户/Python/生产 `sessions.db`、Memory、Channel Ledger、
+  真实渠道或网络。禁止 DML、Worker、SSE、前端或 CLI+Web；默认 `DISABLED` 时不得创建详情 Route 或数据访问 Bean。
 
 禁止提交：
 

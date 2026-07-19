@@ -1,12 +1,12 @@
 # R13-C2-B 受限历史详情实施计划
 
-- 状态：C2-B0 决策门禁已完成；C2-B1 至 C2-B6 未授权、未开始
+- 状态：C2-B0 最小范围已确认；C2-B1 Fixture 已完成并通过聚焦 compat 验证；C2-B2 实施中，C2-B3 至 C2-B6 未开始
 - 决策门禁：[R13-C2-B 受限历史详情决策门禁](../contracts/r13-c2-b-history-decision-gate.md)
 - 当前实现基线：[R13-C2-A 内存终态历史目录 Contract](../contracts/r13-terminal-history-catalog.md)
 
 ## 1. 范围与不可变约束
 
-本计划只在 B0-D1 至 B0-D6 全部获得明确值后才可执行。实施始终复用既有 `DISABLED`、Servlet、Loopback、Bearer、
+本计划在 B0-D1 至 B0-D6 全部获得明确值后执行。实施始终复用既有 `DISABLED`、Servlet、Loopback、Bearer、
 Request ID 与 `Cache-Control: no-store` 边界；不得改动 C2-A 的语义。
 
 每个任务只处理一个可观察边界，并依次完成 RED、最小 GREEN、diff/Spec 自审和一个本地提交。任何任务发现未分类列、
@@ -105,6 +105,5 @@ failure（如新增该类场景）、compat Fixture 与格式检查。
 
 ## 4. 当前暂停点
 
-当前只完成 C2-B0。C2-B1 的解除条件是用户逐项确认
-[决策门禁](../contracts/r13-c2-b-history-decision-gate.md#3-必须由用户逐项确认的业务值)中的 B0-D1 至 B0-D6；在此之前，
-下一项可执行工作是文档审查或 C2-A 的缺陷修复，而非 C2-B 生产实现。
+已完成 C2-B1：30 Case Fixture、Manifest SHA、ADR-0037 与 compat consumer 已通过聚焦 GREEN。当前进入 C2-B2 的
+安全值对象与只读 Port。当前授权不改变任何真实数据、网络、前端或渠道冻结状态。

@@ -1,7 +1,7 @@
 # R13-C2-B 受限历史详情决策门禁
 
 - 阶段：R13-C2-B0
-- 状态：已完成；已冻结决策输入与拒绝默认值，**未授权任何 C2-B 数据读取或运行时实现**
+- 状态：已确认最小范围；C2-B1 Fixture 已获准，后续任务按本 Contract 的固定值连续 TDD
 - 前置：[R13-C2 受限历史浏览执行计划](../plans/2026-07-19-r13-c2-restricted-history-browse-plan.md)、[R13-C2-B 详情实施计划](../plans/2026-07-19-r13-c2b-history-detail-implementation-plan.md)、[R13-C2-A 内存终态历史目录 Contract](r13-terminal-history-catalog.md)
 
 ## 1. C2-B0 的完成范围
@@ -27,28 +27,27 @@ Port、Adapter、DML、网络调用或测试数据库。
 5. C2-A `historyRef` 只能作为目录标识，绝不自动转化为详情 Ref。若 C2-B 需要详情 Ref，必须新签发、短期、
    actor-bound、Scope-bound 且可撤销的值。
 
-## 3. 必须由用户逐项确认的业务值
+## 3. 已确认的业务值
 
-下表中的 `待确认` 不是默认允许。任何一项未确认时，C2-B1 及后续任务不得开始；实现应继续只保留 C2-A。
+用户于 2026-07-19 确认以下最小范围。下表是 C2-B 的唯一有效授权；其外的值仍为拒绝默认值。
 
-| ID | 决策 | 待确认的精确值 | 未确认时的固定行为 |
+| ID | 决策 | 已确认的精确值 | 固定拒绝行为 |
 | --- | --- | --- | --- |
-| B0-D1 | 数据范围 | Java `sessions.db` 的哪些 schema version、仅当前 Session 还是 actor 的哪些 Scope | 零数据源访问 |
-| B0-D2 | 可见角色与正文 | 允许的 role 枚举；是否返回正文/摘要；单条、单页和总字符预算 | 零正文、零摘要、零消息字段 |
-| B0-D3 | Retention | 可见历史最大年龄、到期清理责任、详情 Ref TTL 与过期 HTTP/code | 不签发详情 Ref |
-| B0-D4 | actor/Scope 映射 | Operator actor 如何获得内部 Scope Capability；跨 Scope 的统一拒绝语义 | 无映射即拒绝，不泄漏存在性 |
-| B0-D5 | 列表与详情形状 | 是否需要列表、详情 Route、允许的固定 sort、page size/max page、cursor TTL | 不新增 Route 或 query |
-| B0-D6 | 审计与可观测性 | 允许记录的 hash-only 审计字段、保留期与 sink 失败策略 | 不新增 C2-B 审计事件 |
+| B0-D1 | 数据范围 | 只读 Java 自有的 `SqliteSchemaInitializer` 当前 `sessions`/`messages` schema；每次只允许由服务端 `HistoryScopeCapability` 绑定的一条当前 Session。自动化只能使用临时 Java SQLite/Fake，绝不打开用户、Python 或生产数据库。 | 任意原始 Session ID、未知 schema/列或非当前 Scope 均不读取。 |
+| B0-D2 | 可见角色与正文 | 只允许 `USER`、`ASSISTANT` 的元数据项 `role`、`occurredAt`；不返回正文、摘要、字数、message ID、sequence、Tool/Provider 字段。正文总预算固定为零。 | `SYSTEM`、`TOOL`、未知 role、NULL/损坏字段全部 Fail Closed，不作跳过或宽松投影。 |
+| B0-D3 | Retention | 只读取 `ts` 在请求时刻前 24 小时内的记录；不删除、不清理源数据。详情 Ref 与 cursor 均为内存、actor/Scope-bound、一次性、60 秒。过期、撤销或不匹配统一为 `404 CONTROL_HISTORY_NOT_FOUND`。 | 不签发持久化 Ref；不得以 404 区分不存在、过期或跨 Scope。 |
+| B0-D4 | actor/Scope 映射 | 认证后的 Loopback `OperatorSessionPrincipal` 只能交给内部 `ControlHistoryScopeResolver`；Resolver 只返回预绑定单一 Session 的不透明 Capability。默认 Resolver 拒绝全部。 | 缺失、撤销、错误 actor、跨 Scope 或无法映射统一返回相同的 `404 CONTROL_HISTORY_NOT_FOUND`。 |
+| B0-D5 | 列表与详情形状 | 唯一新 Route 为 `GET /api/v1/control/history/detail`：无 query 时仅签发 `detailRef`；`ref` 首次消费读取第一页；`cursor` 消费后续页。时间倒序、内部 sequence 仅作稳定 tie-break；默认 10、最大 20；无搜索、过滤、下载、导出或任意字段选择。 | 非 GET、body、未知/重复 query、`ref` 与 `cursor` 并用或原始 ID 一律 `400 CONTROL_REQUEST_INVALID`。 |
+| B0-D6 | 审计与可观测性 | 复用现有非持久化 `ControlPlaneAudit`：只记录 action、result、stable code、request ID、actor hash、detail-Ref hash 和条数；不记录 Session/Scope/正文。sink 失败继续忽略，绝不改变 HTTP 结果。 | 不创建新日志、数据库表、指标标签或可反查的审计字段。 |
 
-## 4. 建议的最小 C2-B 候选（尚待确认）
+## 4. 具体响应与分页约束
 
-为减少授权面，后续确认时建议选择下列最窄组合：只读取 Java 自有的当前 Scope；只允许显式白名单 role；详情 Ref 与
-cursor 均为 60 秒、一次性、actor/Scope-bound 内存值；默认页 10、最大 20；固定时间倒序；每页固定字符总预算；无搜索、
-无任意过滤、无下载、无导出。即使采用该候选，正文是否可见仍必须由 B0-D2 单独确认。
+签发响应只包含 `schemaVersion`、`observedAt`、`state`、`code` 和 22 字符 `detailRef`。读取响应只包含相同的
+公共字段、最多 20 个 `{role, occurredAt}` item 和 22 字符 `nextCursor`；消费后的 `detailRef` 不再回送。首次读取
+与后续 cursor 均按 `occurredAt` 倒序、内部 sequence 倒序稳定排序。任何项目都不得出现 Session、actor、Scope、
+content、message ID、sequence、原始 Ref 或异常文本。
 
 ## 5. B0 退出与重新进入条件
 
-C2-B0 已完成，因为范围、永久禁令、必要决策、默认拒绝和后续 TDD 任务均已固定。它不意味着 C2-B 已批准或开始。
-
-只有用户以 B0-D1 至 B0-D6 的具体值明确确认后，才能将本文件状态更新为“已批准实现”、新增版本化 Fixture，
-并从 C2-B1 开始。任何扩大数据来源、角色、正文、Retention、查询能力或远程访问的请求都必须重新更新本门禁。
+C2-B0 已完成且最小范围已获准；C2-B1 可以开始。Fixture、Kernel、Adapter 和 Controller 必须严格保持本页的固定值。
+任何扩大数据来源、角色、正文、Retention、查询能力、Route 或远程访问的请求都必须先重新更新本门禁并取得明确批准。

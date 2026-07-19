@@ -1,0 +1,70 @@
+{
+  "cases": [
+    {"id":"disabled-has-no-detail-route","group":"activation","input":{"mode":"DISABLED"},"expected":{"mapped":false}},
+    {"id":"loopback-servlet-maps-only-detail-get","group":"activation","input":{"mode":"LOOPBACK","web":"SERVLET","method":"GET"},"expected":{"mapped":true,"path":"/api/v1/control/history/detail"}},
+    {"id":"non-servlet-has-no-detail-route","group":"activation","input":{"mode":"LOOPBACK","web":"NONE"},"expected":{"mapped":false}},
+    {"id":"detail-post-is-rejected","group":"activation","input":{"mode":"LOOPBACK","method":"POST"},"expected":{"code":"CONTROL_REQUEST_INVALID"}},
+    {"id":"detail-body-is-rejected","group":"activation","input":{"method":"GET","body":"nonempty"},"expected":{"code":"CONTROL_REQUEST_INVALID"}},
+
+    {"id":"missing-bearer-is-rejected","group":"actor-scope","input":{"credential":"MISSING"},"expected":{"code":"CONTROL_AUTHENTICATION_REQUIRED","httpStatus":401}},
+    {"id":"expired-bearer-is-rejected","group":"actor-scope","input":{"credential":"EXPIRED"},"expected":{"code":"CONTROL_AUTHENTICATION_REQUIRED","httpStatus":401}},
+    {"id":"valid-operator-resolves-current-scope-only","group":"actor-scope","input":{"credential":"VALID","resolver":"CURRENT_SCOPE"},"expected":{"scopePresent":true}},
+    {"id":"unmapped-operator-hides-history-existence","group":"actor-scope","input":{"resolver":"NONE"},"expected":{"code":"CONTROL_HISTORY_NOT_FOUND","httpStatus":404}},
+    {"id":"wrong-actor-hides-history-existence","group":"actor-scope","input":{"binding":"WRONG_ACTOR"},"expected":{"code":"CONTROL_HISTORY_NOT_FOUND","httpStatus":404}},
+    {"id":"cross-scope-hides-history-existence","group":"actor-scope","input":{"binding":"OTHER_SCOPE"},"expected":{"code":"CONTROL_HISTORY_NOT_FOUND","httpStatus":404}},
+
+    {"id":"empty-query-issues-one-detail-ref","group":"reference-lifecycle","input":{"query":{}},"expected":{"detailRefKind":"OPAQUE","state":"REFERENCE_ISSUED"}},
+    {"id":"detail-ref-is-actor-and-scope-bound","group":"reference-lifecycle","input":{"refBinding":"ACTOR_AND_SCOPE"},"expected":{"authorized":true}},
+    {"id":"detail-ref-expires-after-sixty-seconds","group":"reference-lifecycle","input":{"refAgeSeconds":60},"expected":{"code":"CONTROL_HISTORY_NOT_FOUND","httpStatus":404}},
+    {"id":"detail-ref-is-one-time","group":"reference-lifecycle","input":{"ref":"ALREADY_CONSUMED"},"expected":{"code":"CONTROL_HISTORY_NOT_FOUND","httpStatus":404}},
+    {"id":"cursor-is-one-time-and-actor-bound","group":"reference-lifecycle","input":{"cursor":"RACE_OR_OTHER_ACTOR"},"expected":{"oneConsumer":true}},
+
+    {"id":"only-user-and-assistant-roles-are-projected","group":"projection-budget","input":{"roles":["USER","ASSISTANT"]},"expected":{"roles":["USER","ASSISTANT"]}},
+    {"id":"detail-item-has-only-role-and-time","group":"projection-budget","input":{"includeAllColumns":true},"expected":{"fields":["occurredAt","role"]}},
+    {"id":"detail-sorts-newest-first-with-internal-tie-break","group":"projection-budget","input":{"sameTimestamp":true},"expected":{"stable":true,"sort":"OCCURRED_AT_DESC"}},
+    {"id":"empty-scope-history-is-successful-empty-page","group":"projection-budget","input":{"rows":[]},"expected":{"httpStatus":200,"items":[]}},
+    {"id":"default-page-is-ten","group":"projection-budget","input":{},"expected":{"pageSize":10}},
+    {"id":"maximum-page-is-twenty-with-zero-content-budget","group":"projection-budget","input":{"pageSize":20},"expected":{"contentCharacters":0,"pageSize":20}},
+
+    {"id":"unknown-session-schema-is-degraded-and-empty","group":"data-integrity","input":{"schema":"UNKNOWN"},"expected":{"code":"CONTROL_SNAPSHOT_UNAVAILABLE","items":[],"state":"DEGRADED"}},
+    {"id":"unknown-role-is-degraded-and-empty","group":"data-integrity","input":{"storedRole":"UNKNOWN"},"expected":{"code":"CONTROL_SNAPSHOT_UNAVAILABLE","items":[],"state":"DEGRADED"}},
+    {"id":"invalid-timestamp-is-degraded-and-empty","group":"data-integrity","input":{"timestamp":"INVALID"},"expected":{"code":"CONTROL_SNAPSHOT_UNAVAILABLE","items":[],"state":"DEGRADED"}},
+    {"id":"older-than-retention-is-absent","group":"data-integrity","input":{"ageSeconds":86401},"expected":{"listed":false}},
+
+    {"id":"storage-failure-is-degraded-and-redacted","group":"failure","input":{"storage":"THROWS"},"expected":{"code":"CONTROL_SNAPSHOT_UNAVAILABLE","items":[],"state":"DEGRADED"}},
+    {"id":"runtime-closed-is-degraded-and-empty","group":"failure","input":{"runtime":"CLOSED"},"expected":{"code":"CONTROL_SHUTTING_DOWN","items":[],"state":"SHUTTING_DOWN"}},
+    {"id":"cancelled-read-is-degraded-and-empty","group":"failure","input":{"read":"CANCELLED"},"expected":{"code":"CONTROL_SNAPSHOT_UNAVAILABLE","items":[],"state":"DEGRADED"}},
+    {"id":"audit-sink-failure-does-not-change-success","group":"failure","input":{"audit":"THROWS"},"expected":{"httpStatus":200,"state":"READY"}}
+  ],
+  "contractEvidence": {
+    "adr": "docs/adr/0037-expose-current-scope-history-as-zero-content-metadata.md",
+    "approvedOn": "2026-07-19",
+    "contract": "docs/contracts/r13-c2-b-history-decision-gate.md",
+    "plan": "docs/plans/2026-07-19-r13-c2b-history-detail-implementation-plan.md",
+    "spec": "docs/specs/2026-07-19-r13-c2b-history-detail-design.md"
+  },
+  "defaults": {
+    "rawActor": "operator-raw-secret",
+    "rawContent": "private message body",
+    "rawReference": "detail-reference-secret",
+    "rawSession": "session-raw-secret",
+    "rawSqlitePath": "/private/session.db"
+  },
+  "formatVersion": 1,
+  "limits": {
+    "contentCharacters": 0,
+    "cursorTtlSeconds": 60,
+    "defaultPageSize": 10,
+    "detailRefTtlSeconds": 60,
+    "historyRetentionSeconds": 86400,
+    "maximumPageSize": 20,
+    "schemaVersion": 1
+  },
+  "normalization": [
+    "详情 Ref 和 cursor 是内存、22 字符、60 秒、一次性、actor/Scope-bound 随机值，不从 Session 或消息标识派生",
+    "只投影 USER 与 ASSISTANT 的 role 和 occurredAt，按 occurredAt 倒序和内部 sequence 倒序稳定排序",
+    "任何错误、日志、审计或 expected 不含正文、Session、actor、Scope、SQLite 路径、内部 sequence 或原始 Ref"
+  ],
+  "source": "java-contract",
+  "suite": "control-plane/r13-history-detail-v1"
+}

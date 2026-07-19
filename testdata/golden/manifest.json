@@ -169,6 +169,12 @@
       "source": "java-contract"
     },
     {
+      "id": "control-plane/r13-history-detail-v1",
+      "path": "control-plane/r13-history-detail-v1.json",
+      "sha256": "b2585630745a7385b2a825d1c22d02cab03ac458b3c6c73fddbd096d9772f58d",
+      "source": "java-contract"
+    },
+    {
       "id": "control-plane/r13-terminal-history-catalog-v1",
       "path": "control-plane/r13-terminal-history-catalog-v1.json",
       "sha256": "276ec5501008cc36decf707132a8b93899fc5f6fbb7deff4b70ec41bfa27258e",
