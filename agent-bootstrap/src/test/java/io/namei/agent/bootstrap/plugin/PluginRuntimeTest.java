@@ -15,7 +15,6 @@ import io.namei.agent.kernel.plugin.PluginTap;
 import io.namei.agent.kernel.plugin.PluginTapOutcome;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -69,7 +68,7 @@ class PluginRuntimeTest {
   @Test
   void activeJavaRuntimeProjectsChatAndToolLifecycleEventsOffTheCallerPath() throws Exception {
     var events = new CopyOnWriteArrayList<io.namei.agent.kernel.plugin.PluginTapEvent>();
-    var received = new CountDownLatch(2);
+    var received = new LinkedBlockingQueue<io.namei.agent.kernel.plugin.PluginTapEvent>();
     var plugin =
         new AgentPlugin() {
           @Override
@@ -87,7 +86,7 @@ class PluginRuntimeTest {
           public PluginTap tap() {
             return event -> {
               events.add(event);
-              received.countDown();
+              received.offer(event);
             };
           }
         };
@@ -102,15 +101,12 @@ class PluginRuntimeTest {
             (command, limits) -> {
               throw new AssertionError();
             })) {
-      runtime
-          .lifecycleObserver()
-          .onEvent(io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.turnStarted());
-      runtime
-          .lifecycleObserver()
-          .onEvent(
-              io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.toolStarted(1, "call-1", "clock"));
-
-      assertThat(received.await(1, TimeUnit.SECONDS)).isTrue();
+      publishAndAwait(
+          runtime, io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.turnStarted(), received);
+      publishAndAwait(
+          runtime,
+          io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.toolStarted(1, "call-1", "clock"),
+          received);
     }
 
     assertThat(events)

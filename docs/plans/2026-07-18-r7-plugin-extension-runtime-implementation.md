@@ -58,3 +58,8 @@ P6 证据（2026-07-18）：审查发现 External stdio Bridge 在 Tap 协议错
 `./mvnw --batch-mode --no-transfer-progress -Pfailure verify`、
 `./mvnw --batch-mode --no-transfer-progress -Pcompat verify`；三套均完成，Surefire/Failsafe 报告无
 `failure`/`error`。本阶段未启动真实 Provider、真实 Python Plugin、远程访问、CLI+Web 或前端变更。
+
+CI 稳定性修复（2026-07-19）：`PluginRuntimeTest` 曾在未等待第一个异步 Tap 完成时立即发布第二个事件；这与
+Dispatcher 固定的“同一 Plugin 忙时丢弃后续事件”语义冲突，慢速 CI 会使测试错误地等待两个回调。改为每次发布后
+在 1 秒有界等待对应回调再发布下一事件，既持续验证调用方路径外投递与 Chat/Tool 映射，也不改变生产的 busy-drop
+保护。针对该测试的聚焦验证及三套阶段门禁均须通过后，方可视为稳定性修复完成。
