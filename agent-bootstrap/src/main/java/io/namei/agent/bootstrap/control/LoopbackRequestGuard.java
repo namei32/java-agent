@@ -13,14 +13,15 @@ public final class LoopbackRequestGuard {
   private static final Pattern IPV6_HOST = Pattern.compile("\\[::1](?::[1-9][0-9]{0,4})?");
   private static final Pattern LOCALHOST = Pattern.compile("localhost(?::[1-9][0-9]{0,4})?");
   private static final Pattern TURN_REF = Pattern.compile("[A-Za-z0-9_-]{22}");
+  private static final String PENDING_OPERATION_PREFIX = "/api/v1/control/pending-operations";
 
   public void validate(HttpServletRequest request) {
     if (!approvedShape(request.getMethod(), request.getRequestURI())
         || request.getQueryString() != null) {
-      reject(ControlStableCode.CONTROL_REQUEST_INVALID, 400);
+      reject(requestInvalidCode(request.getRequestURI()), 400);
     }
     if (!allowsDecisionBody(request)) {
-      validateEmptyBody(request);
+      validateEmptyBody(request, requestInvalidCode(request.getRequestURI()));
     }
     if (!isLoopback(request.getRemoteAddr())) {
       reject(ControlStableCode.CONTROL_REMOTE_ACCESS_REJECTED, 403);
@@ -50,10 +51,15 @@ public final class LoopbackRequestGuard {
       if ("/api/v1/control/approvals".equals(path)) {
         return true;
       }
+      if (pendingOperationPath(path, "")) {
+        return true;
+      }
       return turnPath(path, "/events");
     }
     return ("POST".equals(method) && turnPath(path, "/cancel"))
-        || approvalDecisionPath(method, path);
+        || approvalDecisionPath(method, path)
+        || ("POST".equals(method)
+            && (pendingOperationPath(path, "/resume") || pendingOperationPath(path, "/cancel")));
   }
 
   private static boolean allowsDecisionBody(HttpServletRequest request) {
@@ -82,20 +88,35 @@ public final class LoopbackRequestGuard {
     return TURN_REF.matcher(reference).matches();
   }
 
-  private static void validateEmptyBody(HttpServletRequest request) {
+  private static boolean pendingOperationPath(String path, String suffix) {
+    String prefix = PENDING_OPERATION_PREFIX + "/";
+    if (path == null || !path.startsWith(prefix) || !path.endsWith(suffix)) {
+      return false;
+    }
+    String reference = path.substring(prefix.length(), path.length() - suffix.length());
+    return TURN_REF.matcher(reference).matches();
+  }
+
+  private static void validateEmptyBody(HttpServletRequest request, ControlStableCode code) {
     if (request.getContentLengthLong() > 0) {
-      reject(ControlStableCode.CONTROL_REQUEST_INVALID, 400);
+      reject(code, 400);
     }
     if (request.getContentLengthLong() == 0 && request.getHeader("Transfer-Encoding") == null) {
       return;
     }
     try {
       if (request.getInputStream().read() != -1) {
-        reject(ControlStableCode.CONTROL_REQUEST_INVALID, 400);
+        reject(code, 400);
       }
     } catch (IOException failure) {
-      reject(ControlStableCode.CONTROL_REQUEST_INVALID, 400);
+      reject(code, 400);
     }
+  }
+
+  private static ControlStableCode requestInvalidCode(String path) {
+    return path != null && path.startsWith(PENDING_OPERATION_PREFIX)
+        ? ControlStableCode.PENDING_RECOVERY_REQUEST_INVALID
+        : ControlStableCode.CONTROL_REQUEST_INVALID;
   }
 
   private static boolean isLoopback(String value) {

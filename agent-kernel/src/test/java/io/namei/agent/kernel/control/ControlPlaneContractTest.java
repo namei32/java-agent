@@ -81,11 +81,13 @@ class ControlPlaneContractTest {
 
     assertThat(ControlStableCode.CONTROL_SNAPSHOT_UNAVAILABLE.retryable()).isTrue();
     assertThat(ControlStableCode.CONTROL_SHUTTING_DOWN.retryable()).isTrue();
+    assertThat(ControlStableCode.PENDING_RECOVERY_UNAVAILABLE.retryable()).isTrue();
     assertThat(ControlStableCode.values())
         .filteredOn(code -> !code.retryable())
         .doesNotContain(
             ControlStableCode.CONTROL_SNAPSHOT_UNAVAILABLE,
-            ControlStableCode.CONTROL_SHUTTING_DOWN);
+            ControlStableCode.CONTROL_SHUTTING_DOWN,
+            ControlStableCode.PENDING_RECOVERY_UNAVAILABLE);
   }
 
   @Test

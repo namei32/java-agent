@@ -1,15 +1,15 @@
 # Pending Operation Loopback Control 契约
 
-- 状态：已冻结；R11-B2c 将实现仅限获批 `forget_memory` 的本机映射，默认仍无路由、无 Worker
+- 状态：已冻结；F4 已实现严格受保护的本机映射；F5 的默认关闭配置与生产 Bean 接线完成前，部署仍无可用路由、无 Worker
 - 契约版本：1
 - 日期：2026-07-19
 - 阶段：R11 B2b / O6 A6
 - 前置：[Pending Operation Session Anchor 与 Recovery Capability 契约](pending-operation-recovery-capability.md)
 - 复用：[Loopback 控制面、安全状态、事件流与活动 Turn 取消契约](loopback-control-plane.md)
 
-> 本文只固定未来、本机、认证后的 Pending Operation 控制消息。当前所有部署继续没有 Pending Recovery 路由：
-> 即使 `agent.control-plane.mode=LOOPBACK`，也不会创建 Resume、Cancel、Status 映射、后台 Worker 或 Tool
-> Capability。
+> 本文只固定本机、认证后的 Pending Operation 控制消息。控制器还要求 `forget_memory` Capability、Approval
+> Inbox 与 Control Plane 三项都精确显式开启；仅开启 `agent.control-plane.mode=LOOPBACK` 不会创建路由、后台
+> Worker 或 Tool Capability。F5 完成前没有生产 Bean 可使这些路由可用。
 
 ## 1. 固定的未来表面
 

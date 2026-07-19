@@ -39,6 +39,17 @@ class LoopbackRequestGuardTest {
                         "localhost",
                         "http://localhost")))
         .doesNotThrowAnyException();
+    for (String path :
+        new String[] {
+          "/api/v1/control/pending-operations/AAAAAAAAAAAAAAAAAAAAAA",
+          "/api/v1/control/pending-operations/AAAAAAAAAAAAAAAAAAAAAA/resume",
+          "/api/v1/control/pending-operations/AAAAAAAAAAAAAAAAAAAAAA/cancel"
+        }) {
+      String method = path.endsWith("/resume") || path.endsWith("/cancel") ? "POST" : "GET";
+      assertThatCode(
+              () -> guard.validate(request(method, path, "127.0.0.1", "127.0.0.1:8080", null)))
+          .doesNotThrowAnyException();
+    }
   }
 
   @Test
@@ -91,6 +102,32 @@ class LoopbackRequestGuardTest {
         request("POST", "/api/v1/control/session", "127.0.0.1", "127.0.0.1", null);
     body.setContent("x".getBytes(StandardCharsets.UTF_8));
     assertRejected(body, ControlStableCode.CONTROL_REQUEST_INVALID);
+    MockHttpServletRequest pendingQuery =
+        request(
+            "GET",
+            "/api/v1/control/pending-operations/AAAAAAAAAAAAAAAAAAAAAA",
+            "127.0.0.1",
+            "127.0.0.1",
+            null);
+    pendingQuery.setQueryString("forbidden=value");
+    assertRejected(pendingQuery, ControlStableCode.PENDING_RECOVERY_REQUEST_INVALID);
+    MockHttpServletRequest pendingBody =
+        request(
+            "POST",
+            "/api/v1/control/pending-operations/AAAAAAAAAAAAAAAAAAAAAA/resume",
+            "127.0.0.1",
+            "127.0.0.1",
+            null);
+    pendingBody.setContent("x".getBytes(StandardCharsets.UTF_8));
+    assertRejected(pendingBody, ControlStableCode.PENDING_RECOVERY_REQUEST_INVALID);
+    assertRejected(
+        request(
+            "POST",
+            "/api/v1/control/pending-operations/not-a-reference/resume",
+            "127.0.0.1",
+            "127.0.0.1",
+            null),
+        ControlStableCode.PENDING_RECOVERY_REQUEST_INVALID);
   }
 
   private void assertRejected(MockHttpServletRequest request, ControlStableCode code) {
