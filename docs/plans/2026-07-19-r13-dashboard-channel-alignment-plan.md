@@ -1,6 +1,6 @@
 # R13 Dashboard、控制面与渠道对齐计划
 
-- 状态：C0 Contract/Fixture、C1 本机只读索引、C2-A 内存终态目录与 C2-B 零正文详情已完成；C3-C0 至 C3-F3 已完成，C3-M0 与 C4–C5 未开始
+- 状态：C0 Contract/Fixture、C1 本机只读索引、C2-A 内存终态目录与 C2-B 零正文详情已完成；C3-C0 至 C3-F3 与 C3-M0 已完成，C4–C5 未开始
 - 日期：2026-07-19
 - Python 证据基线：`akashic-agent` 提交 `b65a5430e332c8733b981dfc2dfbc3eb1967e9ef`
 - Java 证据基线：`agent/r12-skill-catalog`，含 Loopback 控制面、审批 Inbox、CLI/Telegram 离线纵向切片
@@ -85,6 +85,7 @@ C2-B 已以 31 Case Fixture 实现严格的 `GET /api/v1/control/history/detail`
 作为 C3 的唯一首项写 Capability。它严格复用 R11-B2c 的静态 `forget_memory`、Approval、Capsule、Ledger、
 Reservation、幂等、取消/过期/并发、`UNKNOWN` 与 `COMMIT_UNREPORTED` 边界；本轮不新增 Route、Worker、真实数据或渠道。
 其 54 个聚焦离线测试已通过，确认既有链在 R13 边界下无需代码修复。
+M0 已决定不新增直接创建 Route、Memory 目标 Ref 或控制面 Memory 数据权限；唯一控制引用继续是既有 `operationRef`。
 具体的对象、测试归属、完成标准和新入口暂停条件见
 [R13-C3 Scope 受限 Memory Forget 实施计划](2026-07-19-r13-c3-memory-forget-implementation-plan.md)。
 

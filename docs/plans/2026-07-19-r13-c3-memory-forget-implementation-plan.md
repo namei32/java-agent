@@ -1,6 +1,6 @@
 # R13-C3 Scope 受限 Memory Forget 实施计划
 
-- 状态：C3-C0 至 C3-F3 已完成；现有 R11-B2c 纵向链的离线回归已通过。新的控制面写入口仍停在 C3-M0，尚未获批准。
+- 状态：C3-C0 至 C3-F3 和 C3-M0 已完成；M0 决定不新增直接控制面创建入口。任何新入口均为后续独立子阶段，M1–M6 不启动。
 - Capability：[`forget_memory` / `java-memory-forget-v1`](../contracts/r13-c3-approved-memory-forget-execution.md)
 - 既有实现依据：[R11-B2c 实施计划](2026-07-19-r11-memory-forget-capability-implementation.md)
 - 适用数据：仅临时 Java SQLite、固定时钟、Fake Approval、Fake Invoker
@@ -75,22 +75,18 @@ non-empty forget_memory
 
 **暂停条件：** 任何结果表明需要原始 Session/Memory ID、正文、生产库、网络、真实 operator 或新的 HTTP 写请求时，立即停止；这意味着进入 C3-M0，而不是扩大当前 Contract。
 
-## 4. 新管理入口的硬性暂停点（C3-M0）
+## 4. 新管理入口决策门禁（C3-M0，已完成）
 
-目前没有获批准的“控制面创建 Forget 请求”接口。C2-B 的 `detailRef`、`historyRef` 和 cursor 都是只读一次性引用，
-不能转换为写权限；它们也不包含 Memory 目标。
+M0 已冻结为[不新增直接 Memory Forget 管理入口](../contracts/r13-c3-memory-forget-management-ingress-gate.md)：不签发
+Memory 目标 Ref，不增加控制面创建 Route，也不赋予控制面 Memory SQLite 权限。唯一公开控制引用仍是已创建 Pending 的
+`operationRef`；它只允许既有 Status/Resume/Cancel，不能代替 Tool 参数或 Memory 选择器。
 
-因此，只有用户明确决定下列三项后，才能开始新的管理入口：
+这不是遗漏实现，而是当前最小权限结论：C2-B 的 `detailRef`、`historyRef`、cursor 与任何 raw Memory ID 都不能安全地
+转换为写目标。现有受控 Producer 已是唯一的非空请求创建者。
 
-1. **目标引用：** 服务端如何签发、绑定、过期和撤销一个不泄漏 Memory ID 的写目标 Ref；
-2. **请求表面：** 唯一 HTTP method/path、严格 body、重复请求与幂等行为；
-3. **数据权限：** 允许的 Java 数据源、当前 Scope 映射方式，以及仍然禁止的字段和数据源。
+## 5. 若未来重新批准直接入口的精确 TDD 顺序
 
-未得到这三项决定前，不创建 Controller、Route、Request DTO、数据库查询或 Fixture。
-
-## 5. 获得新入口授权后的精确 TDD 顺序
-
-这部分不是当前授权的实现任务，只定义未来的执行顺序，防止跳过安全步骤：
+这部分不是当前 C3 的实施任务。只有推翻 M0 并获得新的目标 Ref、请求表面和数据权限 Contract 后，才能执行：
 
 1. **M1 RED Fixture：** 新增独立版本化 Fixture，至少覆盖默认关闭、Loopback/Servlet/Bearer、目标 Ref 签发与 TTL、
    actor/Scope 绑定、严格请求形状、重复/并发、Approval 创建、取消/过期、审计失败、`UNKNOWN` 与
@@ -111,5 +107,5 @@ non-empty forget_memory
 本计划不实现 Session/Message 删除、全局或物理 Memory 管理、`memorize`、Optimizer、消息投递、真实 Telegram、
 前端、CLI+Web、远程访问或生产数据操作。
 
-当前退出条件已满足：C3-C0 Contract 已冻结，C3-F2/F3 聚焦回归通过且无新增权限。只有 M1–M6 在获得单独入口授权后全部完成，
-才可以把 C3 标记为已实现；届时也仍不构成真实数据或部署启用授权。
+当前退出条件已满足：C3-C0/F1–F3/M0 均已完成，且无新增权限。当前 C3 切片仅验证并保留既有受审批恢复链；
+M1–M6 只有在未来推翻 M0 后才会启动，届时也仍不构成真实数据或部署启用授权。
