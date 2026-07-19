@@ -82,7 +82,9 @@ Java 模型/会话超时继续由 `AGENT_MODEL_TIMEOUT` 控制；它是 Java 运
 - `channels`、`plugins`、`memory`、`proactive`、`integrations`、`peer_agents`。
 - Java 尚未迁移的其他 Python 表和字段。
 
-Java 可以在配置检查报告中把它们标记为 `DEFERRED`，但不得因为这些字段存在而启动失败，也不得声称对应能力已启用。
+Java 可以在配置检查报告中把它们标记为 `DEFERRED`，但不得因为这些字段存在而启动失败，也不得声称对应能力已启用。R10-P1
+已经审计这些 Provider 字段的激活前置条件，见[受信 Provider Options 决策记录](../specs/2026-07-19-r10-provider-options-decision.md)；
+在明确选择其运行语义并通过独立 Fixture 前，它们继续保持 `DEFERRED`。
 
 Tool、Memory、渠道等能力迁移时，必须通过新的 Contract/Spec 把相应字段从 `DEFERRED` 提升为活动字段，并增加 Golden。
 

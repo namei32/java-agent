@@ -49,11 +49,12 @@ Failure Code。9 个生产消费的 Fixture Case 覆盖同步与流式、嵌套 
 P0 不能实现 Python 的“裁剪后自动重试”，不能新建 Provider Profile、不能设置 thinking、不能存储 Usage，且不改变
 默认 Provider 配置。
 
-### P1：受信 Provider Options 映射（RED → GREEN，待设计复核）
+### P1：受信 Provider Options 映射（已审计，等待运行语义选择）
 
-只在 P0 全绿后，才决定是否激活一个小型、严格 allowlisted 的 Java Properties 映射。每个 provider strategy 必须有
-本地请求 JSON Fixture、未知键拒绝、默认零注入、Tool continuation、模型/Options 类型保留和取消测试。任意原样
-转发 `extra_body`、从 Python TOML 激活私有参数或真实 Provider Smoke 都不在本切片。
+P0 全绿后已完成 P1 审计，详见[受信 Provider Options 决策记录](../specs/2026-07-19-r10-provider-options-decision.md)。必须先
+选择“继续冻结”、“仅无 Tool 的文本轮次发送受信请求”或“先完成 P2 后完整支持”。无论选择哪一项，Java 都只接受小型、严格
+allowlisted 的 Java Properties 映射；每个 strategy 必须有本地请求 JSON Fixture、未知键拒绝、默认零注入、模型/Options
+类型保留和取消测试。任意原样转发 `extra_body`、从 Python TOML 激活私有参数或真实 Provider Smoke 都不在本切片。
 
 ### P2：Thinking 与 Tool continuation 数据（需显式数据保留决策）
 
