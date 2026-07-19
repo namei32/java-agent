@@ -195,6 +195,33 @@ public final class JdbcSessionRepository implements SessionRepository {
   }
 
   @Override
+  public boolean cancelPendingTurnAnchorIfMatches(PendingTurnAnchor anchor) {
+    Objects.requireNonNull(anchor, "anchor");
+    if (anchor.state() != PendingTurnAnchorState.PENDING_APPROVAL) {
+      return false;
+    }
+    try (var connection = schema.openConnection()) {
+      connection.setAutoCommit(false);
+      try {
+        if (readPendingTurnAnchor(connection, anchor.operationReference())
+            .filter(anchor::equals)
+            .isEmpty()) {
+          connection.rollback();
+          return false;
+        }
+        transitionPendingTurnAnchor(connection, anchor, PendingTurnAnchorState.CANCELLED);
+        connection.commit();
+        return true;
+      } catch (SQLException | RuntimeException exception) {
+        rollbackPreservingFailure(connection, exception);
+        throw exception;
+      }
+    } catch (SQLException | RuntimeException exception) {
+      throw new SqliteRepositoryException("取消 Pending Turn Anchor 失败", exception);
+    }
+  }
+
+  @Override
   public boolean appendPendingResolutionIfAnchorMatches(
       PendingTurnAnchor anchor, PendingTurnResolution resolution) {
     Objects.requireNonNull(anchor, "anchor");

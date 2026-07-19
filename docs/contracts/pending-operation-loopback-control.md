@@ -1,6 +1,6 @@
 # Pending Operation Loopback Control 契约
 
-- 状态：已冻结，仅设计；没有 HTTP 映射、恢复器、Capability 或 Worker 实现
+- 状态：已冻结；R11-B2c 将实现仅限获批 `forget_memory` 的本机映射，默认仍无路由、无 Worker
 - 契约版本：1
 - 日期：2026-07-19
 - 阶段：R11 B2b / O6 A6
@@ -41,8 +41,17 @@ Body、任意 Query、非不透明引用均在查库或竞争 Reservation 前以
 `CANCEL` 只可在副作用尚未进入 `RUNNING` 前将 Pending/Approved Operation 与 Anchor 固化为取消终态；对已进入
 `CONSUMING` 的记录不能充当 kill 或重试信号。终态取消幂等，并始终零 Invoker 调用。
 
-`PENDING_RECOVERY_*` 是本契约预留的稳定码；当前没有 Controller 或枚举实现它们。具体 HTTP Status、速率限制、
-审计保留期与 Capability 名称必须随第一个获批 Capability 的实现计划一同冻结，不能由本 Fixture 暗中启用。
+`PENDING_RECOVERY_*` 稳定码和 HTTP 映射固定如下：请求形状无效为 `400`
+`PENDING_RECOVERY_REQUEST_INVALID`；缺失引用为 `404` `PENDING_RECOVERY_NOT_FOUND`；未批准、取消、过期、
+`COMMIT_UNREPORTED` 或其他不可恢复状态为 `409` `PENDING_RECOVERY_NOT_RESUMABLE`；`UNKNOWN` 为 `409`
+`PENDING_RECOVERY_UNKNOWN_REQUIRES_OPERATOR`；运行中取消为 `409` `PENDING_RECOVERY_NOT_CANCELLABLE`；
+Store/Session 不可用为 `503` `PENDING_RECOVERY_UNAVAILABLE` 且仅该码可重试。成功 Status、Resume、Cancel
+均为 `200`，只返回 `schemaVersion`、`state`、`updatedAt`。这些路由只在获批的 `forget_memory` Capability
+显式启用时映射，并复用既有审计边界；不创建 Worker、自动 Resume 或新认证能力。
+
+取消仍不伪装为跨库事务：先在 `approval-inbox.db` 同一事务撤销尚未 `CONSUMING` 的 Approval/Operation，随后
+在 `sessions.db` 条件终态化匹配 Pending Anchor。第二步失败也不能恢复第一步或产生执行权；之后 Resume 必须为零
+调用。终态取消返回当前稳定状态且不改变任何 Ledger 或 Result。
 
 ## 3. 验收与非目标
 

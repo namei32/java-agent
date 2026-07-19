@@ -57,6 +57,11 @@ Controller 映射不能间接使 Tool 可见。
 Capability 实现消费，复用其认证、Host、Origin、`no-store`、审计和严格无 Body/Query 约束。它不是
 R13 Dashboard/Web、CLI 或远程 API 的解冻；不会增加 SSE、Worker 或自动 Resume。
 
+F4 的成功响应和 Status 一律是 `{schemaVersion,state,updatedAt}`；不返回 Tool、Approval、Capsule、Ledger
+结果、Session 或 Conversation。Resume 内联调用 F3 的显式恢复器，但没有后台重放；Cancel 先取消未运行的
+Operation/Approval，再条件取消 Anchor，第二步故障仍保持零执行权。请求形状错误、缺失、不可恢复、UNKNOWN、
+运行中取消和存储故障使用 Pending Recovery Contract 中固定的 400/404/409/503 稳定码。
+
 ## 5. 故障模型
 
 | 位置 | 处理 |

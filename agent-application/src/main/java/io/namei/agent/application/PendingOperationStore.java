@@ -42,6 +42,14 @@ public interface PendingOperationStore {
     throw new UnsupportedOperationException("Pending Operation Store 不支持 Session 过时固化");
   }
 
+  /** Cancels only an operation that has not crossed into the durable consuming state. */
+  default PendingOperationCancelStatus cancelIfUnconsumed(
+      PendingOperationReference reference, Instant observedAt) {
+    Objects.requireNonNull(reference, "reference");
+    Objects.requireNonNull(observedAt, "observedAt");
+    throw new UnsupportedOperationException("Pending Operation Store 不支持取消");
+  }
+
   /**
    * Atomically consumes an already-approved Inbox record, advances its operation to {@code
    * CONSUMING}, and creates the only durable side-effect Reservation.

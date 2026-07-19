@@ -17,7 +17,7 @@ import java.util.Objects;
  * Explicit recovery path for the one approved memory forget capability, not a generic Tool executor
  * and not a background worker.
  */
-public final class MemoryForgetRecoveryCoordinator {
+public final class MemoryForgetRecoveryCoordinator implements MemoryForgetRecovery {
   private static final String UNKNOWN_INVOKER = "MEMORY_FORGET_INVOKER_UNCERTAIN";
   private static final String UNKNOWN_RESULT = "MEMORY_FORGET_INVALID_SAFE_RESULT";
 

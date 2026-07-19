@@ -48,6 +48,12 @@ public interface SessionRepository {
     throw new UnsupportedOperationException("Session Repository 不支持 Pending Turn Anchor");
   }
 
+  /** Conditionally terminally cancels one still-pending Anchor without appending a Message. */
+  default boolean cancelPendingTurnAnchorIfMatches(PendingTurnAnchor anchor) {
+    Objects.requireNonNull(anchor, "anchor");
+    throw new UnsupportedOperationException("Session Repository 不支持 Pending Turn Anchor 取消");
+  }
+
   /**
    * Atomically appends one safe Assistant resolution only if the stored pending Anchor and Session
    * cursor still exactly match.

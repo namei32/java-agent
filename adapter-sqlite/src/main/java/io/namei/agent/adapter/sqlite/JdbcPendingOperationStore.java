@@ -4,6 +4,7 @@ import io.namei.agent.application.ApprovalFingerprint;
 import io.namei.agent.application.ApprovalInboxEntry;
 import io.namei.agent.application.EncryptedPendingOperationCapsule;
 import io.namei.agent.application.PendingOperation;
+import io.namei.agent.application.PendingOperationCancelStatus;
 import io.namei.agent.application.PendingOperationCapsule;
 import io.namei.agent.application.PendingOperationCapsuleBinding;
 import io.namei.agent.application.PendingOperationCapsuleCipher;
@@ -127,6 +128,43 @@ public final class JdbcPendingOperationStore implements PendingOperationStore {
                 PendingOperationState.STALE_SESSION,
                 observedAt);
             return true;
+          });
+    } catch (PendingOperationStoreException exception) {
+      throw exception;
+    } catch (SQLException | RuntimeException exception) {
+      throw new PendingOperationStoreException(exception);
+    }
+  }
+
+  @Override
+  public PendingOperationCancelStatus cancelIfUnconsumed(
+      PendingOperationReference reference, Instant observedAt) {
+    Objects.requireNonNull(reference, "reference");
+    Objects.requireNonNull(observedAt, "observedAt");
+    try (var connection = schema.openConnection()) {
+      return ApprovalInboxSchemaInitializer.immediateTransaction(
+          connection,
+          () -> {
+            StoredOperationState stored = findState(connection, reference);
+            if (stored == null) {
+              return PendingOperationCancelStatus.NOT_FOUND;
+            }
+            return switch (stored.operationState()) {
+              case PENDING_APPROVAL, APPROVED_PENDING_RESUME -> {
+                cancelApproval(connection, stored, observedAt);
+                updateOperationState(
+                    connection,
+                    reference,
+                    stored.operationState(),
+                    PendingOperationState.CANCELLED,
+                    observedAt);
+                yield PendingOperationCancelStatus.CANCELLED;
+              }
+              case CANCELLED -> PendingOperationCancelStatus.ALREADY_CANCELLED;
+              case CONSUMING -> PendingOperationCancelStatus.NOT_CANCELLABLE;
+              case SUCCEEDED, FAILED, UNKNOWN, COMMIT_UNREPORTED, DENIED, EXPIRED, STALE_SESSION ->
+                  PendingOperationCancelStatus.ALREADY_TERMINAL;
+            };
           });
     } catch (PendingOperationStoreException exception) {
       throw exception;
@@ -471,6 +509,20 @@ public final class JdbcPendingOperationStore implements PendingOperationStore {
             "UPDATE approval_inbox_entries SET state = 'CONSUMED' "
                 + "WHERE approval_id = ? AND state = 'APPROVED'")) {
       statement.setString(1, stored.approvalId());
+      if (statement.executeUpdate() != 1) {
+        throw new PendingOperationStoreException();
+      }
+    }
+  }
+
+  private static void cancelApproval(
+      Connection connection, StoredOperationState stored, Instant observedAt) throws SQLException {
+    try (var statement =
+        connection.prepareStatement(
+            "UPDATE approval_inbox_entries SET state = 'CANCELLED', decided_at = ?, "
+                + "actor_reference = '' WHERE approval_id = ? AND state IN ('PENDING', 'APPROVED')")) {
+      statement.setString(1, observedAt.toString());
+      statement.setString(2, stored.approvalId());
       if (statement.executeUpdate() != 1) {
         throw new PendingOperationStoreException();
       }
