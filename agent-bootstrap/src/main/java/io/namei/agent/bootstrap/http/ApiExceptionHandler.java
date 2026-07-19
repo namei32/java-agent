@@ -8,7 +8,9 @@ import io.namei.agent.application.SideEffectStateUnknownException;
 import io.namei.agent.kernel.error.EmbeddingInvocationException;
 import io.namei.agent.kernel.error.InvalidEmbeddingResponseException;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
+import io.namei.agent.kernel.error.ModelContextLimitException;
 import io.namei.agent.kernel.error.ModelInvocationException;
+import io.namei.agent.kernel.error.ModelSafetyRejectedException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
 import io.namei.agent.kernel.error.ToolCallLimitExceededException;
 import io.namei.agent.kernel.error.ToolLoopLimitExceededException;
@@ -69,6 +71,8 @@ public class ApiExceptionHandler {
 
   @ExceptionHandler({
     ModelInvocationException.class,
+    ModelSafetyRejectedException.class,
+    ModelContextLimitException.class,
     InvalidModelResponseException.class,
     ToolCallLimitExceededException.class,
     ToolLoopLimitExceededException.class,

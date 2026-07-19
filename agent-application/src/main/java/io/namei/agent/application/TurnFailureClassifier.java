@@ -2,7 +2,9 @@ package io.namei.agent.application;
 
 import io.namei.agent.kernel.channel.TurnFailureCode;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
+import io.namei.agent.kernel.error.ModelContextLimitException;
 import io.namei.agent.kernel.error.ModelInvocationException;
+import io.namei.agent.kernel.error.ModelSafetyRejectedException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
 import io.namei.agent.kernel.error.SessionPersistenceException;
 import io.namei.agent.kernel.error.ToolCallLimitExceededException;
@@ -17,6 +19,12 @@ final class TurnFailureClassifier {
     }
     if (failure instanceof ModelTimeoutException) {
       return TurnFailureCode.MODEL_TIMEOUT;
+    }
+    if (failure instanceof ModelSafetyRejectedException) {
+      return TurnFailureCode.MODEL_SAFETY_REJECTED;
+    }
+    if (failure instanceof ModelContextLimitException) {
+      return TurnFailureCode.MODEL_CONTEXT_LIMIT;
     }
     if (failure instanceof ModelInvocationException) {
       return TurnFailureCode.MODEL_UNAVAILABLE;

@@ -1,0 +1,137 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "channelCode": "MODEL_SAFETY_REJECTED",
+        "exception": "ModelSafetyRejectedException",
+        "retryable": false
+      },
+      "id": "sync-safety-marker",
+      "input": {
+        "failure": "SAFETY",
+        "nested": false,
+        "transport": "SYNC"
+      }
+    },
+    {
+      "expected": {
+        "channelCode": "MODEL_SAFETY_REJECTED",
+        "exception": "ModelSafetyRejectedException",
+        "retryable": false
+      },
+      "id": "sync-nested-safety-marker",
+      "input": {
+        "failure": "SAFETY",
+        "nested": true,
+        "transport": "SYNC"
+      }
+    },
+    {
+      "expected": {
+        "channelCode": "MODEL_CONTEXT_LIMIT",
+        "exception": "ModelContextLimitException",
+        "retryable": false
+      },
+      "id": "sync-context-marker",
+      "input": {
+        "failure": "CONTEXT",
+        "nested": false,
+        "transport": "SYNC"
+      }
+    },
+    {
+      "expected": {
+        "channelCode": "MODEL_CONTEXT_LIMIT",
+        "exception": "ModelContextLimitException",
+        "retryable": false
+      },
+      "id": "sync-nested-context-marker",
+      "input": {
+        "failure": "CONTEXT",
+        "nested": true,
+        "transport": "SYNC"
+      }
+    },
+    {
+      "expected": {
+        "channelCode": "MODEL_TIMEOUT",
+        "exception": "ModelTimeoutException",
+        "retryable": true
+      },
+      "id": "sync-timeout-wins-over-marker",
+      "input": {
+        "failure": "TIMEOUT_WITH_SAFETY_MARKER",
+        "nested": true,
+        "transport": "SYNC"
+      }
+    },
+    {
+      "expected": {
+        "channelCode": "MODEL_UNAVAILABLE",
+        "exception": "ModelInvocationException",
+        "retryable": true
+      },
+      "id": "sync-unknown-provider-failure",
+      "input": {
+        "failure": "UNKNOWN",
+        "nested": false,
+        "transport": "SYNC"
+      }
+    },
+    {
+      "expected": {
+        "channelCode": "MODEL_SAFETY_REJECTED",
+        "exception": "ModelSafetyRejectedException",
+        "retryable": false
+      },
+      "id": "stream-safety-marker",
+      "input": {
+        "failure": "SAFETY",
+        "nested": false,
+        "transport": "STREAM"
+      }
+    },
+    {
+      "expected": {
+        "channelCode": "MODEL_CONTEXT_LIMIT",
+        "exception": "ModelContextLimitException",
+        "retryable": false
+      },
+      "id": "stream-nested-context-marker",
+      "input": {
+        "failure": "CONTEXT",
+        "nested": true,
+        "transport": "STREAM"
+      }
+    },
+    {
+      "expected": {
+        "channelCode": "MODEL_UNAVAILABLE",
+        "exception": "ModelInvocationException",
+        "retryable": true
+      },
+      "id": "stream-unknown-provider-failure",
+      "input": {
+        "failure": "UNKNOWN",
+        "nested": false,
+        "transport": "STREAM"
+      }
+    }
+  ],
+  "contractEvidence": {
+    "adr": "docs/adr/0028-classify-provider-rejections-at-adapter-boundary.md",
+    "approvedOn": "2026-07-19",
+    "contract": "docs/contracts/r10-provider-failure-classification.md",
+    "spec": "docs/specs/2026-07-19-r10-provider-failure-classification-design.md"
+  },
+  "defaults": {
+    "sensitiveFragment": "provider-secret"
+  },
+  "formatVersion": 1,
+  "normalization": [
+    "provider error body is never compared or projected",
+    "channel retryable is derived from the stable failure code"
+  ],
+  "source": "java-contract",
+  "suite": "provider/r10-provider-failure-v1"
+}

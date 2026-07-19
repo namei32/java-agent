@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.namei.agent.kernel.error.InvalidModelResponseException;
+import io.namei.agent.kernel.error.ModelContextLimitException;
 import io.namei.agent.kernel.error.ModelInvocationException;
+import io.namei.agent.kernel.error.ModelSafetyRejectedException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
 import io.namei.agent.kernel.model.AssistantToolCallMessage;
 import io.namei.agent.kernel.model.ChatMessage;
@@ -26,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
@@ -134,6 +137,19 @@ class OpenAiCompatibleAdapterIT {
         .hasMessage("模型调用失败");
   }
 
+  @ParameterizedTest
+  @MethodSource("classifiedProviderFailureBodies")
+  @Tag("failure")
+  void mapsRealCompatibleProviderFailureBodyWithoutLeakingIt(
+      String marker, Class<? extends RuntimeException> expected) {
+    SERVER.respond(400, "{\"error\":{\"message\":\"" + marker + " provider-secret\"}}");
+
+    assertThatThrownBy(() -> model.generate(request()))
+        .isInstanceOf(expected)
+        .hasMessageNotContaining(marker)
+        .hasMessageNotContaining("provider-secret");
+  }
+
   @Test
   void rejectsInvalidOrEmptyResponse() {
     SERVER.respond(200, "not-json");
@@ -154,6 +170,12 @@ class OpenAiCompatibleAdapterIT {
 
   private static Stream<Integer> upstreamFailures() {
     return Stream.of(401, 429, 500);
+  }
+
+  private static Stream<Arguments> classifiedProviderFailureBodies() {
+    return Stream.of(
+        Arguments.of("content_policy_violation", ModelSafetyRejectedException.class),
+        Arguments.of("context_length_exceeded", ModelContextLimitException.class));
   }
 
   private static OpenAiStubServer createServer() {

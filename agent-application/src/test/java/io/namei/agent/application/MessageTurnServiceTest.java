@@ -10,7 +10,9 @@ import io.namei.agent.kernel.channel.OutboundMessageType;
 import io.namei.agent.kernel.channel.TurnCancellationCode;
 import io.namei.agent.kernel.channel.TurnFailureCode;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
+import io.namei.agent.kernel.error.ModelContextLimitException;
 import io.namei.agent.kernel.error.ModelInvocationException;
+import io.namei.agent.kernel.error.ModelSafetyRejectedException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
 import io.namei.agent.kernel.error.SessionPersistenceException;
 import io.namei.agent.kernel.error.ToolCallLimitExceededException;
@@ -144,6 +146,14 @@ class MessageTurnServiceTest {
             "model timeout",
             new ModelTimeoutException("Bearer upstream-secret", new RuntimeException()),
             TurnFailureCode.MODEL_TIMEOUT),
+        Arguments.of(
+            "model safety rejected",
+            new ModelSafetyRejectedException(new IllegalStateException("Bearer upstream-secret")),
+            TurnFailureCode.MODEL_SAFETY_REJECTED),
+        Arguments.of(
+            "model context limit",
+            new ModelContextLimitException(new IllegalStateException("Bearer upstream-secret")),
+            TurnFailureCode.MODEL_CONTEXT_LIMIT),
         Arguments.of(
             "model unavailable",
             new ModelInvocationException("Bearer upstream-secret", new RuntimeException()),

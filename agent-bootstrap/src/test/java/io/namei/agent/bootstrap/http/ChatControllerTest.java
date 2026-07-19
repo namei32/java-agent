@@ -18,7 +18,9 @@ import io.namei.agent.application.PromptTurnContextFactory;
 import io.namei.agent.application.SessionLockTimeoutException;
 import io.namei.agent.application.SideEffectStateUnknownException;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
+import io.namei.agent.kernel.error.ModelContextLimitException;
 import io.namei.agent.kernel.error.ModelInvocationException;
+import io.namei.agent.kernel.error.ModelSafetyRejectedException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
 import io.namei.agent.kernel.error.ToolCallLimitExceededException;
 import io.namei.agent.kernel.error.ToolLoopLimitExceededException;
@@ -190,6 +192,27 @@ class ChatControllerTest {
                 .string(
                     org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("raw provider payload"))));
+
+    useCase.failure =
+        new ModelSafetyRejectedException(new IllegalStateException("provider-secret"));
+    performValidChat()
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.title").value("模型调用失败"))
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("provider-secret"))));
+
+    useCase.failure = new ModelContextLimitException(new IllegalStateException("provider-secret"));
+    performValidChat()
+        .andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.title").value("模型调用失败"))
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("provider-secret"))));
 
     useCase.failure = new ToolLoopLimitExceededException("private call id");
     performValidChat()

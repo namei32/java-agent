@@ -3,7 +3,9 @@ package io.namei.agent.adapter.springai;
 import io.namei.agent.kernel.channel.MessageContract;
 import io.namei.agent.kernel.concurrent.CancellationSignal;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
+import io.namei.agent.kernel.error.ModelContextLimitException;
 import io.namei.agent.kernel.error.ModelInvocationException;
+import io.namei.agent.kernel.error.ModelSafetyRejectedException;
 import io.namei.agent.kernel.error.ModelTimeoutException;
 import io.namei.agent.kernel.error.TurnCancelledException;
 import io.namei.agent.kernel.model.AssistantToolCallMessage;
@@ -21,11 +23,14 @@ import java.net.SocketTimeoutException;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,6 +53,18 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
   private static final ObjectMapper JSON = new ObjectMapper();
   private static final Duration DEFAULT_STREAM_IDLE_TIMEOUT = Duration.ofSeconds(30);
   private static final int MAX_STREAM_TOOL_CALLS = 128;
+  private static final int MAX_FAILURE_CAUSES = 32;
+  private static final List<String> SAFETY_MARKERS =
+      List.of("data_inspection_failed", "content_filter", "content_policy_violation");
+  private static final List<String> CONTEXT_LIMIT_MARKERS =
+      List.of(
+          "range of input length",
+          "context_length_exceeded",
+          "maximum context length",
+          "context window exceeds limit",
+          "string too long",
+          "reduce the length",
+          "too many tokens");
   private final ChatModel chatModel;
   private final int maxArgumentBytes;
   private final Duration streamIdleTimeout;
@@ -105,10 +122,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     } catch (InvalidModelResponseException exception) {
       throw exception;
     } catch (RuntimeException exception) {
-      if (hasTimeoutCause(exception)) {
-        throw new ModelTimeoutException("模型调用超时", exception);
-      }
-      throw new ModelInvocationException("模型调用失败", exception);
+      throw mapProviderFailure(exception, "模型调用超时", "模型调用失败");
     }
   }
 
@@ -270,7 +284,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
   }
 
   private static boolean hasTimeoutCause(Throwable throwable) {
-    for (Throwable current = throwable; current != null; current = current.getCause()) {
+    for (Throwable current : causes(throwable)) {
       boolean interruptedTimeout =
           current instanceof InterruptedIOException
               && current.getMessage() != null
@@ -283,6 +297,57 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
       }
     }
     return false;
+  }
+
+  private static boolean hasMarker(Throwable throwable, List<String> markers) {
+    for (Throwable current : causes(throwable)) {
+      String message = current.getMessage();
+      if (message == null) {
+        continue;
+      }
+      String normalized = message.toLowerCase(Locale.ROOT);
+      if (markers.stream().anyMatch(normalized::contains)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static List<Throwable> causes(Throwable throwable) {
+    var result = new java.util.ArrayList<Throwable>();
+    Set<Throwable> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Throwable current = throwable;
+        current != null && result.size() < MAX_FAILURE_CAUSES && seen.add(current);
+        current = current.getCause()) {
+      result.add(current);
+    }
+    return result;
+  }
+
+  private static RuntimeException mapProviderFailure(
+      Throwable failure, String timeoutMessage, String invocationMessage) {
+    if (failure instanceof ModelSafetyRejectedException safety) {
+      return safety;
+    }
+    if (failure instanceof ModelContextLimitException contextLimit) {
+      return contextLimit;
+    }
+    if (failure instanceof ModelTimeoutException timeout) {
+      return timeout;
+    }
+    if (failure instanceof ModelInvocationException invocation) {
+      return invocation;
+    }
+    if (hasTimeoutCause(failure)) {
+      return new ModelTimeoutException(timeoutMessage, failure);
+    }
+    if (hasMarker(failure, SAFETY_MARKERS)) {
+      return new ModelSafetyRejectedException(failure);
+    }
+    if (hasMarker(failure, CONTEXT_LIMIT_MARKERS)) {
+      return new ModelContextLimitException(failure);
+    }
+    return new ModelInvocationException(invocationMessage, failure);
   }
 
   private RuntimeException mapStreamingFailure(Throwable failure) {
@@ -298,10 +363,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     if (failure instanceof ModelInvocationException invocation) {
       return invocation;
     }
-    if (hasTimeoutCause(failure)) {
-      return new ModelTimeoutException("模型流空闲超时", failure);
-    }
-    return new ModelInvocationException("模型流调用失败", failure);
+    return mapProviderFailure(failure, "模型流空闲超时", "模型流调用失败");
   }
 
   private final class StreamingBridge

@@ -4,6 +4,8 @@ public enum TurnFailureCode {
   INVALID_REQUEST(false),
   SESSION_BUSY(true),
   MODEL_TIMEOUT(true),
+  MODEL_SAFETY_REJECTED(false),
+  MODEL_CONTEXT_LIMIT(false),
   MODEL_UNAVAILABLE(true),
   INVALID_MODEL_RESPONSE(true),
   TURN_LIMIT_EXCEEDED(false),
