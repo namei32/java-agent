@@ -58,6 +58,8 @@ agent:
     stream-idle-timeout: ${AGENT_MODEL_STREAM_IDLE_TIMEOUT:30s}
     max-delta-events: ${AGENT_MODEL_MAX_DELTA_EVENTS:2048}
     max-delta-code-points: ${AGENT_MODEL_MAX_DELTA_CODE_POINTS:32000}
+  context-limit-recovery:
+    mode: ${AGENT_CONTEXT_LIMIT_RECOVERY_MODE:DISABLED}
   cli:
     session-id: ${AGENT_CLI_SESSION_ID:cli:local}
     conversation-id: ${AGENT_CLI_CONVERSATION_ID:local}

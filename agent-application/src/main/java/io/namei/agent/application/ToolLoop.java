@@ -1,12 +1,14 @@
 package io.namei.agent.application;
 
 import io.namei.agent.kernel.error.InvalidModelResponseException;
+import io.namei.agent.kernel.error.ModelContextLimitException;
 import io.namei.agent.kernel.error.ToolCallLimitExceededException;
 import io.namei.agent.kernel.error.ToolLoopLimitExceededException;
 import io.namei.agent.kernel.error.TurnCancelledException;
 import io.namei.agent.kernel.lifecycle.TurnLifecycleEvent;
 import io.namei.agent.kernel.model.AssistantToolCallMessage;
 import io.namei.agent.kernel.model.ChatModelRequest;
+import io.namei.agent.kernel.model.ChatModelResponse;
 import io.namei.agent.kernel.model.ModelMessage;
 import io.namei.agent.kernel.model.ToolResultMessage;
 import io.namei.agent.kernel.port.ChatModelPort;
@@ -155,21 +157,13 @@ final class ToolLoop {
     ToolCatalogSession catalogSession = tools.newCatalogSession();
     var streamingBudget = progressListener == null ? null : new StreamingBudget(streamingSettings);
     int totalCalls = 0;
+    boolean toolExecuted = false;
     for (int iteration = 1; iteration <= maxIterations; iteration++) {
       checkCancellation(cancellation);
       lifecycle.emit(TurnLifecycleEvent.modelRequested(iteration));
       var request = new ChatModelRequest(messages, tools.definitions(catalogSession));
       var response =
-          progressListener == null
-              ? model.generate(request)
-              : model.generate(
-                  request,
-                  delta -> {
-                    checkCancellation(cancellation);
-                    streamingBudget.accept(delta);
-                    progressListener.onContentDelta(delta);
-                  },
-                  cancellation);
+          generate(request, cancellation, progressListener, streamingBudget, toolExecuted);
       checkCancellation(cancellation);
       if (response == null) {
         lifecycle.emit(TurnLifecycleEvent.modelCompleted(iteration, "INVALID"));
@@ -201,6 +195,7 @@ final class ToolLoop {
               cancellation,
               catalogSession,
               invocationContext);
+      toolExecuted = true;
       for (int callIndex = 0; callIndex < response.toolCalls().size(); callIndex++) {
         var call = response.toolCalls().get(callIndex);
         var result = results.get(callIndex);
@@ -214,6 +209,31 @@ final class ToolLoop {
       }
     }
     throw new ToolLoopLimitExceededException("Tool Loop 超过最大迭代次数");
+  }
+
+  private ChatModelResponse generate(
+      ChatModelRequest request,
+      TurnCancellation cancellation,
+      ChatProgressListener progressListener,
+      StreamingBudget streamingBudget,
+      boolean toolExecuted) {
+    try {
+      return progressListener == null
+          ? model.generate(request)
+          : model.generate(
+              request,
+              delta -> {
+                checkCancellation(cancellation);
+                streamingBudget.accept(delta);
+                progressListener.onContentDelta(delta);
+              },
+              cancellation);
+    } catch (ModelContextLimitException failure) {
+      if (progressListener == null && !toolExecuted) {
+        throw new ContextLimitRecoveryCandidateException(failure);
+      }
+      throw failure;
+    }
   }
 
   private static void checkCancellation(TurnCancellation cancellation) {

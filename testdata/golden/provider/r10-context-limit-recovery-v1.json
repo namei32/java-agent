@@ -1,0 +1,61 @@
+{
+  "cases": [
+    {
+      "expected": {"plans": [{"historySize": 4, "trimPlan": "FULL"}]},
+      "id": "disabled-only-original-request",
+      "input": {"historySize": 4, "mode": "DISABLED"}
+    },
+    {
+      "expected": {
+        "plans": [
+          {"historySize": 4, "trimPlan": "FULL"},
+          {"historySize": 4, "trimPlan": "TRIM_SKILLS_CATALOG"},
+          {"historySize": 4, "trimPlan": "TRIM_ACTIVE_SKILLS"},
+          {"historySize": 4, "trimPlan": "TRIM_LONG_TERM_MEMORY"},
+          {"historySize": 4, "trimPlan": "TRIM_RETRIEVED_MEMORY"},
+          {"historySize": 2, "trimPlan": "TRIM_RETRIEVED_MEMORY"},
+          {"historySize": 0, "trimPlan": "TRIM_RETRIEVED_MEMORY"}
+        ]
+      },
+      "id": "safe-local-full-history-and-two-reductions",
+      "input": {"historySize": 4, "mode": "SAFE_LOCAL"}
+    },
+    {
+      "expected": {
+        "plans": [
+          {"historySize": 1, "trimPlan": "FULL"},
+          {"historySize": 1, "trimPlan": "TRIM_SKILLS_CATALOG"},
+          {"historySize": 1, "trimPlan": "TRIM_ACTIVE_SKILLS"},
+          {"historySize": 1, "trimPlan": "TRIM_LONG_TERM_MEMORY"},
+          {"historySize": 1, "trimPlan": "TRIM_RETRIEVED_MEMORY"},
+          {"historySize": 0, "trimPlan": "TRIM_RETRIEVED_MEMORY"}
+        ]
+      },
+      "id": "safe-local-deduplicates-half-rounding-to-zero",
+      "input": {"historySize": 1, "mode": "SAFE_LOCAL"}
+    },
+    {
+      "expected": {
+        "plans": [
+          {"historySize": 0, "trimPlan": "FULL"},
+          {"historySize": 0, "trimPlan": "TRIM_SKILLS_CATALOG"},
+          {"historySize": 0, "trimPlan": "TRIM_ACTIVE_SKILLS"},
+          {"historySize": 0, "trimPlan": "TRIM_LONG_TERM_MEMORY"},
+          {"historySize": 0, "trimPlan": "TRIM_RETRIEVED_MEMORY"}
+        ]
+      },
+      "id": "safe-local-empty-history-has-no-duplicate-reductions",
+      "input": {"historySize": 0, "mode": "SAFE_LOCAL"}
+    }
+  ],
+  "contractEvidence": {
+    "adr": "docs/adr/0030-recover-context-limit-before-any-tool-execution.md",
+    "approvedOn": "2026-07-19",
+    "contract": "docs/contracts/r10-context-limit-recovery.md",
+    "spec": "docs/specs/2026-07-19-r10-context-limit-recovery-design.md"
+  },
+  "formatVersion": 1,
+  "normalization": [],
+  "source": "java-contract",
+  "suite": "provider/r10-context-limit-recovery-v1"
+}

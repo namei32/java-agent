@@ -9,6 +9,7 @@ import io.namei.agent.kernel.port.MemoryRetrievalPort;
 import io.namei.agent.kernel.prompt.PromptMode;
 import io.namei.agent.kernel.prompt.PromptSection;
 import io.namei.agent.kernel.prompt.PromptSectionId;
+import io.namei.agent.kernel.prompt.PromptTrimPlan;
 import io.namei.agent.kernel.prompt.PromptTurnContext;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -110,7 +111,8 @@ public final class MemoryContextService {
         selectedHistory,
         currentUser,
         requestedAt,
-        null);
+        null,
+        PromptTrimPlan.FULL);
   }
 
   ContextAssembler.AssembledContext assemble(
@@ -122,6 +124,29 @@ public final class MemoryContextService {
       ChatMessage currentUser,
       Instant requestedAt,
       PromptTurnContext turnContext) {
+    return assemble(
+        basePrompt,
+        sessionBinding,
+        sessionId,
+        fullHistory,
+        selectedHistory,
+        currentUser,
+        requestedAt,
+        turnContext,
+        PromptTrimPlan.FULL);
+  }
+
+  ContextAssembler.AssembledContext assemble(
+      String basePrompt,
+      String sessionBinding,
+      String sessionId,
+      List<ChatMessage> fullHistory,
+      List<ChatMessage> selectedHistory,
+      ChatMessage currentUser,
+      Instant requestedAt,
+      PromptTurnContext turnContext,
+      PromptTrimPlan minimumPlan) {
+    Objects.requireNonNull(minimumPlan, "minimumPlan");
     MemoryProfile profile = loadProfile();
     MemoryRetrievalResult result =
         retrieve(sessionBinding, fullHistory, currentUser.content(), requestedAt);
@@ -133,7 +158,8 @@ public final class MemoryContextService {
           currentUser,
           requestedAt,
           sessionId,
-          turnContext);
+          turnContext,
+          minimumPlan);
     }
     return assembler.assemble(
         basePrompt, profile, selectedHistory, result.block(), Set.of(), currentUser);
@@ -146,7 +172,8 @@ public final class MemoryContextService {
       ChatMessage currentUser,
       Instant requestedAt,
       String sessionId,
-      PromptTurnContext suppliedContext) {
+      PromptTurnContext suppliedContext,
+      PromptTrimPlan minimumPlan) {
     PromptTurnContext turnContext =
         suppliedContext == null
             ? new PromptTurnContext(requestedAt, promptSettings.zoneId(), "unknown", sessionId)
@@ -170,7 +197,7 @@ public final class MemoryContextService {
 
     PromptAssembly assembled =
         promptOrchestrator.assemble(
-            sections, selectedHistory, currentUser, promptSettings.budget());
+            sections, selectedHistory, currentUser, promptSettings.budget(), minimumPlan);
     var sectionNames = new ArrayList<String>();
     assembled.systemSections().forEach(section -> sectionNames.add(section.value()));
     assembled.frameSections().forEach(section -> sectionNames.add(section.value()));

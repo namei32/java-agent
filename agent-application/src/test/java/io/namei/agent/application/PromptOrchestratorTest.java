@@ -102,6 +102,26 @@ class PromptOrchestratorTest {
   }
 
   @Test
+  void honorsTheMinimumTrimPlanEvenWhenAnEarlierPlanWouldFitTheBudget() {
+    var result =
+        orchestrator.assemble(
+            List.of(
+                section(PromptSectionId.IDENTITY, "id"),
+                section(PromptSectionId.SKILLS_CATALOG, "skills"),
+                section(PromptSectionId.RETRIEVED_MEMORY, "memory")),
+            List.of(),
+            new ChatMessage(MessageRole.USER, "now"),
+            new PromptBudget(100, 100, 200, 9),
+            PromptTrimPlan.TRIM_RETRIEVED_MEMORY);
+
+    assertThat(result.trimPlan()).isEqualTo(PromptTrimPlan.TRIM_RETRIEVED_MEMORY);
+    assertThat(result.trimmedSections())
+        .containsExactly(PromptSectionId.SKILLS_CATALOG, PromptSectionId.RETRIEVED_MEMORY);
+    assertThat(result.systemPrompt()).doesNotContain("skills");
+    assertThat(result.contextFrame()).doesNotContain("memory");
+  }
+
+  @Test
   void rejectsAnUntrimmableBudgetOverflowBeforeModelMessagesAreReturned() {
     assertThatThrownBy(
             () ->

@@ -38,13 +38,30 @@ public final class PromptOrchestrator {
       List<ChatMessage> history,
       ChatMessage currentUser,
       PromptBudget budget) {
+    return assemble(sections, history, currentUser, budget, PromptTrimPlan.FULL);
+  }
+
+  /**
+   * Compiles a prompt starting at a minimum trim plan. Earlier, less-trimmed candidates are never
+   * reconsidered, while the normal budget validation remains in force for every later candidate.
+   */
+  public PromptAssembly assemble(
+      List<PromptSection> sections,
+      List<ChatMessage> history,
+      ChatMessage currentUser,
+      PromptBudget budget,
+      PromptTrimPlan minimumPlan) {
     Objects.requireNonNull(sections, "sections");
     Objects.requireNonNull(history, "history");
     Objects.requireNonNull(budget, "budget");
+    Objects.requireNonNull(minimumPlan, "minimumPlan");
     requireCurrentUser(currentUser);
 
     List<PromptSection> ordered = ordered(sections);
     for (PromptTrimPlan plan : PromptTrimPlan.values()) {
+      if (plan.ordinal() < minimumPlan.ordinal()) {
+        continue;
+      }
       PromptAssembly candidate =
           compile(
               remaining(ordered, plan), history, currentUser, plan, trimmedSections(ordered, plan));

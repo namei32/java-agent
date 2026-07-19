@@ -1,6 +1,6 @@
 # R10 Provider 协议、失败语义与思考数据对齐计划
 
-- 状态：P0 已完成并离线验证；P1–P4 未开始
+- 状态：P0、P3 已完成并离线验证；P1、P2、P4 未开始
 - 日期：2026-07-19
 - Python 证据基线：`akashic-agent` 提交 `b65a5430e332c8733b981dfc2dfbc3eb1967e9ef`
 - Java 证据基线：`agent/r12-skill-catalog`，含 Spring AI OpenAI-compatible 同步/流式 Adapter
@@ -62,11 +62,14 @@ allowlisted 的 Java Properties 映射；每个 strategy 必须有本地请求 J
 Tool continuation 的准确字段和清理期限。没有这份决策时，Java 继续丢弃 reasoning，并不把 Python 的 `provider_fields`
 当作可持久化元数据。
 
-### P3：上下文超限恢复语义（需独立 Prompt/重试 Contract）
+### P3：上下文超限恢复语义（已实现并验证）
 
-Python 在 `ContentSafetyError`/`ContextLengthError` 后切换 history/context 裁剪计划。Java 只能在固定、明确的尝试次数、
-无 Tool 执行/无副作用重放、Cancellation、预算和 Session Commit 隔离均可证明时引入这一恢复；不可把 P0 的分类自动
-变成请求重试。
+Python 在 `ContentSafetyError`/`ContextLengthError` 后切换 history/context 裁剪计划。P3 的
+[安全恢复 Contract](../contracts/r10-context-limit-recovery.md)与 ADR-0030 已固定 Java 的更窄边界：默认关闭，仅非流式、
+任何 Tool 执行前的 `ModelContextLimitException` 可在确定 Prompt/History 候选间重试；不重放 Tool/副作用，不改写历史，
+耗尽时仍按 P0 失败。实现提供严格 `agent.context-limit-recovery.mode`（`DISABLED`/`SAFE_LOCAL`）与默认关闭的
+Bootstrap 接线；Prompt 最低裁剪计划、尾部历史缩减、流式/取消/Tool 后零重试和单次提交均有离线测试。默认、`failure`、
+`compat` 三套完整 Reactor 门禁已通过。它不可把 P0 的分类自动变成调用方可重试的协议。
 
 ### P4：缓存 Usage 与受限观测（需独立观测 Contract）
 

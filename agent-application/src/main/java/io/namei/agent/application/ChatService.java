@@ -2,6 +2,7 @@ package io.namei.agent.application;
 
 import io.namei.agent.kernel.approval.ApprovalDecision;
 import io.namei.agent.kernel.error.InvalidModelResponseException;
+import io.namei.agent.kernel.error.ModelContextLimitException;
 import io.namei.agent.kernel.error.ToolCallLimitExceededException;
 import io.namei.agent.kernel.error.ToolLoopLimitExceededException;
 import io.namei.agent.kernel.error.TurnCancelledException;
@@ -36,6 +37,7 @@ public final class ChatService implements ChatUseCase {
   private final MemoryContextService memoryContext;
   private final ConversationEvidenceContextFactory conversationEvidenceContexts;
   private final MemoryRecallContextFactory memoryRecallContexts;
+  private final ContextLimitRecoveryPolicy contextLimitRecovery;
 
   public ChatService(
       SessionRepository sessions,
@@ -81,6 +83,42 @@ public final class ChatService implements ChatUseCase {
         maxIterations,
         observer,
         ToolRuntimeSettings.readOnlyDefaults());
+  }
+
+  /** Test-friendly opt-in constructor for the R10-P3 local recovery path. */
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
+      List<Tool> tools,
+      int maxIterations,
+      TurnLifecycleObserver observer,
+      ContextLimitRecoveryPolicy contextLimitRecovery) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
+        ToolCatalog.alwaysOn(List.copyOf(tools)),
+        maxIterations,
+        observer,
+        ToolRuntimeSettings.readOnlyDefaults(),
+        request -> ApprovalDecision.deniedFor(request, clock.instant(), "deny-all"),
+        SideEffectLedger.unavailable(),
+        new SecureIdGenerator(),
+        Duration.ofMinutes(5),
+        MemoryContextService.disabled(),
+        ModelStreamingSettings.defaults(),
+        ConversationEvidenceContextFactory.disabled(),
+        MemoryRecallContextFactory.disabled(),
+        contextLimitRecovery);
   }
 
   public ChatService(
@@ -387,6 +425,50 @@ public final class ChatService implements ChatUseCase {
       ModelStreamingSettings streamingSettings,
       ConversationEvidenceContextFactory conversationEvidenceContexts,
       MemoryRecallContextFactory memoryRecallContexts) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
+        catalog,
+        maxIterations,
+        observer,
+        toolSettings,
+        approvals,
+        ledger,
+        ids,
+        approvalTimeout,
+        memoryContext,
+        streamingSettings,
+        conversationEvidenceContexts,
+        memoryRecallContexts,
+        ContextLimitRecoveryPolicy.disabled());
+  }
+
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
+      ToolCatalog catalog,
+      int maxIterations,
+      TurnLifecycleObserver observer,
+      ToolRuntimeSettings toolSettings,
+      ApprovalPort approvals,
+      SideEffectLedger ledger,
+      IdGenerator ids,
+      Duration approvalTimeout,
+      MemoryContextService memoryContext,
+      ModelStreamingSettings streamingSettings,
+      ConversationEvidenceContextFactory conversationEvidenceContexts,
+      MemoryRecallContextFactory memoryRecallContexts,
+      ContextLimitRecoveryPolicy contextLimitRecovery) {
     this.sessions = Objects.requireNonNull(sessions, "sessions");
     this.historySelector = Objects.requireNonNull(historySelector, "historySelector");
     this.limits = Objects.requireNonNull(limits, "limits");
@@ -400,6 +482,8 @@ public final class ChatService implements ChatUseCase {
         Objects.requireNonNull(conversationEvidenceContexts, "conversationEvidenceContexts");
     this.memoryRecallContexts =
         Objects.requireNonNull(memoryRecallContexts, "memoryRecallContexts");
+    this.contextLimitRecovery =
+        Objects.requireNonNull(contextLimitRecovery, "contextLimitRecovery");
     var registry = new ToolRegistry(catalog, toolSettings);
     var coordinator =
         new SideEffectBatchCoordinator(
@@ -455,26 +539,20 @@ public final class ChatService implements ChatUseCase {
       var snapshot = sessions.load(command.sessionId());
       var user = new ChatMessage(MessageRole.USER, command.message());
       String sessionBinding = ApprovalFingerprint.sessionBinding(command.sessionId());
-      var assembled =
-          memoryContext.assemble(
-              systemPrompt,
-              sessionBinding,
-              command.sessionId(),
-              snapshot.messages(),
-              historySelector.select(snapshot.messages(), limits),
-              user,
-              clock.instant(),
-              command.promptTurnContext());
-      var messages = new ArrayList<ModelMessage>(assembled.messages());
       OffsetDateTime userAt = OffsetDateTime.now(clock);
       var context = new SideEffectBatchCoordinator.Context(sessionBinding, ids.newTurnId());
       var invocationContext = conversationEvidenceContexts.forSession(command.sessionId());
       invocationContext = memoryRecallContexts.forSessionBinding(sessionBinding, invocationContext);
       var finalContent =
-          progressListener == null
-              ? toolLoop.complete(messages, cancellation, context, invocationContext)
-              : toolLoop.completeStreaming(
-                  messages, cancellation, context, invocationContext, progressListener);
+          completeWithContextLimitRecovery(
+              command,
+              snapshot.messages(),
+              user,
+              sessionBinding,
+              context,
+              invocationContext,
+              cancellation,
+              progressListener);
       if (finalContent.isBlank()) {
         throw new InvalidModelResponseException("模型返回了空响应");
       }
@@ -489,6 +567,58 @@ public final class ChatService implements ChatUseCase {
       lifecycle.emit(TurnLifecycleEvent.turnFailed(failureStatus(failure)));
       throw failure;
     }
+  }
+
+  private String completeWithContextLimitRecovery(
+      ChatCommand command,
+      List<ChatMessage> fullHistory,
+      ChatMessage user,
+      String sessionBinding,
+      SideEffectBatchCoordinator.Context context,
+      ToolInvocationContext invocationContext,
+      TurnCancellation cancellation,
+      ChatProgressListener progressListener) {
+    List<ChatMessage> selectedHistory = historySelector.select(fullHistory, limits);
+    ModelContextLimitException lastContextLimit = null;
+    for (ContextLimitRecoveryPolicy.Plan plan :
+        contextLimitRecovery.plans(selectedHistory.size())) {
+      checkCancellation(cancellation);
+      List<ChatMessage> history = trailingHistory(selectedHistory, plan.historySize());
+      var assembled =
+          memoryContext.assemble(
+              systemPrompt,
+              sessionBinding,
+              command.sessionId(),
+              fullHistory,
+              history,
+              user,
+              clock.instant(),
+              command.promptTurnContext(),
+              plan.trimPlan());
+      var messages = new ArrayList<ModelMessage>(assembled.messages());
+      try {
+        return progressListener == null
+            ? toolLoop.complete(messages, cancellation, context, invocationContext)
+            : toolLoop.completeStreaming(
+                messages, cancellation, context, invocationContext, progressListener);
+      } catch (ContextLimitRecoveryCandidateException candidate) {
+        lastContextLimit = candidate.original();
+      }
+    }
+    if (lastContextLimit != null) {
+      throw lastContextLimit;
+    }
+    throw new IllegalStateException("上下文恢复候选不能为空");
+  }
+
+  private static List<ChatMessage> trailingHistory(List<ChatMessage> history, int size) {
+    if (size < 0 || size > history.size()) {
+      throw new IllegalArgumentException("恢复历史窗口无效");
+    }
+    if (size == history.size()) {
+      return history;
+    }
+    return List.copyOf(history.subList(history.size() - size, history.size()));
   }
 
   private static String failureStatus(RuntimeException failure) {

@@ -115,6 +115,7 @@ import org.springframework.core.io.Resource;
   McpAssetProperties.class,
   ConversationEvidenceProperties.class,
   MemoryRecallProperties.class,
+  ContextLimitRecoveryProperties.class,
   CliProperties.class,
   PluginProperties.class,
   ProactiveProperties.class
@@ -487,6 +488,7 @@ public class ApplicationConfiguration {
         conversationEvidenceContexts,
         MemoryRecallToolset.disabled(),
         MemoryRecallContextFactory.disabled(),
+        new ContextLimitRecoveryProperties(null),
         properties,
         modelName,
         compatibilityPrompt,
@@ -509,6 +511,7 @@ public class ApplicationConfiguration {
       ConversationEvidenceContextFactory conversationEvidenceContexts,
       MemoryRecallToolset memoryRecallTools,
       MemoryRecallContextFactory memoryRecallContexts,
+      ContextLimitRecoveryProperties contextLimitRecoveryProperties,
       AgentProperties properties,
       @Value("${spring.ai.openai.chat.model}") String modelName,
       @Value("${agent.compatibility.system-prompt-base64:}") String compatibilityPrompt,
@@ -554,7 +557,8 @@ public class ApplicationConfiguration {
             new ModelStreamingSettings(
                 properties.model().maxDeltaEvents(), properties.model().maxDeltaCodePoints()),
             conversationEvidenceContexts,
-            memoryRecallContexts);
+            memoryRecallContexts,
+            contextLimitRecoveryProperties.toPolicy());
     return new SafeChatUseCase(service, Clock.systemUTC());
   }
 
