@@ -2,7 +2,7 @@
 
 - 状态：当前事实；后续实现必须以本审计和各阶段 Contract 为准
 - Python 证据基线：`akashic-agent` 提交 `b65a5430e332c8733b981dfc2dfbc3eb1967e9ef`
-- Java 证据基线：`agent/r12-skill-catalog`（R12-S5 当前 Scope `recall_memory`、R12-S4 `read_skill`、R11-B4 会话证据 Tool 与 R14-P0/P1 离线边界/决策 Fixture）
+- Java 证据基线：`main` 的 `a59db85`（R12-S5 当前 Scope `recall_memory`、R12-S4 `read_skill`、R11-B4 会话证据 Tool、R8 安全 Job 检视与 R14-P0/P1 离线边界/决策 Fixture）
 - 审计日期：2026-07-19
 
 ## 审计边界
@@ -14,8 +14,8 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 ## 已有 Java 闭环
 
 1. 被动聊天、SQLite 会话、受限历史、OpenAI-compatible 文本/Tool/SSE、错误投影和单 JVM 会话串行。
-2. 版本化渠道消息、CLI、Telegram 离线可靠投递、Loopback 控制面、受限 Plugin、Scheduler/Drift/Subagent
-   和 sandbox Cutover 演练。
+2. 版本化渠道消息、CLI、Telegram 离线可靠投递、Loopback 控制面、受限 Plugin、Scheduler/Drift/Subagent、仅活动
+   Runtime 的安全 Job 检视和 sandbox Cutover 演练。
 3. 只读 Markdown 与 Java 原生显式语义记忆、R10 Prompt Section/Core Persona、R11 Catalog/Approval
    Inbox/Pending Operation 无执行安全基础，以及默认关闭、当前 Session 限定的会话证据 Tool。自动语义检索使用
    Session 的 SHA-256 Binding，因此可覆盖 Telegram 等渠道；显式 Memory HTTP 管理 API 则有意只接受安全路径 ID，
@@ -29,13 +29,13 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 | Python 已提交能力 | 证据位置 | Java 当前状态 | 对齐路径 |
 | --- | --- | --- | --- |
 | Skills 目录、frontmatter、工作区覆盖、依赖可用性、always 注入 | `agent/skills.py`、`agent/core/prompt_block.py`、`skills/*/SKILL.md` | R12-S1 Catalog/always 注入与 S4 deferred `read_skill` 已有 Kernel Port、受限只读 Adapter、严格 Properties 和 Tool Loop 回送；默认关闭 | ADR-0029 已确认 Python 没有 Skill Runner；Skill 文本要求的每个动作仍须对应 Tool Contract。动态下载与 Python import 仍须单独 Contract |
-| 文件、Shell、Web、消息、记忆、调度、Spawn、Peer、MCP 管理等 Tool | `agent/tools/*.py`、`agent/mcp/*`、`agent/peer_agent/*` | `current_time`、静态只读 MCP、R11-B3 默认关闭独立 Root 的 `read_file`/`list_dir`，以及 R11-B4 默认关闭当前 Session 的 `fetch_messages`/`search_messages` | B3 已有路径/链接、严格 UTF-8、预算、Deferred Schema 与纵向失败测试；B4 已有 opaque ID、显式 Turn Scope、SQLite 隔离、预算和三套门禁。其余仍按 Tool 逐一建立 Capability、Sandbox、Ledger、`UNKNOWN` 与 Smoke Contract |
+| 文件、Shell、Web、消息、记忆、调度、Spawn、Peer、MCP 管理等 Tool | `agent/tools/*.py`、`agent/mcp/*`、`agent/peer_agent/*` | `current_time`、静态只读 MCP、R11-B3 默认关闭独立 Root 的 `read_file`/`list_dir`、R11-B4 当前 Session 的 `fetch_messages`/`search_messages`，以及 R8 默认关闭的 `list_local_proactive_jobs` | B3 已有路径/链接、严格 UTF-8、预算、Deferred Schema 与纵向失败测试；B4 已有 opaque ID、显式 Turn Scope、SQLite 隔离、预算和三套门禁。R8 检视只复用已启动的本地 Runtime，且不等价 Python `list_schedules`：没有渠道/身份/正文/时区/运行次数，不创建、取消或投递任务。其余仍按 Tool 逐一建立 Capability、Sandbox、Ledger、`UNKNOWN` 与 Smoke Contract |
 | Provider 适配策略与 thinking/cache 细节 | `agent/provider.py`、`bootstrap/providers.py` | 一个 OpenAI-compatible Spring AI 适配器；Tool/流/超时/取消已有本地验收，P0 已增加安全拒绝/上下文超限的脱敏稳定分类，P1 已增加默认关闭的固定 thinking/effort allowlist，P2 已增加仅 `DEEPSEEK` + `SAFE_LOCAL` 的单 Tool Loop 有界 reasoning 回放，P3 已验证默认关闭、Tool 前非流式的本地上下文超限恢复，P4 已验证只包含三项整数的匿名缓存用量聚合 | P0、P1、P3、P4 与受限即时 P2 已通过三套完整门禁；[P2b](../plans/2026-07-19-r10-provider-protocol-alignment-plan.md#p2bdeepseek-reasoning-历史与空占位符未实现需数据保留授权) 仍未对齐 Akashic 的跨 Turn reasoning 历史与空占位符。P2 只在内存中将 metadata/`<think>` 送到紧随 Tool continuation，不进入 Session、SQLite、日志、Channel 或 HTTP/CLI；P1 不做 URL 推断或任意 body 转发，P4 不等同于 Python Dashboard 或持久诊断。真实 Provider Smoke 仍独立批准 |
 | MCP Tool Client | `agent/mcp/client.py`、`bootstrap/toolsets/mcp.py` | 静态 stdio、只读 `tools/list`/`tools/call`；R12-S2 另有默认关闭的 `resources/list`/`prompts/list` 元数据目录与 Stale | Python 基线并不实现 Resources/Prompts；S2 是 Java-owned 安全扩展，不是对齐证据。远程认证、正文读取/注入、Streamable HTTP、取消与隔离须先证明必要性，再另立 Contract |
 | Python Plugin 全生命周期、配置与 Tool Hook | `agent/plugins/*`、`agent/lifecycle/*` | Java ServiceLoader/stdio 观察型 Tap，含 API v2 Lifecycle Phase 映射 | R12-S3 已实现默认关闭的只读映射；可变 Hook/动态 Python import 需要独立授权 |
 | QQ/Feishu/IPC、完整 Channel Host | `infra/channels/*`、`plugins/qqbot`、`plugins/feishu` | CLI/Telegram 离线纵向切片 | [R13 计划](../plans/2026-07-19-r13-dashboard-channel-alignment-plan.md)已冻结渠道逐一的身份、投递、恢复、真实 Smoke 与回退路径；当前不实现 IPC/QQ/Plugin Channel，真实 Telegram 继续冻结 |
 | Dashboard 会话/消息/记忆管理与前端 | `bootstrap/dashboard_api.py`、`frontend/` | 后端 Loopback 状态/取消、审批 Inbox，零前端；R13-C0 已冻结未来只读索引的 20 Case Contract Fixture | C0 不创建 Controller、历史读取或任何 Web 扩展；R13 仍须先实现 C1 最小只读投影，且在解除 CLI+Web/前端冻结前不实现前端、Session/Message 浏览或写入 |
-| 完整 Proactive v2、外部源、反馈、自动记忆/Optimizer | `proactive_v2/*`、`memory2/*`、`core/memory/*` | 安全 NoOp/只读/显式记忆；R14-P0/P1 已冻结边界和无执行决策 | [R14 计划](../plans/2026-07-19-r14-proactive-peer-memory-automation-plan.md)已完成 28 Case 状态/Fake Source/Memory 禁止边界及 15 Case Gate + ReadOnly Drift 的无正文投影；P2–P5 的逐源、逐写入许可、审计、预算、恢复与回退仍未实现，不得自动启用，旧 Python `memory2` 数据仍不迁移 |
+| 完整 Proactive v2、外部源、反馈、自动记忆/Optimizer | `proactive_v2/*`、`memory2/*`、`core/memory/*` | 安全 NoOp/只读/显式记忆；R8 另提供默认关闭的活动 Job 安全检视，R14-P0/P1 已冻结边界和无执行决策 | [R14 计划](../plans/2026-07-19-r14-proactive-peer-memory-automation-plan.md)已完成 28 Case 状态/Fake Source/Memory 禁止边界及 15 Case Gate + ReadOnly Drift 的无正文投影；R8 检视不启动 Runtime、也不授予创建/取消/投递。P2–P5 的逐源、逐写入许可、审计、预算、恢复与回退仍未实现，不得自动启用，旧 Python `memory2` 数据仍不迁移 |
 | Peer Agent 进程、Agent Card 与远端信任 | `agent/peer_agent/*` | 无 Peer Agent；R14-P0 仅有 `LOCAL_FAKE` 值对象 | R14 P4 仍须建身份/协议/信任/资源边界，并以本地 Fake 演练；真实进程、远程 A2A 和推送仍未授权 |
 | 部署、真实数据迁移、灰度与 Python 退役 | `bootstrap/*`、`docker/`、`infra/` | 仅 sandbox Cutover 演练 | [R15 计划](../plans/2026-07-19-r15-production-migration-retirement-plan.md)已冻结配置、实例、数据副本、灰度与退役门槛；仅在书面授权、备份、双向回退及观察证据齐备后执行 |
 
