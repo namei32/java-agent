@@ -5,7 +5,6 @@ import io.namei.agent.kernel.channel.OutboundMessageType;
 import io.namei.agent.kernel.channel.TurnCancellationCode;
 import io.namei.agent.kernel.control.ControlCancelResult;
 import io.namei.agent.kernel.control.ControlEventProjection;
-import io.namei.agent.kernel.control.ControlStableCode;
 import io.namei.agent.kernel.control.ControlTerminalKind;
 import io.namei.agent.kernel.control.ControlTurnRef;
 import io.namei.agent.kernel.control.ControlTurnState;
@@ -99,6 +98,31 @@ public final class ActiveTurnRegistry implements ActiveTurnObserver, AutoCloseab
               .thenComparing(snapshot -> snapshot.turnRef().value()));
       return new ActiveTurnRegistrySnapshot(
           snapshots, tombstones.size(), !accepting || active.size() >= maxActiveTurns);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
+   * Returns unexpired terminal metadata only; callers must not expose the internal Turn reference.
+   */
+  public List<ControlTerminalTurnSnapshot> terminalSnapshot() {
+    lock.lock();
+    try {
+      cleanupExpired(clock.instant());
+      return tombstones.entrySet().stream()
+          .map(
+              entry ->
+                  new ControlTerminalTurnSnapshot(
+                      entry.getKey(),
+                      entry.getValue().channel(),
+                      entry.getValue().kind(),
+                      entry.getValue().completedAt()))
+          .sorted(
+              Comparator.comparing(ControlTerminalTurnSnapshot::completedAt)
+                  .reversed()
+                  .thenComparing(snapshot -> snapshot.turnRef().value()))
+          .toList();
     } finally {
       lock.unlock();
     }
@@ -287,8 +311,8 @@ public final class ActiveTurnRegistry implements ActiveTurnObserver, AutoCloseab
       ControlTerminalKind terminalKind = terminalKind(message.type());
       if (terminalKind != null && active.remove(turnRef, entry)) {
         closeEntrySubscriptionsLocked(entry, ControlSubscriptionCloseReason.TERMINAL, true);
-        addTombstone(
-            turnRef, terminalKind, message.code(), clock.instant().plus(terminalRetention));
+        Instant completedAt = clock.instant();
+        addTombstone(turnRef, entry.channel, terminalKind, completedAt);
       }
     } finally {
       lock.unlock();
@@ -301,11 +325,7 @@ public final class ActiveTurnRegistry implements ActiveTurnObserver, AutoCloseab
       Entry removed = active.remove(turnRef);
       if (removed != null) {
         closeEntrySubscriptionsLocked(removed, ControlSubscriptionCloseReason.SOURCE_ENDED, false);
-        addTombstone(
-            turnRef,
-            ControlTerminalKind.SOURCE_ENDED,
-            ControlStableCode.CONTROL_SOURCE_ENDED.name(),
-            clock.instant().plus(terminalRetention));
+        addTombstone(turnRef, removed.channel, ControlTerminalKind.SOURCE_ENDED, clock.instant());
       }
     } finally {
       lock.unlock();
@@ -380,8 +400,9 @@ public final class ActiveTurnRegistry implements ActiveTurnObserver, AutoCloseab
   }
 
   private void addTombstone(
-      ControlTurnRef turnRef, ControlTerminalKind kind, String code, Instant expiresAt) {
-    tombstones.put(turnRef, new Tombstone(kind, code, expiresAt));
+      ControlTurnRef turnRef, String channel, ControlTerminalKind kind, Instant completedAt) {
+    tombstones.put(
+        turnRef, new Tombstone(channel, kind, completedAt, completedAt.plus(terminalRetention)));
     if (tombstones.size() <= maxTerminalTombstones) {
       return;
     }
@@ -458,10 +479,12 @@ public final class ActiveTurnRegistry implements ActiveTurnObserver, AutoCloseab
     }
   }
 
-  private record Tombstone(ControlTerminalKind kind, String code, Instant expiresAt) {
+  private record Tombstone(
+      String channel, ControlTerminalKind kind, Instant completedAt, Instant expiresAt) {
     private Tombstone {
+      requireChannel(channel);
       Objects.requireNonNull(kind, "kind");
-      Objects.requireNonNull(code, "code");
+      Objects.requireNonNull(completedAt, "completedAt");
       Objects.requireNonNull(expiresAt, "expiresAt");
     }
   }

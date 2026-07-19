@@ -54,6 +54,20 @@ public final class ControlPlaneController {
     }
   }
 
+  @GetMapping("/history")
+  ResponseEntity<?> history(HttpServletRequest request) {
+    try {
+      HistoryQuery query = HistoryQuery.parse(request);
+      return ResponseEntity.ok(
+          control.history(query.pageSize(), query.cursor(), principal(request).actorRef()));
+    } catch (IllegalArgumentException invalid) {
+      return ResponseEntity.badRequest()
+          .body(
+              ControlErrorResponse.of(
+                  ControlStableCode.CONTROL_REQUEST_INVALID, requestId(request)));
+    }
+  }
+
   @PostMapping("/turns/{turnRef}/cancel")
   ResponseEntity<?> cancel(@PathVariable String turnRef, HttpServletRequest request) {
     ControlCancellationOutcome outcome;
@@ -143,6 +157,39 @@ public final class ControlPlaneController {
       }
       if (values.length != 1 || values[0] == null || values[0].isEmpty()) {
         throw new IllegalArgumentException("控制索引查询参数无效");
+      }
+      return values[0];
+    }
+  }
+
+  private record HistoryQuery(int pageSize, String cursor) {
+    private static final Set<String> ALLOWED_PARAMETERS = Set.of("pageSize", "cursor");
+
+    static HistoryQuery parse(HttpServletRequest request) {
+      Map<String, String[]> parameters = request.getParameterMap();
+      if (!ALLOWED_PARAMETERS.containsAll(parameters.keySet())) {
+        throw new IllegalArgumentException("控制历史包含未批准的查询参数");
+      }
+      String pageSize = one(parameters, "pageSize");
+      String cursor = one(parameters, "cursor");
+      if (pageSize == null) {
+        return new HistoryQuery(
+            ControlPlaneStatusService.defaultHistoryPageSize(), cursor == null ? "" : cursor);
+      }
+      try {
+        return new HistoryQuery(Integer.parseInt(pageSize), cursor == null ? "" : cursor);
+      } catch (NumberFormatException invalid) {
+        throw new IllegalArgumentException("控制历史分页大小格式无效", invalid);
+      }
+    }
+
+    private static String one(Map<String, String[]> parameters, String name) {
+      String[] values = parameters.get(name);
+      if (values == null) {
+        return null;
+      }
+      if (values.length != 1 || values[0] == null || values[0].isEmpty()) {
+        throw new IllegalArgumentException("控制历史查询参数无效");
       }
       return values[0];
     }

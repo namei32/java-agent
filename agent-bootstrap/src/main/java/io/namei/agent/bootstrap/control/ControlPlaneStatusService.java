@@ -3,6 +3,7 @@ package io.namei.agent.bootstrap.control;
 import io.namei.agent.application.control.ActiveTurnRegistrySnapshot;
 import io.namei.agent.application.control.ControlCancellationOutcome;
 import io.namei.agent.application.control.ControlEventHubSnapshot;
+import io.namei.agent.application.control.ControlTerminalTurnSnapshot;
 import io.namei.agent.bootstrap.channel.ChannelHost;
 import io.namei.agent.bootstrap.channel.ChannelReliabilityStatus;
 import io.namei.agent.bootstrap.channel.ChannelStatusSnapshot;
@@ -26,6 +27,8 @@ public final class ControlPlaneStatusService {
   private final ControlPlaneRuntime runtime;
   private final ControlPlaneProperties properties;
   private final ControlIndexCursorStore indexCursors;
+  private final ControlHistoryCursorStore historyCursors;
+  private final ControlHistoryReferenceStore historyReferences;
 
   public ControlPlaneStatusService(
       Clock clock,
@@ -37,7 +40,9 @@ public final class ControlPlaneStatusService {
         host,
         runtime,
         properties,
-        new ControlIndexCursorStore(clock, ControlRandomSource.secure()));
+        new ControlIndexCursorStore(clock, ControlRandomSource.secure()),
+        new ControlHistoryCursorStore(clock, ControlRandomSource.secure()),
+        new ControlHistoryReferenceStore(clock, ControlRandomSource.secure()));
   }
 
   ControlPlaneStatusService(
@@ -46,11 +51,31 @@ public final class ControlPlaneStatusService {
       ControlPlaneRuntime runtime,
       ControlPlaneProperties properties,
       ControlIndexCursorStore indexCursors) {
+    this(
+        clock,
+        host,
+        runtime,
+        properties,
+        indexCursors,
+        new ControlHistoryCursorStore(clock, ControlRandomSource.secure()),
+        new ControlHistoryReferenceStore(clock, ControlRandomSource.secure()));
+  }
+
+  ControlPlaneStatusService(
+      Clock clock,
+      ChannelHost host,
+      ControlPlaneRuntime runtime,
+      ControlPlaneProperties properties,
+      ControlIndexCursorStore indexCursors,
+      ControlHistoryCursorStore historyCursors,
+      ControlHistoryReferenceStore historyReferences) {
     this.clock = Objects.requireNonNull(clock, "clock");
     this.host = Objects.requireNonNull(host, "host");
     this.runtime = Objects.requireNonNull(runtime, "runtime");
     this.properties = Objects.requireNonNull(properties, "properties");
     this.indexCursors = Objects.requireNonNull(indexCursors, "indexCursors");
+    this.historyCursors = Objects.requireNonNull(historyCursors, "historyCursors");
+    this.historyReferences = Objects.requireNonNull(historyReferences, "historyReferences");
   }
 
   public ControlStatusResponse status() {
@@ -148,6 +173,48 @@ public final class ControlPlaneStatusService {
         nextCursor);
   }
 
+  public ControlHistoryCatalogResponse history(int pageSize, String cursor, String actorRef) {
+    requireHistoryRequest(pageSize, cursor);
+    Instant observedAt = clock.instant();
+    if (runtime.isClosed()) {
+      return new ControlHistoryCatalogResponse(
+          ControlPlaneContract.CURRENT_VERSION,
+          observedAt,
+          "SHUTTING_DOWN",
+          ControlStableCode.CONTROL_SHUTTING_DOWN.name(),
+          List.of(),
+          "");
+    }
+    List<ControlTerminalTurnSnapshot> candidates;
+    try {
+      List<ControlTerminalTurnSnapshot> snapshot = runtime.registry().terminalSnapshot();
+      candidates =
+          cursor.isEmpty()
+              ? snapshot
+              : historyCursors
+                  .take(cursor, actorRef)
+                  .orElseThrow(() -> new IllegalArgumentException("控制历史游标无效或已失效"));
+    } catch (IllegalArgumentException invalid) {
+      throw invalid;
+    } catch (RuntimeException unavailable) {
+      return historyUnavailable(observedAt);
+    }
+    int end = Math.min(pageSize, candidates.size());
+    List<ControlHistoryCatalogResponse.Item> items =
+        candidates.subList(0, end).stream()
+            .map(
+                snapshot ->
+                    new ControlHistoryCatalogResponse.Item(
+                        historyReferences.issue(actorRef, snapshot),
+                        snapshot.channel(),
+                        snapshot.terminalKind().name(),
+                        snapshot.completedAt()))
+            .toList();
+    String nextCursor = historyCursors.issue(actorRef, candidates.subList(end, candidates.size()));
+    return new ControlHistoryCatalogResponse(
+        ControlPlaneContract.CURRENT_VERSION, observedAt, "READY", "", items, nextCursor);
+  }
+
   public ControlCancellationOutcome cancel(String reference) {
     return runtime.registry().cancel(ControlTurnRef.parse(reference));
   }
@@ -176,6 +243,16 @@ public final class ControlPlaneStatusService {
         "DEGRADED",
         ControlStableCode.CONTROL_SNAPSHOT_UNAVAILABLE.name(),
         List.of(),
+        List.of(),
+        "");
+  }
+
+  private static ControlHistoryCatalogResponse historyUnavailable(Instant observedAt) {
+    return new ControlHistoryCatalogResponse(
+        ControlPlaneContract.CURRENT_VERSION,
+        observedAt,
+        "DEGRADED",
+        ControlStableCode.CONTROL_SNAPSHOT_UNAVAILABLE.name(),
         List.of(),
         "");
   }
@@ -222,7 +299,20 @@ public final class ControlPlaneStatusService {
     }
   }
 
+  private static void requireHistoryRequest(int pageSize, String cursor) {
+    if (pageSize < 1 || pageSize > MAXIMUM_INDEX_PAGE_SIZE) {
+      throw new IllegalArgumentException("控制历史分页大小无效");
+    }
+    if (cursor == null || !INDEX_CURSOR.matcher(cursor).matches()) {
+      throw new IllegalArgumentException("控制历史游标格式无效");
+    }
+  }
+
   static int defaultIndexPageSize() {
+    return DEFAULT_INDEX_PAGE_SIZE;
+  }
+
+  static int defaultHistoryPageSize() {
     return DEFAULT_INDEX_PAGE_SIZE;
   }
 

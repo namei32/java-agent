@@ -157,6 +157,40 @@ class ActiveTurnRegistryTest {
     assertThat(registry.snapshot().terminalTombstones()).isEqualTo(1);
   }
 
+  @Test
+  void exposesOnlySafeTerminalMetadataInCompletionOrder() {
+    MutableClock clock = new MutableClock(START);
+    ControlTurnRef firstRef = ref(1);
+    ControlTurnRef secondRef = ref(2);
+    ActiveTurnRegistry registry = registry(clock, 2, 2, firstRef, secondRef);
+
+    ActiveTurnRegistration first =
+        registry.register(
+            "telegram", ControlCancellationHandle.from(new TurnCancellationSource()), START);
+    first.observe(started());
+    first.observe(completed(1, "first-secret-answer"));
+    clock.advance(Duration.ofSeconds(1));
+    ActiveTurnRegistration second =
+        registry.register(
+            "mcp", ControlCancellationHandle.from(new TurnCancellationSource()), clock.instant());
+    second.observe(started());
+    second.closeWithoutTerminal();
+
+    assertThat(registry.terminalSnapshot())
+        .containsExactly(
+            new ControlTerminalTurnSnapshot(
+                secondRef, "mcp", ControlTerminalKind.SOURCE_ENDED, START.plusSeconds(1)),
+            new ControlTerminalTurnSnapshot(
+                firstRef, "telegram", ControlTerminalKind.COMPLETED, START));
+    assertThat(registry.terminalSnapshot().toString())
+        .doesNotContain(
+            "first-secret-answer", "turn-secret", "session-secret", "conversation-secret");
+
+    clock.advance(Duration.ofMinutes(5));
+
+    assertThat(registry.terminalSnapshot()).isEmpty();
+  }
+
   private static ActiveTurnRegistry registry(
       Clock clock, int maxActive, int maxTombstones, ControlTurnRef first, ControlTurnRef... rest) {
     ArrayDeque<ControlTurnRef> references = new ArrayDeque<>();

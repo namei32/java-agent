@@ -17,7 +17,7 @@ class ControlPlaneConfigurationTest {
   private static final Instant NOW = Instant.parse("2026-07-18T00:00:00Z");
 
   @Test
-  void disabledModeDoesNotCreateTheReadOnlyIndexController() {
+  void disabledModeDoesNotCreateTheReadOnlyControlCatalogController() {
     new WebApplicationContextRunner()
         .withUserConfiguration(ControlPlaneConfiguration.class, ControlPlaneController.class)
         .run(

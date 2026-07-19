@@ -87,6 +87,52 @@ class ControlPlaneControllerTest {
         .andExpect(jsonPath("$.turns[0].lastSequence").doesNotExist())
         .andExpect(jsonPath("$.actor").doesNotExist())
         .andExpect(jsonPath("$.nextCursor").value(""));
+
+    var terminal =
+        runtime.register(
+            "telegram", ControlCancellationHandle.from(new TurnCancellationSource()), NOW);
+    terminal.observe(
+        io.namei.agent.kernel.channel.OutboundMessage.started(
+            "raw-turn-secret",
+            "raw-session-secret",
+            new io.namei.agent.kernel.channel.MessageRoute("telegram", "raw-route-secret")));
+    terminal.observe(
+        io.namei.agent.kernel.channel.OutboundMessage.completed(
+            "raw-turn-secret",
+            "raw-session-secret",
+            new io.namei.agent.kernel.channel.MessageRoute("telegram", "raw-route-secret"),
+            1,
+            "private terminal body"));
+    mvc.perform(authenticated(get("/api/v1/control/history"), token))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Cache-Control", "no-store"))
+        .andExpect(jsonPath("$.schemaVersion").value(1))
+        .andExpect(jsonPath("$.state").value("READY"))
+        .andExpect(jsonPath("$.items[0].historyRef").isString())
+        .andExpect(jsonPath("$.items[0].channel").value("telegram"))
+        .andExpect(jsonPath("$.items[0].terminalState").value("COMPLETED"))
+        .andExpect(jsonPath("$.items[0].completedAt").value(NOW.toString()))
+        .andExpect(jsonPath("$.items[0].turnRef").doesNotExist())
+        .andExpect(jsonPath("$.actor").doesNotExist())
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("raw-session-secret"))));
+    mvc.perform(
+            authenticated(
+                get("/api/v1/control/history")
+                    .queryParam("sessionId", "telegram:raw-session-secret"),
+                token))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CONTROL_REQUEST_INVALID"));
+    mvc.perform(
+            authenticated(get("/api/v1/control/history").queryParam("historyRef", "opaque"), token))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CONTROL_REQUEST_INVALID"));
+    mvc.perform(authenticated(post("/api/v1/control/history"), token))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CONTROL_REQUEST_INVALID"));
     mvc.perform(
             authenticated(
                 get("/api/v1/control/index").queryParam("sessionId", "telegram:raw-session-secret"),

@@ -1,6 +1,6 @@
 # R13-C1 Loopback 只读控制索引设计
 
-- 状态：C0 Contract/Fixture 与 C1 本机实现已完成；R13 的 C2–C5 仍未开始。
+- 状态：C0 Contract/Fixture、C1 本机实现与 C2-A 内存终态目录已完成；R13 的 C2-B/C3–C5 仍未开始。
 - 关联 Contract：[R13-C0 只读控制索引](../contracts/r13-read-only-control-index.md)
 - 前置：既有 Loopback Guard、短期 Operator Session、`ActiveTurnRegistry` 与渠道健康快照。
 

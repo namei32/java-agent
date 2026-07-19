@@ -1,0 +1,53 @@
+{
+  "cases": [
+    {"id": "default-disabled-has-no-history-route", "group": "activation", "input": {"configuredMode": "DISABLED"}, "expected": {"mapped": false}},
+    {"id": "loopback-maps-only-history-get", "group": "activation", "input": {"configuredMode": "LOOPBACK", "method": "GET"}, "expected": {"mapped": true, "path": "/api/v1/control/history"}},
+    {"id": "non-get-history-request-is-rejected", "group": "activation", "input": {"configuredMode": "LOOPBACK", "method": "POST"}, "expected": {"code": "CONTROL_REQUEST_INVALID"}},
+    {"id": "remote-binding-cannot-map-history-route", "group": "activation", "input": {"configuredMode": "LOOPBACK", "serverAddress": "0.0.0.0"}, "expected": {"code": "CONTROL_BINDING_INVALID", "mapped": false}},
+    {"id": "missing-bearer-is-rejected", "group": "authentication", "input": {"credential": "MISSING"}, "expected": {"code": "CONTROL_AUTHENTICATION_REQUIRED", "httpStatus": 401}},
+    {"id": "expired-bearer-is-rejected", "group": "authentication", "input": {"credential": "EXPIRED"}, "expected": {"code": "CONTROL_AUTHENTICATION_REQUIRED", "httpStatus": 401}},
+    {"id": "valid-bearer-does-not-project-actor", "group": "authentication", "input": {"credential": "VALID"}, "expected": {"actorPresent": false, "authorized": true}},
+    {"id": "empty-tombstones-return-empty-success", "group": "projection", "input": {"terminalTurns": []}, "expected": {"httpStatus": 200, "items": []}},
+    {"id": "active-turn-is-not-history-item", "group": "projection", "input": {"activeTurn": "ACTIVE"}, "expected": {"listed": false}},
+    {"id": "terminal-tombstone-is-history-item", "group": "projection", "input": {"terminalState": "COMPLETED"}, "expected": {"listed": true}},
+    {"id": "history-item-uses-minimal-safe-fields", "group": "projection", "input": {"includeRawIdentifiers": true}, "expected": {"fields": ["channel", "completedAt", "historyRef", "terminalState"]}},
+    {"id": "history-sorts-by-completion-then-internal-reference", "group": "projection", "input": {"sameCompletedAt": true}, "expected": {"stable": true}},
+    {"id": "expired-tombstone-is-absent", "group": "projection", "input": {"expired": true}, "expected": {"listed": false}},
+    {"id": "default-page-size-is-bounded", "group": "pagination", "input": {}, "expected": {"pageSize": 20}},
+    {"id": "maximum-page-size-is-bounded", "group": "pagination", "input": {"pageSize": 50}, "expected": {"pageSize": 50}},
+    {"id": "oversized-page-size-is-rejected", "group": "pagination", "input": {"pageSize": 51}, "expected": {"code": "CONTROL_REQUEST_INVALID"}},
+    {"id": "raw-session-cursor-is-rejected", "group": "pagination", "input": {"cursor": "telegram:raw-session-secret"}, "expected": {"code": "CONTROL_REQUEST_INVALID"}},
+    {"id": "next-cursor-is-opaque-and-actor-bound", "group": "pagination", "input": {"hasNextPage": true}, "expected": {"cursorKind": "OPAQUE", "rawIdentifiersPresent": false}},
+    {"id": "unknown-query-is-not-a-history-filter", "group": "secrecy", "input": {"query": {"sessionId": "telegram:raw-session-secret"}}, "expected": {"code": "CONTROL_REQUEST_INVALID"}},
+    {"id": "message-content-query-is-rejected", "group": "secrecy", "input": {"query": {"content": "private message body"}}, "expected": {"code": "CONTROL_REQUEST_INVALID"}},
+    {"id": "history-ref-is-not-a-detail-authority", "group": "secrecy", "input": {"historyRef": "opaque"}, "expected": {"detailMapped": false}},
+    {"id": "snapshot-failure-is-degraded-and-redacted", "group": "secrecy", "input": {"snapshotFailure": true}, "expected": {"code": "CONTROL_SNAPSHOT_UNAVAILABLE", "items": [], "state": "DEGRADED"}}
+  ],
+  "contractEvidence": {
+    "adr": "docs/adr/0036-restrict-control-history-to-in-memory-terminal-metadata.md",
+    "approvedOn": "2026-07-19",
+    "contract": "docs/contracts/r13-terminal-history-catalog.md",
+    "plan": "docs/plans/2026-07-19-r13-c2-restricted-history-browse-plan.md",
+    "spec": "docs/specs/2026-07-19-r13-terminal-history-catalog-design.md"
+  },
+  "defaults": {
+    "rawContent": "private message body",
+    "rawRoute": "telegram:raw-route-secret",
+    "rawSession": "telegram:raw-session-secret",
+    "rawTurn": "raw-turn-secret"
+  },
+  "formatVersion": 1,
+  "limits": {
+    "cursorTtlSeconds": 60,
+    "defaultPageSize": 20,
+    "maximumPageSize": 50,
+    "schemaVersion": 1
+  },
+  "normalization": [
+    "终态按 completedAt 倒序、内部 turnRef 字典序稳定排序；turnRef 不进入公开投影",
+    "historyRef 与 cursor 为服务器签发的 actor-bound 不透明值，不能由 Session、Turn 或正文标识派生",
+    "目录只含终态元数据，不含正文、身份、Provider、Tool、Memory、Approval 或 SQLite 字段"
+  ],
+  "source": "java-contract",
+  "suite": "control-plane/r13-terminal-history-catalog-v1"
+}

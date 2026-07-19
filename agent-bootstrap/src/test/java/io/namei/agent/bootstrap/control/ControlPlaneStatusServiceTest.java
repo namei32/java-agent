@@ -206,6 +206,57 @@ class ControlPlaneStatusServiceTest {
   }
 
   @Test
+  void projectsBoundedTerminalMetadataCatalogWithOpaqueContinuation() {
+    assertThat(ControlPlaneStatusService.defaultHistoryPageSize()).isEqualTo(20);
+    var host = new ChannelHost(List.of());
+    host.start();
+    var runtime = runtime();
+    var completed =
+        runtime.register(
+            "telegram", ControlCancellationHandle.from(new TurnCancellationSource()), NOW);
+    completed.observe(
+        OutboundMessage.started(
+            "raw-turn-secret", "raw-session-secret", new MessageRoute("telegram", "raw-route")));
+    completed.observe(
+        OutboundMessage.completed(
+            "raw-turn-secret",
+            "raw-session-secret",
+            new MessageRoute("telegram", "raw-route"),
+            1,
+            "private terminal body"));
+    var sourceEnded =
+        runtime.register("mcp", ControlCancellationHandle.from(new TurnCancellationSource()), NOW);
+    sourceEnded.closeWithoutTerminal();
+    var service = service(host, runtime);
+
+    ControlHistoryCatalogResponse firstPage = service.history(1, "", "AAAAAAAAAAAAAAAAAAAAAA");
+    ControlHistoryCatalogResponse secondPage =
+        service.history(50, firstPage.nextCursor(), "AAAAAAAAAAAAAAAAAAAAAA");
+
+    assertThat(firstPage.schemaVersion()).isEqualTo(1);
+    assertThat(firstPage.state()).isEqualTo("READY");
+    assertThat(firstPage.code()).isEmpty();
+    assertThat(firstPage.items()).hasSize(1);
+    assertThat(firstPage.items().getFirst().historyRef()).matches("[A-Za-z0-9_-]{22}");
+    assertThat(firstPage.items().getFirst().channel()).isEqualTo("telegram");
+    assertThat(firstPage.items().getFirst().terminalState()).isEqualTo("COMPLETED");
+    assertThat(firstPage.items().getFirst().completedAt()).isEqualTo(NOW);
+    assertThat(firstPage.nextCursor()).matches("[A-Za-z0-9_-]{22}");
+    assertThat(secondPage.items())
+        .containsExactly(
+            new ControlHistoryCatalogResponse.Item(
+                secondPage.items().getFirst().historyRef(), "mcp", "SOURCE_ENDED", NOW));
+    assertThat(secondPage.nextCursor()).isEmpty();
+    assertThat(firstPage.toString())
+        .doesNotContain(
+            "raw-turn-secret",
+            "raw-session-secret",
+            "raw-route",
+            "private terminal body",
+            completed.turnRef().orElseThrow().value());
+  }
+
+  @Test
   void reportsRegistrySaturationWithoutCancellingOrRejectingTheRunningTurn() {
     ControlPlaneProperties properties = properties(1);
     var next = new java.util.concurrent.atomic.AtomicInteger();
