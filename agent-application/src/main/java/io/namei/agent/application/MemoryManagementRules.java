@@ -11,7 +11,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -82,6 +84,16 @@ final class MemoryManagementRules {
 
   static String deleteArgumentHash(String itemId) {
     return argumentHash(MUTATION_VERSION, "DELETE", "", itemId, "", "");
+  }
+
+  static String forgetArgumentHash(List<String> ids) {
+    Objects.requireNonNull(ids, "ids");
+    var fields = new ArrayList<String>(ids.size() + 3);
+    fields.add(MUTATION_VERSION);
+    fields.add("FORGET");
+    fields.add(Integer.toString(ids.size()));
+    ids.forEach(id -> fields.add(Objects.requireNonNull(id, "Memory Item ID")));
+    return argumentHash(fields.toArray(String[]::new));
   }
 
   private static String safeIdentifier(String value, String field) {

@@ -93,6 +93,19 @@ public final class JdbcPendingOperationStore implements PendingOperationStore {
   }
 
   @Override
+  public Optional<PendingOperationCapsule> loadVerifiedCapsule(
+      PendingOperationReference reference) {
+    Objects.requireNonNull(reference, "reference");
+    try (var connection = schema.openConnection()) {
+      return findAuthenticated(connection, reference).map(AuthenticatedOperation::capsule);
+    } catch (PendingOperationStoreException exception) {
+      throw exception;
+    } catch (SQLException | RuntimeException exception) {
+      throw new PendingOperationStoreException(exception);
+    }
+  }
+
+  @Override
   public PendingOperationReservation reserveApproved(
       PendingOperationReference reference, Instant observedAt) {
     Objects.requireNonNull(reference, "reference");
@@ -662,6 +675,11 @@ public final class JdbcPendingOperationStore implements PendingOperationStore {
 
   private Optional<PendingOperation> find(
       Connection connection, PendingOperationReference reference) throws SQLException {
+    return findAuthenticated(connection, reference).map(AuthenticatedOperation::operation);
+  }
+
+  private Optional<AuthenticatedOperation> findAuthenticated(
+      Connection connection, PendingOperationReference reference) throws SQLException {
     try (var statement =
         connection.prepareStatement(
             """
@@ -680,7 +698,7 @@ public final class JdbcPendingOperationStore implements PendingOperationStore {
         if (!rows.next()) {
           return Optional.empty();
         }
-        PendingOperation operation = read(rows, reference);
+        AuthenticatedOperation operation = read(rows, reference);
         if (rows.next()) {
           throw new PendingOperationStoreException();
         }
@@ -689,7 +707,7 @@ public final class JdbcPendingOperationStore implements PendingOperationStore {
     }
   }
 
-  private PendingOperation read(ResultSet rows, PendingOperationReference reference)
+  private AuthenticatedOperation read(ResultSet rows, PendingOperationReference reference)
       throws SQLException {
     try {
       PendingOperationReference storedReference =
@@ -723,9 +741,17 @@ public final class JdbcPendingOperationStore implements PendingOperationStore {
       if (!capsule.matches(operation)) {
         throw new PendingOperationStoreException();
       }
-      return operation;
+      return new AuthenticatedOperation(operation, capsule);
     } catch (PendingOperationCapsuleException | IllegalArgumentException exception) {
       throw new PendingOperationStoreException(exception);
+    }
+  }
+
+  private record AuthenticatedOperation(
+      PendingOperation operation, PendingOperationCapsule capsule) {
+    private AuthenticatedOperation {
+      Objects.requireNonNull(operation, "operation");
+      Objects.requireNonNull(capsule, "capsule");
     }
   }
 

@@ -1,18 +1,19 @@
 # R11-B2c Scope 受限 Memory Forget Capability 实施计划
 
-- 状态：已获路径 A 批准；F1 尚未开始
+- 状态：已获路径 A 批准；F1、F2 已完成，F3 的静态 Capability 与显式恢复编排进行中；尚未注册 Tool、开放路由或装配生产 Bean
 - 日期：2026-07-19
 - Contract：[获批的 Scope 受限 Memory Forget Capability](../contracts/approved-scope-bound-memory-forget.md)
 - Design：[R11-B2c 设计](../specs/2026-07-19-r11-memory-forget-capability-design.md)
 
 ## 连续 TDD 切片
 
-1. **F1 Fixture 与 Kernel RED→GREEN**：新增 Java-owned `memory-forget-capability-v1` Fixture，先写
+1. **F1 Fixture 与 Kernel RED→GREEN（已完成）**：新增 Java-owned `memory-forget-capability-v1` Fixture，先写
    失败的 Kernel/Fixture Case，冻结输入去空白/去重、脱敏结果、Scope 隐藏、状态机与默认关闭。
-2. **F2 Memory Schema V2 RED→GREEN**：先让 V1→V2、备份失败、未知 Schema、状态过滤和再激活 Case
+2. **F2 Memory Schema V2 RED→GREEN（已完成）**：先让 V1→V2、备份失败、未知 Schema、状态过滤和再激活 Case
    失败；实现 V2 migration/validator 与 SQLite SoftForget Store。只用临时数据库。
-3. **F3 Capability 与 Pending 编排 RED→GREEN**：实现静态 Descriptor、Capsule 绑定、内部操作键、
-   Approval/Anchor/Reservation/`RUNNING`/安全结果。不引入泛化任意 Tool 执行器。
+3. **F3 Capability 与 Pending 编排 RED→GREEN（进行中）**：实现静态 Descriptor、Capsule 绑定、内部操作键、
+   Approval/Anchor/Reservation/`RUNNING`/安全结果。不引入泛化任意 Tool 执行器。当前已完成恢复半程；创建
+   Pending 投影与受控 Catalog 接线仍留在本切片后续工作。
 4. **F4 Loopback Resume/Cancel/Status RED→GREEN**：仅实现现有 R11 消息 Contract 的认证本机映射；验证
    无 Body/Query、默认零路由、模式组合、脱敏、无 Worker 和 `UNKNOWN`/`COMMIT_UNREPORTED` 停机。
 5. **F5 失败与并发 RED→GREEN**：覆盖取消、过期、新 Turn、绑定不符、单获胜者、事务回滚、关闭/中断和

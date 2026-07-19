@@ -72,6 +72,26 @@ class PendingOperationReservationTest {
   }
 
   @Test
+  void exposesAPlaintextCapsuleOnlyAfterTheStoredOperationBindingAuthenticates() throws Exception {
+    ApprovalInboxSchemaInitializer schema = schema();
+    schema.initialize();
+    JdbcPendingOperationStore store = create(store(schema));
+
+    assertThat(store.loadVerifiedCapsule(operation().reference())).contains(capsule(operation()));
+
+    try (Connection connection = schema.openConnection();
+        var statement =
+            connection.prepareStatement(
+                "UPDATE pending_operations SET capsule_ciphertext = zeroblob(length(capsule_ciphertext)) "
+                    + "WHERE operation_ref = ?")) {
+      statement.setString(1, operation().reference().value());
+      assertThat(statement.executeUpdate()).isOne();
+    }
+    assertThatThrownBy(() -> store.loadVerifiedCapsule(operation().reference()))
+        .isInstanceOf(PendingOperationStoreException.class);
+  }
+
+  @Test
   void expiryBeatsAnApprovedButNotYetConsumedOperation() throws Exception {
     ApprovalInboxSchemaInitializer schema = schema();
     schema.initialize();

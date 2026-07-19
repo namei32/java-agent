@@ -2,6 +2,7 @@ package io.namei.agent.application;
 
 import io.namei.agent.kernel.tool.ToolResult;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -15,6 +16,20 @@ public interface PendingOperationStore {
       PendingOperation operation, ApprovalInboxEntry approval, PendingOperationCapsule capsule);
 
   Optional<PendingOperation> find(PendingOperationReference reference);
+
+  /**
+   * Returns a plaintext capsule only after the adapter has reconstructed the complete Operation,
+   * authenticated the encrypted payload, and verified the complete binding.
+   *
+   * <p>This is not an execution right and must never expose ciphertext, nonce, key material, or raw
+   * persisted parameter columns. A future capability must still obtain its own Reservation before
+   * invocation.
+   */
+  default Optional<PendingOperationCapsule> loadVerifiedCapsule(
+      PendingOperationReference reference) {
+    Objects.requireNonNull(reference, "reference");
+    throw new UnsupportedOperationException("Pending Operation Store 不支持已认证 Capsule 读取");
+  }
 
   /**
    * Atomically consumes an already-approved Inbox record, advances its operation to {@code

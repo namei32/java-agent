@@ -1,6 +1,6 @@
 # R11-B2c Scope 受限 Memory Forget Capability 设计
 
-- 状态：Contract 已冻结，等待 TDD 实现
+- 状态：F1/F2 已完成；F3 的静态 Capability、认证 Capsule 读取与显式恢复器已实现并通过临时 SQLite 纵向测试；创建 Pending 投影、Catalog/Bootstrap 和控制面仍未实现
 - 日期：2026-07-19
 - Contract：[获批的 Scope 受限 Memory Forget Capability](../contracts/approved-scope-bound-memory-forget.md)
 - ADR：[ADR-0035](../adr/0035-use-scope-bound-soft-supersede-for-memory-forget.md)
@@ -15,6 +15,11 @@ Tool Catalog -> forget_memory Pending 投影 -> Approval Inbox
 
 Tool 调用本身不执行写入。没有明确模式、Approval、Reservation 和 Anchor 的精确绑定，或任何一项恢复
 检查失败时，调用计数必须为零。Resume 不接收 Tool 参数；它只消费已认证加密 Capsule 中的规范化 `ids`。
+
+F3 的生产恢复器不是泛化 Tool 执行器：它只接受 `forget_memory` 的静态 Descriptor，并仅从已认证
+`PendingOperationStore` 边界取得短生命周期 Capsule。它以 Operation Ref 派生内部 Mutation Key，以 Capsule
+的 Session 派生 Scope，并以固定、无参数的 Assistant 完成投影提交 Anchor；Memory 的安全 JSON Result 只进入
+已受 Ledger 大小限制的安全结果字段。
 
 ## 2. Kernel 模型
 
