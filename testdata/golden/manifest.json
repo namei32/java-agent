@@ -235,6 +235,12 @@
       "source": "java-contract"
     },
     {
+      "id": "tools/memory-forget-capability-v1",
+      "path": "tools/memory-forget-capability-v1.json",
+      "sha256": "ad8e1aa1d108b8f79f38db76660b3415880af14109b3e590349b169238a490e1",
+      "source": "java-contract"
+    },
+    {
       "id": "tools/approval-inbox-v1",
       "path": "tools/approval-inbox-v1.json",
       "sha256": "c44a7e4d3b0854885fb4dfc7234d2d058a873d73257dd010ab1e9bdf18a8ff5b",

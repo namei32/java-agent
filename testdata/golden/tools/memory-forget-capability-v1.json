@@ -1,0 +1,145 @@
+{
+  "formatVersion": 1,
+  "suite": "tools/memory-forget-capability-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0035-use-scope-bound-soft-supersede-for-memory-forget.md",
+    "contract": "docs/contracts/approved-scope-bound-memory-forget.md",
+    "spec": "docs/specs/2026-07-19-r11-memory-forget-capability-design.md"
+  },
+  "normalization": ["java-string-strip", "drop-blank", "stable-deduplicate"],
+  "defaults": {
+    "scopeBinding": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "operationKey": "forget-op-001",
+    "argumentHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "cases": [
+    {
+      "id": "forget-default-disabled-is-zero-registration-and-zero-io",
+      "group": "activation",
+      "input": {"mode": "DISABLED"},
+      "expected": {"registeredTools": 0, "pendingOperations": 0, "invocations": 0}
+    },
+    {
+      "id": "forget-requires-java-native-loopback-inbox-and-explicit-mode",
+      "group": "activation",
+      "input": {"mode": "LOOPBACK_APPROVAL"},
+      "expected": {"prerequisites": ["JAVA_NATIVE", "LOOPBACK", "APPROVAL_INBOX_LOOPBACK", "HEALTHY_STORES"]}
+    },
+    {
+      "id": "forget-definition-is-static-write-deferred",
+      "group": "definition",
+      "input": {"name": "forget_memory"},
+      "expected": {"risk": "WRITE", "version": "java-memory-forget-v1", "visibility": "DEFERRED"}
+    },
+    {
+      "id": "forget-schema-requires-only-ids-array",
+      "group": "schema",
+      "input": {"ids": ["memory-a"]},
+      "expected": {"additionalProperties": false, "required": ["ids"]}
+    },
+    {
+      "id": "forget-normalizes-strip-drops-blanks-and-stably-deduplicates",
+      "group": "normalization",
+      "input": {"ids": [" memory-a ", "", "memory-b", "memory-a", "   "]},
+      "expected": {"requested_ids": ["memory-a", "memory-b"]}
+    },
+    {
+      "id": "forget-normalization-preserves-first-occurrence-and-case",
+      "group": "normalization",
+      "input": {"ids": ["A", "a", " A ", "a"]},
+      "expected": {"requested_ids": ["A", "a"]}
+    },
+    {
+      "id": "forget-empty-normalized-input-is-immediate-safe-success",
+      "group": "normalization",
+      "input": {"ids": [" ", ""]},
+      "expected": {"requested_ids": [], "superseded_ids": [], "missing_ids": [], "count": 0, "pendingOperations": 0}
+    },
+    {
+      "id": "forget-result-preserves-request-hit-and-missing-order",
+      "group": "projection",
+      "input": {"ids": ["memory-b", "memory-a", "missing"]},
+      "expected": {"requested_ids": ["memory-b", "memory-a", "missing"], "superseded_ids": ["memory-b", "memory-a"], "missing_ids": ["missing"], "count": 2}
+    },
+    {
+      "id": "forget-result-never-contains-items-or-memory-content",
+      "group": "projection",
+      "input": {"ids": ["memory-a"]},
+      "expected": {"forbiddenFields": ["items", "content", "embedding", "content_hash", "scope", "session", "approval", "capsule", "ledger"]}
+    },
+    {
+      "id": "forget-cross-scope-and-unknown-ids-are-equally-missing",
+      "group": "scope",
+      "input": {"ids": ["current", "other-scope", "unknown"]},
+      "expected": {"superseded_ids": ["current"], "missing_ids": ["other-scope", "unknown"], "scopeSource": "CURRENT_SESSION_PRIVATE_BINDING"}
+    },
+    {
+      "id": "forget-existing-superseded-id-remains-a-stable-hit",
+      "group": "lifecycle",
+      "input": {"ids": ["memory-a"], "initialStatus": "SUPERSEDED"},
+      "expected": {"superseded_ids": ["memory-a"], "count": 1}
+    },
+    {
+      "id": "forget-has-only-active-and-superseded-lifecycle-states",
+      "group": "lifecycle",
+      "input": {"operation": "enum"},
+      "expected": {"states": ["ACTIVE", "SUPERSEDED"]}
+    },
+    {
+      "id": "forget-superseded-items-are-excluded-from-list-search-and-context",
+      "group": "lifecycle",
+      "input": {"initialStatus": "SUPERSEDED"},
+      "expected": {"list": 0, "candidates": 0, "context": 0}
+    },
+    {
+      "id": "forget-upsert-reactivates-same-scope-same-content",
+      "group": "lifecycle",
+      "input": {"initialStatus": "SUPERSEDED", "operation": "UPSERT_SAME_CONTENT"},
+      "expected": {"status": "ACTIVE", "newItem": false, "reinforced": true}
+    },
+    {
+      "id": "forget-v1-to-v2-backs-up-before-status-and-results-migration",
+      "group": "schema",
+      "input": {"schemaVersion": 1},
+      "expected": {"schemaVersion": 2, "backupBeforeDdl": true, "statusDefault": "ACTIVE"}
+    },
+    {
+      "id": "forget-operation-key-replay-returns-original-safe-batch-result",
+      "group": "idempotency",
+      "input": {"operationKey": "forget-op-001", "ids": ["memory-a", "missing"]},
+      "expected": {"writes": 1, "replayWrites": 0, "result": "ORIGINAL_SAFE_PROJECTION"}
+    },
+    {
+      "id": "forget-operation-key-argument-change-fails-closed",
+      "group": "idempotency",
+      "input": {"operationKey": "forget-op-001", "ids": ["memory-a", "memory-b"]},
+      "expected": {"accepted": false, "code": "IDEMPOTENCY_CONFLICT", "writes": 0}
+    },
+    {
+      "id": "forget-needs-approved-anchor-and-unique-reservation-before-invocation",
+      "group": "recovery",
+      "input": {"approval": "APPROVED", "anchor": "MATCHED", "reservation": "ACQUIRED"},
+      "expected": {"invocations": 1, "states": ["CONSUMING", "RUNNING", "SUCCEEDED"]}
+    },
+    {
+      "id": "forget-cancel-expiry-stale-anchor-and-binding-mismatch-never-invoke",
+      "group": "recovery",
+      "input": {"conditions": ["CANCELLED", "EXPIRED", "STALE_SESSION", "MISMATCHED"]},
+      "expected": {"invocations": 0}
+    },
+    {
+      "id": "forget-unknown-never-replays",
+      "group": "recovery",
+      "input": {"invoker": "UNKNOWN"},
+      "expected": {"state": "UNKNOWN", "replayInvocations": 0}
+    },
+    {
+      "id": "forget-commit-unreported-never-replays",
+      "group": "recovery",
+      "input": {"conversationCommit": "CAS_FAILURE"},
+      "expected": {"state": "COMMIT_UNREPORTED", "replayInvocations": 0}
+    }
+  ]
+}
