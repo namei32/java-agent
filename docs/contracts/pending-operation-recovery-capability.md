@@ -1,6 +1,6 @@
 # Pending Operation Session Anchor 与 Recovery Capability 契约
 
-- 状态：已冻结；A1–A7 的 Fixture、Anchor Model、初始 SQLite 原子写入、安全 Result 条件提交、测试专用 Fake Capability 演练与 Loopback Message Contract 已完成，且 R11 分支三套完整 Reactor 门禁已通过；生产恢复编排未实现
+- 状态：已冻结；A1–A7 的 Fixture、Anchor Model、初始 SQLite 原子写入、安全 Result 条件提交、测试专用 Fake Capability 演练与 Loopback Message Contract 已完成，且 R11 分支三套完整 Reactor 门禁已通过；首个获批 Capability 的生产恢复编排见 R11-B2c，尚未实现
 - 契约版本：1
 - 日期：2026-07-19
 - 阶段：R11 B2b / O6
@@ -8,7 +8,9 @@
 - 关联 ADR：[ADR-0019：在恢复前冻结 Pending Operation 的 Session Anchor](../adr/0019-freeze-pending-operation-session-anchor-before-resume.md)
 
 > 本契约只冻结恢复所需的 Session Anchor 与测试边界。它不启用 Resume HTTP、Cancel HTTP、后台 Worker、
->真实 Tool、网络、文件、Shell、消息发送或任何新的 Spring Bean。
+>真实 Tool、网络、文件、Shell、消息发送或任何新的 Spring Bean。唯一例外是已获得单独用户批准、仍默认关闭的
+> [Scope 受限 Memory Forget Capability](approved-scope-bound-memory-forget.md)；它的实现必须继续满足本文所有
+> Anchor、Reservation、`UNKNOWN` 与零重放要求。
 
 ## 1. 不可跨越的前置条件
 

@@ -1,6 +1,6 @@
 # R11-B2c 首个副作用 Capability 候选、语义差异与授权边界
 
-- 状态：候选已审计；Python/Java 删除语义存在实质差异，**未选择实现路径、未获逐工具执行授权**，零生产路由、零 Capability、零 Tool 注册
+- 状态：路径 A 已于 2026-07-19 获用户选择；实现尚未开始，当前仍为零生产路由、零 Capability、零 Tool 注册
 - 日期：2026-07-19
 - 前置：[Pending Operation Session Anchor 与 Recovery Capability 契约](../contracts/pending-operation-recovery-capability.md)
 - 关联：[R11 O6 Pending Recovery Capability 实施计划](2026-07-19-r11-pending-recovery-capability-implementation.md)
@@ -48,7 +48,17 @@ Pending Recovery 路由、无 Worker、无 `forget_memory` Tool。
 | `shell` / `spawn` | 进程执行与子任务 | R8 Subagent 仍无 Tool/网络继承 | 冻结；需要命令沙箱、资源控制和审计 Contract |
 | `web_fetch` / `web_search` / vision | 远程网络或 Provider | 无获批真实网络路径 | 冻结；需要网络、费用和隐私 Contract |
 
-## 可选择的实现路径（仅供授权审阅）
+## 已批准路径：A（Python 核心语义对齐，采用 Java 安全差异）
+
+用户已选择 **A**：以 Python `forget_memory` 的批量软失效为基准，同时明确接受 Java 的两个安全差异：
+只作用于当前 Session Scope，且结果不返回命中记忆的正文。精确 Contract、Schema V2 和 TDD 顺序已冻结在
+[获批的 Scope 受限 Memory Forget Capability 契约](../contracts/approved-scope-bound-memory-forget.md)与
+[R11-B2c 实施计划](2026-07-19-r11-memory-forget-capability-implementation.md)。
+
+该授权只覆盖这个默认关闭、Loopback 审批、本地临时 SQLite 可验证切片；不解冻真实网络、Telegram、
+前端、CLI+Web、生产数据、Python `memory2.db`、文件、Shell 或其他 Tool。
+
+## 原始候选路径（保留审计记录）
 
 ### 路径 A：Python 语义对齐
 
@@ -99,10 +109,7 @@ Pending Recovery 路由、无 Worker、无 `forget_memory` Tool。
 6. **F6 文档与审查。** 回写 Contract、Capability 审计、Roadmap、矩阵和运行手册；仍不进行真实数据 Smoke，除非
    另有运行授权。
 
-## 需要的明确决策
+## 决策记录
 
-继续实现 F1–F6 前，需要用户确认以下之一：
-
-1. **路径 A**：以 Python `forget_memory` 的批量软失效语义为基准迁移，并单独确认 Scope 与结果脱敏的安全差异；或
-2. **路径 B**：批准 `delete_memory` 作为 Java 专有替代，范围仅限 Java 原生记忆库中当前 Session 的物理删除，默认关闭、
-   Loopback 认证、人工审批与本地 Fake 测试，不启用真实数据、网络、Workspace、Telegram 或 Python 记忆访问。
+- 2026-07-19：用户选择路径 A；Scope 绑定和不回传正文为获批安全差异。
+- 路径 B 未获选择，保留为历史比较，不能作为当前实现依据。
