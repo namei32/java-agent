@@ -16,6 +16,7 @@ import io.namei.agent.kernel.plugin.PluginTapOutcome;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -121,7 +122,7 @@ class PluginRuntimeTest {
   @Test
   void apiV2LifecycleTapReceivesOnlyTheExplicitReadOnlyPhaseMapping() throws Exception {
     var events = new CopyOnWriteArrayList<io.namei.agent.kernel.plugin.PluginTapEvent>();
-    var received = new CountDownLatch(7);
+    var received = new LinkedBlockingQueue<io.namei.agent.kernel.plugin.PluginTapEvent>();
     var plugin =
         new AgentPlugin() {
           @Override
@@ -139,7 +140,7 @@ class PluginRuntimeTest {
           public PluginTap tap() {
             return event -> {
               events.add(event);
-              received.countDown();
+              received.offer(event);
             };
           }
         };
@@ -155,38 +156,35 @@ class PluginRuntimeTest {
             (command, limits) -> {
               throw new AssertionError();
             })) {
-      runtime
-          .lifecycleObserver()
-          .onEvent(io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.turnStarted());
-      runtime
-          .lifecycleObserver()
-          .onEvent(io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.modelRequested(1));
-      runtime
-          .lifecycleObserver()
-          .onEvent(io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.modelCompleted(1, "FINAL"));
-      runtime
-          .lifecycleObserver()
-          .onEvent(
-              io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.toolStarted(
-                  1, "call-1", "read_file"));
-      runtime
-          .lifecycleObserver()
-          .onEvent(
-              io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.toolCompleted(
-                  1, "call-1", "read_file", io.namei.agent.kernel.tool.ToolResultStatus.SUCCESS));
-      runtime
-          .lifecycleObserver()
-          .onEvent(io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.turnCommitted());
-      runtime
-          .lifecycleObserver()
-          .onEvent(io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.turnFailed("MODEL_TIMEOUT"));
+      publishAndAwait(
+          runtime, io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.turnStarted(), received);
+      publishAndAwait(
+          runtime, io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.modelRequested(1), received);
+      publishAndAwait(
+          runtime,
+          io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.modelCompleted(1, "FINAL"),
+          received);
+      publishAndAwait(
+          runtime,
+          io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.toolStarted(1, "call-1", "read_file"),
+          received);
+      publishAndAwait(
+          runtime,
+          io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.toolCompleted(
+              1, "call-1", "read_file", io.namei.agent.kernel.tool.ToolResultStatus.SUCCESS),
+          received);
+      publishAndAwait(
+          runtime, io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.turnCommitted(), received);
+      publishAndAwait(
+          runtime,
+          io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.turnFailed("MODEL_TIMEOUT"),
+          received);
       runtime
           .lifecycleObserver()
           .onEvent(
               io.namei.agent.kernel.lifecycle.TurnLifecycleEvent.approvalRequested(
                   1, "call-2", "write_file"));
-
-      assertThat(received.await(1, TimeUnit.SECONDS)).isTrue();
+      assertThat(received.poll()).isNull();
     }
 
     assertThat(events)
@@ -209,6 +207,15 @@ class PluginRuntimeTest {
               assertThat(event.capability()).isEqualTo(PluginCapability.LIFECYCLE_TAP);
               assertThat(event.referenceHash()).matches("[0-9a-f]{64}");
             });
+  }
+
+  private static void publishAndAwait(
+      PluginRuntime runtime,
+      io.namei.agent.kernel.lifecycle.TurnLifecycleEvent event,
+      LinkedBlockingQueue<io.namei.agent.kernel.plugin.PluginTapEvent> received)
+      throws InterruptedException {
+    runtime.lifecycleObserver().onEvent(event);
+    assertThat(received.poll(1, TimeUnit.SECONDS)).isNotNull();
   }
 
   private static List<io.namei.agent.kernel.plugin.AgentPlugin> failIfLoaded(AtomicInteger loads) {
