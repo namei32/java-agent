@@ -1,6 +1,6 @@
 # R11-B2c Scope 受限 Memory Forget Capability 实施计划
 
-- 状态：已获路径 A 批准；F1–F6 已完成，默认、`failure`、`compat` 三套完整阶段门禁已通过；仍未注册 `forget_memory` Tool 或 Chat 接线
+- 状态：已获路径 A 批准；F1–F6 与后续受控 Tool/Chat Pending 生产器均已完成，默认、`failure`、`compat` 三套完整阶段门禁已通过
 - 日期：2026-07-19
 - Contract：[获批的 Scope 受限 Memory Forget Capability](../contracts/approved-scope-bound-memory-forget.md)
 - Design：[R11-B2c 设计](../specs/2026-07-19-r11-memory-forget-capability-design.md)
@@ -34,4 +34,4 @@
 完成仅表示本地默认关闭 Capability 已经通过 Fixture 和三套离线门禁。它不表示可访问真实 Telegram、
 网络、生产数据或旧 Python memory，也不授权后续 `memorize`、文件、Shell 或消息写入。
 
-模型可见性和 Pending 创建仍是独立阶段，见[Tool/Chat Pending 生产器实施提案](2026-07-19-r11-memory-forget-tool-chat-pending-producer-plan.md)。
+模型可见性和 Pending 创建已由独立的[Tool/Chat Pending 生产器实施计划](2026-07-19-r11-memory-forget-tool-chat-pending-producer-plan.md)实现并通过自身 P6 审计；它仍不授权执行、网络或真实数据。

@@ -279,11 +279,11 @@ Tool 权限视为已迁移。
 
 ## R11：Tool Catalog、审批与逐工具 Capability
 
-状态：B1 Tool Catalog 与 B2a Local Approval Inbox Foundation 已实现并验证；B2b Pending Operation Contract 的无执行状态机、AES-GCM 参数胶囊、v2 原子 Store、同库 `CONSUMED`/唯一 `RESERVED`、并发单获胜者、Ledger 终态、Session 条件提交、初始 Session Anchor 原子写入、安全 Result 的 Anchor 条件提交、不可恢复 Cursor 拒绝、测试专用 Fake Capability 零重放演练与 54 场景 Fixture 已完成；B3/B4 的只读 Tool 已完成。B2c 已实现默认关闭的 Scope 受限软失效 Capability、Capsule、Approval/Reservation、SQLite 恢复与取消、严格本机 Resume/Cancel/Status、Servlet 限制和 24 场景 Fixture 归属。它不注册 `forget_memory` Tool 或 Chat 生产器，不启动 Worker 或自动 Resume，也不执行真实数据；R11 仍未完成。
+状态：B1 Tool Catalog 与 B2a Local Approval Inbox Foundation 已实现并验证；B2b Pending Operation Contract 的无执行状态机、AES-GCM 参数胶囊、v2 原子 Store、同库 `CONSUMED`/唯一 `RESERVED`、并发单获胜者、Ledger 终态、Session 条件提交、初始 Session Anchor 原子写入、安全 Result 的 Anchor 条件提交、不可恢复 Cursor 拒绝、测试专用 Fake Capability 零重放演练与 54 场景 Fixture 已完成；B3/B4 的只读 Tool 已完成。B2c 已实现默认关闭的 Scope 受限软失效 Capability、Capsule、Approval/Reservation、SQLite 恢复与取消、严格本机 Resume/Cancel/Status、Servlet 限制和 24 场景 Fixture 归属，以及 13 场景的受控 `forget_memory` Pending Producer。后者只在 `APPROVAL_REQUIRED` 和全部 Loopback 前置满足时经 `tool_search` 投放，非空调用只创建 Pending 并固定终止 Turn；它不启动 Worker、自动 Resume 或真实数据执行。R11 仍未完成。
 
 B1 把 Python Registry 的“常驻工具—`tool_search`—本轮解锁—下一请求投放 Schema”共同投影迁移为 Java-owned Catalog。Catalog 的来源、风险、版本、可见性和搜索提示由受信注册固定；搜索结果只能缩小模型的未知工具范围，不能改变 Tool Runtime 的 Schema、预算、取消、审批或 Ledger 执行边界。静态只读 MCP 项在 Bootstrap 中作为 deferred Catalog 项投放，默认关闭和 R5.1 的连接/调用边界不变。
 
-R11 后续 B 阶段按[B2c Tool/Chat Pending 生产器实施提案](../plans/2026-07-19-r11-memory-forget-tool-chat-pending-producer-plan.md)单独冻结并授权 Tool Catalog 可见性、Chat Pending 投影与创建顺序；它不能复用泛化 Tool Loop 来同步批准或执行。之后每一种真实副作用 Tool 都需独立建立 Capability/Sandbox/`UNKNOWN`/Smoke Contract。B2a 的 Inbox 只记录本机 Operator 的一次性决定；默认部署继续为 Deny All 与 `AGENT_TOOL_MODE=DISABLED`，不能把已有 B2c 本地恢复切片描述为已开放的模型副作用能力。
+R11 后续 B 阶段必须为每一种真实副作用 Tool 独立建立 Capability/Sandbox/`UNKNOWN`/Smoke Contract；不得把 B2c 的受控 Producer 泛化为同步批准或执行入口。B2a 的 Inbox 只记录本机 Operator 的一次性决定；默认部署继续为 Deny All 与 `AGENT_TOOL_MODE=DISABLED`，不能把 B2c 的仅创建 Pending 模型入口描述为已开放的模型副作用执行能力。
 
 退出门禁：Catalog Fixture、Registry/Loop/Bootstrap 纵向测试和 R11 全部 B 阶段的三套门禁通过；每个真实副作用 Tool 具有独立批准的最小权限契约与回退演练。
 

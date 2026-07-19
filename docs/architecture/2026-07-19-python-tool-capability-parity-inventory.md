@@ -53,7 +53,7 @@ Java 则采用静态受信 Catalog、`tool_search` 后当前 Turn 解锁的 Defe
 | `search_messages` | 当前会话全文/关键词消息检索 | R11-B4 默认关闭的 `search_messages`：当前 Session、Unicode 空白分词、`Locale.ROOT` 小写 OR 匹配、角色/分页与 50 行预览 | 有意替代 | 已通过 Fixture、SQLite、Tool Loop、Bootstrap 和三套门禁。Java 不建 FTS 或跨 Channel 枚举；预览不是直接证据，模型须再调用 `fetch_messages` |
 | `recall_memory` | 语义/关键词/时间线检索、种类/时间筛选、证据/引用投影 | R12-S5 已实现默认关闭的当前 Scope cosine/Hotness `recall_memory`；无 Keyword/RRF、时间线或证据字段 | 有意替代 | Tool 仅使用 ChatService 私有 SHA-256 Scope Binding、严格 Java 大写 `MemoryType`、有界正文与 Deferred Schema；不能复用只接受安全 HTTP ID 的 Memory 管理 API。Java 原生记忆没有 Python `memory2` 的 evidence/source-ref/activation 元数据，不能声称等价 |
 | `memorize` | 由 Engine Profile 决定的记忆写入与类型 | Java 有显式 HTTP Write API，不是 Tool | 未实现 | `WRITE` Capability；先选择是否允许模型摘要持久化、Embedding 费用、Scope/类型、Approval 与恢复语义 |
-| `forget_memory` | 批量去重后软失效，返回命中/缺失和条目 | R11-B2c 已实现当前 Scope 批量软失效、无正文安全结果、Approval/Capsule/Reservation/Recovery 与默认关闭 Loopback 控制路径；尚未注册 Tool/Chat 生产器 | 部分 | 用户已批准 Scope 与无正文差异；下一步按 [Pending 生产器提案](../plans/2026-07-19-r11-memory-forget-tool-chat-pending-producer-plan.md)单独冻结并授权模型入口，不能把本地 Resume 路由当作模型可调用 Tool |
+| `forget_memory` | 批量去重后软失效，返回命中/缺失和条目 | R11-B2c 已实现当前 Scope 批量软失效、无正文安全结果、Approval/Capsule/Reservation/Recovery 与默认关闭 Loopback 控制路径；受控 Producer 只在 `APPROVAL_REQUIRED` 与既有所有前置同时成立时，经 `tool_search` 作为 deferred Tool 出现，非空调用只创建 Pending | 部分 | 用户已批准 Scope 与无正文差异；模型入口不会直接执行、恢复或轮询，必须走既有本机 Resume/Cancel/Status，不能把本地路由当作模型可调用执行 Tool |
 | `message_push` | 向已注册渠道发送文本/文件/图片 | Telegram 有渠道投递，但无模型 Tool | 未实现 | `EXTERNAL_SIDE_EFFECT` Capability；真实渠道、目标身份、内容/附件 Root、Receipt、Outbox、Approval、UNKNOWN 和真实 Smoke 均需独立范围 |
 | `schedule` / `list_schedules` / `cancel_schedule` | 创建、列举、取消 AT/AFTER/EVERY/cron 任务，可能触发主动投递 | R8 SQLite Scheduler 有受限 AT/EVERY、租约与 NoOp Delivery；默认关闭的 Deferred `list_local_proactive_jobs` 只检视活动 Job 安全摘要 | 有意替代 | `list_local_proactive_jobs` 已由 13 Case Fixture 与三套门禁验证，但不等价 Python `list_schedules`：无渠道/聊天身份、正文、时区、运行次数、hash/key 或数据库路径。`schedule`/`cancel_schedule` 仍为 `WRITE`，投递与 `message_push` 必须分离授权 |
 | `shell` / `task_output` / `task_stop` | 前台/后台进程、日志轮询、超时、杀进程树 | 无 Shell Tool；R8 Subagent 不继承 Tool/网络 | 未实现 | 高风险 Sandbox Capability：命令 allowlist、工作目录、资源、PTY、进程树、日志脱敏、Approval、UNKNOWN 与恢复，不能复用普通 Subagent |
@@ -68,9 +68,9 @@ Java 则采用静态受信 Catalog、`tool_search` 后当前 Turn 解锁的 Defe
 
 1. **R11-B4 已完成。** 当前 Session 的受限只读 `fetch_messages`/`search_messages` 已由 Contract/ADR/26 Case Fixture
    固定，并通过默认、`failure`、`compat` 门禁；它不授予跨会话读取、Memory Tool 或任何写入。
-2. **R11-B2c：接入受控 Tool/Chat Pending 生产器。** 默认关闭的 Capability 与 Recovery Router 已完成；下一步见
-   [Pending 生产器提案](../plans/2026-07-19-r11-memory-forget-tool-chat-pending-producer-plan.md)，须先获得实施授权并冻结
-   Catalog 可见性、Chat Pending 投影和“创建不执行”Contract，不能令通用 Tool Loop 同步批准或执行。
+2. **R11-B2c：受控 Tool/Chat Pending 生产器已完成。** 默认关闭的 Capability、Recovery Router 与模型入口均已完成，
+   并通过默认、`failure`、`compat` 门禁；它固定 Catalog 可见性、Chat Pending 投影和“创建不执行”Contract，不能令
+   通用 Tool Loop 同步批准或执行，也不扩展网络或数据权限。
 3. **Skill 不构成独立执行 Capability。** Python `SkillsLoader` 只读取 Markdown 并将其注入 Prompt；模型随后调用的
    Shell、文件、MCP、消息、调度或 Spawn Tool 仍是本表中各自的能力。ADR-0029 因此不迁移 Skill Runner，也不允许
    `SKILL.md`、`scripts/` 或 `references/` 绕过 Tool Catalog、审批、Sandbox 或 `UNKNOWN`。

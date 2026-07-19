@@ -146,9 +146,11 @@ R11-B4 已完成当前 Session 的只读会话证据 Tool，且默认保持 `AGE
 `AGENT_TOOL_MODE=READ_ONLY` 都明确启用，模型才可经本 Turn `tool_search` 解锁 `search_messages`/`fetch_messages`；默认、
 `failure`、`compat` 阶段门禁均已通过。它不授权真实用户数据、跨会话检索、远程访问或任何写入。
 
-R11-B2c 已完成默认关闭的 Scope 受限 `forget_memory` 恢复 Capability：批量软失效只作用于当前 Scope，结果不返回正文；
-它要求显式 `JAVA_NATIVE` Memory、Loopback Approval Inbox、Loopback Control Plane 与 AES-256 Capsule Key，才会映射本机
-Resume/Cancel/Status 路由。该切片没有注册 Tool 或 Chat 生产器、没有 Worker/自动 Resume，也不访问真实数据、网络或 Telegram。
+R11-B2c 已完成默认关闭的 Scope 受限 `forget_memory` Pending 生产切片，并通过 `clean verify`、`-Pfailure verify`、
+`-Pcompat verify`：批量软失效只作用于当前 Scope，结果不返回正文；
+除显式 `JAVA_NATIVE` Memory、Loopback Approval Inbox、Loopback Control Plane 与 AES-256 Capsule Key 外，还必须显式设为
+`AGENT_TOOL_MODE=APPROVAL_REQUIRED`，模型才能经本 Turn `tool_search` 在下一请求看到 deferred Schema。非空调用只创建本机审批
+的 Pending/加密 Capsule/Session Anchor，并以固定安全投影终止当前 Turn；它不调用 Invoker、没有 Worker/自动 Resume，也不访问真实数据、网络或 Telegram。
 
 R12-S5 已完成默认关闭的当前 Scope `recall_memory`：它只在 Java Native Memory 与全局 Tool 都明确 `READ_ONLY` 时，经本
 Turn `tool_search` 发现；返回仅限 opaque ID、Java MemoryType、正文和四位小数分数的有界结果。它不读取旧 Python 记忆，

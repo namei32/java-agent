@@ -2,7 +2,7 @@
 
 - 状态：F1–F6 已完成；静态 Capability、认证 Capsule、Pending 创建、显式恢复、SQLite 取消、Loopback 控制面、
   默认关闭的 Servlet Bootstrap、失败/并发边界与 24 Case 控制面 Fixture 均已通过聚焦测试和三套完整阶段门禁；
-  Catalog/Chat 仍未完成
+  Catalog/Chat Pending 生产器已由独立设计实现并通过 P6 三套阶段门禁
 - 日期：2026-07-19
 - Contract：[获批的 Scope 受限 Memory Forget Capability](../contracts/approved-scope-bound-memory-forget.md)
 - ADR：[ADR-0035](../adr/0035-use-scope-bound-soft-supersede-for-memory-forget.md)

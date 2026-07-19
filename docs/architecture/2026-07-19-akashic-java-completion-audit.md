@@ -41,9 +41,9 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 
 ## 优先级与依赖
 
-1. **R11 B2c 的本地恢复切片已完成，但 Tool/Chat 仍未结束。** 默认关闭的获批 Capability、认证 Loopback
-   Resume/Cancel/Status、SQLite SoftForget、Capsule、Reservation 和审计已实现；没有 Tool/Chat 生产器、Worker、
-   自动 Resume 或真实数据执行。任何副作用 Tool 仍先经过独立 Contract。
+1. **R11 B2c 的本地恢复与受控 Tool/Chat Pending 生产器已完成。** 默认关闭的获批 Capability、认证 Loopback
+   Resume/Cancel/Status、SQLite SoftForget、Capsule、Reservation、审计及 deferred `forget_memory` Producer 已实现；
+   非空模型调用只创建 Pending，不执行、没有 Worker、自动 Resume 或真实数据执行。任何后续副作用 Tool 仍先经过独立 Contract。
 2. **R12-S1/S4 Skills 已完成并验证。** S1 只读取受限 Java Skill Root 并提供 Catalog/always 注入；S4 仅在
    双重 `READ_ONLY` 与当前 Turn `tool_search` 后按名返回已审计正文。两者默认 `DISABLED`，不执行 Skill、不访问网络
    或写入 Workspace；Fixture 和完整三套 Maven 门禁已通过。ADR-0029 已证明 Python 也没有待迁移的 Skill Runner；正文
@@ -55,7 +55,7 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 5. R12-S3 API v2 只读生命周期 Tap 与 R12-S4 deferred Skill 正文读取均已完成并通过三套门禁；R12-S5 已实现默认关闭的
    当前 Scope `recall_memory` 受限替代，不读取 Python 记忆、不写入，也不提供跨 Scope/Keyword/RRF/时间线；R12-S2 的
    Assets 目录也已完成，但它是 Java-owned 扩展而非 Python MCP 对齐。R14-P0/P1 已完成离线边界与只读决策 Fixture，
-   但没有接线运行时。实际主线是为已完成的 R11-B2c 恢复切片冻结受控 Tool/Chat Pending 生产 Contract，随后推进 R13
+   但没有接线运行时。R11-B2c Pending Producer 已完成 P6 三套离线门禁；之后才按批准顺序推进 R13
    多渠道/控制面、R14 P2–P5
    和 R15 生产切换。
 6. **渠道级显式记忆管理尚未对齐。** `ChatService` 的自动 Retrieval 可以用私有 SHA-256 Binding 查询
