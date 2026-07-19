@@ -70,10 +70,13 @@ Java 则采用静态受信 Catalog、`tool_search` 后当前 Turn 解锁的 Defe
    固定，并通过默认、`failure`、`compat` 门禁；它不授予跨会话读取、Memory Tool 或任何写入。
 2. **R11-B2c：选择并实现第一个副作用 Capability。** 这是生产 Recovery Router 的必要前置；Python
    `forget_memory` 语义差异的两个路径见 [候选审计](../plans/2026-07-19-r11-first-side-effect-capability-selection.md)。
-3. **R12-S5：Memory Tool 受限替代（完成）。** `recall_memory` 只读取当前 Java Native Scope，并不等价于 Python
+3. **Skill 不构成独立执行 Capability。** Python `SkillsLoader` 只读取 Markdown 并将其注入 Prompt；模型随后调用的
+   Shell、文件、MCP、消息、调度或 Spawn Tool 仍是本表中各自的能力。ADR-0029 因此不迁移 Skill Runner，也不允许
+   `SKILL.md`、`scripts/` 或 `references/` 绕过 Tool Catalog、审批、Sandbox 或 `UNKNOWN`。
+4. **R12-S5：Memory Tool 受限替代（完成）。** `recall_memory` 只读取当前 Java Native Scope，并不等价于 Python
    的 Keyword/RRF、时间线和 citation evidence；`memorize`/`forget_memory` 仍须逐 Tool 副作用 Contract。
-4. **R12/R13：Scheduler 与 Subagent Tool 接线。** 先迁移只读状态，再迁移创建/取消；所有实际 Delivery 保持独立。
-5. **R13/R14：Channel Push、Web、Vision、Shell、动态 MCP 与动态 Tool。** 按网络、外部副作用、进程、数据泄露等
+5. **R12/R13：Scheduler 与 Subagent Tool 接线。** 先迁移只读状态，再迁移创建/取消；所有实际 Delivery 保持独立。
+6. **R13/R14：Channel Push、Web、Vision、Shell、动态 MCP 与动态 Tool。** 按网络、外部副作用、进程、数据泄露等
    风险维度逐个 Contract，不能以 Python Registry 的“默认可见”作为 Java 实现依据。
 
 ## 立即禁止的错误归因

@@ -28,7 +28,7 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 
 | Python 已提交能力 | 证据位置 | Java 当前状态 | 对齐路径 |
 | --- | --- | --- | --- |
-| Skills 目录、frontmatter、工作区覆盖、依赖可用性、always 注入 | `agent/skills.py`、`agent/core/prompt_block.py`、`skills/*/SKILL.md` | R12-S1 Catalog/always 注入与 S4 deferred `read_skill` 已有 Kernel Port、受限只读 Adapter、严格 Properties 和 Tool Loop 回送；默认关闭 | Skill 执行、动态下载与 Python import 仍须单独 Contract |
+| Skills 目录、frontmatter、工作区覆盖、依赖可用性、always 注入 | `agent/skills.py`、`agent/core/prompt_block.py`、`skills/*/SKILL.md` | R12-S1 Catalog/always 注入与 S4 deferred `read_skill` 已有 Kernel Port、受限只读 Adapter、严格 Properties 和 Tool Loop 回送；默认关闭 | ADR-0029 已确认 Python 没有 Skill Runner；Skill 文本要求的每个动作仍须对应 Tool Contract。动态下载与 Python import 仍须单独 Contract |
 | 文件、Shell、Web、消息、记忆、调度、Spawn、Peer、MCP 管理等 Tool | `agent/tools/*.py`、`agent/mcp/*`、`agent/peer_agent/*` | `current_time`、静态只读 MCP、R11-B3 默认关闭独立 Root 的 `read_file`/`list_dir`，以及 R11-B4 默认关闭当前 Session 的 `fetch_messages`/`search_messages` | B3 已有路径/链接、严格 UTF-8、预算、Deferred Schema 与纵向失败测试；B4 已有 opaque ID、显式 Turn Scope、SQLite 隔离、预算和三套门禁。其余仍按 Tool 逐一建立 Capability、Sandbox、Ledger、`UNKNOWN` 与 Smoke Contract |
 | Provider 适配策略与 thinking/cache 细节 | `agent/provider.py`、`bootstrap/providers.py` | 一个 OpenAI-compatible Spring AI 适配器；Tool/流/超时/取消已有本地验收，P0 已增加安全拒绝/上下文超限的脱敏稳定分类 | [R10 Provider 协议计划](../plans/2026-07-19-r10-provider-protocol-alignment-plan.md)已完成 P0；P1 Options 已审计但等待运行语义选择，P2 reasoning、P3 裁剪恢复、P4 cache 观测仍未开始。真实 Provider Smoke 仍独立批准 |
 | MCP Tool Client | `agent/mcp/client.py`、`bootstrap/toolsets/mcp.py` | 静态 stdio、只读 `tools/list`/`tools/call`；R12-S2 另有默认关闭的 `resources/list`/`prompts/list` 元数据目录与 Stale | Python 基线并不实现 Resources/Prompts；S2 是 Java-owned 安全扩展，不是对齐证据。远程认证、正文读取/注入、Streamable HTTP、取消与隔离须先证明必要性，再另立 Contract |
@@ -45,7 +45,8 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
    认证 Resume/Cancel/Status 路由、获批 Capability 或真实执行。任何副作用 Tool 先经过独立 Contract。
 2. **R12-S1/S4 Skills 已完成并验证。** S1 只读取受限 Java Skill Root 并提供 Catalog/always 注入；S4 仅在
    双重 `READ_ONLY` 与当前 Turn `tool_search` 后按名返回已审计正文。两者默认 `DISABLED`，不执行 Skill、不访问网络
-   或写入 Workspace；Fixture 和完整三套 Maven 门禁已通过，仍不授权执行、动态下载或 Python import。
+   或写入 Workspace；Fixture 和完整三套 Maven 门禁已通过。ADR-0029 已证明 Python 也没有待迁移的 Skill Runner；正文
+   所建议的动作不会绕过逐 Tool Capability，动态下载与 Python import 仍未授权。
 3. **R11-B3 只读文件浏览已完成并验证。** 它只允许独立显式 Root 的受预算文本读取和一层目录投影，默认关闭且不使用
    `${agent.workspace}`；它不解决 B2c 恢复，也不授权写入、Shell、网络或真实 Workspace。
 4. **R11-B4 当前会话证据已完成并验证。** `fetch_messages`/`search_messages` 只在双重 `READ_ONLY` 后经当前 Turn

@@ -18,6 +18,6 @@
 
 验证记录：先观察 S1 Kernel、S2 Adapter 的编译 RED，再以最小实现转 GREEN；随后聚焦 default/failure/compat
 测试和 Reactor 完整 `clean verify`、`-Pfailure verify`、`-Pcompat verify` 均通过。该记录只证明 S1，不能
-作为 R12 后续执行、按需正文、远程 MCP 或 Plugin 生命周期的授权。
+作为 R12 后续按需正文、远程 MCP 或 Plugin 生命周期的授权，也不把 Skill 文本的动作要求视为 Capability 授权。
 
-禁止：Python 目录 import、执行 Skill/脚本、Shell、网络、Tool 注册、用户 Workspace 写入、真实密钥或前端。
+禁止：Python 目录 import、Skill Runner/脚本执行、Shell、网络、Tool 注册、用户 Workspace 写入、真实密钥或前端。

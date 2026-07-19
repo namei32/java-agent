@@ -66,5 +66,6 @@ Fake Model；不读 Python Skill 目录、不启外部网络或进程。
 实现证据（2026-07-19）：10 个 Fixture Case、Adapter/Properties/Catalog/Bootstrap/Tool Loop 测试均已通过；完整
 `clean verify`、`-Pfailure verify`、`-Pcompat verify`、Spotless 与差异检查已在 R12 分支通过。
 
-在本契约之外，Skill 执行、脚本、动态下载、Python import、原始 frontmatter/路径读取、任意 Workspace 文件读取和
-可变 Prompt/Gate 仍须单独 Contract。R12-S4 不授予其中任何一项权限。
+在本契约之外，Skill 文本所建议的动作、脚本、动态下载、Python import、原始 frontmatter/路径读取、任意
+Workspace 文件读取和可变 Prompt/Gate 仍须各自单独 Contract。ADR-0029 记录 Python 基线没有可迁移的
+Skill Runner；R12-S4 不授予其中任何一项权限。

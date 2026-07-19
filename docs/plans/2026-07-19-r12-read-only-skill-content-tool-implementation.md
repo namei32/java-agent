@@ -15,5 +15,5 @@
 5. **C5 Gate/Docs（完成）。** 已更新 Golden Manifest、完成度审计、能力矩阵、Roadmap、README 和 R12 总计划；聚焦及完整
    `clean verify`、`-Pfailure verify`、`-Pcompat verify` 均通过。
 
-禁止：执行 Skill、返回路径或 frontmatter、通用文件读取、目录枚举、网络、Shell、Python import、动态下载、写入、
-Gate 或生产启用。
+禁止：引入 Skill Runner，返回路径或 frontmatter、通用文件读取、目录枚举、网络、Shell、Python import、动态下载、
+写入、Gate 或生产启用。Skill 文本中的动作不能绕过独立 Tool Capability。
