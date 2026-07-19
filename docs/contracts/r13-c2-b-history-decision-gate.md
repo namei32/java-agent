@@ -1,7 +1,7 @@
 # R13-C2-B 受限历史详情决策门禁
 
-- 阶段：R13-C2-B0
-- 状态：已确认最小范围；C2-B1 Fixture 已获准，后续任务按本 Contract 的固定值连续 TDD
+- 阶段：R13-C2-B（B0 决策门禁）
+- 状态：B0 至 B6 已完成；当前实现仍保持默认拒绝的数据接线，后续 C3 写 Capability 必须另获批准
 - 前置：[R13-C2 受限历史浏览执行计划](../plans/2026-07-19-r13-c2-restricted-history-browse-plan.md)、[R13-C2-B 详情实施计划](../plans/2026-07-19-r13-c2b-history-detail-implementation-plan.md)、[R13-C2-A 内存终态历史目录 Contract](r13-terminal-history-catalog.md)
 
 ## 1. C2-B0 的完成范围
@@ -49,5 +49,6 @@ content、message ID、sequence、原始 Ref 或异常文本。
 
 ## 5. B0 退出与重新进入条件
 
-C2-B0 已完成且最小范围已获准；C2-B1 可以开始。Fixture、Kernel、Adapter 和 Controller 必须严格保持本页的固定值。
-任何扩大数据来源、角色、正文、Retention、查询能力、Route 或远程访问的请求都必须先重新更新本门禁并取得明确批准。
+C2-B0 已完成且固定值已由 C2-B1 至 B6 实现和聚焦验证。生产装配仍默认提供拒绝全部的 Scope Resolver 与 fail-closed
+Snapshot Port；因此即使显式启用 Loopback，也不会自动读取持久化数据。任何扩大数据来源、角色、正文、Retention、查询能力、
+Route 或远程访问的请求都必须先重新更新本门禁并取得明确批准。

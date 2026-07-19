@@ -3,6 +3,7 @@ package io.namei.agent.bootstrap.control;
 import io.namei.agent.application.control.ControlCancellationOutcome;
 import io.namei.agent.kernel.control.ControlCancelResult;
 import io.namei.agent.kernel.control.ControlStableCode;
+import io.namei.agent.kernel.control.HistoryDetailReadRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.Objects;
@@ -24,10 +25,15 @@ import org.springframework.web.bind.annotation.RestController;
 public final class ControlPlaneController {
   private final ControlPlaneStatusService control;
   private final ControlPlaneAudit audit;
+  private final ControlHistoryDetailService historyDetail;
 
-  public ControlPlaneController(ControlPlaneStatusService control, ControlPlaneAudit audit) {
+  public ControlPlaneController(
+      ControlPlaneStatusService control,
+      ControlPlaneAudit audit,
+      ControlHistoryDetailService historyDetail) {
     this.control = Objects.requireNonNull(control, "control");
     this.audit = Objects.requireNonNull(audit, "audit");
+    this.historyDetail = Objects.requireNonNull(historyDetail, "historyDetail");
   }
 
   @GetMapping("/status")
@@ -61,6 +67,40 @@ public final class ControlPlaneController {
       return ResponseEntity.ok(
           control.history(query.pageSize(), query.cursor(), principal(request).actorRef()));
     } catch (IllegalArgumentException invalid) {
+      return ResponseEntity.badRequest()
+          .body(
+              ControlErrorResponse.of(
+                  ControlStableCode.CONTROL_REQUEST_INVALID, requestId(request)));
+    }
+  }
+
+  @GetMapping("/history/detail")
+  ResponseEntity<?> historyDetail(HttpServletRequest request) {
+    try {
+      DetailQuery query = DetailQuery.parse(request);
+      ControlHistoryDetailResponse response =
+          historyDetail.detail(
+              query.pageSize(), query.reference(), query.cursor(), principal(request).actorRef());
+      auditHistoryDetail(
+          request,
+          response.state(),
+          code(response.code()),
+          response.items().size(),
+          response.detailRef().isEmpty() ? query.referenceOrCursor() : response.detailRef());
+      return ResponseEntity.ok(response);
+    } catch (ControlHistoryDetailNotFoundException notFound) {
+      auditHistoryDetail(
+          request,
+          "NOT_FOUND",
+          ControlStableCode.CONTROL_HISTORY_NOT_FOUND,
+          0,
+          DetailQuery.referenceOrCursor(request));
+      return ResponseEntity.status(HttpStatus.NOT_FOUND)
+          .body(
+              ControlErrorResponse.of(
+                  ControlStableCode.CONTROL_HISTORY_NOT_FOUND, requestId(request)));
+    } catch (IllegalArgumentException invalid) {
+      auditHistoryDetail(request, "REJECTED", ControlStableCode.CONTROL_REQUEST_INVALID, 0, "");
       return ResponseEntity.badRequest()
           .body(
               ControlErrorResponse.of(
@@ -111,6 +151,27 @@ public final class ControlPlaneController {
         turnRef,
         count,
         0);
+  }
+
+  private void auditHistoryDetail(
+      HttpServletRequest request,
+      String result,
+      ControlStableCode code,
+      long count,
+      String opaqueDetailReference) {
+    audit.record(
+        "HISTORY_DETAIL",
+        result,
+        code,
+        requestId(request),
+        principal(request).actorRef(),
+        opaqueDetailReference,
+        count,
+        0);
+  }
+
+  private static ControlStableCode code(String value) {
+    return value == null || value.isEmpty() ? null : ControlStableCode.parse(value);
   }
 
   private static OperatorSessionPrincipal principal(HttpServletRequest request) {
@@ -192,6 +253,65 @@ public final class ControlPlaneController {
         throw new IllegalArgumentException("控制历史查询参数无效");
       }
       return values[0];
+    }
+  }
+
+  private record DetailQuery(int pageSize, String reference, String cursor) {
+    private static final Set<String> ALLOWED_PARAMETERS = Set.of("pageSize", "ref", "cursor");
+
+    static DetailQuery parse(HttpServletRequest request) {
+      Map<String, String[]> parameters = request.getParameterMap();
+      if (!ALLOWED_PARAMETERS.containsAll(parameters.keySet())) {
+        throw new IllegalArgumentException("控制历史详情包含未批准的查询参数");
+      }
+      String pageSize = one(parameters, "pageSize");
+      String reference = one(parameters, "ref");
+      String cursor = one(parameters, "cursor");
+      if (pageSize == null) {
+        return new DetailQuery(
+            HistoryDetailReadRequest.DEFAULT_PAGE_SIZE,
+            reference == null ? "" : reference,
+            cursor == null ? "" : cursor);
+      }
+      try {
+        return new DetailQuery(
+            Integer.parseInt(pageSize),
+            reference == null ? "" : reference,
+            cursor == null ? "" : cursor);
+      } catch (NumberFormatException invalid) {
+        throw new IllegalArgumentException("控制历史详情分页大小格式无效", invalid);
+      }
+    }
+
+    static String referenceOrCursor(HttpServletRequest request) {
+      Map<String, String[]> parameters = request.getParameterMap();
+      String reference = oneIfExactlyOne(parameters.get("ref"));
+      if (reference != null) {
+        return reference;
+      }
+      String cursor = oneIfExactlyOne(parameters.get("cursor"));
+      return cursor == null ? "" : cursor;
+    }
+
+    private static String one(Map<String, String[]> parameters, String name) {
+      String[] values = parameters.get(name);
+      if (values == null) {
+        return null;
+      }
+      if (values.length != 1 || values[0] == null || values[0].isEmpty()) {
+        throw new IllegalArgumentException("控制历史详情查询参数无效");
+      }
+      return values[0];
+    }
+
+    private static String oneIfExactlyOne(String[] values) {
+      return values != null && values.length == 1 && values[0] != null && !values[0].isEmpty()
+          ? values[0]
+          : null;
+    }
+
+    String referenceOrCursor() {
+      return reference.isEmpty() ? cursor : reference;
     }
   }
 }

@@ -1,7 +1,7 @@
 # R13-C2 受限历史浏览执行计划
 
-> **执行状态：C2-A 已实现并完成聚焦验证；C2-B0 决策门禁已完成；C2-B1 至 C2-B6 及其他 C2 变体仍未获授权。**
-> **C2-A 只允许创建本机、内存、终态目录的 Contract、Fixture 和运行时。不得读取 Session/Message 历史、查询 SQLite、返回正文、启用网络、真实 Telegram、CLI+Web、前端或任何写操作。**
+> **执行状态：C2-A 与 C2-B 已实现并完成聚焦验证；其他 C2 变体及 C3 写 Capability 仍需单独授权。**
+> **C2-B 只允许当前 Scope、零正文、24 小时、固定分页的只读投影。自动化只使用临时 Java SQLite/Fake；默认生产 Scope/Port 拒绝，禁止网络、真实 Telegram、CLI+Web、前端或任何写操作。**
 
 ## 1. 目标与非目标
 
@@ -43,8 +43,8 @@ Ledger、Python 数据、用户 Workspace 或真实渠道。
 - `DISABLED` 无 Controller；远程、非 GET、body、未知/重复 query、无效/原始 cursor 与无/过期/撤销 Bearer 均按既有
   稳定控制面错误 Fail Closed。Registry 快照异常只返回 `DEGRADED`/`CONTROL_SNAPSHOT_UNAVAILABLE` 的空目录。
 
-`historyRef` 在 C2-A 只是目录标识，不授予正文、Session 或任何详情读取能力。C2-B 不得假定它已绑定可读历史来源，
-必须在数据保留 Contract 获批后重新定义引用签发与详情语义。
+`historyRef` 在 C2-A 只是目录标识，不授予正文、Session 或任何详情读取能力。已完成的 C2-B 另行签发
+`detailRef`，绝不复用 C2-A `historyRef`；其全部固定语义见 C2-B 决策门禁。
 
 ## 2. 实现前必须由用户明确决定
 
@@ -65,8 +65,9 @@ Ledger、Python 数据、用户 Workspace 或真实渠道。
 
 ### 2.1 C2-B0 已完成的决策门禁
 
-[R13-C2-B 受限历史详情决策门禁](../contracts/r13-c2-b-history-decision-gate.md)现已固定永久禁令、默认拒绝、
-必须由用户确认的 B0-D1 至 B0-D6，以及建议的最小候选。它没有批准数据读取；详细的后续 TDD 任务见
+[R13-C2-B 受限历史详情决策门禁](../contracts/r13-c2-b-history-decision-gate.md)已固定并实现 B0-D1 至 B0-D6：
+31 Case Fixture、Kernel/Port、临时 SQLite/Fake、默认拒绝的 Loopback Service/Controller、一次性消费竞争、关闭和
+审计失败闭环均已完成。详细证据与阶段暂停点见
 [R13-C2-B 受限历史详情实施计划](2026-07-19-r13-c2b-history-detail-implementation-plan.md)。
 
 ## 3. 连续 TDD 顺序
@@ -78,39 +79,24 @@ Ledger、Python 数据、用户 Workspace 或真实渠道。
 3. 以 RED Fixture 验证：原始 Session/chat ID、正文 query、Tool/Provider/Memory 字段、跨 Scope 与任意 search 都不可接受。
 4. C2-A 只允许其内存终态目录 Route；不创建详情 Route、SQLite 查询或生产配置。
 
-### C2-B-P1：未来的 Kernel 安全值与只读 Port（未批准）
+### C2-B：已完成的安全详情（B1–B6）
 
-1. 先写 RED：`historyRef` 的格式、TTL、actor binding、分页 cursor、稳定错误码和结果预算。
-2. 引入最小的只读 `ControlHistorySnapshotPort`；返回的只能是 C2 Fixture 已批准的安全投影。
-3. 禁止 Port 接受原始 Session/Route/Sender、任意 SQL、全文 query 或写操作。
+1. 31 Case Java-owned Fixture 冻结严格 GET/query、actor/Scope、角色/字段、24 小时/1,024 candidate/20 item 预算、
+   一次性 Ref/Cursor 和稳定失败；expected 不含任何秘密。
+2. Kernel 的 Capability、Ref/Cursor、Page/Request 和只读 Port 不接受原始 Session/Route/Sender、SQL 或全文 query。
+   SQLite Adapter 仅以临时 Java 数据库验证固定列、`query_only`、排序、分页和 fail-closed 行为。
+3. 唯一 `GET /api/v1/control/history/detail` 只在显式 Loopback + Servlet 出现；生产默认 Scope Resolver 与 Snapshot Port
+   都拒绝。并发、过期、撤销、关闭和审计 sink 失败均已验证；它不创建 Pending Operation、Approval、Capsule、Ledger、
+   Reservation 或恢复 Worker。
 
-> C2-B 的输入、RED Case、类级目标、完成条件与阶段交接已移至独立的
-> [C2-B 详情实施计划](2026-07-19-r13-c2b-history-detail-implementation-plan.md)，避免 C2-A 和 C2-B 的
-> 授权边界混淆。
+> 完整输入、RED/GREEN 证据、完成条件与阶段暂停点见
+> [C2-B 详情实施计划](2026-07-19-r13-c2b-history-detail-implementation-plan.md)。
 
-### C2-B-P2：未来的隔离 Adapter 与 Fake 数据源（未批准）
+### C2-B6：已完成的文档、聚焦门禁与提交准备
 
-1. 仅用临时 Java SQLite 或 Fake Repository 建立 RED/GREEN 证据；绝不打开用户、Python 或生产数据。
-2. 在查询前执行 Scope/Ref/actor/保留期检查，在读取后执行字段白名单、总量和字符预算。
-3. 任何未分类列、正文越限、损坏编码、存储异常或一致性失败均映射到稳定的脱敏错误，不回退为宽松读取。
-
-### C2-B-P3：未来的详情 Loopback Service 与 Controller（未批准）
-
-1. 复用 C1 的 `DISABLED`、Servlet、Loopback Guard、Bearer、Request ID 与 `Cache-Control: no-store` 条件。
-2. 只有 C2 Contract 已定义的 GET 方法、path 和参数可映射；非 GET、未知/重复 query、空值和 body 全部拒绝。
-3. 响应不投影 actor、token、原始引用、数据库路径、异常文本或未批准字段；不增加 SSE、前端或写 API。
-
-### C2-B-P4：未来的失败、并发与恢复闭环（未批准）
-
-1. 覆盖缺少/过期/撤销 Bearer，Ref 过期、错误 actor、重复 cursor、关闭、取消和快照不可用。
-2. 验证并发消费同一 cursor 至多一个成功；任何竞争失败不得扩大可见数据或改变会话。
-3. C2 是只读，不创建 Pending Operation、Approval、Capsule、Ledger、Reservation 或恢复 Worker；这些只属于 C3 的写操作。
-
-### C2-A-P5：已完成的文档、聚焦门禁与提交准备
-
-1. C2-A 已同步 Contract、Fixture、Spec、ADR、R13 计划、README、Roadmap 与能力矩阵。
-2. C2-A 运行受影响模块的 default 测试、C2 compat Fixture 与格式检查；R13 阶段三套全门禁仍按 C3/C5 决策执行。
-3. 本地小提交只包含 C2-A；不推送、不创建 PR，除非另获授权。
+1. C2-B 已同步 Contract、Fixture、Spec、ADR、R13 计划、README、Roadmap 与能力矩阵。
+2. C2-B 运行受影响模块的 default/failure/compat 聚焦测试与格式检查；R13 阶段三套全门禁仍按 C3/C5 决策执行。
+3. 不推送、不创建 PR，除非另获授权。
 
 ## 3.1 C2-A 实现证据
 

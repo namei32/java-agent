@@ -16,6 +16,7 @@ public final class LoopbackRequestGuard {
   private static final String PENDING_OPERATION_PREFIX = "/api/v1/control/pending-operations";
   private static final String READ_ONLY_INDEX_PATH = "/api/v1/control/index";
   private static final String READ_ONLY_HISTORY_PATH = "/api/v1/control/history";
+  private static final String READ_ONLY_HISTORY_DETAIL_PATH = "/api/v1/control/history/detail";
 
   public void validate(HttpServletRequest request) {
     if (!approvedShape(request.getMethod(), request.getRequestURI()) || !allowsQuery(request)) {
@@ -45,7 +46,8 @@ public final class LoopbackRequestGuard {
     }
     return "GET".equals(request.getMethod())
         && (READ_ONLY_INDEX_PATH.equals(request.getRequestURI())
-            || READ_ONLY_HISTORY_PATH.equals(request.getRequestURI()))
+            || READ_ONLY_HISTORY_PATH.equals(request.getRequestURI())
+            || READ_ONLY_HISTORY_DETAIL_PATH.equals(request.getRequestURI()))
         && !request.getQueryString().isEmpty();
   }
 
@@ -59,7 +61,8 @@ public final class LoopbackRequestGuard {
       if ("/api/v1/control/status".equals(path)
           || "/api/v1/control/turns".equals(path)
           || READ_ONLY_INDEX_PATH.equals(path)
-          || READ_ONLY_HISTORY_PATH.equals(path)) {
+          || READ_ONLY_HISTORY_PATH.equals(path)
+          || READ_ONLY_HISTORY_DETAIL_PATH.equals(path)) {
         return true;
       }
       if ("/api/v1/control/approvals".equals(path)) {

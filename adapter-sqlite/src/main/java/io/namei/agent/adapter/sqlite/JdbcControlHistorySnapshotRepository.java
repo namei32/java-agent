@@ -107,8 +107,9 @@ public final class JdbcControlHistorySnapshotRepository implements ControlHistor
                     .thenComparing(Comparator.comparingLong(Candidate::sequence).reversed()))
             .map(candidate -> new HistoryDetailItem(candidate.role(), candidate.occurredAt()))
             .toList();
-    int end = Math.min(request.pageSize(), approved.size());
-    return new HistoryDetailPage(approved.subList(0, end), end < approved.size());
+    int start = Math.min(request.offset(), approved.size());
+    int end = Math.min(start + request.pageSize(), approved.size());
+    return new HistoryDetailPage(approved.subList(start, end), end < approved.size());
   }
 
   private static Candidate readCandidate(String role, String timestamp, long sequence) {

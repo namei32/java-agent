@@ -34,7 +34,7 @@
 - 已完成：R14-P0 的[主动、自动记忆与 Peer 边界 Contract](contracts/r14-proactive-peer-automation-boundaries.md)，以 28 Case Fixture 固定 Scheduler/租约状态、本地 Fake Source、待审批 Delivery 投影、`NONE` Memory Mutation 和 `LOCAL_FAKE` Peer；它没有接线线程、数据库、网络、进程、投递或自动记忆。
 - 已完成：R14-P1 的[本地只读主动决策 Contract](contracts/r14-read-only-proactive-decision.md)，以 15 Case Fixture 和 failure 测试串联 Gate、Fake Source、只读 Drift 与无正文 skip/pending/cancel 投影；它不创建审批、投递、记忆写入或任何 Bootstrap Runtime。
 - 已完成：R13-C1 的本机[Loopback 只读控制索引](contracts/r13-read-only-control-index.md)，以及 R13-C2-A 的[内存终态历史目录](contracts/r13-terminal-history-catalog.md)。后者仅在既有 `LOOPBACK`/Bearer/Servlet 条件下提供 `GET /api/v1/control/history`，只投影短期 opaque `historyRef`、channel、终态和完成时间；不读取 Session/Message/SQLite/Memory，也没有详情 Route。前端、远程访问、真实 Telegram、CLI+Web、C2-B 历史正文和任何控制面写入仍待单独批准。
-- 实施中：R13-C2-B 的[零正文当前 Scope 历史详情 Contract](contracts/r13-c2-b-history-decision-gate.md)已由用户确认；C2-B1 已完成 31 Case Fixture、Manifest 与 compat 消费者，C2-B2 Kernel 与 C2-B3 临时 SQLite Adapter 已完成聚焦验证。该能力仍不读取用户/Python/生产数据，也未接线 Controller、网络、真实渠道或前端。
+- 已完成聚焦验证：R13-C2-B 的[零正文当前 Scope 历史详情 Contract](contracts/r13-c2-b-history-decision-gate.md)已实现 31 Case Fixture、Kernel/临时 SQLite Adapter、唯一 `GET /api/v1/control/history/detail`、一次性 Ref/Cursor、关闭/竞争/审计失败闭环。生产装配仍默认拒绝 Scope 且 Snapshot Port fail-closed，故不会自动读取持久化数据；不读取用户/Python/生产数据，不启用网络、真实渠道或前端。
 - 尚未覆盖：自动 Memory 写回/Optimizer、真实 Embedding/真实 Workspace 启用、可恢复 Pending Turn、生产 Durable Side Effect Ledger、真实副作用工具、真实 Telegram Smoke、经单独授权的真实 Provider 流式 Smoke、真实 MCP Server/Streamable HTTP，以及任何真实生产切换。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。

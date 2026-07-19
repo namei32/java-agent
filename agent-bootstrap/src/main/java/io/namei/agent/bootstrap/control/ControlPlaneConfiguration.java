@@ -2,6 +2,7 @@ package io.namei.agent.bootstrap.control;
 
 import io.namei.agent.application.control.ControlTurnRefGenerator;
 import io.namei.agent.bootstrap.channel.ChannelHost;
+import io.namei.agent.kernel.port.ControlHistorySnapshotPort;
 import java.time.Clock;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -132,6 +133,31 @@ public class ControlPlaneConfiguration {
     ChannelHost host = hosts.getIfAvailable(() -> new ChannelHost(java.util.List.of()));
     return new ControlPlaneStatusService(
         clocks.getIfAvailable(Clock::systemUTC), host, runtime, properties);
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = PREFIX, name = "mode", havingValue = "LOOPBACK")
+  @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+  @ConditionalOnMissingBean(ControlHistoryScopeResolver.class)
+  ControlHistoryScopeResolver controlHistoryScopeResolver() {
+    return ControlHistoryScopeResolver.denied();
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = PREFIX, name = "mode", havingValue = "LOOPBACK")
+  @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+  ControlHistoryDetailService controlHistoryDetailService(
+      ObjectProvider<Clock> clocks,
+      ControlPlaneRuntime runtime,
+      ControlHistoryScopeResolver scopes,
+      ObjectProvider<ControlHistorySnapshotPort> snapshots,
+      ControlRandomSource random) {
+    return new ControlHistoryDetailService(
+        clocks.getIfAvailable(Clock::systemUTC),
+        runtime,
+        scopes,
+        snapshots.getIfAvailable(ControlHistorySnapshotPort::disabled),
+        random);
   }
 
   @Bean

@@ -1,6 +1,6 @@
 # R13-C2-B 受限历史详情实施计划
 
-- 状态：C2-B0 最小范围已确认；C2-B1 Fixture、C2-B2 Kernel 与 C2-B3 临时 SQLite Adapter 已完成并通过聚焦验证；C2-B4 实施中，C2-B5 至 C2-B6 未开始
+- 状态：C2-B0 至 C2-B6 已完成；仅在临时 Java SQLite/Fake 上验证，生产装配保持 Scope 默认拒绝与 Snapshot Port fail-closed
 - 决策门禁：[R13-C2-B 受限历史详情决策门禁](../contracts/r13-c2-b-history-decision-gate.md)
 - 当前实现基线：[R13-C2-A 内存终态历史目录 Contract](../contracts/r13-terminal-history-catalog.md)
 
@@ -67,6 +67,10 @@ historyRef 伪造。
 
 **完成条件：** 默认 `DISABLED` 无 Controller；不增加 SSE、前端、CLI、写 API 或远程绑定。
 
+**完成证据：** `ControlHistoryDetailService` 只消费 actor/Scope-bound、60 秒、一次性 Ref/Cursor；唯一
+`GET /api/v1/control/history/detail` 复用既有 Guard、Bearer、Request ID 与 `no-store`。显式 `LOOPBACK` + Servlet
+才创建 Controller/Service；默认 Scope Resolver 拒绝，默认 Snapshot Port 抛 fail-closed，故不会自动读取持久化数据。
+
 ### C2-B5：并发、取消、关闭与审计
 
 **先写 RED：** 同一 cursor/Ref 的并发消费仅一个成功；关闭、取消、TTL、actor 撤销和存储异常不改变数据，也不暴露
@@ -76,6 +80,9 @@ historyRef 伪造。
 失败不改变 HTTP 结果。
 
 **完成条件：** 竞争、关闭与异常测试均证明零 DML、零跨 Scope 读取、零正文/内部标识泄漏。
+
+**完成证据：** 并发 Ref/Cursor 消费恰有一次读取；错误 actor 不会消耗正确 actor 的一次性值；过期、Scope 撤销、关闭和
+存储不可用均无读取或只返回脱敏稳定投影。审计用既有 `ControlPlaneAudit` 哈希 detail Ref，sink 异常不改变 HTTP 结果。
 
 ### C2-B6：阶段文档、门禁与交付决策
 
@@ -92,6 +99,10 @@ failure（如新增该类场景）、compat Fixture 与格式检查。
 
 **完成条件：** 文档、Fixture、测试和 Git 状态一致；得到推送/PR 授权后才推送。
 
+**完成证据：** 已同步 Contract、Spec、ADR、Fixture 说明、README、路线图、能力矩阵和 R13 计划；本阶段只运行受影响的
+default/failure/compat 聚焦验证与格式检查。`clean verify`、`-Pfailure verify`、`-Pcompat verify` 全量阶段门禁仍延后至
+C3 或 C5，不因 C2-B 自动触发。
+
 ## 3. C2-B 后的 R13 顺序
 
 1. **C3：受审批写 Capability。** 先选择一个具体 Capability；冻结参数 Capsule、Approval、幂等键、Ledger、
@@ -105,7 +116,7 @@ failure（如新增该类场景）、compat Fixture 与格式检查。
 
 ## 4. 当前暂停点
 
-已完成 C2-B1：31 Case Fixture、Manifest SHA、ADR-0037 与 compat consumer 已通过聚焦 GREEN。C2-B2 已提供不含
-Spring/JDBC 的 Scope Capability、脱敏 Ref/Cursor、零正文 Page/Request 与 fail-closed 只读 Port；C2-B3 已在临时
-SQLite 中验证固定列、`query_only`、Scope、角色、时间、候选上限与脱敏失败。当前进入 C2-B4 的 Loopback 接线；当前
-授权不改变任何真实数据、网络、前端或渠道冻结状态。
+已完成 C2-B1 的 31 Case Fixture、Manifest SHA、ADR-0037 与 compat consumer；C2-B2 提供无 Spring/JDBC 的 Scope
+Capability、脱敏 Ref/Cursor、零正文 Page/Request 与 fail-closed Port；C2-B3 只在临时 SQLite 验证固定列、`query_only`、
+Scope、角色、时间、候选上限和分页；C2-B4/B5 增加默认拒绝的 Loopback 接线、一次性并发消费、撤销/过期/关闭和审计
+失败闭环。当前暂停于 C3：选择具体写 Capability 前不得启用真实数据、网络、前端或渠道。

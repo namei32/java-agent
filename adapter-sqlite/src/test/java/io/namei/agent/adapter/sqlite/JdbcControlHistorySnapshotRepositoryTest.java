@@ -68,6 +68,9 @@ class JdbcControlHistorySnapshotRepositoryTest {
   void boundsThePageAndFailsClosedForUnknownScope() {
     assertThat(repository.read(CURRENT_SCOPE, request(1)).items()).hasSize(1);
     assertThat(repository.read(CURRENT_SCOPE, request(1)).hasMore()).isTrue();
+    assertThat(repository.read(CURRENT_SCOPE, request(1, 1)).items())
+        .extracting(item -> item.role())
+        .containsExactly(HistoryVisibleRole.USER);
     assertThatThrownBy(() -> repository.read(OTHER_SCOPE, request(10)))
         .isInstanceOf(HistorySnapshotUnavailableException.class);
   }
@@ -117,6 +120,11 @@ class JdbcControlHistorySnapshotRepositoryTest {
 
   private HistoryDetailReadRequest request(int pageSize) {
     return new HistoryDetailReadRequest(HistoryDetailRef.fromBytes(new byte[16]), pageSize, NOW);
+  }
+
+  private HistoryDetailReadRequest request(int pageSize, int offset) {
+    return new HistoryDetailReadRequest(
+        HistoryDetailRef.fromBytes(new byte[16]), pageSize, offset, NOW);
   }
 
   private void insert(String session, long sequence, String role, String content, Instant timestamp)

@@ -183,6 +183,11 @@ Loopback 内存终态目录、Bearer、最小 metadata 投影、稳定排序、2
 快照降级及正文/身份/详情 Route 禁令。它只读取受 TTL/容量限制的 Registry Tombstone，不读取 Session、SQLite、
 Memory 或真实渠道。
 
+`control-plane/r13-history-detail-v1.json` 是 Java-owned R13-C2-B Contract Fixture，固定 31 个当前 Scope 的零正文
+详情 Case：Servlet/Loopback 激活、严格 GET/query、actor/Scope、60 秒一次性 Ref/Cursor、24 小时 retention、角色/字段
+白名单、1,024 candidate/20 item 上限、关闭和脱敏失败。它不含正文、Session、actor、路径、token、SQLite 路径或异常文本；
+运行时只在临时 Java SQLite/Fake 验证，默认生产 Scope Resolver/Port 仍拒绝读取。
+
 ## 4. 非确定字段
 
 | 字段 | 处理方式 |

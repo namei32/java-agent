@@ -65,6 +65,11 @@ class LoopbackRequestGuardTest {
     history.setQueryString("pageSize=20&cursor=AAAAAAAAAAAAAAAAAAAAAA");
     assertThatCode(() -> guard.validate(history)).doesNotThrowAnyException();
 
+    MockHttpServletRequest detail =
+        request("GET", "/api/v1/control/history/detail", "127.0.0.1", "127.0.0.1:8080", null);
+    detail.setQueryString("ref=AAAAAAAAAAAAAAAAAAAAAA");
+    assertThatCode(() -> guard.validate(detail)).doesNotThrowAnyException();
+
     MockHttpServletRequest status =
         request("GET", "/api/v1/control/status", "127.0.0.1", "127.0.0.1:8080", null);
     status.setQueryString("pageSize=20");
@@ -74,6 +79,9 @@ class LoopbackRequestGuardTest {
         ControlStableCode.CONTROL_REQUEST_INVALID);
     assertRejected(
         request("POST", "/api/v1/control/history", "127.0.0.1", "127.0.0.1:8080", null),
+        ControlStableCode.CONTROL_REQUEST_INVALID);
+    assertRejected(
+        request("POST", "/api/v1/control/history/detail", "127.0.0.1", "127.0.0.1:8080", null),
         ControlStableCode.CONTROL_REQUEST_INVALID);
   }
 

@@ -61,7 +61,9 @@ class ControlPlaneControllerTest {
             () -> "request-control-1",
             new ObjectMapper());
     MockMvc mvc =
-        standaloneSetup(new ControlPlaneController(service, audit)).addFilters(filter).build();
+        standaloneSetup(new ControlPlaneController(service, audit, deniedHistoryDetail(runtime)))
+            .addFilters(filter)
+            .build();
 
     mvc.perform(authenticated(get("/api/v1/control/status"), token))
         .andExpect(status().isOk())
@@ -205,7 +207,9 @@ class ControlPlaneControllerTest {
             () -> "request-control-2",
             new ObjectMapper());
     MockMvc mvc =
-        standaloneSetup(new ControlPlaneController(service, ControlPlaneAudit.disabled()))
+        standaloneSetup(
+                new ControlPlaneController(
+                    service, ControlPlaneAudit.disabled(), deniedHistoryDetail(runtime)))
             .addFilters(filter)
             .build();
 
@@ -234,5 +238,16 @@ class ControlPlaneControllerTest {
             })
         .header("Host", "127.0.0.1:8080")
         .header("Authorization", "Bearer " + token);
+  }
+
+  private static ControlHistoryDetailService deniedHistoryDetail(ControlPlaneRuntime runtime) {
+    return new ControlHistoryDetailService(
+        Clock.fixed(NOW, ZoneOffset.UTC),
+        runtime,
+        ControlHistoryScopeResolver.denied(),
+        (scope, request) -> {
+          throw new io.namei.agent.kernel.control.HistorySnapshotUnavailableException();
+        },
+        size -> new byte[size]);
   }
 }

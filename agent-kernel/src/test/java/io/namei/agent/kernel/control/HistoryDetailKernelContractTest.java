@@ -54,6 +54,9 @@ class HistoryDetailKernelContractTest {
     assertThat(page.toString()).doesNotContain("private message body");
     assertThatThrownBy(() -> new HistoryDetailReadRequest(reference, 21, NOW))
         .isInstanceOf(IllegalArgumentException.class);
+    assertThat(new HistoryDetailReadRequest(reference, 1, 1_024, NOW).offset()).isEqualTo(1_024);
+    assertThatThrownBy(() -> new HistoryDetailReadRequest(reference, 1, 1_025, NOW))
+        .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> new HistoryDetailPage(java.util.Collections.nCopies(21, item), false))
         .isInstanceOf(IllegalArgumentException.class);
   }

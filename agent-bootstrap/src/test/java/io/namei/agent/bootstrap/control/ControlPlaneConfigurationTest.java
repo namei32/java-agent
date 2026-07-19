@@ -24,6 +24,8 @@ class ControlPlaneConfigurationTest {
             context -> {
               assertThat(context).hasNotFailed();
               assertThat(context).doesNotHaveBean(ControlPlaneController.class);
+              assertThat(context).doesNotHaveBean(ControlHistoryDetailService.class);
+              assertThat(context).doesNotHaveBean(ControlHistoryScopeResolver.class);
             });
   }
 
@@ -40,6 +42,8 @@ class ControlPlaneConfigurationTest {
               assertThat(context).hasNotFailed();
               assertThat(context).hasSingleBean(ControlPlaneRuntime.class);
               assertThat(context).hasSingleBean(ControlPlaneController.class);
+              assertThat(context).hasSingleBean(ControlHistoryDetailService.class);
+              assertThat(context).hasSingleBean(ControlHistoryScopeResolver.class);
               assertThat(context).hasSingleBean(ActiveTurnObserver.class);
               assertThat(context).hasSingleBean(ControlStreamTracker.class);
               assertThat(context).hasSingleBean(ControlPlaneShutdownCoordinator.class);

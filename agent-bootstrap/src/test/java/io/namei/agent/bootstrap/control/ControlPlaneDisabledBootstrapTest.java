@@ -29,6 +29,8 @@ class ControlPlaneDisabledBootstrapTest {
               assertThat(context.getBean(ControlPlaneProperties.class).mode())
                   .isEqualTo(ControlPlaneMode.DISABLED);
               assertThat(context).doesNotHaveBean(ControlPlaneRuntime.class);
+              assertThat(context).doesNotHaveBean(ControlHistoryDetailService.class);
+              assertThat(context).doesNotHaveBean(ControlHistoryScopeResolver.class);
               assertThat(context).doesNotHaveBean(ActiveTurnObserver.class);
               assertThat(context).doesNotHaveBean(ActiveTurnRegistry.class);
               assertThat(context).doesNotHaveBean(ControlEventHub.class);
