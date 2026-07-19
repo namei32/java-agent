@@ -104,7 +104,7 @@ class TelegramReliableDeliveryFailureIT {
           () -> "RESERVED".equals(value(rig.ledger(), "channel_turn_claims", "state")),
           "Claim 已提交");
 
-      assertThat(held.heldTurns()).isOne();
+      await(() -> held.heldTurns() == 1, "已进入任务启动间隙");
       assertThat(model.calls()).isZero();
       assertThat(count(rig.ledger(), "channel_cursors")).isZero();
       first.close();
