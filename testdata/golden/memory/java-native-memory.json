@@ -13,9 +13,20 @@
             "name": "ix_memory_items_scope_updated",
             "table": "memory_items",
             "unique": false
+          },
+          {
+            "columns": [
+              "scope_binding ASC",
+              "status ASC",
+              "updated_at DESC",
+              "id ASC"
+            ],
+            "name": "ix_memory_items_scope_status_updated",
+            "table": "memory_items",
+            "unique": false
           }
         ],
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "tables": [
           {
             "checks": [
@@ -44,7 +55,7 @@
               {
                 "singleton": 1,
                 "updated_at": "UTC_INSTANT",
-                "version": 1
+                "version": 2
               }
             ]
           },
@@ -128,6 +139,12 @@
                 "name": "updated_at",
                 "nullable": false,
                 "type": "TEXT"
+              },
+              {
+                "default": "'ACTIVE'",
+                "name": "status",
+                "nullable": false,
+                "type": "TEXT"
               }
             ],
             "name": "memory_items",
@@ -191,13 +208,43 @@
                 "request_id"
               ]
             ]
+          },
+          {
+            "checks": [
+              "ordinal >= 0"
+            ],
+            "columns": [
+              {
+                "name": "mutation_id",
+                "nullable": false,
+                "primaryKey": true,
+                "type": "INTEGER"
+              },
+              {
+                "name": "ordinal",
+                "nullable": false,
+                "primaryKey": true,
+                "type": "INTEGER"
+              },
+              {
+                "name": "item_id",
+                "nullable": false,
+                "type": "TEXT"
+              },
+              {
+                "name": "result_status",
+                "nullable": false,
+                "type": "TEXT"
+              }
+            ],
+            "name": "memory_mutation_items"
           }
         ]
       },
-      "id": "schema-v1",
+      "id": "schema-v2",
       "input": {
         "databaseState": "ABSENT",
-        "initializerVersion": 1
+        "initializerVersion": 2
       }
     },
     {

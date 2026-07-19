@@ -26,7 +26,7 @@ class JavaMemorySchemaInitializerTest {
   @TempDir Path tempDir;
 
   @Test
-  void createsTheExactV1SchemaWithoutReadingOrChangingMemory2() throws Exception {
+  void createsTheExactV2SchemaWithoutReadingOrChangingMemory2() throws Exception {
     Path database = database();
     Path legacy = database.getParent().resolve("memory2.db");
     Files.createDirectories(legacy.getParent());
@@ -39,7 +39,8 @@ class JavaMemorySchemaInitializerTest {
     assertThat(Files.readString(legacy)).isEqualTo("legacy-must-stay-untouched");
     try (var connection = initializer.openConnection()) {
       assertThat(nonInternalTables(connection))
-          .containsExactlyInAnyOrder("memory_schema", "memory_items", "memory_mutations");
+          .containsExactlyInAnyOrder(
+              "memory_schema", "memory_items", "memory_mutations", "memory_mutation_items");
       assertThat(columns(connection, "memory_schema"))
           .containsExactly("singleton", "version", "updated_at");
       assertThat(columns(connection, "memory_items"))
@@ -58,7 +59,8 @@ class JavaMemorySchemaInitializerTest {
               "happened_at",
               "revision",
               "created_at",
-              "updated_at");
+              "updated_at",
+              "status");
       assertThat(columns(connection, "memory_mutations"))
           .containsExactly(
               "id",
@@ -69,10 +71,14 @@ class JavaMemorySchemaInitializerTest {
               "item_id",
               "result_status",
               "created_at");
-      assertThat(schemaVersion(connection)).isEqualTo(1);
+      assertThat(columns(connection, "memory_mutation_items"))
+          .containsExactly("mutation_id", "ordinal", "item_id", "result_status");
+      assertThat(schemaVersion(connection)).isEqualTo(2);
       assertThat(pragmaInt(connection, "busy_timeout")).isEqualTo(5_000);
       assertThat(indexColumns(connection, "ix_memory_items_scope_updated"))
           .containsExactly("scope_binding ASC", "updated_at DESC", "id ASC");
+      assertThat(indexColumns(connection, "ix_memory_items_scope_status_updated"))
+          .containsExactly("scope_binding ASC", "status ASC", "updated_at DESC", "id ASC");
       assertThat(uniqueIndexes(connection, "memory_items"))
           .contains(List.of("scope_binding", "memory_type", "content_hash"));
       assertThat(uniqueIndexes(connection, "memory_mutations"))
@@ -122,7 +128,7 @@ class JavaMemorySchemaInitializerTest {
     initializer.initialize();
     try (var connection = initializer.openConnection();
         var statement = connection.createStatement()) {
-      statement.executeUpdate("UPDATE memory_schema SET version = 2");
+      statement.executeUpdate("UPDATE memory_schema SET version = 3");
     }
 
     assertThatThrownBy(initializer::initialize)
@@ -131,9 +137,10 @@ class JavaMemorySchemaInitializerTest {
         .isEqualTo(JavaMemoryRepositoryFailure.SCHEMA_INCOMPATIBLE);
 
     try (var connection = initializer.openConnection()) {
-      assertThat(schemaVersion(connection)).isEqualTo(2);
+      assertThat(schemaVersion(connection)).isEqualTo(3);
       assertThat(nonInternalTables(connection))
-          .containsExactlyInAnyOrder("memory_schema", "memory_items", "memory_mutations");
+          .containsExactlyInAnyOrder(
+              "memory_schema", "memory_items", "memory_mutations", "memory_mutation_items");
     }
 
     try (var connection = initializer.openConnection();
@@ -188,7 +195,7 @@ class JavaMemorySchemaInitializerTest {
   }
 
   @Test
-  void backsUpACompatibleV0DatabaseBeforeUpgradingToV1() throws Exception {
+  void backsUpACompatibleV0DatabaseBeforeUpgradingToV2() throws Exception {
     Path database = database();
     createV0(database);
     var initializer = new JavaMemorySchemaInitializer(database, 5_000);
@@ -196,14 +203,38 @@ class JavaMemorySchemaInitializerTest {
     initializer.initialize();
 
     try (var connection = initializer.openConnection()) {
-      assertThat(schemaVersion(connection)).isEqualTo(1);
+      assertThat(schemaVersion(connection)).isEqualTo(2);
       assertThat(nonInternalTables(connection))
-          .containsExactlyInAnyOrder("memory_schema", "memory_items", "memory_mutations");
+          .containsExactlyInAnyOrder(
+              "memory_schema", "memory_items", "memory_mutations", "memory_mutation_items");
     }
     Path backup = onlyBackup(database);
     try (var connection = rawConnection(backup)) {
       assertThat(schemaVersion(connection)).isZero();
       assertThat(nonInternalTables(connection)).containsExactly("memory_schema");
+    }
+  }
+
+  @Test
+  void backsUpACompatibleV1DatabaseBeforeUpgradingToV2() throws Exception {
+    Path database = database();
+    Files.createDirectories(database.getParent());
+    try (var connection = rawConnection(database)) {
+      JavaMemorySchemaV1.createNew(connection, Instant.parse("2026-07-19T00:00:00Z"));
+    }
+    var initializer = new JavaMemorySchemaInitializer(database, 5_000);
+
+    initializer.initialize();
+
+    try (var connection = initializer.openConnection()) {
+      assertThat(schemaVersion(connection)).isEqualTo(2);
+      assertThat(columns(connection, "memory_items")).endsWith("status");
+      assertThat(nonInternalTables(connection)).contains("memory_mutation_items");
+    }
+    try (var connection = rawConnection(onlyV1ToV2Backup(database))) {
+      assertThat(schemaVersion(connection)).isEqualTo(1);
+      assertThat(nonInternalTables(connection))
+          .containsExactlyInAnyOrder("memory_schema", "memory_items", "memory_mutations");
     }
   }
 
@@ -362,6 +393,18 @@ class JavaMemorySchemaInitializerTest {
       List<Path> backups =
           files
               .filter(path -> path.getFileName().toString().startsWith("agent-memory.db.v0-to-v1-"))
+              .filter(path -> path.getFileName().toString().endsWith(".bak"))
+              .toList();
+      assertThat(backups).hasSize(1);
+      return backups.getFirst();
+    }
+  }
+
+  private static Path onlyV1ToV2Backup(Path database) throws Exception {
+    try (var files = Files.list(database.getParent())) {
+      List<Path> backups =
+          files
+              .filter(path -> path.getFileName().toString().startsWith("agent-memory.db.v1-to-v2-"))
               .filter(path -> path.getFileName().toString().endsWith(".bak"))
               .toList();
       assertThat(backups).hasSize(1);

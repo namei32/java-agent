@@ -4,5 +4,6 @@ public enum MemoryMutationStatus {
   CREATED,
   REINFORCED,
   DELETED,
-  NOT_FOUND
+  NOT_FOUND,
+  FORGOTTEN
 }

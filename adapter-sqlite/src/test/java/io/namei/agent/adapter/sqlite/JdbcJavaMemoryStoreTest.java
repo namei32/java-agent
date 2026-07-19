@@ -7,7 +7,9 @@ import io.namei.agent.kernel.memory.EmbeddingVector;
 import io.namei.agent.kernel.memory.MemoryCandidateLimitExceededException;
 import io.namei.agent.kernel.memory.MemoryDeleteCommand;
 import io.namei.agent.kernel.memory.MemoryDeleteStatus;
+import io.namei.agent.kernel.memory.MemoryForgetCommand;
 import io.namei.agent.kernel.memory.MemoryIdempotencyConflictException;
+import io.namei.agent.kernel.memory.MemoryLifecycleState;
 import io.namei.agent.kernel.memory.MemoryMutationKey;
 import io.namei.agent.kernel.memory.MemoryMutationOperation;
 import io.namei.agent.kernel.memory.MemoryMutationStatus;
@@ -302,6 +304,108 @@ class JdbcJavaMemoryStoreTest {
                     SCOPE_A, "req-delete-again", "memory-1", "1".repeat(64), NOW)))
         .extracting(result -> result.status())
         .isEqualTo(MemoryDeleteStatus.NOT_FOUND);
+  }
+
+  @Test
+  void softForgetsOnlyCurrentScopeFiltersReadsReplaysAndReactivatesExactWrites() {
+    store.upsert(
+        command(
+            SCOPE_A,
+            "req-write-a",
+            "memory-a",
+            MemoryType.NOTE,
+            "soft-forget-a",
+            'a',
+            'c',
+            VECTOR_A,
+            "model-a",
+            0,
+            HAPPENED_AT,
+            NOW));
+    store.upsert(
+        command(
+            SCOPE_A,
+            "req-write-b",
+            "memory-b",
+            MemoryType.NOTE,
+            "soft-forget-b",
+            'b',
+            'd',
+            VECTOR_A,
+            "model-a",
+            0,
+            HAPPENED_AT,
+            NOW));
+    store.upsert(
+        command(
+            SCOPE_B,
+            "req-write-cross",
+            "memory-cross",
+            MemoryType.NOTE,
+            "soft-forget-a",
+            'a',
+            'e',
+            VECTOR_A,
+            "model-a",
+            0,
+            HAPPENED_AT,
+            NOW));
+    var forget =
+        new MemoryForgetCommand(
+            SCOPE_A,
+            "forget-op-001",
+            List.of("memory-a", "memory-cross", "missing", "memory-b"),
+            "a".repeat(64),
+            NOW.plusSeconds(1));
+
+    var result = store.softForget(forget);
+    var replay = store.softForget(forget);
+
+    assertThat(result).isEqualTo(replay);
+    assertThat(result.requestedIds())
+        .containsExactly("memory-a", "memory-cross", "missing", "memory-b");
+    assertThat(result.supersededIds()).containsExactly("memory-a", "memory-b");
+    assertThat(result.missingIds()).containsExactly("memory-cross", "missing");
+    assertThat(store.list(SCOPE_A, 100)).isEmpty();
+    assertThat(store.candidateCount(SCOPE_A)).isZero();
+    assertThat(store.list(SCOPE_B, 100))
+        .singleElement()
+        .extracting(item -> item.id())
+        .isEqualTo("memory-cross");
+
+    var reactivated =
+        store.upsert(
+            command(
+                SCOPE_A,
+                "req-reactivate",
+                "memory-new-id-must-not-win",
+                MemoryType.NOTE,
+                "soft-forget-a",
+                'a',
+                'f',
+                VECTOR_A,
+                "model-a",
+                0,
+                HAPPENED_AT,
+                NOW.plusSeconds(2)));
+    assertThat(reactivated.status()).isEqualTo(MemoryWriteStatus.REINFORCED);
+    assertThat(reactivated.item().id()).isEqualTo("memory-a");
+    assertThat(reactivated.item().lifecycleState()).isEqualTo(MemoryLifecycleState.ACTIVE);
+    assertThat(store.list(SCOPE_A, 100))
+        .singleElement()
+        .extracting(item -> item.id())
+        .isEqualTo("memory-a");
+
+    assertThatThrownBy(
+            () ->
+                store.softForget(
+                    new MemoryForgetCommand(
+                        SCOPE_A,
+                        "forget-op-001",
+                        List.of("memory-a"),
+                        "b".repeat(64),
+                        NOW.plusSeconds(2))))
+        .isInstanceOf(MemoryIdempotencyConflictException.class);
   }
 
   @Test

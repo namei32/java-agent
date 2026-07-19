@@ -74,7 +74,7 @@ class JavaNativeMemoryContractTest {
     JsonNode fixture = fixture();
     assertFixtureInventory(fixture);
 
-    JsonNode schemaCase = caseById(fixture, "schema-v1");
+    JsonNode schemaCase = caseById(fixture, "schema-v2");
     JsonNode schemaExpected = schemaCase.path("expected");
     Path database =
         temporaryDirectory.resolve(schemaExpected.path("databaseRelativePath").asString());
@@ -112,7 +112,7 @@ class JavaNativeMemoryContractTest {
   @Test
   void executesApprovedWriteListAndDeleteContractsThroughProductionLayers() throws Exception {
     JsonNode fixture = fixture();
-    JsonNode schemaCase = caseById(fixture, "schema-v1");
+    JsonNode schemaCase = caseById(fixture, "schema-v2");
     Path database =
         temporaryDirectory.resolve(
             schemaCase.path("expected").path("databaseRelativePath").asString());
@@ -292,7 +292,7 @@ class JavaNativeMemoryContractTest {
     assertThat(fixture.path("suite").asString()).isEqualTo("java-native-memory");
     assertThat(strings(fixture.path("cases"), "id"))
         .containsExactly(
-            "schema-v1",
+            "schema-v2",
             "float32-little-endian",
             "scope-and-content-hash",
             "write-argument-hash-v1",

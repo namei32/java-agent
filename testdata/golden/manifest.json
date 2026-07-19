@@ -57,7 +57,7 @@
     {
       "id": "memory/java-native-memory",
       "path": "memory/java-native-memory.json",
-      "sha256": "8c58d500ca6b2bc0e651a827ca32a4927968f1e699b981832357a131cab32883",
+      "sha256": "ba22f8624f18effdbd727b02206abbf862bc8e475a682485aaf9edcd67c64429",
       "source": "java-contract"
     },
     {

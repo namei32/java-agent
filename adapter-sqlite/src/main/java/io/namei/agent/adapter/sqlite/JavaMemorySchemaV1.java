@@ -65,12 +65,12 @@ final class JavaMemorySchemaV1 {
       )
       """;
 
-  private static final List<ColumnSpec> SCHEMA_COLUMNS =
+  static final List<ColumnSpec> SCHEMA_COLUMNS =
       List.of(
           new ColumnSpec("singleton", "INTEGER", false, true, null),
           new ColumnSpec("version", "INTEGER", true, false, null),
           new ColumnSpec("updated_at", "TEXT", true, false, null));
-  private static final List<ColumnSpec> ITEM_COLUMNS =
+  static final List<ColumnSpec> ITEM_COLUMNS =
       List.of(
           new ColumnSpec("id", "TEXT", false, true, null),
           new ColumnSpec("scope_binding", "TEXT", true, false, null),
@@ -87,7 +87,7 @@ final class JavaMemorySchemaV1 {
           new ColumnSpec("revision", "INTEGER", true, false, "1"),
           new ColumnSpec("created_at", "TEXT", true, false, null),
           new ColumnSpec("updated_at", "TEXT", true, false, null));
-  private static final List<ColumnSpec> MUTATION_COLUMNS =
+  static final List<ColumnSpec> MUTATION_COLUMNS =
       List.of(
           new ColumnSpec("id", "INTEGER", false, true, null),
           new ColumnSpec("scope_binding", "TEXT", true, false, null),
@@ -222,7 +222,7 @@ final class JavaMemorySchemaV1 {
     }
   }
 
-  private static void requireColumns(Connection connection, String table, List<ColumnSpec> expected)
+  static void requireColumns(Connection connection, String table, List<ColumnSpec> expected)
       throws SQLException {
     var actual = new ArrayList<ColumnSpec>();
     try (var statement = connection.createStatement();
@@ -242,7 +242,7 @@ final class JavaMemorySchemaV1 {
     }
   }
 
-  private static void requireSqlContains(Connection connection, String name, String fragment)
+  static void requireSqlContains(Connection connection, String name, String fragment)
       throws SQLException {
     String sql;
     try (var statement =
@@ -261,8 +261,8 @@ final class JavaMemorySchemaV1 {
     }
   }
 
-  private static void requireUniqueColumns(
-      Connection connection, String table, List<String> expected) throws SQLException {
+  static void requireUniqueColumns(Connection connection, String table, List<String> expected)
+      throws SQLException {
     for (List<String> columns : uniqueIndexes(connection, table)) {
       if (columns.equals(expected)) {
         return;
@@ -285,7 +285,7 @@ final class JavaMemorySchemaV1 {
     return result;
   }
 
-  private static void requireOrderedIndex(
+  static void requireOrderedIndex(
       Connection connection, String table, String index, List<String> expected)
       throws SQLException {
     Map<String, Boolean> indexes = new HashMap<>();
@@ -318,7 +318,7 @@ final class JavaMemorySchemaV1 {
     return List.copyOf(columns);
   }
 
-  private static void forbidViewsAndTriggers(Connection connection) throws SQLException {
+  static void forbidViewsAndTriggers(Connection connection) throws SQLException {
     try (var statement = connection.createStatement();
         var rows =
             statement.executeQuery(
@@ -331,6 +331,6 @@ final class JavaMemorySchemaV1 {
 
   record SchemaRecord(int version, Instant updatedAt) {}
 
-  private record ColumnSpec(
+  record ColumnSpec(
       String name, String type, boolean notNull, boolean primaryKey, String defaultValue) {}
 }

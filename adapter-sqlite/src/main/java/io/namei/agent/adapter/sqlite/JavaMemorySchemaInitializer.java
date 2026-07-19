@@ -59,8 +59,8 @@ public final class JavaMemorySchemaInitializer {
           transaction(
               connection,
               () -> {
-                JavaMemorySchemaV1.createNew(connection, clock.instant());
-                JavaMemorySchemaV1.validateV1(connection);
+                JavaMemorySchemaV2.createNew(connection, clock.instant());
+                JavaMemorySchemaV2.validateV2(connection);
               });
           return;
         }
@@ -69,21 +69,39 @@ public final class JavaMemorySchemaInitializer {
         }
         JavaMemorySchemaV1.validateHeader(connection);
         JavaMemorySchemaV1.SchemaRecord schema = JavaMemorySchemaV1.readSchemaRecord(connection);
-        if (schema.version() < 0 || schema.version() > JavaMemorySchemaV1.VERSION) {
+        if (schema.version() < 0 || schema.version() > JavaMemorySchemaV2.VERSION) {
           throw JavaMemoryRepositoryException.schemaIncompatible();
+        }
+        if (schema.version() == JavaMemorySchemaV2.VERSION) {
+          JavaMemorySchemaV2.validateV2(connection);
+          return;
         }
         if (schema.version() == JavaMemorySchemaV1.VERSION) {
           JavaMemorySchemaV1.validateV1(connection);
+          backupVersion(connection, JavaMemorySchemaV1.VERSION, JavaMemorySchemaV2.VERSION);
+          transaction(
+              connection,
+              () -> {
+                JavaMemorySchemaV2.migrateV1(connection, clock.instant());
+                JavaMemorySchemaV2.validateV2(connection);
+              });
           return;
         }
 
         JavaMemorySchemaV1.validateV0(connection);
-        backupV0(connection);
+        backupVersion(connection, 0, JavaMemorySchemaV1.VERSION);
         transaction(
             connection,
             () -> {
               JavaMemorySchemaV1.migrateV0(connection, clock.instant());
               JavaMemorySchemaV1.validateV1(connection);
+            });
+        backupVersion(connection, JavaMemorySchemaV1.VERSION, JavaMemorySchemaV2.VERSION);
+        transaction(
+            connection,
+            () -> {
+              JavaMemorySchemaV2.migrateV1(connection, clock.instant());
+              JavaMemorySchemaV2.validateV2(connection);
             });
       }
     } catch (JavaMemoryRepositoryException exception) {
@@ -113,9 +131,17 @@ public final class JavaMemorySchemaInitializer {
     }
   }
 
-  private void backupV0(Connection connection) {
+  private void backupVersion(Connection connection, int fromVersion, int toVersion) {
     Path destination =
-        database.resolveSibling(DATABASE_FILE_NAME + ".v0-to-v1-" + UUID.randomUUID() + ".bak");
+        database.resolveSibling(
+            DATABASE_FILE_NAME
+                + ".v"
+                + fromVersion
+                + "-to-v"
+                + toVersion
+                + "-"
+                + UUID.randomUUID()
+                + ".bak");
     try {
       backup.backup(connection, destination);
       if (!Files.isRegularFile(destination) || Files.size(destination) == 0L) {

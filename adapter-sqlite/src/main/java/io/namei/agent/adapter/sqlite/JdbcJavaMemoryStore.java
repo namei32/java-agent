@@ -4,8 +4,11 @@ import io.namei.agent.kernel.memory.MemoryCandidateLimitExceededException;
 import io.namei.agent.kernel.memory.MemoryDeleteCommand;
 import io.namei.agent.kernel.memory.MemoryDeleteResult;
 import io.namei.agent.kernel.memory.MemoryDeleteStatus;
+import io.namei.agent.kernel.memory.MemoryForgetCommand;
+import io.namei.agent.kernel.memory.MemoryForgetResult;
 import io.namei.agent.kernel.memory.MemoryIdempotencyConflictException;
 import io.namei.agent.kernel.memory.MemoryItem;
+import io.namei.agent.kernel.memory.MemoryLifecycleState;
 import io.namei.agent.kernel.memory.MemoryMutation;
 import io.namei.agent.kernel.memory.MemoryMutationKey;
 import io.namei.agent.kernel.memory.MemoryMutationOperation;
@@ -18,6 +21,7 @@ import io.namei.agent.kernel.memory.MemoryWriteCommand;
 import io.namei.agent.kernel.memory.MemoryWriteReplayQuery;
 import io.namei.agent.kernel.memory.MemoryWriteResult;
 import io.namei.agent.kernel.memory.MemoryWriteStatus;
+import io.namei.agent.kernel.port.MemorySoftForgetPort;
 import io.namei.agent.kernel.port.MemoryStorePort;
 import io.namei.agent.kernel.port.MemoryWritePort;
 import java.sql.Connection;
@@ -30,11 +34,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public final class JdbcJavaMemoryStore implements MemoryStorePort, MemoryWritePort {
+public final class JdbcJavaMemoryStore
+    implements MemoryStorePort, MemoryWritePort, MemorySoftForgetPort {
   private static final String ITEM_COLUMNS =
       "id, scope_binding, memory_type, content, content_hash, embedding, embedding_model, "
           + "embedding_dimensions, reinforcement, emotional_weight, source_kind, happened_at, "
-          + "revision, created_at, updated_at";
+          + "revision, created_at, updated_at, status";
 
   private final JavaMemorySchemaInitializer schema;
   private final Float32VectorCodec vectorCodec;
@@ -87,7 +92,7 @@ public final class JdbcJavaMemoryStore implements MemoryStorePort, MemoryWritePo
             connection.prepareStatement(
                 "SELECT "
                     + ITEM_COLUMNS
-                    + " FROM memory_items WHERE scope_binding = ? "
+                    + " FROM memory_items WHERE scope_binding = ? AND status = 'ACTIVE' "
                     + "ORDER BY updated_at DESC, id ASC LIMIT ?")) {
       statement.setString(1, scope.binding());
       statement.setInt(2, limit);
@@ -172,6 +177,18 @@ public final class JdbcJavaMemoryStore implements MemoryStorePort, MemoryWritePo
     }
   }
 
+  @Override
+  public MemoryForgetResult softForget(MemoryForgetCommand command) {
+    Objects.requireNonNull(command, "command");
+    try (var connection = schema.openConnection()) {
+      return transaction(connection, true, () -> softForgetInTransaction(connection, command));
+    } catch (MemoryIdempotencyConflictException | JavaMemoryRepositoryException exception) {
+      throw exception;
+    } catch (SQLException | RuntimeException exception) {
+      throw JavaMemoryRepositoryException.operationFailed(exception);
+    }
+  }
+
   private MemoryWriteResult replayUpsert(MemoryWriteCommand command, MemoryMutation mutation) {
     try (var connection = schema.openConnection()) {
       return replayUpsert(connection, command.scope(), command.argumentHash(), mutation);
@@ -246,6 +263,47 @@ public final class JdbcJavaMemoryStore implements MemoryStorePort, MemoryWritePo
     return new MemoryDeleteResult(status, command.itemId());
   }
 
+  private MemoryForgetResult softForgetInTransaction(
+      Connection connection, MemoryForgetCommand command) throws SQLException {
+    Optional<Long> recorded = findForgetMutation(connection, command);
+    if (recorded.isPresent()) {
+      return replayForget(connection, command, recorded.orElseThrow());
+    }
+
+    long mutationId = insertForgetMutation(connection, command);
+    var supersededIds = new ArrayList<String>();
+    var missingIds = new ArrayList<String>();
+    int ordinal = 0;
+    for (String itemId : command.requestedIds()) {
+      int affected;
+      try (var update =
+          connection.prepareStatement(
+              """
+              UPDATE memory_items
+              SET status = 'SUPERSEDED', revision = revision + 1, updated_at = ?
+              WHERE scope_binding = ? AND id = ?
+              """)) {
+        update.setString(1, command.requestedAt().toString());
+        update.setString(2, command.scope().binding());
+        update.setString(3, itemId);
+        affected = update.executeUpdate();
+      }
+      if (affected < 0 || affected > 1) {
+        throw new SQLException("unexpected memory soft forget count");
+      }
+      String resultStatus;
+      if (affected == 1) {
+        supersededIds.add(itemId);
+        resultStatus = "SUPERSEDED";
+      } else {
+        missingIds.add(itemId);
+        resultStatus = "MISSING";
+      }
+      insertForgetMutationItem(connection, mutationId, ordinal++, itemId, resultStatus);
+    }
+    return new MemoryForgetResult(command.requestedIds(), supersededIds, missingIds);
+  }
+
   private static MemoryDeleteResult replayDelete(
       MemoryDeleteCommand command, MemoryMutation mutation) {
     requireMatchingMutation(mutation, MemoryMutationOperation.DELETE, command.argumentHash());
@@ -253,7 +311,8 @@ public final class JdbcJavaMemoryStore implements MemoryStorePort, MemoryWritePo
         switch (mutation.status()) {
           case DELETED -> MemoryDeleteStatus.DELETED;
           case NOT_FOUND -> MemoryDeleteStatus.NOT_FOUND;
-          case CREATED, REINFORCED -> throw JavaMemoryRepositoryException.operationFailed(null);
+          case CREATED, REINFORCED, FORGOTTEN ->
+              throw JavaMemoryRepositoryException.operationFailed(null);
         };
     return new MemoryDeleteResult(status, mutation.itemId());
   }
@@ -266,7 +325,8 @@ public final class JdbcJavaMemoryStore implements MemoryStorePort, MemoryWritePo
         switch (mutation.status()) {
           case CREATED -> MemoryWriteStatus.CREATED;
           case REINFORCED -> MemoryWriteStatus.REINFORCED;
-          case DELETED, NOT_FOUND -> throw JavaMemoryRepositoryException.operationFailed(null);
+          case DELETED, NOT_FOUND, FORGOTTEN ->
+              throw JavaMemoryRepositoryException.operationFailed(null);
         };
     MemoryItem item =
         findItem(connection, scope, mutation.itemId())
@@ -283,7 +343,8 @@ public final class JdbcJavaMemoryStore implements MemoryStorePort, MemoryWritePo
 
   private long countCandidates(Connection connection, MemoryScope scope) throws SQLException {
     try (var statement =
-        connection.prepareStatement("SELECT COUNT(*) FROM memory_items WHERE scope_binding = ?")) {
+        connection.prepareStatement(
+            "SELECT COUNT(*) FROM memory_items WHERE scope_binding = ? AND status = 'ACTIVE'")) {
       statement.setString(1, scope.binding());
       try (var rows = statement.executeQuery()) {
         if (!rows.next()) {
@@ -304,7 +365,8 @@ public final class JdbcJavaMemoryStore implements MemoryStorePort, MemoryWritePo
         connection.prepareStatement(
             "SELECT "
                 + ITEM_COLUMNS
-                + " FROM memory_items WHERE scope_binding = ? AND embedding_model = ? "
+                + " FROM memory_items WHERE scope_binding = ? AND status = 'ACTIVE' "
+                + "AND embedding_model = ? "
                 + "AND embedding_dimensions = ? ORDER BY updated_at DESC, id ASC")) {
       statement.setString(1, request.scope().binding());
       statement.setString(2, request.embeddingModel());
@@ -334,6 +396,116 @@ public final class JdbcJavaMemoryStore implements MemoryStorePort, MemoryWritePo
         return Optional.of(mutation);
       }
     }
+  }
+
+  private Optional<Long> findForgetMutation(Connection connection, MemoryForgetCommand command)
+      throws SQLException {
+    try (var statement =
+        connection.prepareStatement(
+            "SELECT id, operation, argument_hash FROM memory_mutations "
+                + "WHERE scope_binding = ? AND request_id = ?")) {
+      statement.setString(1, command.scope().binding());
+      statement.setString(2, command.operationKey());
+      try (var rows = statement.executeQuery()) {
+        if (!rows.next()) {
+          return Optional.empty();
+        }
+        long mutationId = exactLong(rows, "id");
+        if (!MemoryMutationOperation.FORGET.name().equals(rows.getString("operation"))
+            || !command.argumentHash().equals(rows.getString("argument_hash"))) {
+          throw new MemoryIdempotencyConflictException();
+        }
+        if (rows.next()) {
+          throw new SQLException("duplicate memory forget mutation");
+        }
+        return Optional.of(mutationId);
+      }
+    }
+  }
+
+  private static long insertForgetMutation(Connection connection, MemoryForgetCommand command)
+      throws SQLException {
+    try (var statement =
+        connection.prepareStatement(
+            """
+            INSERT INTO memory_mutations (
+              scope_binding, request_id, operation, argument_hash,
+              item_id, result_status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """)) {
+      statement.setString(1, command.scope().binding());
+      statement.setString(2, command.operationKey());
+      statement.setString(3, MemoryMutationOperation.FORGET.name());
+      statement.setString(4, command.argumentHash());
+      statement.setString(5, "batch");
+      statement.setString(6, MemoryMutationStatus.FORGOTTEN.name());
+      statement.setString(7, command.requestedAt().toString());
+      if (statement.executeUpdate() != 1) {
+        throw new SQLException("memory forget mutation insert count is not one");
+      }
+    }
+    try (var statement = connection.createStatement();
+        var rows = statement.executeQuery("SELECT last_insert_rowid()")) {
+      if (!rows.next()) {
+        throw new SQLException("memory forget mutation id missing");
+      }
+      long mutationId = rows.getLong(1);
+      if (rows.wasNull() || mutationId < 1 || rows.next()) {
+        throw new SQLException("invalid memory forget mutation id");
+      }
+      return mutationId;
+    }
+  }
+
+  private static void insertForgetMutationItem(
+      Connection connection, long mutationId, int ordinal, String itemId, String resultStatus)
+      throws SQLException {
+    try (var statement =
+        connection.prepareStatement(
+            """
+            INSERT INTO memory_mutation_items (mutation_id, ordinal, item_id, result_status)
+            VALUES (?, ?, ?, ?)
+            """)) {
+      statement.setLong(1, mutationId);
+      statement.setInt(2, ordinal);
+      statement.setString(3, itemId);
+      statement.setString(4, resultStatus);
+      if (statement.executeUpdate() != 1) {
+        throw new SQLException("memory forget mutation item insert count is not one");
+      }
+    }
+  }
+
+  private static MemoryForgetResult replayForget(
+      Connection connection, MemoryForgetCommand command, long mutationId) throws SQLException {
+    var supersededIds = new ArrayList<String>();
+    var missingIds = new ArrayList<String>();
+    int ordinal = 0;
+    try (var statement =
+        connection.prepareStatement(
+            "SELECT ordinal, item_id, result_status FROM memory_mutation_items "
+                + "WHERE mutation_id = ? ORDER BY ordinal ASC")) {
+      statement.setLong(1, mutationId);
+      try (var rows = statement.executeQuery()) {
+        while (rows.next()) {
+          if (exactInt(rows, "ordinal") != ordinal
+              || ordinal >= command.requestedIds().size()
+              || !command.requestedIds().get(ordinal).equals(rows.getString("item_id"))) {
+            throw JavaMemoryRepositoryException.operationFailed(null);
+          }
+          switch (rows.getString("result_status")) {
+            case "SUPERSEDED" -> supersededIds.add(command.requestedIds().get(ordinal));
+            case "MISSING" -> missingIds.add(command.requestedIds().get(ordinal));
+            default -> throw JavaMemoryRepositoryException.operationFailed(null);
+          }
+          ordinal++;
+        }
+      }
+    }
+    if (ordinal != command.requestedIds().size()) {
+      throw JavaMemoryRepositoryException.operationFailed(null);
+    }
+    return new MemoryForgetResult(command.requestedIds(), supersededIds, missingIds);
   }
 
   private Optional<MemoryItem> findExactItem(Connection connection, MemoryWriteCommand command)
@@ -413,7 +585,8 @@ public final class JdbcJavaMemoryStore implements MemoryStorePort, MemoryWritePo
         existing.happenedAt(),
         Math.addExact(existing.revision(), 1),
         existing.createdAt(),
-        latest(existing.updatedAt(), command.requestedAt()));
+        latest(existing.updatedAt(), command.requestedAt()),
+        MemoryLifecycleState.ACTIVE);
   }
 
   private static Instant latest(Instant first, Instant second) {
@@ -457,16 +630,17 @@ public final class JdbcJavaMemoryStore implements MemoryStorePort, MemoryWritePo
         connection.prepareStatement(
             """
             UPDATE memory_items
-            SET reinforcement = ?, emotional_weight = ?, revision = ?, updated_at = ?
+            SET reinforcement = ?, emotional_weight = ?, revision = ?, updated_at = ?, status = ?
             WHERE scope_binding = ? AND id = ? AND revision = ?
             """)) {
       statement.setInt(1, item.reinforcement());
       statement.setInt(2, item.emotionalWeight());
       statement.setLong(3, item.revision());
       statement.setString(4, item.updatedAt().toString());
-      statement.setString(5, item.scope().binding());
-      statement.setString(6, item.id());
-      statement.setLong(7, item.revision() - 1);
+      statement.setString(5, item.lifecycleState().name());
+      statement.setString(6, item.scope().binding());
+      statement.setString(7, item.id());
+      statement.setLong(8, item.revision() - 1);
       if (statement.executeUpdate() != 1) {
         throw new SQLException("memory reinforce count is not one");
       }
@@ -528,7 +702,8 @@ public final class JdbcJavaMemoryStore implements MemoryStorePort, MemoryWritePo
         happenedAt == null ? null : Instant.parse(happenedAt),
         exactLong(rows, "revision"),
         Instant.parse(rows.getString("created_at")),
-        Instant.parse(rows.getString("updated_at")));
+        Instant.parse(rows.getString("updated_at")),
+        MemoryLifecycleState.valueOf(rows.getString("status")));
   }
 
   private static MemoryMutation readMutation(ResultSet rows) throws SQLException {

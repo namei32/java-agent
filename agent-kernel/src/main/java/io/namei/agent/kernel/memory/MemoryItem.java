@@ -17,7 +17,8 @@ public record MemoryItem(
     Instant happenedAt,
     long revision,
     Instant createdAt,
-    Instant updatedAt) {
+    Instant updatedAt,
+    MemoryLifecycleState lifecycleState) {
   public MemoryItem {
     id = MemoryValueRules.itemId(id);
     Objects.requireNonNull(scope, "scope");
@@ -38,9 +39,43 @@ public record MemoryItem(
     }
     Objects.requireNonNull(createdAt, "createdAt");
     Objects.requireNonNull(updatedAt, "updatedAt");
+    Objects.requireNonNull(lifecycleState, "lifecycleState");
     if (updatedAt.isBefore(createdAt)) {
       throw new IllegalArgumentException("Updated At 不能早于 Created At");
     }
+  }
+
+  public MemoryItem(
+      String id,
+      MemoryScope scope,
+      MemoryType type,
+      String content,
+      String contentHash,
+      EmbeddingVector embedding,
+      String embeddingModel,
+      int reinforcement,
+      int emotionalWeight,
+      MemorySourceKind sourceKind,
+      Instant happenedAt,
+      long revision,
+      Instant createdAt,
+      Instant updatedAt) {
+    this(
+        id,
+        scope,
+        type,
+        content,
+        contentHash,
+        embedding,
+        embeddingModel,
+        reinforcement,
+        emotionalWeight,
+        sourceKind,
+        happenedAt,
+        revision,
+        createdAt,
+        updatedAt,
+        MemoryLifecycleState.ACTIVE);
   }
 
   public int embeddingDimensions() {
@@ -55,6 +90,8 @@ public record MemoryItem(
         + reinforcement
         + ", revision="
         + revision
+        + ", lifecycleState="
+        + lifecycleState
         + "]";
   }
 }

@@ -15,9 +15,15 @@ public record MemoryMutation(
     itemId = MemoryValueRules.itemId(itemId);
     Objects.requireNonNull(status, "status");
     Objects.requireNonNull(createdAt, "createdAt");
-    boolean writeStatus =
-        status == MemoryMutationStatus.CREATED || status == MemoryMutationStatus.REINFORCED;
-    if ((operation == MemoryMutationOperation.UPSERT) != writeStatus) {
+    boolean valid =
+        switch (operation) {
+          case UPSERT ->
+              status == MemoryMutationStatus.CREATED || status == MemoryMutationStatus.REINFORCED;
+          case DELETE ->
+              status == MemoryMutationStatus.DELETED || status == MemoryMutationStatus.NOT_FOUND;
+          case FORGET -> status == MemoryMutationStatus.FORGOTTEN;
+        };
+    if (!valid) {
       throw new IllegalArgumentException("Mutation Operation 与 Status 不一致");
     }
   }
