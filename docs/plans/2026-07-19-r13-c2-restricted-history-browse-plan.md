@@ -1,6 +1,6 @@
 # R13-C2 受限历史浏览执行计划
 
-> **执行状态：C2-A 已实现并完成聚焦验证；C2-B 及其他 C2 变体仍未获授权。**
+> **执行状态：C2-A 已实现并完成聚焦验证；C2-B0 决策门禁已完成；C2-B1 至 C2-B6 及其他 C2 变体仍未获授权。**
 > **C2-A 只允许创建本机、内存、终态目录的 Contract、Fixture 和运行时。不得读取 Session/Message 历史、查询 SQLite、返回正文、启用网络、真实 Telegram、CLI+Web、前端或任何写操作。**
 
 ## 1. 目标与非目标
@@ -63,6 +63,12 @@ Ledger、Python 数据、用户 Workspace 或真实渠道。
 建议的最小批准模型是：仅 Java 自有会话、仅安全 role 的显式白名单、无 Tool/Provider/Memory 字段、固定总量和
 字符预算、短期 actor-bound `historyRef`、无搜索。任何扩大范围都必须形成新的版本化 Contract。
 
+### 2.1 C2-B0 已完成的决策门禁
+
+[R13-C2-B 受限历史详情决策门禁](../contracts/r13-c2-b-history-decision-gate.md)现已固定永久禁令、默认拒绝、
+必须由用户确认的 B0-D1 至 B0-D6，以及建议的最小候选。它没有批准数据读取；详细的后续 TDD 任务见
+[R13-C2-B 受限历史详情实施计划](2026-07-19-r13-c2b-history-detail-implementation-plan.md)。
+
 ## 3. 连续 TDD 顺序
 
 ### C2-C0：数据边界 Contract 与 Fixture（C2-A 已完成）
@@ -77,6 +83,10 @@ Ledger、Python 数据、用户 Workspace 或真实渠道。
 1. 先写 RED：`historyRef` 的格式、TTL、actor binding、分页 cursor、稳定错误码和结果预算。
 2. 引入最小的只读 `ControlHistorySnapshotPort`；返回的只能是 C2 Fixture 已批准的安全投影。
 3. 禁止 Port 接受原始 Session/Route/Sender、任意 SQL、全文 query 或写操作。
+
+> C2-B 的输入、RED Case、类级目标、完成条件与阶段交接已移至独立的
+> [C2-B 详情实施计划](2026-07-19-r13-c2b-history-detail-implementation-plan.md)，避免 C2-A 和 C2-B 的
+> 授权边界混淆。
 
 ### C2-B-P2：未来的隔离 Adapter 与 Fake 数据源（未批准）
 
