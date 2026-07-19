@@ -35,10 +35,16 @@
 - 已完成：R14-P1 的[本地只读主动决策 Contract](contracts/r14-read-only-proactive-decision.md)，以 15 Case Fixture 和 failure 测试串联 Gate、Fake Source、只读 Drift 与无正文 skip/pending/cancel 投影；它不创建审批、投递、记忆写入或任何 Bootstrap Runtime。
 - 已完成：R13-C1 的本机[Loopback 只读控制索引](contracts/r13-read-only-control-index.md)，以及 R13-C2-A 的[内存终态历史目录](contracts/r13-terminal-history-catalog.md)。后者仅在既有 `LOOPBACK`/Bearer/Servlet 条件下提供 `GET /api/v1/control/history`，只投影短期 opaque `historyRef`、channel、终态和完成时间；不读取 Session/Message/SQLite/Memory，也没有详情 Route。前端、远程访问、真实 Telegram、CLI+Web、C2-B 历史正文和任何控制面写入仍待单独批准。
 - 已完成聚焦验证：R13-C2-B 的[零正文当前 Scope 历史详情 Contract](contracts/r13-c2-b-history-decision-gate.md)已实现 31 Case Fixture、Kernel/临时 SQLite Adapter、唯一 `GET /api/v1/control/history/detail`、一次性 Ref/Cursor、关闭/竞争/审计失败闭环。生产装配仍默认拒绝 Scope 且 Snapshot Port fail-closed，故不会自动读取持久化数据；不读取用户/Python/生产数据，不启用网络、真实渠道或前端。
-- 已冻结：R13-C3 的首项受审批管理写入为既有[Scope 受限 `forget_memory` 执行契约](contracts/r13-c3-approved-memory-forget-execution.md)。它只采用已经验证的 Pending/Approval/Capsule/Reservation/Ledger/Anchor 恢复边界；本轮没有新增控制面写 Route、Worker、真实数据执行或渠道。Session/Message 删除或编辑、全局 Memory 管理、`memorize`、Optimizer 与投递仍须分别选择并批准。
+- 已冻结：R13-C3 的首项受审批管理写入为既有[Scope 受限 `forget_memory` 执行契约](contracts/r13-c3-approved-memory-forget-execution.md)。它只采用已经验证的 Pending/Approval/Capsule/Reservation/Ledger/Anchor 恢复边界；本轮没有新增控制面写 Route、Worker、真实数据执行或渠道。具体对象、测试责任和暂停点见其[实施计划](plans/2026-07-19-r13-c3-memory-forget-implementation-plan.md)。Session/Message 删除或编辑、全局 Memory 管理、`memorize`、Optimizer 与投递仍须分别选择并批准。
 - 尚未覆盖：自动 Memory 写回/Optimizer、真实 Embedding/真实 Workspace 启用、可恢复 Pending Turn、生产 Durable Side Effect Ledger、真实副作用工具、真实 Telegram Smoke、经单独授权的真实 Provider 流式 Smoke、真实 MCP Server/Streamable HTTP，以及任何真实生产切换。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。
+
+## 推荐阅读方式
+
+先从[全量对齐计划的功能模块总览](plans/2026-07-18-java-parity-program.md#功能模块总览)确认当前能力和下一步；再进入对应
+Contract 确认权限与边界；最后阅读具体实施计划，其中必须包含对象责任、RED/GREEN 顺序、测试归属、完成条件和暂停点。
+总览不堆叠类名或测试细节，具体计划不省略这些细节。
 
 ## 阅读顺序
 

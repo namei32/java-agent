@@ -13,7 +13,24 @@ Tool 层不能只按“是否存在相似 Runtime”盘点：Python 注册的每
 的逐项差异见[Tool Capability 清单](../architecture/2026-07-19-python-tool-capability-parity-inventory.md)。该清单是 R11–R14
 的执行顺序补充，不授予任何副作用或网络权限。
 
-## 后续顺序
+## 如何阅读本计划
+
+- 想知道“系统现在能做什么、下一步补哪个功能”，先看下方**功能模块总览**。
+- 想知道某项工作如何落地，进入对应的 Contract，再阅读该功能的实施计划；实施计划必须给出对象、测试、完成条件和暂停点。
+- R 编号只表示交付顺序，不是用户功能菜单。下方的“阶段索引”保留它，便于追溯历史提交和 Fixture。
+
+## 功能模块总览
+
+| 功能模块 | 已具备的能力 | 当前缺口 | 当前下一步 |
+| --- | --- | --- | --- |
+| 对话与 Provider | 被动聊天、消息协议、流式投影、Prompt/Persona、受限 Provider 失败恢复 | 跨 Turn reasoning、真实 Provider 运行与完整 Python Chat Lane | 保持默认关闭；任何真实 Provider/数据保留扩展另立 Contract |
+| 记忆与上下文 | Java Native Memory、当前 Scope 检索、Context 注入、只读 `recall_memory` | 自动写回、Optimizer、全局管理与真实 Embedding | 先完成受审批的 `forget_memory` 离线回归；其他 Memory 写入逐项选择 |
+| Tool 与审批安全 | Catalog、Deferred Tool、Approval Inbox、Capsule、Reservation、Ledger、Anchor、首个 `forget_memory` 链 | 其他写 Tool、真实审批操作与 Sandbox | R13-C3 只核验已选 `forget_memory`；不自动扩展为新写 API |
+| 扩展与外部资产 | 只读 MCP、Skill Catalog/Content、Plugin 生命周期 Tap | 远程 MCP、可变 Plugin、脚本/网络执行 | 维持只读和默认关闭；逐能力评审外部访问 |
+| 控制面与渠道 | Loopback 状态/取消/SSE、控制索引、零正文历史、Telegram 离线链 | 管理写入、前端、多渠道与真实渠道 Smoke | C3 已选择首项写 Capability；前端、真实 Telegram 和远程访问继续冻结 |
+| 主动运行与交付 | 受限 Scheduler/Drift/Subagent、只读主动决策、sandbox 切换演练 | 外部源、自动 Memory、Peer、真实生产迁移 | 先冻结每一类外部输入/副作用 Contract，再考虑接线 |
+
+## 阶段索引（按实施顺序）
 
 | 阶段 | 对齐主题 | Python 证据 | Java 完成标准 | 当前状态 |
 | --- | --- | --- | --- | --- |

@@ -6,6 +6,7 @@
 - 执行边界：`memory-forget-capability-v1`
 - 前置：[获批的 Scope 受限 Memory Forget Capability](approved-scope-bound-memory-forget.md)、[Pending Operation Session Anchor 与 Recovery Capability 契约](pending-operation-recovery-capability.md)
 - 关联 ADR：[ADR-0038：选择 Scope 受限 Memory Forget 作为 R13-C3 的首项写 Capability](../adr/0038-select-scope-bound-memory-forget-as-first-r13-c3-write-capability.md)
+- 实施计划：[R13-C3 Scope 受限 Memory Forget 实施计划](../plans/2026-07-19-r13-c3-memory-forget-implementation-plan.md)
 
 > C3 不以“Dashboard 管理写入”为名绕过 R11-B2c。首项且唯一被选中的动作是已经获批的
 > `forget_memory`：在当前 Session Scope 内，对指定 Java Native Memory ID 批量执行软失效。它复用既有
@@ -91,4 +92,3 @@ Memory ID，也不授予 C3 写入权限。
 2. 仅在需要新的管理入口且用户明确批准其请求/目标引用模型后，先写该入口的 RED Fixture；
 3. 才能实现最小 Producer/Route，随后覆盖取消、过期、并发、审计失败、`UNKNOWN` 与 `COMMIT_UNREPORTED`；
 4. C3 全部实现后，再与 C5 一起执行默认、`failure`、`compat` 三套完整门禁。
-

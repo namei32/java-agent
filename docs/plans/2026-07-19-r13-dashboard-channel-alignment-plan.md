@@ -6,6 +6,18 @@
 - Java 证据基线：`agent/r12-skill-catalog`，含 Loopback 控制面、审批 Inbox、CLI/Telegram 离线纵向切片
 - 前置：[完成度审计](../architecture/2026-07-19-akashic-java-completion-audit.md)、[Tool Capability 清单](../architecture/2026-07-19-python-tool-capability-parity-inventory.md)、[Loopback 控制面契约](../contracts/loopback-control-plane.md)
 
+## 阅读地图：按功能模块定位
+
+| 功能模块 | 解决的问题 | 当前状态 | 阅读入口 |
+| --- | --- | --- | --- |
+| 控制索引 | 当前有哪些本机 Turn/渠道状态 | 已完成，只读 | C1 |
+| 历史浏览 | 当前 Scope 有哪些近期活动，不暴露正文 | C2-A/C2-B 已完成 | C2 |
+| 受审批写入 | 如何在审批后改变状态，而不把只读 Ref 变成写权限 | C3-C0 已冻结 | [C3 实施计划](2026-07-19-r13-c3-memory-forget-implementation-plan.md) |
+| 前端与资产 | 如何提供界面而不加载不受信任代码 | 冻结 | C4 |
+| 渠道 | 如何逐一接入外部消息通道 | 冻结 | C5 |
+
+先按模块理解“能做什么”，再按 C0–C5 的顺序实施。C 编号是依赖顺序，不是功能名称。
+
 ## 1. 本轮结论
 
 Python `bootstrap/dashboard_api.py` 是带 Vite 静态前端的广泛 Dashboard：它可读写 Session、Message、Memory，
@@ -72,6 +84,8 @@ C2-B 已以 31 Case Fixture 实现严格的 `GET /api/v1/control/history/detail`
 用户已单独选择 [Scope 受限 `forget_memory` 执行契约](../contracts/r13-c3-approved-memory-forget-execution.md)
 作为 C3 的唯一首项写 Capability。它严格复用 R11-B2c 的静态 `forget_memory`、Approval、Capsule、Ledger、
 Reservation、幂等、取消/过期/并发、`UNKNOWN` 与 `COMMIT_UNREPORTED` 边界；本轮不新增 Route、Worker、真实数据或渠道。
+具体的对象、测试归属、完成标准和新入口暂停条件见
+[R13-C3 Scope 受限 Memory Forget 实施计划](2026-07-19-r13-c3-memory-forget-implementation-plan.md)。
 
 Session/Message 删除或编辑、全局/物理 Memory 管理、`memorize`、Optimizer 和任何投递仍未选择。它们都必须逐项建立
 Capability Version、目标引用、Approval、Capsule、Ledger、Reservation、幂等键和可恢复审计的独立 Fixture/Contract，
