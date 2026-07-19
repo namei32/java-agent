@@ -4,6 +4,7 @@ import io.namei.agent.kernel.proactive.ProactiveJobLease;
 import io.namei.agent.kernel.proactive.ProactiveSourceItem;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * In-memory-only handoff between P2-A and a future P2-B producer.
@@ -15,6 +16,7 @@ final class LocalProactiveCandidate {
   private final ProactiveJobLease lease;
   private final ProactiveSourceItem source;
   private final Instant preparedAt;
+  private final AtomicBoolean claimedForPreparation = new AtomicBoolean();
 
   LocalProactiveCandidate(ProactiveJobLease lease, ProactiveSourceItem source, Instant preparedAt) {
     this.lease = Objects.requireNonNull(lease, "lease");
@@ -32,6 +34,14 @@ final class LocalProactiveCandidate {
 
   Instant preparedAt() {
     return preparedAt;
+  }
+
+  boolean tryClaimForPreparation() {
+    return claimedForPreparation.compareAndSet(false, true);
+  }
+
+  void releaseAfterPreparationFailure() {
+    claimedForPreparation.set(false);
   }
 
   @Override

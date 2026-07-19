@@ -38,7 +38,7 @@
 | R11 | Tool Catalog 与审批恢复安全基础 | 实施中（首个默认关闭恢复切片完成） | Catalog、审批 Inbox、Pending Operation/Reservation/Ledger/Anchor Contract 已验证；B2c 已增加 Scope 软失效 Capability、严格本机 Resume/Cancel/Status 和 24 Case Fixture。受控 Tool/Chat Producer 仅在显式 `APPROVAL_REQUIRED`、搜索解锁和全部 Loopback 前置满足时创建 Pending；它不启动 Worker、自动 Resume 或真实数据执行 |
 | R12 | Skills、MCP 扩展、Plugin 生命周期与受限记忆召回 | S1–S5 已实现并验证 | 默认关闭的只读 Skill Catalog、API v2 生命周期 Tap、deferred `read_skill` 与当前 Scope `recall_memory` 已缩小 Python 差距；MCP Assets 是 Java-owned 扩展。经 ADR-0029 审计，Python 不存在待迁移的 Skill Runner；远程 MCP、可变生命周期和记忆写入仍未开始 |
 | R13 | 多渠道、Dashboard 与控制面 | C0–C1、C2-A、C2-B、C3-C0 至 F3/M0 已完成；C4–C5 未开始 | 20 Case Fixture 已由默认关闭的本机 `GET /api/v1/control/index` 消费；22 Case C2-A Fixture 已由 `GET /api/v1/control/history` 消费；31 Case C2-B Fixture 已由零正文 `GET /api/v1/control/history/detail` 消费。C2-B 仅投影当前 Scope 的 role/time，默认 Scope Resolver/Port 拒绝，SQLite 仅在临时 Java 数据库/Fake 验证。C3 已选择并离线验证既有 Scope 受限 `forget_memory` 的受审批执行契约（54 个聚焦测试通过）；M0 明确不新增直接创建 Route、Memory 目标 Ref、Worker、真实数据或渠道。现有能力均在既有 Loopback/Bearer 后工作；没有用户/Python/生产历史读取、IPC、QQ、Feishu、Dashboard、前端、真实渠道或 CLI+Web；它们继续冻结或待单独批准 |
-| R14 | 主动、自动记忆与 Peer | P0、P1、P2-A 已完成；P2-B–P5 未开始 | P0 的 28 Case 边界、P1 的 15 Case无正文决策以及 P2-A 的 12 Case本地候选准备均未接线。P2-A 只在同步内存中保留 `FIXED_LOCAL` Fake Source 候选；没有 Approval、Pending、网络、进程、投递或自动写入 |
+| R14 | 主动、自动记忆与 Peer | P0、P1、P2 已完成并验证；P3–P5 未开始 | P0 的 28 Case 边界、P1 的 15 Case 无正文决策与 P2 的本地候选/Fake Delivery Preparation 均未接线。P2 含 12 Case 候选与 8 Case Pending Fixture、Fake Recovery，使用独立 Approval/Anchor/AES-GCM Capsule 与单次 Fake Port，并已通过默认、`failure`、`compat` 门禁；没有 SQLite、网络、进程、真实投递或自动写入 |
 | R15 | 生产迁移与 Python 退役 | 计划已冻结 | R9 只有 sandbox 演练；生产副本、灰度、回退、观察及 Python 退役均需另行授权 |
 
 ## R0：治理、契约与跨语言基线

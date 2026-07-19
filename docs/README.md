@@ -36,7 +36,7 @@
 - 已完成：R13-C1 的本机[Loopback 只读控制索引](contracts/r13-read-only-control-index.md)，以及 R13-C2-A 的[内存终态历史目录](contracts/r13-terminal-history-catalog.md)。后者仅在既有 `LOOPBACK`/Bearer/Servlet 条件下提供 `GET /api/v1/control/history`，只投影短期 opaque `historyRef`、channel、终态和完成时间；不读取 Session/Message/SQLite/Memory，也没有详情 Route。前端、远程访问、真实 Telegram、CLI+Web、C2-B 历史正文和任何控制面写入仍待单独批准。
 - 已完成聚焦验证：R13-C2-B 的[零正文当前 Scope 历史详情 Contract](contracts/r13-c2-b-history-decision-gate.md)已实现 31 Case Fixture、Kernel/临时 SQLite Adapter、唯一 `GET /api/v1/control/history/detail`、一次性 Ref/Cursor、关闭/竞争/审计失败闭环。生产装配仍默认拒绝 Scope 且 Snapshot Port fail-closed，故不会自动读取持久化数据；不读取用户/Python/生产数据，不启用网络、真实渠道或前端。
 - 已验证：R13-C3 的首项受审批管理写入为既有[Scope 受限 `forget_memory` 执行契约](contracts/r13-c3-approved-memory-forget-execution.md)。54 个聚焦测试确认 Pending/Approval/Capsule/Reservation/Ledger/Anchor 恢复边界在临时 Java SQLite/Fake 上保持正确；[C3-M0 管理入口决策](contracts/r13-c3-memory-forget-management-ingress-gate.md)进一步固定不新增直接创建 Route、Memory 目标 Ref 或控制面 Memory 数据权限。具体对象、测试责任和未来入口暂停条件见其[实施计划](plans/2026-07-19-r13-c3-memory-forget-implementation-plan.md)。Session/Message 删除或编辑、全局 Memory 管理、`memorize`、Optimizer 与投递仍须分别选择并批准。
-- 已完成聚焦验证：R14-P2-A 的[本地主动候选与 Fake Delivery Preparation 契约](contracts/r14-p2-local-proactive-preparation.md)以 12 Case Fixture 验证 Gate、固定 Fake Source、只读 Drift、取消与无正文候选投影。候选只存在于未接线 Application 内存中；它没有 Approval、Pending、Capsule、Outbox、Receipt、Delivery、网络或自动 Memory 写入。P2-B/P2-C 仍须分别实现并完成阶段门禁。
+- 已完成并验证：R14-P2 的[本地主动候选与 Fake Delivery Preparation 契约](contracts/r14-p2-local-proactive-preparation.md)以 P2-A 的 12 Case、P2-B 的 8 Case Fixture，以及 P2-C 的成功、失败和并发 Fake 测试固定候选、独立 Approval/Pending/Anchor、AES-GCM Capsule 与不可重放恢复。默认、`failure`、`compat` 阶段门禁均通过；它只使用同包内存对象和注入 Fake Store/Fake Delivery Port，没有 Bootstrap、SQLite、Scheduler、Outbox、网络、渠道、Receipt Adapter 或自动 Memory 写入。
 - 尚未覆盖：自动 Memory 写回/Optimizer、真实 Embedding/真实 Workspace 启用、可恢复 Pending Turn、生产 Durable Side Effect Ledger、真实副作用工具、真实 Telegram Smoke、经单独授权的真实 Provider 流式 Smoke、真实 MCP Server/Streamable HTTP，以及任何真实生产切换。
 
 完整进度与阶段门禁见 [Java 重写 Roadmap](roadmap/java-rewrite-roadmap.md)，逐项能力状态见 [Python/Java 能力差距矩阵](architecture/python-java-capability-matrix.md)。
@@ -93,9 +93,10 @@ R12-S5 的[当前 Scope 只读记忆召回 Tool](contracts/read-only-memory-reca
 `JAVA_NATIVE`、全局 `READ_ONLY` 与 `CURRENT_SCOPE_READ_ONLY` 同时成立时，`recall_memory` 才经当前 Turn `tool_search`
 作为 Deferred Tool 出现。它复用 Java 的 cosine/Hotness 稳定排序、先做类型过滤、限制候选/正文/Tool Result 预算，并把
 Embedding、Store、取消和内部失败收敛为稳定安全码；它不是 Python `memory2`、Keyword/RRF、时间线或写入 Tool 的对齐声明。
-R14-P0 的[主动、自动记忆与 Peer 边界 Contract](contracts/r14-proactive-peer-automation-boundaries.md)已作为下一阶段的
-离线前置完成：它只定义 Fixture/Kernel 值，不启动 R8 Scheduler，不接入 Source、Transport、Memory DML 或 Peer Process；
-P2–P5 与 R11-B2c 的副作用 Capability 继续按独立 Contract 推进。
+R14-P0/P1/P2 的[主动、自动记忆与 Peer 边界 Contract](contracts/r14-proactive-peer-automation-boundaries.md)已完成离线
+前置、本地只读决策与 Fake Delivery Preparation；P2 的 Pending/Approval/Capsule/Recovery 仍未接线，且不启动 R8
+Scheduler，不接入真实 Source、Transport、Memory DML 或 Peer Process。P3–P5 与 R11-B2c 的副作用 Capability 继续按
+独立 Contract 推进。
 完整后续顺序见[Java / Akashic Agent 全量对齐计划](plans/2026-07-18-java-parity-program.md)。
 
 ## 目录职责

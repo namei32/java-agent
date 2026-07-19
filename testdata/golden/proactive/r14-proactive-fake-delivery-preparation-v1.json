@@ -1,0 +1,66 @@
+{
+  "formatVersion": 1,
+  "suite": "proactive/r14-proactive-fake-delivery-preparation-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0040-restrict-r14-p2-to-local-candidate-and-fake-delivery-preparation.md",
+    "contract": "docs/contracts/r14-p2-local-proactive-preparation.md",
+    "spec": "docs/specs/2026-07-19-r14-p2-local-proactive-preparation-design.md"
+  },
+  "normalization": [],
+  "defaults": {
+    "sourceText": "local proactive body must never enter an outcome",
+    "recipientRef": "fake-recipient-fixture"
+  },
+  "cases": [
+    {
+      "id": "no-candidate-creates-no-pending-operation",
+      "group": "input",
+      "input": {"candidate": "NONE"},
+      "expected": {"outcome": "NOT_READY", "createAttempts": 0}
+    },
+    {
+      "id": "expired-candidate-creates-no-pending-operation",
+      "group": "lease",
+      "input": {"candidate": "READY", "lease": "EXPIRED"},
+      "expected": {"outcome": "NOT_READY", "createAttempts": 0}
+    },
+    {
+      "id": "cancelled-preparation-creates-no-pending-operation",
+      "group": "cancellation",
+      "input": {"candidate": "READY", "cancel": "BEFORE"},
+      "expected": {"outcome": "CANCELLED", "createAttempts": 0}
+    },
+    {
+      "id": "ready-candidate-creates-one-approval-bound-pending-operation",
+      "group": "creation",
+      "input": {"candidate": "READY"},
+      "expected": {"outcome": "PENDING", "createAttempts": 1, "state": "PENDING_APPROVAL", "anchor": "PENDING_APPROVAL"}
+    },
+    {
+      "id": "candidate-is-consumed-after-one-pending-operation",
+      "group": "idempotency",
+      "input": {"candidate": "READY", "repeat": true},
+      "expected": {"outcome": "ALREADY_PREPARED", "firstOutcome": "PENDING", "createAttempts": 1}
+    },
+    {
+      "id": "concurrent-preparation-has-one-pending-operation",
+      "group": "concurrency",
+      "input": {"candidate": "READY", "concurrent": true},
+      "expected": {"outcome": "PENDING", "outcomes": ["PENDING", "ALREADY_PREPARED"], "createAttempts": 1}
+    },
+    {
+      "id": "store-failure-releases-candidate-for-one-safe-retry",
+      "group": "failure",
+      "input": {"candidate": "READY", "store": "FAIL_ONCE", "retry": true},
+      "expected": {"outcome": "PENDING", "createAttempts": 2}
+    },
+    {
+      "id": "pending-outcome-and-stored-envelope-never-render-source-or-recipient",
+      "group": "projection",
+      "input": {"candidate": "READY"},
+      "expected": {"outcome": "PENDING", "createAttempts": 1, "leaksSourceText": false, "leaksRecipientRef": false}
+    }
+  ]
+}
