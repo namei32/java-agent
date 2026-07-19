@@ -1,6 +1,6 @@
 # R8 主动运行时、Drift 与 Subagent 实施计划
 
-- 状态：G0、A1–A6 已完成；等待阶段三套门禁与 R9 C1
+- 状态：G0、A1–A6 已完成；阶段三套门禁已通过，R9 C1–C6 已完成并已合入 `main`
 - 前置：R7 阶段门禁通过
 
 1. A1：Fixture、Kernel Job/Lease/Decision/Subagent Contract。
