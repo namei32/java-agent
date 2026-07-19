@@ -1,0 +1,50 @@
+{
+  "cases": [
+    {
+      "expected": {"cacheHitTokens": null, "cachePromptTokens": null, "modelCallCount": 0},
+      "id": "no-model-responses",
+      "input": {"responses": []}
+    },
+    {
+      "expected": {"cacheHitTokens": null, "cachePromptTokens": null, "modelCallCount": 1},
+      "id": "response-without-usable-cache-pair",
+      "input": {"responses": [{"cacheHitTokens": null, "promptTokens": 7}]}
+    },
+    {
+      "expected": {"cacheHitTokens": 0, "cachePromptTokens": 10, "modelCallCount": 1},
+      "id": "zero-cache-hit-is-observed",
+      "input": {"responses": [{"cacheHitTokens": 0, "promptTokens": 10}]}
+    },
+    {
+      "expected": {"cacheHitTokens": 7, "cachePromptTokens": 20, "modelCallCount": 2},
+      "id": "aggregate-every-usable-response-including-tool-loop",
+      "input": {
+        "responses": [
+          {"cacheHitTokens": 4, "promptTokens": 11},
+          {"cacheHitTokens": 3, "promptTokens": 9}
+        ]
+      }
+    },
+    {
+      "expected": {"cacheHitTokens": 0, "cachePromptTokens": 9, "modelCallCount": 3},
+      "id": "missing-pairs-do-not-become-zero-or-block-usable-pairs",
+      "input": {
+        "responses": [
+          {"cacheHitTokens": null, "promptTokens": null},
+          {"cacheHitTokens": null, "promptTokens": 12},
+          {"cacheHitTokens": 0, "promptTokens": 9}
+        ]
+      }
+    }
+  ],
+  "contractEvidence": {
+    "adr": "docs/adr/0031-observe-anonymous-provider-cache-usage-per-committed-turn.md",
+    "approvedOn": "2026-07-19",
+    "contract": "docs/contracts/r10-provider-cache-usage-observation.md",
+    "spec": "docs/specs/2026-07-19-r10-provider-cache-usage-observation-design.md"
+  },
+  "formatVersion": 1,
+  "normalization": [],
+  "source": "java-contract",
+  "suite": "provider/r10-provider-cache-usage-v1"
+}

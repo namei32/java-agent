@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
+import org.springframework.ai.chat.metadata.ChatResponseMetadata;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
@@ -60,6 +62,77 @@ class SpringAiChatModelAdapterTest {
     assertThat(chatModel.lastPrompt().getInstructions())
         .extracting(message -> message.getText())
         .containsExactly("系统", "问题", "历史回答");
+  }
+
+  @Test
+  void projectsOnlyStandardPromptAndCacheReadUsageWithoutTouchingNativeUsage() {
+    Usage usage =
+        new Usage() {
+          @Override
+          public Integer getPromptTokens() {
+            return 10;
+          }
+
+          @Override
+          public Integer getCompletionTokens() {
+            return 2;
+          }
+
+          @Override
+          public Object getNativeUsage() {
+            throw new AssertionError("native usage 必须留在 Provider 边界");
+          }
+
+          @Override
+          public Long getCacheReadInputTokens() {
+            return 4L;
+          }
+        };
+    var response =
+        new ChatResponse(
+            List.of(new Generation(new AssistantMessage("回答"))),
+            ChatResponseMetadata.builder().usage(usage).build());
+    var chatModel = new StubChatModel(ignored -> response);
+
+    var result = new SpringAiChatModelAdapter(chatModel).generate(request());
+
+    assertThat(result.cacheUsage())
+        .contains(new io.namei.agent.kernel.model.ProviderCacheUsage(10, 4));
+  }
+
+  @Test
+  void omitsMissingOrImpossibleUsageInsteadOfTurningItIntoAnAdapterFailure() {
+    Usage impossibleUsage =
+        new Usage() {
+          @Override
+          public Integer getPromptTokens() {
+            return 3;
+          }
+
+          @Override
+          public Integer getCompletionTokens() {
+            return null;
+          }
+
+          @Override
+          public Object getNativeUsage() {
+            throw new AssertionError("native usage 必须留在 Provider 边界");
+          }
+
+          @Override
+          public Long getCacheReadInputTokens() {
+            return 4L;
+          }
+        };
+    var response =
+        new ChatResponse(
+            List.of(new Generation(new AssistantMessage("回答"))),
+            ChatResponseMetadata.builder().usage(impossibleUsage).build());
+
+    var result =
+        new SpringAiChatModelAdapter(new StubChatModel(ignored -> response)).generate(request());
+
+    assertThat(result.cacheUsage()).isEmpty();
   }
 
   @Test

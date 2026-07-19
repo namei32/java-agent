@@ -13,6 +13,7 @@ import io.namei.agent.kernel.model.ChatMessage;
 import io.namei.agent.kernel.model.ChatModelRequest;
 import io.namei.agent.kernel.model.ChatModelResponse;
 import io.namei.agent.kernel.model.ModelMessage;
+import io.namei.agent.kernel.model.ProviderCacheUsage;
 import io.namei.agent.kernel.model.ToolResultMessage;
 import io.namei.agent.kernel.port.ChatModelPort;
 import io.namei.agent.kernel.port.ChatModelStreamObserver;
@@ -118,7 +119,8 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
       if ((text == null || text.isBlank()) && toolCalls.isEmpty()) {
         throw new InvalidModelResponseException("模型返回了空响应");
       }
-      return new ChatModelResponse(text == null ? "" : text.strip(), toolCalls);
+      return new ChatModelResponse(
+          text == null ? "" : text.strip(), toolCalls, cacheUsage(response));
     } catch (InvalidModelResponseException exception) {
       throw exception;
     } catch (RuntimeException exception) {
@@ -249,6 +251,24 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     }
   }
 
+  private static ProviderCacheUsage cacheUsage(
+      org.springframework.ai.chat.model.ChatResponse response) {
+    if (response.getMetadata() == null || response.getMetadata().getUsage() == null) {
+      return null;
+    }
+    var usage = response.getMetadata().getUsage();
+    Integer promptTokens = usage.getPromptTokens();
+    Long cacheHitTokens = usage.getCacheReadInputTokens();
+    if (promptTokens == null || cacheHitTokens == null) {
+      return null;
+    }
+    try {
+      return new ProviderCacheUsage(promptTokens.longValue(), cacheHitTokens);
+    } catch (IllegalArgumentException ignored) {
+      return null;
+    }
+  }
+
   private Map<String, Object> parseArguments(String arguments) {
     String json = arguments == null ? "{}" : arguments;
     if (json.getBytes(StandardCharsets.UTF_8).length > maxArgumentBytes) {
@@ -372,6 +392,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     private final ChatModelStreamObserver observer;
     private final StringBuilder content = new StringBuilder();
     private final LinkedHashMap<String, ToolCall> toolCalls = new LinkedHashMap<>();
+    private ProviderCacheUsage cacheUsage;
     private final CompletableFuture<ChatModelResponse> completion = new CompletableFuture<>();
     private final AtomicBoolean done = new AtomicBoolean();
     private final AtomicReference<RuntimeException> projectFailure = new AtomicReference<>();
@@ -423,7 +444,8 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
           if (finalContent.isBlank() && toolCalls.isEmpty()) {
             throw new InvalidModelResponseException("模型返回了空响应");
           }
-          response = new ChatModelResponse(finalContent, List.copyOf(toolCalls.values()));
+          response =
+              new ChatModelResponse(finalContent, List.copyOf(toolCalls.values()), cacheUsage);
           if (!done.compareAndSet(false, true)) {
             return;
           }
@@ -457,6 +479,10 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
         throw new InvalidModelResponseException("模型流响应缺少 Generation");
       }
       var output = generation.getOutput();
+      var incomingCacheUsage = cacheUsage(response);
+      if (incomingCacheUsage != null) {
+        cacheUsage = incomingCacheUsage;
+      }
       String delta = output.getText();
       if (delta != null && !delta.isEmpty()) {
         observer.onContentDelta(delta);

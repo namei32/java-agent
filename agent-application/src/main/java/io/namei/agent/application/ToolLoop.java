@@ -118,7 +118,17 @@ final class ToolLoop {
       TurnCancellation cancellation,
       SideEffectBatchCoordinator.Context context,
       ToolInvocationContext invocationContext) {
-    return complete(initialMessages, cancellation, context, invocationContext, null);
+    return complete(initialMessages, cancellation, context, invocationContext, null, null);
+  }
+
+  String complete(
+      List<? extends ModelMessage> initialMessages,
+      TurnCancellation cancellation,
+      SideEffectBatchCoordinator.Context context,
+      ToolInvocationContext invocationContext,
+      ProviderTurnUsageCollector usageCollector) {
+    return complete(
+        initialMessages, cancellation, context, invocationContext, null, usageCollector);
   }
 
   String completeStreaming(
@@ -141,7 +151,24 @@ final class ToolLoop {
         cancellation,
         context,
         invocationContext,
-        Objects.requireNonNull(progressListener, "progressListener"));
+        Objects.requireNonNull(progressListener, "progressListener"),
+        null);
+  }
+
+  String completeStreaming(
+      List<? extends ModelMessage> initialMessages,
+      TurnCancellation cancellation,
+      SideEffectBatchCoordinator.Context context,
+      ToolInvocationContext invocationContext,
+      ChatProgressListener progressListener,
+      ProviderTurnUsageCollector usageCollector) {
+    return complete(
+        initialMessages,
+        cancellation,
+        context,
+        invocationContext,
+        Objects.requireNonNull(progressListener, "progressListener"),
+        usageCollector);
   }
 
   private String complete(
@@ -149,7 +176,8 @@ final class ToolLoop {
       TurnCancellation cancellation,
       SideEffectBatchCoordinator.Context context,
       ToolInvocationContext invocationContext,
-      ChatProgressListener progressListener) {
+      ChatProgressListener progressListener,
+      ProviderTurnUsageCollector usageCollector) {
     Objects.requireNonNull(cancellation, "cancellation");
     Objects.requireNonNull(context, "context");
     Objects.requireNonNull(invocationContext, "invocationContext");
@@ -168,6 +196,9 @@ final class ToolLoop {
       if (response == null) {
         lifecycle.emit(TurnLifecycleEvent.modelCompleted(iteration, "INVALID"));
         throw new InvalidModelResponseException("模型返回了无效响应");
+      }
+      if (usageCollector != null) {
+        usageCollector.accept(response);
       }
       if (!response.hasToolCalls()) {
         lifecycle.emit(TurnLifecycleEvent.modelCompleted(iteration, "FINAL"));

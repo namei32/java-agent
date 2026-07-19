@@ -35,6 +35,8 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.metadata.ChatResponseMetadata;
+import org.springframework.ai.chat.metadata.DefaultUsage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
@@ -91,6 +93,21 @@ class SpringAiStreamingChatModelAdapterTest {
         .containsExactly(
             new ToolCall("call-1", "lookup", Map.of("city", "上海")),
             new ToolCall("call-2", "clock", Map.of()));
+  }
+
+  @Test
+  void keepsTheLastUsableStandardUsageFromACompletedStream() {
+    var chatModel =
+        new StreamingStubChatModel(
+            null, ignored -> Flux.just(response("前", 4, 1), response("中"), response("后", 10, 3)));
+
+    ChatModelResponse result =
+        new SpringAiChatModelAdapter(chatModel, 16_384, Duration.ofSeconds(1))
+            .generate(request(List.of()), ignored -> {}, CancellationSignal.none());
+
+    assertThat(result.content()).isEqualTo("前中后");
+    assertThat(result.cacheUsage())
+        .contains(new io.namei.agent.kernel.model.ProviderCacheUsage(10, 3));
   }
 
   @Test
@@ -273,6 +290,14 @@ class SpringAiStreamingChatModelAdapterTest {
 
   private static ChatResponse response(String content) {
     return new ChatResponse(List.of(new Generation(new AssistantMessage(content))));
+  }
+
+  private static ChatResponse response(String content, int promptTokens, long cacheHitTokens) {
+    return new ChatResponse(
+        List.of(new Generation(new AssistantMessage(content))),
+        ChatResponseMetadata.builder()
+            .usage(new DefaultUsage(promptTokens, 0, promptTokens, null, cacheHitTokens, null))
+            .build());
   }
 
   private static ChatResponse toolResponse(String callId, String name, String arguments) {

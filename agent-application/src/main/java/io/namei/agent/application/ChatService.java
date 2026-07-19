@@ -14,6 +14,7 @@ import io.namei.agent.kernel.model.MessageRole;
 import io.namei.agent.kernel.model.ModelMessage;
 import io.namei.agent.kernel.model.PersistedTurn;
 import io.namei.agent.kernel.port.ChatModelPort;
+import io.namei.agent.kernel.port.ProviderUsageObserver;
 import io.namei.agent.kernel.port.SessionRepository;
 import io.namei.agent.kernel.port.Tool;
 import io.namei.agent.kernel.port.TurnLifecycleObserver;
@@ -38,6 +39,7 @@ public final class ChatService implements ChatUseCase {
   private final ConversationEvidenceContextFactory conversationEvidenceContexts;
   private final MemoryRecallContextFactory memoryRecallContexts;
   private final ContextLimitRecoveryPolicy contextLimitRecovery;
+  private final ProviderUsageObserver providerUsageObserver;
 
   public ChatService(
       SessionRepository sessions,
@@ -106,6 +108,35 @@ public final class ChatService implements ChatUseCase {
         gate,
         systemPrompt,
         clock,
+        tools,
+        maxIterations,
+        observer,
+        contextLimitRecovery,
+        ProviderUsageObserver.disabled());
+  }
+
+  /** Test-friendly opt-in constructor for anonymous committed-turn provider usage observation. */
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
+      List<Tool> tools,
+      int maxIterations,
+      TurnLifecycleObserver observer,
+      ContextLimitRecoveryPolicy contextLimitRecovery,
+      ProviderUsageObserver providerUsageObserver) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
         ToolCatalog.alwaysOn(List.copyOf(tools)),
         maxIterations,
         observer,
@@ -118,7 +149,8 @@ public final class ChatService implements ChatUseCase {
         ModelStreamingSettings.defaults(),
         ConversationEvidenceContextFactory.disabled(),
         MemoryRecallContextFactory.disabled(),
-        contextLimitRecovery);
+        contextLimitRecovery,
+        providerUsageObserver);
   }
 
   public ChatService(
@@ -469,6 +501,52 @@ public final class ChatService implements ChatUseCase {
       ConversationEvidenceContextFactory conversationEvidenceContexts,
       MemoryRecallContextFactory memoryRecallContexts,
       ContextLimitRecoveryPolicy contextLimitRecovery) {
+    this(
+        sessions,
+        model,
+        historySelector,
+        limits,
+        gate,
+        systemPrompt,
+        clock,
+        catalog,
+        maxIterations,
+        observer,
+        toolSettings,
+        approvals,
+        ledger,
+        ids,
+        approvalTimeout,
+        memoryContext,
+        streamingSettings,
+        conversationEvidenceContexts,
+        memoryRecallContexts,
+        contextLimitRecovery,
+        ProviderUsageObserver.disabled());
+  }
+
+  public ChatService(
+      SessionRepository sessions,
+      ChatModelPort model,
+      ConversationHistorySelector historySelector,
+      HistoryLimits limits,
+      SessionExecutionGate gate,
+      String systemPrompt,
+      Clock clock,
+      ToolCatalog catalog,
+      int maxIterations,
+      TurnLifecycleObserver observer,
+      ToolRuntimeSettings toolSettings,
+      ApprovalPort approvals,
+      SideEffectLedger ledger,
+      IdGenerator ids,
+      Duration approvalTimeout,
+      MemoryContextService memoryContext,
+      ModelStreamingSettings streamingSettings,
+      ConversationEvidenceContextFactory conversationEvidenceContexts,
+      MemoryRecallContextFactory memoryRecallContexts,
+      ContextLimitRecoveryPolicy contextLimitRecovery,
+      ProviderUsageObserver providerUsageObserver) {
     this.sessions = Objects.requireNonNull(sessions, "sessions");
     this.historySelector = Objects.requireNonNull(historySelector, "historySelector");
     this.limits = Objects.requireNonNull(limits, "limits");
@@ -484,6 +562,8 @@ public final class ChatService implements ChatUseCase {
         Objects.requireNonNull(memoryRecallContexts, "memoryRecallContexts");
     this.contextLimitRecovery =
         Objects.requireNonNull(contextLimitRecovery, "contextLimitRecovery");
+    this.providerUsageObserver =
+        Objects.requireNonNull(providerUsageObserver, "providerUsageObserver");
     var registry = new ToolRegistry(catalog, toolSettings);
     var coordinator =
         new SideEffectBatchCoordinator(
@@ -543,6 +623,7 @@ public final class ChatService implements ChatUseCase {
       var context = new SideEffectBatchCoordinator.Context(sessionBinding, ids.newTurnId());
       var invocationContext = conversationEvidenceContexts.forSession(command.sessionId());
       invocationContext = memoryRecallContexts.forSessionBinding(sessionBinding, invocationContext);
+      var usageCollector = new ProviderTurnUsageCollector();
       var finalContent =
           completeWithContextLimitRecovery(
               command,
@@ -552,7 +633,8 @@ public final class ChatService implements ChatUseCase {
               context,
               invocationContext,
               cancellation,
-              progressListener);
+              progressListener,
+              usageCollector);
       if (finalContent.isBlank()) {
         throw new InvalidModelResponseException("模型返回了空响应");
       }
@@ -562,6 +644,7 @@ public final class ChatService implements ChatUseCase {
       lifecycle.emit(TurnLifecycleEvent.turnCommitting());
       sessions.appendTurn(command.sessionId(), turn);
       lifecycle.emit(TurnLifecycleEvent.turnCommitted());
+      publishProviderUsage(usageCollector);
       return new ChatResult(command.sessionId(), assistant);
     } catch (RuntimeException failure) {
       lifecycle.emit(TurnLifecycleEvent.turnFailed(failureStatus(failure)));
@@ -577,7 +660,8 @@ public final class ChatService implements ChatUseCase {
       SideEffectBatchCoordinator.Context context,
       ToolInvocationContext invocationContext,
       TurnCancellation cancellation,
-      ChatProgressListener progressListener) {
+      ChatProgressListener progressListener,
+      ProviderTurnUsageCollector usageCollector) {
     List<ChatMessage> selectedHistory = historySelector.select(fullHistory, limits);
     ModelContextLimitException lastContextLimit = null;
     for (ContextLimitRecoveryPolicy.Plan plan :
@@ -598,9 +682,14 @@ public final class ChatService implements ChatUseCase {
       var messages = new ArrayList<ModelMessage>(assembled.messages());
       try {
         return progressListener == null
-            ? toolLoop.complete(messages, cancellation, context, invocationContext)
+            ? toolLoop.complete(messages, cancellation, context, invocationContext, usageCollector)
             : toolLoop.completeStreaming(
-                messages, cancellation, context, invocationContext, progressListener);
+                messages,
+                cancellation,
+                context,
+                invocationContext,
+                progressListener,
+                usageCollector);
       } catch (ContextLimitRecoveryCandidateException candidate) {
         lastContextLimit = candidate.original();
       }
@@ -647,6 +736,14 @@ public final class ChatService implements ChatUseCase {
       return "MEMORY_CONTEXT_UNAVAILABLE";
     }
     return "TURN_EXECUTION_FAILED";
+  }
+
+  private void publishProviderUsage(ProviderTurnUsageCollector usageCollector) {
+    try {
+      providerUsageObserver.onCommittedTurn(usageCollector.snapshot());
+    } catch (RuntimeException ignored) {
+      // Observation is intentionally best effort and cannot roll back a committed turn.
+    }
   }
 
   private static void checkCancellation(TurnCancellation cancellation) {
