@@ -30,6 +30,7 @@
     {"id":"unknown-role-is-degraded-and-empty","group":"data-integrity","input":{"storedRole":"UNKNOWN"},"expected":{"code":"CONTROL_SNAPSHOT_UNAVAILABLE","items":[],"state":"DEGRADED"}},
     {"id":"invalid-timestamp-is-degraded-and-empty","group":"data-integrity","input":{"timestamp":"INVALID"},"expected":{"code":"CONTROL_SNAPSHOT_UNAVAILABLE","items":[],"state":"DEGRADED"}},
     {"id":"older-than-retention-is-absent","group":"data-integrity","input":{"ageSeconds":86401},"expected":{"listed":false}},
+    {"id":"candidate-limit-is-degraded-without-partial-page","group":"data-integrity","input":{"candidateCount":1025},"expected":{"code":"CONTROL_SNAPSHOT_UNAVAILABLE","items":[],"state":"DEGRADED"}},
 
     {"id":"storage-failure-is-degraded-and-redacted","group":"failure","input":{"storage":"THROWS"},"expected":{"code":"CONTROL_SNAPSHOT_UNAVAILABLE","items":[],"state":"DEGRADED"}},
     {"id":"runtime-closed-is-degraded-and-empty","group":"failure","input":{"runtime":"CLOSED"},"expected":{"code":"CONTROL_SHUTTING_DOWN","items":[],"state":"SHUTTING_DOWN"}},
@@ -53,6 +54,7 @@
   "formatVersion": 1,
   "limits": {
     "contentCharacters": 0,
+    "maximumCandidates": 1024,
     "cursorTtlSeconds": 60,
     "defaultPageSize": 10,
     "detailRefTtlSeconds": 60,

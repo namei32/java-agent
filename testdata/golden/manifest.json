@@ -171,7 +171,7 @@
     {
       "id": "control-plane/r13-history-detail-v1",
       "path": "control-plane/r13-history-detail-v1.json",
-      "sha256": "b2585630745a7385b2a825d1c22d02cab03ac458b3c6c73fddbd096d9772f58d",
+      "sha256": "461ce66e4227368e5cb58cc275d9264d4cc13026fed7cb1adcfda635dc679bbf",
       "source": "java-contract"
     },
     {

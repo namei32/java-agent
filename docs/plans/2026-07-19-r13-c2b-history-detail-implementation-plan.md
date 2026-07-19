@@ -1,6 +1,6 @@
 # R13-C2-B 受限历史详情实施计划
 
-- 状态：C2-B0 最小范围已确认；C2-B1 Fixture 与 C2-B2 Kernel 已完成并通过聚焦验证；C2-B3 实施中，C2-B4 至 C2-B6 未开始
+- 状态：C2-B0 最小范围已确认；C2-B1 Fixture、C2-B2 Kernel 与 C2-B3 临时 SQLite Adapter 已完成并通过聚焦验证；C2-B4 实施中，C2-B5 至 C2-B6 未开始
 - 决策门禁：[R13-C2-B 受限历史详情决策门禁](../contracts/r13-c2-b-history-decision-gate.md)
 - 当前实现基线：[R13-C2-A 内存终态历史目录 Contract](../contracts/r13-terminal-history-catalog.md)
 
@@ -105,6 +105,7 @@ failure（如新增该类场景）、compat Fixture 与格式检查。
 
 ## 4. 当前暂停点
 
-已完成 C2-B1：30 Case Fixture、Manifest SHA、ADR-0037 与 compat consumer 已通过聚焦 GREEN。C2-B2 已提供不含
-Spring/JDBC 的 Scope Capability、脱敏 Ref/Cursor、零正文 Page/Request 与 fail-closed 只读 Port。当前进入 C2-B3 的
-临时 SQLite/Fake Adapter；当前授权不改变任何真实数据、网络、前端或渠道冻结状态。
+已完成 C2-B1：31 Case Fixture、Manifest SHA、ADR-0037 与 compat consumer 已通过聚焦 GREEN。C2-B2 已提供不含
+Spring/JDBC 的 Scope Capability、脱敏 Ref/Cursor、零正文 Page/Request 与 fail-closed 只读 Port；C2-B3 已在临时
+SQLite 中验证固定列、`query_only`、Scope、角色、时间、候选上限与脱敏失败。当前进入 C2-B4 的 Loopback 接线；当前
+授权不改变任何真实数据、网络、前端或渠道冻结状态。

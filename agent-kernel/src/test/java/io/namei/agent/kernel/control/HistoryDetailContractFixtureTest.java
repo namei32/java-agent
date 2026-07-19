@@ -19,7 +19,7 @@ class HistoryDetailContractFixtureTest {
   private static final ObjectMapper JSON = new ObjectMapper();
 
   @Test
-  void freezesThirtyReadOnlyScopedHistoryDetailCasesWithoutRuntimeAuthority() throws Exception {
+  void freezesThirtyOneReadOnlyScopedHistoryDetailCasesWithoutRuntimeAuthority() throws Exception {
     JsonNode fixture =
         JSON.readTree(goldenRoot().resolve("control-plane/r13-history-detail-v1.json"));
     JsonNode cases = fixture.path("cases");
@@ -31,7 +31,7 @@ class HistoryDetailContractFixtureTest {
         .isEqualTo("2026-07-19");
     assertThat(fixture.path("contractEvidence").path("contract").asString())
         .isEqualTo("docs/contracts/r13-c2-b-history-decision-gate.md");
-    assertThat(cases).hasSize(30);
+    assertThat(cases).hasSize(31);
     Map<String, Long> groups =
         StreamSupport.stream(cases.spliterator(), false)
             .map(testCase -> testCase.path("group").asString())
@@ -43,13 +43,14 @@ class HistoryDetailContractFixtureTest {
                 "actor-scope", 6L,
                 "reference-lifecycle", 5L,
                 "projection-budget", 6L,
-                "data-integrity", 4L,
+                "data-integrity", 5L,
                 "failure", 4L));
     assertThat(fixture.path("limits").path("historyRetentionSeconds").asInt()).isEqualTo(86_400);
     assertThat(fixture.path("limits").path("detailRefTtlSeconds").asInt()).isEqualTo(60);
     assertThat(fixture.path("limits").path("cursorTtlSeconds").asInt()).isEqualTo(60);
     assertThat(fixture.path("limits").path("defaultPageSize").asInt()).isEqualTo(10);
     assertThat(fixture.path("limits").path("maximumPageSize").asInt()).isEqualTo(20);
+    assertThat(fixture.path("limits").path("maximumCandidates").asInt()).isEqualTo(1_024);
     assertThat(fixture.path("limits").path("contentCharacters").asInt()).isZero();
 
     Set<String> rawValues =
