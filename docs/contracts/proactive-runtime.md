@@ -7,6 +7,7 @@
 - 关联 ADR：[ADR-0013：使用本地 SQLite 租约主动运行时](../adr/0013-use-local-sqlite-leased-proactive-runtime.md)
 - 关联设计：[R8 主动运行时设计](../specs/2026-07-18-proactive-runtime-design.md)
 - 实施计划：[R8 主动运行时计划](../plans/2026-07-18-r8-proactive-runtime-implementation.md)
+- 后续安全检视：[本地 Proactive Job 只读检视契约](read-only-local-proactive-job-inspection.md)
 
 ## 1. 目标与范围
 

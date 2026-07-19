@@ -1,0 +1,159 @@
+{
+  "formatVersion": 1,
+  "suite": "proactive/read-only-local-proactive-job-inspection-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0034-expose-only-active-hash-safe-proactive-job-inspection.md",
+    "contract": "docs/contracts/read-only-local-proactive-job-inspection.md",
+    "spec": "docs/specs/2026-07-19-r8-read-only-proactive-job-inspection-design.md"
+  },
+  "normalization": [],
+  "limits": {
+    "defaultLimit": 16,
+    "maximumLimit": 32
+  },
+  "tool": {
+    "name": "list_local_proactive_jobs",
+    "version": "local-proactive-inspect-v1"
+  },
+  "cases": [
+    {
+      "id": "scheduled-at-is-an-active-safe-snapshot",
+      "group": "snapshot",
+      "input": {
+        "jobRef": "daily-summary",
+        "schedule": "AT",
+        "nextRunAt": "2026-07-20T00:00:00Z",
+        "state": "SCHEDULED",
+        "attempts": 0,
+        "maxAttempts": 3
+      },
+      "expected": {
+        "accepted": true,
+        "fields": ["job_ref", "schedule", "next_run_at", "state", "attempts", "max_attempts"]
+      }
+    },
+    {
+      "id": "claimed-every-is-an-active-safe-snapshot",
+      "group": "snapshot",
+      "input": {
+        "jobRef": "hourly-summary",
+        "schedule": "EVERY",
+        "nextRunAt": "2026-07-20T01:00:00Z",
+        "everySeconds": 3600,
+        "state": "CLAIMED",
+        "attempts": 1,
+        "maxAttempts": 3
+      },
+      "expected": {
+        "accepted": true,
+        "fields": ["job_ref", "schedule", "next_run_at", "every_seconds", "state", "attempts", "max_attempts"]
+      }
+    },
+    {
+      "id": "running-every-is-an-active-safe-snapshot",
+      "group": "snapshot",
+      "input": {
+        "jobRef": "digest-refresh",
+        "schedule": "EVERY",
+        "nextRunAt": "2026-07-20T02:00:00Z",
+        "everySeconds": 7200,
+        "state": "RUNNING",
+        "attempts": 1,
+        "maxAttempts": 2
+      },
+      "expected": {
+        "accepted": true,
+        "fields": ["job_ref", "schedule", "next_run_at", "every_seconds", "state", "attempts", "max_attempts"]
+      }
+    },
+    {
+      "id": "terminal-state-is-not-an-active-snapshot",
+      "group": "snapshot",
+      "input": {
+        "jobRef": "finished-summary",
+        "schedule": "AT",
+        "nextRunAt": "2026-07-19T00:00:00Z",
+        "state": "SUCCEEDED",
+        "attempts": 1,
+        "maxAttempts": 3
+      },
+      "expected": {"accepted": false, "code": "PROACTIVE_CONTRACT_INVALID"}
+    },
+    {
+      "id": "every-requires-a-bounded-interval",
+      "group": "snapshot",
+      "input": {
+        "jobRef": "bad-interval",
+        "schedule": "EVERY",
+        "nextRunAt": "2026-07-20T00:00:00Z",
+        "state": "SCHEDULED",
+        "attempts": 0,
+        "maxAttempts": 3
+      },
+      "expected": {"accepted": false, "code": "PROACTIVE_CONTRACT_INVALID"}
+    },
+    {
+      "id": "disabled-tool-runtime-registers-nothing",
+      "group": "registration",
+      "input": {"toolMode": "DISABLED", "inspectionMode": "ACTIVE_RUNTIME", "runtime": "ACTIVE"},
+      "expected": {"registered": false, "queries": 0}
+    },
+    {
+      "id": "active-runtime-registers-one-deferred-read-only-tool",
+      "group": "registration",
+      "input": {"toolMode": "READ_ONLY", "inspectionMode": "ACTIVE_RUNTIME", "runtime": "ACTIVE"},
+      "expected": {"registered": true, "visibility": "DEFERRED", "risk": "READ_ONLY"}
+    },
+    {
+      "id": "default-limit-is-bounded",
+      "group": "tool",
+      "input": {},
+      "expected": {"limit": 16}
+    },
+    {
+      "id": "maximum-limit-is-accepted",
+      "group": "tool",
+      "input": {"limit": 32},
+      "expected": {"limit": 32}
+    },
+    {
+      "id": "non-integral-limit-is-rejected",
+      "group": "tool",
+      "input": {"limit": 1.5},
+      "expected": {"code": "PROACTIVE_JOB_INSPECTION_INVALID_ARGUMENT"}
+    },
+    {
+      "id": "unavailable-port-fails-closed",
+      "group": "tool",
+      "input": {"limit": 1},
+      "expected": {"code": "PROACTIVE_JOB_INSPECTION_UNAVAILABLE"}
+    },
+    {
+      "id": "terminal-jobs-are-excluded-and-active-jobs-sort-stably",
+      "group": "store",
+      "input": {"limit": 2},
+      "expected": {"jobRefs": ["alpha-summary", "zeta-summary"], "terminalIncluded": false}
+    },
+    {
+      "id": "tool-projection-never-includes-scheduler-secrets",
+      "group": "projection",
+      "input": {"limit": 1},
+      "expected": {
+        "absentFields": [
+          "target_hash",
+          "idempotency_key",
+          "owner_id",
+          "lease_expires_at",
+          "revision",
+          "database_path",
+          "prompt",
+          "message",
+          "channel",
+          "chat_id"
+        ]
+      }
+    }
+  ]
+}

@@ -103,6 +103,12 @@
       "source": "java-contract"
     },
     {
+      "id": "proactive/read-only-local-proactive-job-inspection-v1",
+      "path": "proactive/read-only-local-proactive-job-inspection-v1.json",
+      "sha256": "ea6aa66fe7797372bd101bf40d942ba891bd4f6fb98bf232ce375559a4cd5e7a",
+      "source": "java-contract"
+    },
+    {
       "id": "proactive/r14-proactive-peer-automation-v1",
       "path": "proactive/r14-proactive-peer-automation-v1.json",
       "sha256": "14c026f1c388912ed134df9f5506faaf64c13b517852848af24fa0cafe991e72",

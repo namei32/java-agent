@@ -33,6 +33,7 @@ import io.namei.agent.application.MemoryRecallToolset;
 import io.namei.agent.application.MemoryWriteService;
 import io.namei.agent.application.MessageTurnService;
 import io.namei.agent.application.ModelStreamingSettings;
+import io.namei.agent.application.ProactiveJobInspectionToolset;
 import io.namei.agent.application.PromptRuntimeSettings;
 import io.namei.agent.application.PromptTurnContextFactory;
 import io.namei.agent.application.ReadOnlyMemoryRecallService;
@@ -66,6 +67,7 @@ import io.namei.agent.bootstrap.plugin.JavaServicePluginDiscovery;
 import io.namei.agent.bootstrap.plugin.JdkExternalStdioPluginTransport;
 import io.namei.agent.bootstrap.plugin.PluginProperties;
 import io.namei.agent.bootstrap.plugin.PluginRuntime;
+import io.namei.agent.bootstrap.proactive.ProactiveInspectionProperties;
 import io.namei.agent.bootstrap.proactive.ProactiveProperties;
 import io.namei.agent.bootstrap.proactive.ProactiveRuntime;
 import io.namei.agent.bootstrap.tool.CurrentTimeTool;
@@ -118,7 +120,8 @@ import org.springframework.core.io.Resource;
   ContextLimitRecoveryProperties.class,
   CliProperties.class,
   PluginProperties.class,
-  ProactiveProperties.class
+  ProactiveProperties.class,
+  ProactiveInspectionProperties.class
 })
 @Import(SpringAiAdapterConfiguration.class)
 public class ApplicationConfiguration {
@@ -208,6 +211,26 @@ public class ApplicationConfiguration {
       ProactiveProperties proactiveProperties,
       PluginRuntime plugins) {
     return ProactiveRuntime.start(proactiveProperties, agentProperties.workspace(), plugins);
+  }
+
+  @Bean
+  ProactiveJobInspectionToolset proactiveJobInspectionToolset(
+      AgentProperties agentProperties,
+      ProactiveInspectionProperties inspectionProperties,
+      ProactiveRuntime proactiveRuntime) {
+    if (!proactiveInspectionEnabled(agentProperties, inspectionProperties)) {
+      return ProactiveJobInspectionToolset.disabled();
+    }
+    if (!proactiveRuntime.active() || proactiveRuntime.inspectionPort().isEmpty()) {
+      throw new IllegalStateException(
+          "启用 Proactive Job Inspection Tool 需要活动的 LOCAL_SQLITE Runtime");
+    }
+    if (ProactiveJobInspectionToolset.MAX_PROJECTED_CHARACTERS
+        > agentProperties.tools().maxResultCharacters()) {
+      throw new IllegalStateException(
+          "agent.proactive-inspection 单项预算不能大于 agent.tools.max-result-characters");
+    }
+    return ProactiveJobInspectionToolset.enabled(proactiveRuntime.inspectionPort().orElseThrow());
   }
 
   @Bean
@@ -488,6 +511,7 @@ public class ApplicationConfiguration {
         conversationEvidenceContexts,
         MemoryRecallToolset.disabled(),
         MemoryRecallContextFactory.disabled(),
+        ProactiveJobInspectionToolset.disabled(),
         new ContextLimitRecoveryProperties(null),
         properties,
         modelName,
@@ -511,6 +535,7 @@ public class ApplicationConfiguration {
       ConversationEvidenceContextFactory conversationEvidenceContexts,
       MemoryRecallToolset memoryRecallTools,
       MemoryRecallContextFactory memoryRecallContexts,
+      ProactiveJobInspectionToolset proactiveInspectionTools,
       ContextLimitRecoveryProperties contextLimitRecoveryProperties,
       AgentProperties properties,
       @Value("${spring.ai.openai.chat.model}") String modelName,
@@ -526,7 +551,8 @@ public class ApplicationConfiguration {
             skillCatalog,
             skillProperties,
             conversationEvidenceTools,
-            memoryRecallTools);
+            memoryRecallTools,
+            proactiveInspectionTools);
     var toolSettings =
         new ToolRuntimeSettings(
             properties.tools().mode(),
@@ -731,6 +757,26 @@ public class ApplicationConfiguration {
       SkillProperties skillProperties,
       ConversationEvidenceToolset conversationEvidenceTools,
       MemoryRecallToolset memoryRecallTools) {
+    return configuredToolCatalog(
+        properties,
+        mcpRuntime,
+        workspaceTools,
+        skillCatalog,
+        skillProperties,
+        conversationEvidenceTools,
+        memoryRecallTools,
+        ProactiveJobInspectionToolset.disabled());
+  }
+
+  ToolCatalog configuredToolCatalog(
+      AgentProperties properties,
+      McpRuntime mcpRuntime,
+      WorkspaceReadOnlyToolset workspaceTools,
+      SkillCatalogPort skillCatalog,
+      SkillProperties skillProperties,
+      ConversationEvidenceToolset conversationEvidenceTools,
+      MemoryRecallToolset memoryRecallTools,
+      ProactiveJobInspectionToolset proactiveInspectionTools) {
     Objects.requireNonNull(properties, "properties");
     Objects.requireNonNull(mcpRuntime, "mcpRuntime");
     Objects.requireNonNull(workspaceTools, "workspaceTools");
@@ -738,6 +784,7 @@ public class ApplicationConfiguration {
     Objects.requireNonNull(skillProperties, "skillProperties");
     Objects.requireNonNull(conversationEvidenceTools, "conversationEvidenceTools");
     Objects.requireNonNull(memoryRecallTools, "memoryRecallTools");
+    Objects.requireNonNull(proactiveInspectionTools, "proactiveInspectionTools");
     Tool skillTool = readSkillTool(properties, skillCatalog, skillProperties);
     if (properties.tools().mode() == ToolRuntimeMode.DISABLED) {
       return new ToolCatalog(List.of());
@@ -782,6 +829,18 @@ public class ApplicationConfiguration {
               ToolCatalogSource.BUILTIN,
               "",
               List.of("记忆", "memory", "recall")));
+    }
+    for (Tool tool : proactiveInspectionTools.tools()) {
+      if (tool.definition().risk() != ToolRisk.READ_ONLY) {
+        throw new IllegalStateException("Proactive Job Inspection Runtime 暴露了非只读工具");
+      }
+      tools.add(
+          new ToolCatalogEntry(
+              tool,
+              ToolCatalogVisibility.DEFERRED,
+              ToolCatalogSource.BUILTIN,
+              "",
+              List.of("计划", "调度", "proactive", "任务")));
     }
     for (Tool tool : workspaceTools.tools()) {
       if (tool.definition().risk() != ToolRisk.READ_ONLY) {
@@ -853,6 +912,20 @@ public class ApplicationConfiguration {
     }
     if (agentProperties.tools().mode() != ToolRuntimeMode.READ_ONLY) {
       throw new IllegalStateException("只读 Memory Recall Tool 要求 agent.tools.mode=READ_ONLY");
+    }
+    return true;
+  }
+
+  private static boolean proactiveInspectionEnabled(
+      AgentProperties agentProperties, ProactiveInspectionProperties properties) {
+    if (agentProperties.tools().mode() == ToolRuntimeMode.DISABLED
+        || properties.toMode()
+            == io.namei.agent.bootstrap.proactive.ProactiveInspectionMode.DISABLED) {
+      return false;
+    }
+    if (agentProperties.tools().mode() != ToolRuntimeMode.READ_ONLY) {
+      throw new IllegalStateException(
+          "只读 Proactive Job Inspection Tool 要求 agent.tools.mode=READ_ONLY");
     }
     return true;
   }

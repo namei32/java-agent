@@ -85,14 +85,39 @@ class JdbcProactiveJobStoreTest {
         .hasMessageContaining("重复");
   }
 
+  @Test
+  void listsOnlyActiveJobsWithStableOrderAndBoundedLimit() {
+    var schema = schema();
+    schema.initialize();
+    var store = new JdbcProactiveJobStore(schema);
+    store.schedule(atJob("finished-summary", KEY));
+    var claimed = store.claimNext(DUE, "worker-a", Duration.ofSeconds(30)).orElseThrow();
+    var running = store.markRunning(claimed, DUE.plusSeconds(1)).orElseThrow();
+    assertThat(store.complete(running, ProactiveJobState.SUCCEEDED, DUE.plusSeconds(2))).isTrue();
+
+    Instant next = DUE.plus(Duration.ofHours(1));
+    store.schedule(atJobAt("zeta-summary", next, "c".repeat(64)));
+    store.schedule(atJobAt("alpha-summary", next, "d".repeat(64)));
+    store.schedule(atJobAt("later-summary", next.plusSeconds(1), "e".repeat(64)));
+
+    assertThat(store.listActive(2))
+        .extracting(snapshot -> snapshot.jobRef().value())
+        .containsExactly("alpha-summary", "zeta-summary");
+    assertThatThrownBy(() -> store.listActive(0)).isInstanceOf(IllegalArgumentException.class);
+  }
+
   private ProactiveSchemaInitializer schema() {
     return new ProactiveSchemaInitializer(tempDir.resolve("proactive/proactive-runtime.db"), 5_000);
   }
 
   private static ScheduledJob atJob(String reference, String idempotencyKey) {
+    return atJobAt(reference, DUE, idempotencyKey);
+  }
+
+  private static ScheduledJob atJobAt(String reference, Instant nextRunAt, String idempotencyKey) {
     return new ScheduledJob(
         ProactiveJobRef.parse(reference),
-        new ProactiveSchedule(ProactiveScheduleKind.AT, DUE, null),
+        new ProactiveSchedule(ProactiveScheduleKind.AT, nextRunAt, null),
         TARGET,
         idempotencyKey,
         ProactiveJobState.SCHEDULED,

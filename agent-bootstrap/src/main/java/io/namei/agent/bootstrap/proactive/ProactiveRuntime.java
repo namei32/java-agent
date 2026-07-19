@@ -14,6 +14,7 @@ import io.namei.agent.bootstrap.plugin.PluginRuntime;
 import io.namei.agent.kernel.plugin.PluginCapability;
 import io.namei.agent.kernel.plugin.PluginTapEvent;
 import io.namei.agent.kernel.plugin.PluginTapOutcome;
+import io.namei.agent.kernel.port.ProactiveJobInspectionPort;
 import io.namei.agent.kernel.proactive.ProactiveDecision;
 import io.namei.agent.kernel.proactive.ProactiveJobState;
 import io.namei.agent.kernel.proactive.ProactiveStableCode;
@@ -21,15 +22,20 @@ import io.namei.agent.kernel.proactive.ScheduledJob;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
- * Bootstrap boundary for the default-off local scheduler. It has no provider, channel or tool path.
+ * Bootstrap boundary for the default-off local scheduler. It has no provider or channel path and
+ * exposes only a hash-safe read-only inspection port when active.
  */
 public final class ProactiveRuntime implements AutoCloseable {
   private final ProactiveScheduler scheduler;
+  private final ProactiveJobInspectionPort inspectionPort;
 
-  private ProactiveRuntime(ProactiveScheduler scheduler) {
+  private ProactiveRuntime(
+      ProactiveScheduler scheduler, ProactiveJobInspectionPort inspectionPort) {
     this.scheduler = scheduler;
+    this.inspectionPort = inspectionPort;
   }
 
   public static ProactiveRuntime start(
@@ -43,7 +49,7 @@ public final class ProactiveRuntime implements AutoCloseable {
     Objects.requireNonNull(plugins, "plugins");
     Objects.requireNonNull(clock, "clock");
     if (properties.mode() == ProactiveMode.DISABLED) {
-      return new ProactiveRuntime(null);
+      return new ProactiveRuntime(null, null);
     }
     Path database =
         Objects.requireNonNull(workspace, "workspace").resolve("proactive/proactive-runtime.db");
@@ -80,7 +86,7 @@ public final class ProactiveRuntime implements AutoCloseable {
             (lease, terminal) -> plugins.publishProactive(tap(lease.job(), terminal)));
     try {
       scheduler.start();
-      return new ProactiveRuntime(scheduler);
+      return new ProactiveRuntime(scheduler, store);
     } catch (RuntimeException failure) {
       scheduler.close();
       throw failure;
@@ -89,6 +95,11 @@ public final class ProactiveRuntime implements AutoCloseable {
 
   public boolean active() {
     return scheduler != null;
+  }
+
+  /** Returns a safe inspection port only when the local scheduler has already been started. */
+  public Optional<ProactiveJobInspectionPort> inspectionPort() {
+    return Optional.ofNullable(inspectionPort);
   }
 
   @Override

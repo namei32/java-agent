@@ -55,7 +55,7 @@ Java 则采用静态受信 Catalog、`tool_search` 后当前 Turn 解锁的 Defe
 | `memorize` | 由 Engine Profile 决定的记忆写入与类型 | Java 有显式 HTTP Write API，不是 Tool | 未实现 | `WRITE` Capability；先选择是否允许模型摘要持久化、Embedding 费用、Scope/类型、Approval 与恢复语义 |
 | `forget_memory` | 批量去重后软失效，返回命中/缺失和条目 | Java 有当前 Scope 单 ID 物理删除 API，不是 Tool | 部分 | 语义差异已单独审计；必须选择 Python 软失效对齐或 Java `delete_memory` 替代后，才能进入 R11-B2c |
 | `message_push` | 向已注册渠道发送文本/文件/图片 | Telegram 有渠道投递，但无模型 Tool | 未实现 | `EXTERNAL_SIDE_EFFECT` Capability；真实渠道、目标身份、内容/附件 Root、Receipt、Outbox、Approval、UNKNOWN 和真实 Smoke 均需独立范围 |
-| `schedule` / `list_schedules` / `cancel_schedule` | 创建、列举、取消 AT/AFTER/EVERY/cron 任务，可能触发主动投递 | R8 SQLite Scheduler 有受限 AT/EVERY、租约与 NoOp Delivery；无 Tool | 部分 | 先冻结 Java Scheduler 与 Python cron/时区/消息语义差异；创建/取消为 `WRITE`，投递与 `message_push` 必须分离授权 |
+| `schedule` / `list_schedules` / `cancel_schedule` | 创建、列举、取消 AT/AFTER/EVERY/cron 任务，可能触发主动投递 | R8 SQLite Scheduler 有受限 AT/EVERY、租约与 NoOp Delivery；默认关闭的 Deferred `list_local_proactive_jobs` 只检视活动 Job 安全摘要 | 有意替代 | `list_local_proactive_jobs` 已由 13 Case Fixture 与三套门禁验证，但不等价 Python `list_schedules`：无渠道/聊天身份、正文、时区、运行次数、hash/key 或数据库路径。`schedule`/`cancel_schedule` 仍为 `WRITE`，投递与 `message_push` 必须分离授权 |
 | `shell` / `task_output` / `task_stop` | 前台/后台进程、日志轮询、超时、杀进程树 | 无 Shell Tool；R8 Subagent 不继承 Tool/网络 | 未实现 | 高风险 Sandbox Capability：命令 allowlist、工作目录、资源、PTY、进程树、日志脱敏、Approval、UNKNOWN 与恢复，不能复用普通 Subagent |
 | `spawn` / `spawn_manage` | 模型创建/查看/取消带 profile 的后台 Python Subagent | R8 有受限 parent-bound Subagent Runtime；无 Tool | 部分 | 先冻结任务内容最小化、profile 映射、身份、结果回灌、取消与并发；不要把 Python 的 `scripting/general` 权限隐式授予 Java Runtime |
 | `web_search` / `web_fetch` | 外部网络搜索与抓取 | 无 | 未实现 | 网络 Capability：允许域名、重定向、DNS/私网防护、配额、缓存、正文净化、审计、费用及真实网络授权 |
@@ -75,7 +75,7 @@ Java 则采用静态受信 Catalog、`tool_search` 后当前 Turn 解锁的 Defe
    `SKILL.md`、`scripts/` 或 `references/` 绕过 Tool Catalog、审批、Sandbox 或 `UNKNOWN`。
 4. **R12-S5：Memory Tool 受限替代（完成）。** `recall_memory` 只读取当前 Java Native Scope，并不等价于 Python
    的 Keyword/RRF、时间线和 citation evidence；`memorize`/`forget_memory` 仍须逐 Tool 副作用 Contract。
-5. **R12/R13：Scheduler 与 Subagent Tool 接线。** 先迁移只读状态，再迁移创建/取消；所有实际 Delivery 保持独立。
+5. **R8 已完成 Scheduler 安全只读检视；后续再接线写入。** `list_local_proactive_jobs` 只读替代已完成；创建/取消、Subagent Tool 与所有实际 Delivery 继续各自冻结并须单独 Contract。
 6. **R13/R14：Channel Push、Web、Vision、Shell、动态 MCP 与动态 Tool。** 按网络、外部副作用、进程、数据泄露等
    风险维度逐个 Contract，不能以 Python Registry 的“默认可见”作为 Java 实现依据。
 

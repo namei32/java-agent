@@ -137,6 +137,8 @@ agent:
     shutdown-timeout: ${AGENT_PROACTIVE_SHUTDOWN_TIMEOUT:2s}
     cooldown: ${AGENT_PROACTIVE_COOLDOWN:5m}
     plans: []
+  proactive-inspection:
+    mode: ${AGENT_PROACTIVE_INSPECTION_MODE:DISABLED}
   memory:
     mode: ${AGENT_MEMORY_MODE:DISABLED}
     max-file-bytes: ${AGENT_MEMORY_MAX_FILE_BYTES:65536}

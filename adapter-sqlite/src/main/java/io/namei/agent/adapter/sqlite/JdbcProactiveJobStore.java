@@ -1,6 +1,8 @@
 package io.namei.agent.adapter.sqlite;
 
+import io.namei.agent.kernel.port.ProactiveJobInspectionPort;
 import io.namei.agent.kernel.port.ProactiveJobStore;
+import io.namei.agent.kernel.proactive.ProactiveJobInspectionSnapshot;
 import io.namei.agent.kernel.proactive.ProactiveJobLease;
 import io.namei.agent.kernel.proactive.ProactiveJobRef;
 import io.namei.agent.kernel.proactive.ProactiveJobState;
@@ -13,11 +15,12 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
 /** SQLite implementation whose short transactions never include planner or delivery execution. */
-public final class JdbcProactiveJobStore implements ProactiveJobStore {
+public final class JdbcProactiveJobStore implements ProactiveJobStore, ProactiveJobInspectionPort {
   private final ProactiveSchemaInitializer schema;
   private final Clock clock;
 
@@ -145,6 +148,35 @@ public final class JdbcProactiveJobStore implements ProactiveJobStore {
     }
     try (var connection = schema.openConnection()) {
       return transaction(connection, () -> recover(connection, now, limit));
+    } catch (SQLException exception) {
+      throw ProactiveRepositoryException.operationFailed(exception);
+    }
+  }
+
+  @Override
+  public List<ProactiveJobInspectionSnapshot> listActive(int limit) {
+    if (limit < 1 || limit > 32) {
+      throw new IllegalArgumentException("Proactive inspection limit 必须在 1..32");
+    }
+    try (var connection = schema.openConnection();
+        var select =
+            connection.prepareStatement(
+                """
+                SELECT job_ref, schedule_kind, next_run_at, every_millis, state, attempts,
+                       max_attempts
+                  FROM proactive_jobs
+                 WHERE state IN ('SCHEDULED', 'CLAIMED', 'RUNNING')
+                 ORDER BY next_run_at ASC, job_ref ASC
+                 LIMIT ?
+                """)) {
+      select.setInt(1, limit);
+      try (var rows = select.executeQuery()) {
+        var snapshots = new ArrayList<ProactiveJobInspectionSnapshot>();
+        while (rows.next()) {
+          snapshots.add(readInspection(rows));
+        }
+        return List.copyOf(snapshots);
+      }
     } catch (SQLException exception) {
       throw ProactiveRepositoryException.operationFailed(exception);
     }
@@ -295,6 +327,24 @@ public final class JdbcProactiveJobStore implements ProactiveJobStore {
             rows.getInt("attempts"),
             rows.getInt("max_attempts"));
     return new StoredJob(job, rows.getLong("revision"));
+  }
+
+  private static ProactiveJobInspectionSnapshot readInspection(java.sql.ResultSet rows)
+      throws SQLException {
+    ProactiveScheduleKind kind = ProactiveScheduleKind.valueOf(rows.getString("schedule_kind"));
+    long storedEveryMillis = rows.getLong("every_millis");
+    Long everyMillis = rows.wasNull() ? null : storedEveryMillis;
+    var schedule =
+        new ProactiveSchedule(
+            kind,
+            Instant.parse(rows.getString("next_run_at")),
+            everyMillis == null ? null : Duration.ofMillis(everyMillis));
+    return new ProactiveJobInspectionSnapshot(
+        ProactiveJobRef.parse(rows.getString("job_ref")),
+        schedule,
+        ProactiveJobState.parse(rows.getString("state")),
+        rows.getInt("attempts"),
+        rows.getInt("max_attempts"));
   }
 
   private static void bindJob(java.sql.PreparedStatement insert, ScheduledJob job, Instant now)

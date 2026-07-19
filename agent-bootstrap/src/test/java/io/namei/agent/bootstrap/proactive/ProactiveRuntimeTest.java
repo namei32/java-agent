@@ -21,6 +21,7 @@ class ProactiveRuntimeTest {
 
     try (var runtime = ProactiveRuntime.start(properties, workspace, PluginRuntime.disabled())) {
       assertThat(runtime.active()).isFalse();
+      assertThat(runtime.inspectionPort()).isEmpty();
     }
 
     assertThat(Files.exists(workspace)).isFalse();
@@ -50,6 +51,7 @@ class ProactiveRuntimeTest {
 
     try (var runtime = ProactiveRuntime.start(properties, workspace, PluginRuntime.disabled())) {
       assertThat(runtime.active()).isTrue();
+      assertThat(runtime.inspectionPort()).isPresent();
       assertThat(Files.isRegularFile(workspace.resolve("proactive/proactive-runtime.db"))).isTrue();
     }
   }
