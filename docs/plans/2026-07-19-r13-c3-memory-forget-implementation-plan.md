@@ -1,6 +1,6 @@
 # R13-C3 Scope 受限 Memory Forget 实施计划
 
-- 状态：C3-C0（选择与 Contract）已完成；本计划只安排现有 R11-B2c 纵向链的回归核验。新的控制面写入口尚未获批准，不能开始实现。
+- 状态：C3-C0 至 C3-F3 已完成；现有 R11-B2c 纵向链的离线回归已通过。新的控制面写入口仍停在 C3-M0，尚未获批准。
 - Capability：[`forget_memory` / `java-memory-forget-v1`](../contracts/r13-c3-approved-memory-forget-execution.md)
 - 既有实现依据：[R11-B2c 实施计划](2026-07-19-r11-memory-forget-capability-implementation.md)
 - 适用数据：仅临时 Java SQLite、固定时钟、Fake Approval、Fake Invoker
@@ -48,23 +48,28 @@ non-empty forget_memory
 
 **完成条件：** C3 文档只能引用这些已冻结 Fixture；不得以“C3”名义复制 R11 的并发或恢复矩阵。
 
-### C3-F2：现有纵向链聚焦回归（下一项可执行工作）
+### C3-F2：现有纵向链聚焦回归（已完成）
 
-**先运行以下测试，不先改代码：**
+**执行结果（2026-07-19）：** 54 个聚焦测试通过，未发现 Capability、Store、配置或 Contract 缺口；没有修改运行时代码。
 
 | 层次 | 测试 | 必须证明的结果 |
 | --- | --- | --- |
 | Kernel / Fixture | `MemoryForgetContractFixtureTest`、`GoldenManifestTest` | Fixture 仍可消费，且结果不泄漏内容或内部绑定 |
 | Producer | `MemoryForgetPendingToolsetFixtureTest`、`MemoryForgetPendingServiceTest`、`MemoryForgetPendingToolLoopTest` | 搜索后才可见；非空调用只创建一个 Pending；失败与空输入零 Invoker |
-| Recovery | `MemoryForgetRecoveryCoordinatorTest` | 批准 + Anchor + Reservation 才能执行一次；取消、过期、竞争、`UNKNOWN` 与 `COMMIT_UNREPORTED` 零重放 |
+| Recovery | `MemoryForgetRecoveryCoordinatorTest`、`MemoryForgetControlServiceTest` | 批准 + Anchor + Reservation 才能执行一次；Cancel/Resume/Status、取消、过期、竞争、`UNKNOWN` 与 `COMMIT_UNREPORTED` 零重放 |
 | SQLite | `MemoryForgetRecoveryIntegrationTest` | 临时数据库中的软失效、幂等 Ledger 与恢复状态一致 |
-| Bootstrap | `MemoryForgetCapabilityConfigurationTest` | 默认零 Bean/零文件；非 Servlet 或缺少前置失败关闭；显式模式不创建 Worker |
+| Bootstrap / Message Contract | `MemoryForgetCapabilityConfigurationTest`、`PendingRecoveryControlGoldenTest` | 默认零 Bean/零文件；非 Servlet 或缺少前置失败关闭；显式模式不创建 Worker；24 个 Loopback Recovery Case 均由生产边界或聚焦测试拥有 |
 
-**完成条件：** 测试全绿时不为“显示工作量”新增代码或测试。若出现 RED，只能在失败归属的模块写最小修复；任何修复仍不得新增 Route、真实数据库连接、网络或后台任务。
+**已执行命令：** Kernel/Producer Fixture 与 Manifest 使用 `-Pcompat`；其余默认组测试按 Application、SQLite、Bootstrap
+分模块执行；Loopback Recovery Fixture 单独使用 `-Pcompat`。默认/compat 分组没有混用，避免未标记的 SQLite/配置测试被
+`compat` Profile 排除。
 
-### C3-F3：结果记录与阶段判断
+**完成结论：** 测试全绿时不为“显示工作量”新增代码或测试。若未来出现 RED，只能在失败归属的模块写最小修复；任何修复仍不得新增 Route、真实数据库连接、网络或后台任务。
 
-**通过时：** 在计划中记录命令、通过数量和工作树状态；C3 仍只完成“已选择 Capability 的离线执行链核验”。
+### C3-F3：结果记录与阶段判断（已完成）
+
+**结果：** 已记录 54 个通过的聚焦测试；测试前后工作树保持干净。C3 仍只完成“已选择 Capability 的离线执行链核验”，
+不表示已出现新的控制面写入口。
 
 **失败时：** 先判定失败属于 Fixture、Producer、Recovery、SQLite 或 Bootstrap；一次提交只修一个层次。并发测试只补缺失的独立不变量，不复制既有 Reservation/Anchor 矩阵。
 
@@ -106,5 +111,5 @@ non-empty forget_memory
 本计划不实现 Session/Message 删除、全局或物理 Memory 管理、`memorize`、Optimizer、消息投递、真实 Telegram、
 前端、CLI+Web、远程访问或生产数据操作。
 
-当前退出条件仅为：C3-C0 Contract 已冻结，C3-F2 聚焦回归通过且无新增权限。只有 M1–M6 在获得单独入口授权后全部完成，
+当前退出条件已满足：C3-C0 Contract 已冻结，C3-F2/F3 聚焦回归通过且无新增权限。只有 M1–M6 在获得单独入口授权后全部完成，
 才可以把 C3 标记为已实现；届时也仍不构成真实数据或部署启用授权。
