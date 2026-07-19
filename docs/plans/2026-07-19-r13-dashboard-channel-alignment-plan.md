@@ -1,6 +1,6 @@
 # R13 Dashboard、控制面与渠道对齐计划
 
-- 状态：差距审计和计划已冻结；**未开始实现**
+- 状态：C0 Contract/Fixture 已完成；C1–C5 未开始，零运行时 API 扩展
 - 日期：2026-07-19
 - Python 证据基线：`akashic-agent` 提交 `b65a5430e332c8733b981dfc2dfbc3eb1967e9ef`
 - Java 证据基线：`agent/r12-skill-catalog`，含 Loopback 控制面、审批 Inbox、CLI/Telegram 离线纵向切片
@@ -40,11 +40,12 @@ Optimizer 控制、IPC/QQ Channel。这是正确的当前事实，而非 R13 已
 
 ## 4. 解冻后的连续 TDD 顺序
 
-### C0：只读 Dashboard Message Contract Fixture（RED）
+### C0：只读 Dashboard Message Contract Fixture（已完成，零运行时）
 
-先冻结仅限 Loopback 的版本化 Fixture：Operator Session、认证、请求 ID、响应字段、空页、稳定排序、页大小、
-不透明引用、SSE 不可重放、取消竞态、关闭和脱敏错误。Fixture 不含原始 Channel Session、Message 正文、Embedding、
-Memory 正文、Provider/工具异常或数据库路径。此步不增加 Controller。
+已冻结 20 Case 的 `control-plane/r13-read-only-control-index-v1`，详见
+[C0 Contract](../contracts/r13-read-only-control-index.md)。它固定 Loopback/Bearer 激活、最小活跃 Turn/渠道投影、
+稳定排序、20/50 分页、opaque cursor、快照降级与原始身份/正文禁令。Fixture consumer 仅验证 Contract 形状和敏感值
+禁令；此步没有 Controller、Route、Bean、SQLite 查询、前端或 SSE，不能说成 Dashboard 实现。
 
 ### C1：只读控制面索引（GREEN）
 

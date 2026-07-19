@@ -1,0 +1,150 @@
+{
+  "cases": [
+    {
+      "expected": {"mapped": false, "mode": "DISABLED"},
+      "group": "activation",
+      "id": "default-disabled-has-no-index-route",
+      "input": {"configuredMode": "DISABLED", "method": "GET"}
+    },
+    {
+      "expected": {"mapped": true, "path": "/api/v1/control/index"},
+      "group": "activation",
+      "id": "loopback-maps-only-future-get-index-route",
+      "input": {"configuredMode": "LOOPBACK", "method": "GET"}
+    },
+    {
+      "expected": {"code": "CONTROL_REQUEST_INVALID", "mapped": false},
+      "group": "activation",
+      "id": "non-get-index-request-is-rejected",
+      "input": {"configuredMode": "LOOPBACK", "method": "POST"}
+    },
+    {
+      "expected": {"code": "CONTROL_BINDING_INVALID", "mapped": false},
+      "group": "activation",
+      "id": "remote-binding-cannot-map-index-route",
+      "input": {"configuredMode": "LOOPBACK", "serverAddress": "0.0.0.0"}
+    },
+    {
+      "expected": {"code": "CONTROL_AUTHENTICATION_REQUIRED", "httpStatus": 401},
+      "group": "authentication",
+      "id": "missing-bearer-is-rejected-uniformly",
+      "input": {"credential": "MISSING"}
+    },
+    {
+      "expected": {"code": "CONTROL_AUTHENTICATION_REQUIRED", "httpStatus": 401},
+      "group": "authentication",
+      "id": "expired-bearer-is-rejected-uniformly",
+      "input": {"credential": "EXPIRED"}
+    },
+    {
+      "expected": {"actorPresent": false, "authorized": true},
+      "group": "authentication",
+      "id": "valid-bearer-does-not-project-operator-identity",
+      "input": {"credential": "VALID"}
+    },
+    {
+      "expected": {"channels": [], "httpStatus": 200, "turns": []},
+      "group": "projection",
+      "id": "empty-snapshot-is-a-bounded-success",
+      "input": {"channels": [], "turns": []}
+    },
+    {
+      "expected": {"channels": ["cli", "telegram"]},
+      "group": "projection",
+      "id": "channels-use-stable-name-order",
+      "input": {"channels": ["telegram", "cli"]}
+    },
+    {
+      "expected": {"fields": ["channel", "lastSequence", "state", "turnRef"]},
+      "group": "projection",
+      "id": "active-turn-uses-minimal-safe-fields",
+      "input": {"includeRawIdentifiers": true, "state": "ACTIVE"}
+    },
+    {
+      "expected": {"listed": false},
+      "group": "projection",
+      "id": "terminal-turn-is-not-an-index-entry",
+      "input": {"terminalState": "COMPLETED"}
+    },
+    {
+      "expected": {"activeTurns": 0, "unknownExecutionCount": 1},
+      "group": "projection",
+      "id": "unknown-execution-is-count-only",
+      "input": {"unknownExecutions": 1}
+    },
+    {
+      "expected": {"pageSize": 20},
+      "group": "pagination",
+      "id": "default-page-size-is-bounded",
+      "input": {}
+    },
+    {
+      "expected": {"pageSize": 50},
+      "group": "pagination",
+      "id": "maximum-page-size-is-bounded",
+      "input": {"pageSize": 50}
+    },
+    {
+      "expected": {"code": "CONTROL_REQUEST_INVALID"},
+      "group": "pagination",
+      "id": "oversized-page-size-is-rejected",
+      "input": {"pageSize": 51}
+    },
+    {
+      "expected": {"code": "CONTROL_REQUEST_INVALID"},
+      "group": "pagination",
+      "id": "raw-session-cursor-is-rejected",
+      "input": {"cursor": "telegram:raw-session-secret"}
+    },
+    {
+      "expected": {"cursorKind": "OPAQUE", "rawIdentifiersPresent": false},
+      "group": "pagination",
+      "id": "next-cursor-is-opaque-and-safe",
+      "input": {"hasNextPage": true}
+    },
+    {
+      "expected": {"code": "CONTROL_REQUEST_INVALID"},
+      "group": "secrecy",
+      "id": "raw-session-query-is-not-an-index-filter",
+      "input": {"query": {"sessionId": "telegram:raw-session-secret"}}
+    },
+    {
+      "expected": {"code": "CONTROL_REQUEST_INVALID"},
+      "group": "secrecy",
+      "id": "message-content-query-is-not-an-index-filter",
+      "input": {"query": {"content": "private message body"}}
+    },
+    {
+      "expected": {"code": "CONTROL_SNAPSHOT_UNAVAILABLE", "state": "DEGRADED"},
+      "group": "secrecy",
+      "id": "snapshot-failure-is-degraded-and-redacted",
+      "input": {"snapshotFailure": true}
+    }
+  ],
+  "contractEvidence": {
+    "adr": "docs/adr/0011-use-authenticated-sse-for-loopback-control-events.md",
+    "approvedOn": "2026-07-19",
+    "contract": "docs/contracts/r13-read-only-control-index.md",
+    "spec": "docs/specs/2026-07-19-r13-read-only-control-index-design.md"
+  },
+  "defaults": {
+    "rawActor": "operator-secret",
+    "rawContent": "private message body",
+    "rawRoute": "telegram:raw-route-secret",
+    "rawSession": "telegram:raw-session-secret",
+    "rawTurn": "raw-turn-secret"
+  },
+  "formatVersion": 1,
+  "limits": {
+    "defaultPageSize": 20,
+    "maximumPageSize": 50,
+    "schemaVersion": 1
+  },
+  "normalization": [
+    "渠道名称与 turnRef 使用稳定字典序，不按底层 Map 或数据库顺序输出",
+    "cursor 是服务端生成的不透明值，不能由原始 Session、Turn 或 Message 标识派生为公开文本",
+    "索引不包含正文、身份或 Provider 字段；未知执行仅投影为计数"
+  ],
+  "source": "java-contract",
+  "suite": "control-plane/r13-read-only-control-index-v1"
+}
