@@ -35,8 +35,8 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
 | Python Plugin 全生命周期、配置与 Tool Hook | `agent/plugins/*`、`agent/lifecycle/*` | Java ServiceLoader/stdio 观察型 Tap，含 API v2 Lifecycle Phase 映射 | R12-S3 已实现默认关闭的只读映射；可变 Hook/动态 Python import 需要独立授权 |
 | QQ/Feishu/IPC、完整 Channel Host | `infra/channels/*`、`plugins/qqbot`、`plugins/feishu` | CLI/Telegram 离线纵向切片 | [R13 计划](../plans/2026-07-19-r13-dashboard-channel-alignment-plan.md)已冻结渠道逐一的身份、投递、恢复、真实 Smoke 与回退路径；当前不实现 IPC/QQ/Plugin Channel，真实 Telegram 继续冻结 |
 | Dashboard 会话/消息/记忆管理与前端 | `bootstrap/dashboard_api.py`、`frontend/` | 后端 Loopback 状态/取消、审批 Inbox、R13-C1 活动索引、C2-A 内存终态目录及 C2-B 默认拒绝的零正文详情；零前端 | C1 的 20 Case、C2-A 的 22 Case 与 C2-B 的 31 Case Fixture 已验证。C2-B 只投影受限当前 Scope 的 role/time，默认不绑定持久化数据源；不读取用户/Python/生产数据，不开启远程/CLI+Web/前端，也不提供写入。C3–C5 仍待单独批准 |
-| 完整 Proactive v2、外部源、反馈、自动记忆/Optimizer | `proactive_v2/*`、`memory2/*`、`core/memory/*` | 安全 NoOp/只读/显式记忆；R8 另提供默认关闭的活动 Job 安全检视，R14-P0/P1/P2 已完成离线 Fake 链 | [R14 计划](../plans/2026-07-19-r14-proactive-peer-memory-automation-plan.md)已完成 28 Case 状态/Fake Source/Memory 禁止边界、15 Case Gate + ReadOnly Drift 无正文投影，以及 P2 的内存候选、独立 Approval/Anchor/AES-GCM Capsule 和 Fake Recovery；R8 检视不启动 Runtime，P2 也不接线 SQLite、Scheduler、网络、渠道或自动记忆。P3–P5 的逐源、逐写入许可、审计、预算、恢复与回退仍未实现，不得自动启用，旧 Python `memory2` 数据仍不迁移 |
-| Peer Agent 进程、Agent Card 与远端信任 | `agent/peer_agent/*` | 无 Peer Agent；R14-P0 仅有 `LOCAL_FAKE` 值对象 | R14 P4 仍须建身份/协议/信任/资源边界，并以本地 Fake 演练；真实进程、远程 A2A 和推送仍未授权 |
+| 完整 Proactive v2、外部源、反馈、自动记忆/Optimizer | `proactive_v2/*`、`memory2/*`、`core/memory/*` | 安全 NoOp/只读/显式记忆；R8 另提供默认关闭的活动 Job 安全检视，R14-P0–P5 已完成离线 Fake/静态 Catalog 链 | [R14 计划](../plans/2026-07-19-r14-proactive-peer-memory-automation-plan.md)已完成 P0 28 Case、P1 15 Case、P2 Fake Delivery，及 P3 单个 `NOTE` Fake Memory Approval/Capsule/Recovery、P4 静态 Fake Peer、P5 两个 Deferred 空 Schema。全链不接线 SQLite Adapter、Scheduler、网络、渠道、真实 Memory DML 或自动执行；逐源、真实写入/Optimizer、审计保留、预算和回退仍需独立 Contract，旧 Python `memory2` 数据仍不迁移 |
+| Peer Agent 进程、Agent Card 与远端信任 | `agent/peer_agent/*` | R14-P0 值对象；P4 静态 `LOCAL_FAKE` Manifest/Card/预算和 Fake Port Recovery | P4 固定唯一 local Fake Peer，验证取消、输出净化、并发、失败与零重放；没有命令、进程、网络、A2A 或推送。真实进程、远程 A2A 和推送仍未授权 |
 | 部署、真实数据迁移、灰度与 Python 退役 | `bootstrap/*`、`docker/`、`infra/` | 仅 sandbox Cutover 演练 | [R15 计划](../plans/2026-07-19-r15-production-migration-retirement-plan.md)已冻结配置、实例、数据副本、灰度与退役门槛；仅在书面授权、备份、双向回退及观察证据齐备后执行 |
 
 ## 优先级与依赖
@@ -54,9 +54,9 @@ Python 工作树目前含未提交的 `infra/channels/telegram_channel.py`、`re
    `tool_search` 解锁，使用 opaque ID 和显式 Scope 查询当前 Session；它不对齐 Python 的原始 ID、跨会话或 FTS 表面。
 5. R12-S3 API v2 只读生命周期 Tap 与 R12-S4 deferred Skill 正文读取均已完成并通过三套门禁；R12-S5 已实现默认关闭的
    当前 Scope `recall_memory` 受限替代，不读取 Python 记忆、不写入，也不提供跨 Scope/Keyword/RRF/时间线；R12-S2 的
-   Assets 目录也已完成，但它是 Java-owned 扩展而非 Python MCP 对齐。R14-P0/P1 已完成离线边界与只读决策 Fixture，
-   但没有接线运行时。R11-B2c Pending Producer 已完成 P6 三套离线门禁；之后才按批准顺序推进 R13
-   多渠道/控制面、R14 P2–P5
+   Assets 目录也已完成，但它是 Java-owned 扩展而非 Python MCP 对齐。R14-P0–P5 已完成离线边界、只读决策、Fake
+   副作用恢复和静态 Catalog，但没有接线运行时。R11-B2c Pending Producer 已完成 P6 三套离线门禁；之后才按批准顺序推进 R13
+   多渠道/控制面、R14 的真实外部能力
    和 R15 生产切换。
 6. **渠道级显式记忆管理尚未对齐。** `ChatService` 的自动 Retrieval 可以用私有 SHA-256 Binding 查询
    `telegram:<chatId>` 的当前 Scope；但 Memory HTTP API 为避免危险路径和原始 Session 泄露，只接受

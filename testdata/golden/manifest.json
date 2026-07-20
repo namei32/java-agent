@@ -133,6 +133,18 @@
       "source": "java-contract"
     },
     {
+      "id": "proactive/r14-proactive-memory-mutation-v1",
+      "path": "proactive/r14-proactive-memory-mutation-v1.json",
+      "sha256": "861db2b7a9221da3b4599896d8b414baa22ad4ca7b562fe6b1d490c9b5b308b4",
+      "source": "java-contract"
+    },
+    {
+      "id": "proactive/r14-local-fake-peer-process-v1",
+      "path": "proactive/r14-local-fake-peer-process-v1.json",
+      "sha256": "9f76cbf7fdfbd097252d4ba5a80f5874d290ad9e49b37b0a7cdca393a9430289",
+      "source": "java-contract"
+    },
+    {
       "id": "cutover/cutover-runtime-v1",
       "path": "cutover/cutover-runtime-v1.json",
       "sha256": "38a10ed29a8f6dc6ad7381bec4234e960b62d4420736a4703ddfaca70eba2c5a",
@@ -268,6 +280,12 @@
       "id": "tools/memory-forget-pending-producer-v1",
       "path": "tools/memory-forget-pending-producer-v1.json",
       "sha256": "87595faf382e321fe5aa35e015f3e5a77e77a44376c3530fcd1b09c43485ccde",
+      "source": "java-contract"
+    },
+    {
+      "id": "tools/r14-trusted-proactive-catalog-v1",
+      "path": "tools/r14-trusted-proactive-catalog-v1.json",
+      "sha256": "2d918068e2ba86f8be35e27abb556df5ce1dbb7fff9162e706eb4d1b8612d3a4",
       "source": "java-contract"
     },
     {

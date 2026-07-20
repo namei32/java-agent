@@ -93,10 +93,10 @@ R12-S5 的[当前 Scope 只读记忆召回 Tool](contracts/read-only-memory-reca
 `JAVA_NATIVE`、全局 `READ_ONLY` 与 `CURRENT_SCOPE_READ_ONLY` 同时成立时，`recall_memory` 才经当前 Turn `tool_search`
 作为 Deferred Tool 出现。它复用 Java 的 cosine/Hotness 稳定排序、先做类型过滤、限制候选/正文/Tool Result 预算，并把
 Embedding、Store、取消和内部失败收敛为稳定安全码；它不是 Python `memory2`、Keyword/RRF、时间线或写入 Tool 的对齐声明。
-R14-P0/P1/P2 的[主动、自动记忆与 Peer 边界 Contract](contracts/r14-proactive-peer-automation-boundaries.md)已完成离线
-前置、本地只读决策与 Fake Delivery Preparation；P2 的 Pending/Approval/Capsule/Recovery 仍未接线，且不启动 R8
-Scheduler，不接入真实 Source、Transport、Memory DML 或 Peer Process。P3–P5 与 R11-B2c 的副作用 Capability 继续按
-独立 Contract 推进。
+R14-P0–P5 的[主动、自动记忆与 Peer 边界 Contract](contracts/r14-proactive-peer-automation-boundaries.md)已完成离线、
+默认关闭的 Fake 切片：P3 对单个 `NOTE` 捕获建立逐 Mutation Approval/Capsule/Recovery，P4 固定本地 Fake Peer
+Manifest/Card/预算与取消恢复，P5 仅暴露两个可搜索的空参数 Placeholder Schema。它们不启动 R8 Scheduler，不接入真实
+Source、Transport、Memory DML、Peer Process、网络或 Bootstrap；Schema 和 Fake Port 都不构成生产执行权。
 完整后续顺序见[Java / Akashic Agent 全量对齐计划](plans/2026-07-18-java-parity-program.md)。
 
 ## 目录职责

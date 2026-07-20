@@ -1,0 +1,27 @@
+{
+  "formatVersion": 1,
+  "suite": "tools/r14-trusted-proactive-catalog-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0041-restrict-r14-p3-p5-to-approved-local-fakes.md",
+    "contract": "docs/contracts/r14-p5-trusted-proactive-catalog.md",
+    "spec": "docs/specs/2026-07-19-r14-p3-p5-safe-automation-design.md"
+  },
+  "normalization": [],
+  "tools": [
+    {"name": "request_proactive_memory_capture", "version": "r14-proactive-memory-v1", "risk": "WRITE"},
+    {"name": "request_local_fake_peer_task", "version": "r14-local-fake-peer-v1", "risk": "EXTERNAL_SIDE_EFFECT"}
+  ],
+  "cases": [
+    {"id": "disabled-toolset-registers-no-catalog-entries", "input": {}},
+    {"id": "catalog-only-exposes-exactly-two-static-request-schemas", "input": {}},
+    {"id": "initial-turn-exposes-only-tool-search", "input": {}},
+    {"id": "memory-search-unlocks-only-the-memory-request", "input": {}},
+    {"id": "peer-search-unlocks-only-the-peer-request", "input": {}},
+    {"id": "exact-selection-can-unlock-both-static-requests", "input": {}},
+    {"id": "schemas-accept-no-sensitive-or-dynamic-arguments", "input": {}},
+    {"id": "placeholder-is-fixed-unavailable-and-has-no-side-effect", "input": {}},
+    {"id": "trusted-proactive-entries-coexist-with-forget-memory-catalog-entry", "input": {}}
+  ]
+}

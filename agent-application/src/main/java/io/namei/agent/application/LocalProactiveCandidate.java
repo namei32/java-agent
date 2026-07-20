@@ -17,6 +17,7 @@ final class LocalProactiveCandidate {
   private final ProactiveSourceItem source;
   private final Instant preparedAt;
   private final AtomicBoolean claimedForPreparation = new AtomicBoolean();
+  private final AtomicBoolean claimedForMemoryCapture = new AtomicBoolean();
 
   LocalProactiveCandidate(ProactiveJobLease lease, ProactiveSourceItem source, Instant preparedAt) {
     this.lease = Objects.requireNonNull(lease, "lease");
@@ -42,6 +43,14 @@ final class LocalProactiveCandidate {
 
   void releaseAfterPreparationFailure() {
     claimedForPreparation.set(false);
+  }
+
+  boolean tryClaimForMemoryCapture() {
+    return claimedForMemoryCapture.compareAndSet(false, true);
+  }
+
+  void releaseAfterMemoryCapturePreparationFailure() {
+    claimedForMemoryCapture.set(false);
   }
 
   @Override

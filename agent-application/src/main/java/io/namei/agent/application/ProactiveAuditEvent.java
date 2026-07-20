@@ -17,7 +17,9 @@ public record ProactiveAuditEvent(
     DRIFT,
     PROJECTION,
     PLAN,
-    DELIVERY
+    DELIVERY,
+    MEMORY,
+    PEER
   }
 
   public ProactiveAuditEvent {

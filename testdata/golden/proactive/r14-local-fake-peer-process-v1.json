@@ -1,0 +1,109 @@
+{
+  "formatVersion": 1,
+  "suite": "proactive/r14-local-fake-peer-process-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-19",
+    "adr": "docs/adr/0041-restrict-r14-p3-p5-to-approved-local-fakes.md",
+    "contract": "docs/contracts/r14-p4-local-fake-peer-process.md",
+    "spec": "docs/specs/2026-07-19-r14-p3-p5-safe-automation-design.md"
+  },
+  "normalization": ["CRLF_TO_LF", "REMOVE_C0_EXCEPT_LF"],
+  "limits": {
+    "maxOutputCodePoints": 1024,
+    "timeoutMillis": 5000,
+    "maxConcurrentTasks": 1
+  },
+  "cases": [
+    {
+      "id": "only-the-static-local-fake-manifest-is-accepted",
+      "group": "manifest",
+      "input": {"peerRef": "peer-local-fake", "protocol": "local-fake-peer-v1", "version": 1, "maxOutputCodePoints": 1024, "timeoutMillis": 5000, "maxConcurrentTasks": 1},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "peer-identity-is-case-sensitive-and-opaque",
+      "group": "manifest",
+      "input": {"peerRef": "Peer-Local-Fake", "protocol": "local-fake-peer-v1", "version": 1, "maxOutputCodePoints": 1024, "timeoutMillis": 5000, "maxConcurrentTasks": 1},
+      "expected": {"accepted": false, "code": "PEER_CONTRACT_INVALID"}
+    },
+    {
+      "id": "manifest-rejects-a-protocol-variant",
+      "group": "manifest",
+      "input": {"peerRef": "peer-local-fake", "protocol": "LOCAL-FAKE-PEER-V1", "version": 1, "maxOutputCodePoints": 1024, "timeoutMillis": 5000, "maxConcurrentTasks": 1},
+      "expected": {"accepted": false, "code": "PEER_CONTRACT_INVALID"}
+    },
+    {
+      "id": "manifest-rejects-a-version-variant",
+      "group": "manifest",
+      "input": {"peerRef": "peer-local-fake", "protocol": "local-fake-peer-v1", "version": 2, "maxOutputCodePoints": 1024, "timeoutMillis": 5000, "maxConcurrentTasks": 1},
+      "expected": {"accepted": false, "code": "PEER_CONTRACT_INVALID"}
+    },
+    {
+      "id": "manifest-rejects-a-larger-output-budget",
+      "group": "manifest",
+      "input": {"peerRef": "peer-local-fake", "protocol": "local-fake-peer-v1", "version": 1, "maxOutputCodePoints": 1025, "timeoutMillis": 5000, "maxConcurrentTasks": 1},
+      "expected": {"accepted": false, "code": "PEER_CONTRACT_INVALID"}
+    },
+    {
+      "id": "manifest-rejects-a-timeout-variant",
+      "group": "manifest",
+      "input": {"peerRef": "peer-local-fake", "protocol": "local-fake-peer-v1", "version": 1, "maxOutputCodePoints": 1024, "timeoutMillis": 5001, "maxConcurrentTasks": 1},
+      "expected": {"accepted": false, "code": "PEER_CONTRACT_INVALID"}
+    },
+    {
+      "id": "manifest-rejects-more-than-one-concurrent-task",
+      "group": "manifest",
+      "input": {"peerRef": "peer-local-fake", "protocol": "local-fake-peer-v1", "version": 1, "maxOutputCodePoints": 1024, "timeoutMillis": 5000, "maxConcurrentTasks": 2},
+      "expected": {"accepted": false, "code": "PEER_CONTRACT_INVALID"}
+    },
+    {
+      "id": "card-permits-only-the-fixed-local-task-kind",
+      "group": "card",
+      "input": {"taskKind": "LOCAL_FAKE_TASK"},
+      "expected": {"accepted": true}
+    },
+    {
+      "id": "card-rejects-a-dynamic-or-case-variant-task-kind",
+      "group": "card",
+      "input": {"taskKind": "local_fake_task"},
+      "expected": {"accepted": false, "code": "PEER_CONTRACT_INVALID"}
+    },
+    {
+      "id": "fake-process-allows-a-safe-terminal-success-projection",
+      "group": "result",
+      "input": {"state": "SUCCEEDED", "output": "safe result"},
+      "expected": {"accepted": true, "safeOutput": "safe result"}
+    },
+    {
+      "id": "fake-process-normalizes-line-endings-and-removes-controls",
+      "group": "result",
+      "input": {"state": "FAILED", "output": "first\r\nsecond\u0000\rthird"},
+      "expected": {"accepted": true, "safeOutput": "first\nsecond\nthird"}
+    },
+    {
+      "id": "fake-process-allows-terminal-cancellation-with-no-output",
+      "group": "result",
+      "input": {"state": "CANCELLED"},
+      "expected": {"accepted": true, "safeOutput": ""}
+    },
+    {
+      "id": "fake-process-rejects-a-nonterminal-result",
+      "group": "result",
+      "input": {"state": "RUNNING", "output": "not terminal"},
+      "expected": {"accepted": false, "code": "PEER_CONTRACT_INVALID"}
+    },
+    {
+      "id": "fake-process-rejects-output-beyond-the-static-budget",
+      "group": "result",
+      "input": {"state": "SUCCEEDED", "outputCodePoints": 1025},
+      "expected": {"accepted": false, "code": "PEER_CONTRACT_INVALID"}
+    },
+    {
+      "id": "safe-result-projection-never-renders-output",
+      "group": "projection",
+      "input": {"state": "SUCCEEDED", "output": "private fake output"},
+      "expected": {"accepted": true, "leaksOutput": false}
+    }
+  ]
+}
