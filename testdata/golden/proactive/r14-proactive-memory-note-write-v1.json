@@ -1,0 +1,210 @@
+{
+  "formatVersion": 1,
+  "suite": "proactive/r14-proactive-memory-note-write-v1",
+  "source": "java-contract",
+  "contractEvidence": {
+    "approvedOn": "2026-07-20",
+    "adr": "docs/adr/0042-restrict-r14-p6-to-temp-sqlite-note-rehearsal.md",
+    "contract": "docs/contracts/r14-p6-approved-proactive-memory-note-write-rehearsal.md",
+    "spec": "docs/specs/2026-07-20-r14-p6-proactive-memory-note-write-design.md"
+  },
+  "normalization": [],
+  "defaults": {
+    "capability": "proactive_memory_note_write",
+    "version": "r14-proactive-memory-note-v1",
+    "sourceKind": "FIXED_LOCAL",
+    "memoryType": "NOTE",
+    "emotionalWeight": 0,
+    "embedding": "fake-r14-p6-memory-v1",
+    "database": "TEMP_JUNIT_AGENT_MEMORY_DB",
+    "retention": "TEST_LIFETIME"
+  },
+  "cases": [
+    {
+      "id": "disabled-has-zero-id-embedding-and-sqlite-io",
+      "group": "disabled",
+      "input": {"mode": "DISABLED"},
+      "expected": {"ids": 0, "embeddingCalls": 0, "sqliteWrites": 0}
+    },
+    {
+      "id": "only-fixed-local-source-is-eligible",
+      "group": "source",
+      "input": {"sourceKind": "EXTERNAL"},
+      "expected": {"outcome": "REJECTED", "sqliteWrites": 0}
+    },
+    {
+      "id": "only-note-memory-type-is-permitted",
+      "group": "mutation",
+      "input": {"memoryType": "PREFERENCE"},
+      "expected": {"outcome": "REJECTED", "sqliteWrites": 0}
+    },
+    {
+      "id": "emotional-weight-is-fixed-to-zero",
+      "group": "mutation",
+      "input": {"emotionalWeight": 1},
+      "expected": {"outcome": "REJECTED", "sqliteWrites": 0}
+    },
+    {
+      "id": "scope-is-derived-inside-capsule-without-session-input",
+      "group": "scope",
+      "input": {"session": "telegram:123"},
+      "expected": {"outcome": "REJECTED", "leaksSession": false}
+    },
+    {
+      "id": "only-junit-temp-agent-memory-database-is-allowed",
+      "group": "retention",
+      "input": {"database": "WORKSPACE"},
+      "expected": {"outcome": "REJECTED", "sqliteWrites": 0}
+    },
+    {
+      "id": "retention-never-exceeds-test-lifetime",
+      "group": "retention",
+      "input": {"retention": "PERSISTENT"},
+      "expected": {"outcome": "REJECTED", "sqliteWrites": 0}
+    },
+    {
+      "id": "pending-approval-performs-no-embedding-or-dml",
+      "group": "approval",
+      "input": {"approval": "PENDING"},
+      "expected": {"outcome": "NOT_STARTED", "embeddingCalls": 0, "sqliteWrites": 0}
+    },
+    {
+      "id": "denied-approval-performs-no-embedding-or-dml",
+      "group": "approval",
+      "input": {"approval": "DENIED"},
+      "expected": {"outcome": "NOT_STARTED", "embeddingCalls": 0, "sqliteWrites": 0}
+    },
+    {
+      "id": "expired-approval-performs-no-embedding-or-dml",
+      "group": "approval",
+      "input": {"approval": "EXPIRED"},
+      "expected": {"outcome": "NOT_STARTED", "embeddingCalls": 0, "sqliteWrites": 0}
+    },
+    {
+      "id": "cancelled-operation-performs-no-embedding-or-dml",
+      "group": "cancellation",
+      "input": {"operation": "CANCELLED"},
+      "expected": {"outcome": "NOT_STARTED", "embeddingCalls": 0, "sqliteWrites": 0}
+    },
+    {
+      "id": "tampered-capsule-performs-no-embedding-or-dml",
+      "group": "capsule",
+      "input": {"capsule": "TAMPERED"},
+      "expected": {"outcome": "NOT_STARTED", "embeddingCalls": 0, "sqliteWrites": 0}
+    },
+    {
+      "id": "lost-reservation-performs-no-embedding-or-dml",
+      "group": "concurrency",
+      "input": {"reservation": "LOST"},
+      "expected": {"outcome": "NOT_STARTED", "embeddingCalls": 0, "sqliteWrites": 0}
+    },
+    {
+      "id": "approved-note-creates-one-item-and-mutation-ledger-entry",
+      "group": "write",
+      "input": {"approval": "APPROVED", "existingItem": false},
+      "expected": {"outcome": "COMMITTED", "receipt": "CREATED", "items": 1, "mutations": 1}
+    },
+    {
+      "id": "same-note-with-new-operation-reinforces-existing-item",
+      "group": "write",
+      "input": {"approval": "APPROVED", "existingItem": true},
+      "expected": {"outcome": "COMMITTED", "receipt": "REINFORCED", "items": 1, "mutations": 2}
+    },
+    {
+      "id": "same-operation-replays-ledger-without-embedding-or-reinforcement",
+      "group": "idempotency",
+      "input": {"replay": "SAME_OPERATION"},
+      "expected": {"outcome": "COMMITTED", "embeddingCalls": 0, "sqliteWrites": 0}
+    },
+    {
+      "id": "same-request-with-different-arguments-fails-closed",
+      "group": "idempotency",
+      "input": {"replay": "CONFLICT"},
+      "expected": {"outcome": "UNKNOWN", "embeddingCalls": 0, "sqliteWrites": 0}
+    },
+    {
+      "id": "concurrent-resume-has-one-winner",
+      "group": "concurrency",
+      "input": {"resume": "CONCURRENT"},
+      "expected": {"portCalls": 1, "committed": 1, "notStarted": 1}
+    },
+    {
+      "id": "embedding-failure-precedes-sqlite-transaction",
+      "group": "failure",
+      "input": {"embedding": "FAIL"},
+      "expected": {"outcome": "UNKNOWN", "items": 0, "mutations": 0}
+    },
+    {
+      "id": "sqlite-transaction-failure-rolls-back-item-and-ledger",
+      "group": "failure",
+      "input": {"sqlite": "FAIL_TRANSACTION"},
+      "expected": {"outcome": "UNKNOWN", "items": 0, "mutations": 0}
+    },
+    {
+      "id": "uncertain-dml-result-is-unknown-and-never-auto-replayed",
+      "group": "failure",
+      "input": {"sqlite": "UNCERTAIN"},
+      "expected": {"outcome": "UNKNOWN", "automaticReplays": 0}
+    },
+    {
+      "id": "audit-failure-precedes-memory-write",
+      "group": "failure",
+      "input": {"audit": "FAIL"},
+      "expected": {"outcome": "UNKNOWN", "embeddingCalls": 0, "sqliteWrites": 0}
+    },
+    {
+      "id": "pending-ledger-failure-after-write-is-unknown-and-never-replayed",
+      "group": "failure",
+      "input": {"pendingLedger": "FAIL_AFTER_WRITE"},
+      "expected": {"outcome": "UNKNOWN", "automaticReplays": 0}
+    },
+    {
+      "id": "anchor-commit-failure-is-commit-unreported-and-never-replayed",
+      "group": "failure",
+      "input": {"anchor": "FAIL_COMMIT"},
+      "expected": {"outcome": "COMMIT_UNREPORTED", "automaticReplays": 0}
+    },
+    {
+      "id": "p6-does-not-reuse-p3-operation-or-capability",
+      "group": "isolation",
+      "input": {"operation": "P3"},
+      "expected": {"outcome": "REJECTED", "sqliteWrites": 0}
+    },
+    {
+      "id": "no-bootstrap-configuration-is-created",
+      "group": "disabled",
+      "input": {"bootstrap": "DEFAULT"},
+      "expected": {"beans": 0, "sqliteWrites": 0}
+    },
+    {
+      "id": "no-tool-http-cli-or-worker-is-created",
+      "group": "disabled",
+      "input": {"runtime": "DEFAULT"},
+      "expected": {"toolSchemas": 0, "routes": 0, "workers": 0}
+    },
+    {
+      "id": "no-provider-network-or-real-embedding-is-used",
+      "group": "isolation",
+      "input": {"embedding": "DEFAULT"},
+      "expected": {"networkCalls": 0, "providerCalls": 0}
+    },
+    {
+      "id": "no-python-or-user-memory-database-is-opened",
+      "group": "isolation",
+      "input": {"database": "DEFAULT"},
+      "expected": {"pythonDatabaseOpens": 0, "userDatabaseOpens": 0}
+    },
+    {
+      "id": "safe-outcome-and-audit-never-render-sensitive-memory-values",
+      "group": "projection",
+      "input": {"source": "SENSITIVE"},
+      "expected": {"leaksSource": false, "leaksScope": false, "leaksItemId": false}
+    },
+    {
+      "id": "teardown-removes-database-wal-shm-capsule-and-source",
+      "group": "retention",
+      "input": {"teardown": "COMPLETE"},
+      "expected": {"databaseFiles": 0, "capsules": 0, "sourceFiles": 0}
+    }
+  ]
+}

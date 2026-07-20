@@ -1,13 +1,13 @@
 # R14 P6 Java-native NOTE 写入演练实施计划
 
-- 状态：Contract 已冻结；尚未开始实现
+- 状态：P6-A 的 32 Case Fixture 与 Manifest Consumer 已完成；P6-B 尚未开始
 - 日期：2026-07-20
 - 目标：仅在临时 Java SQLite 中验证经审批的单个 `NOTE` 写入、幂等、恢复和回退语义。
 
 ## 实施顺序
 
-1. **P6-A Fixture（RED）**：增加不少于 30 个 `r14-proactive-memory-note-write-v1` Case 与 Manifest Hash，固定 Scope、
-   保留期、Approval、Receipt、`UNKNOWN`、回退和禁止项。
+1. **P6-A Fixture（已完成）**：已增加 32 个 `r14-proactive-memory-note-write-v1` Case、Manifest Hash 与 compat
+   Consumer，固定 Scope、保留期、Approval、Receipt、`UNKNOWN`、回退和禁止项。
 2. **P6-B Kernel/Application 值对象（RED → GREEN）**：新增独立 P6 Capability、Operation、Anchor、Capsule、
    安全 Receipt 与专用 Port；禁止复用 P3 名称或伪造 Session。
 3. **P6-C 专用写入 Capability（RED → GREEN）**：以固定 Clock/ID/Fake Embedding 构造 `MemoryScope`、Memory V1

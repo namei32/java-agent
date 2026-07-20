@@ -139,6 +139,12 @@
       "source": "java-contract"
     },
     {
+      "id": "proactive/r14-proactive-memory-note-write-v1",
+      "path": "proactive/r14-proactive-memory-note-write-v1.json",
+      "sha256": "f518c8ee9d4093e4e33083b42844afe022119845b48e41a5ede5dc04af69b3d5",
+      "source": "java-contract"
+    },
+    {
       "id": "proactive/r14-local-fake-peer-process-v1",
       "path": "proactive/r14-local-fake-peer-process-v1.json",
       "sha256": "9f76cbf7fdfbd097252d4ba5a80f5874d290ad9e49b37b0a7cdca393a9430289",
