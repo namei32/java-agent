@@ -1,7 +1,7 @@
 # R14 P6 获批的 Java-native NOTE 写入演练契约
 
 - 阶段：R14 P6
-- 状态：Contract 已冻结；实现尚未开始
+- 状态：已实现并通过阶段三套完整门禁（仅本地 `@TempDir` 演练）
 - 日期：2026-07-20
 - Capability：`proactive_memory_note_write` / `r14-proactive-memory-note-v1` / `WRITE`
 - 关联 ADR：[ADR-0042](../adr/0042-restrict-r14-p6-to-temp-sqlite-note-rehearsal.md)
@@ -16,8 +16,8 @@
 类型、情绪权重（固定 `0`）、发生时间、Scope、Embedding Model、Item ID、请求 ID、风险和版本均不能由模型、Prompt、
 Plugin、MCP、配置或外部输入覆盖。
 
-Scope 的唯一 preimage 是 Capsule 内部的 `r14-p6-note:<jobRef>:<targetHash>`；专用 Capability 在内存中构造
-`MemoryScope`，只让既有 Store 保存其 SHA-256 Binding。它不接收 Chat Session，也不把 preimage、Binding 或原始
+Scope 的唯一 preimage 是 Capsule 内部的 `r14-p6-note:<jobRef>:<targetHash>`；专用 Capability 先在内存中将其做
+SHA-256 绑定，再以该 Binding 构造 `MemoryScope`，只让既有 Store 保存 Binding。它不接收 Chat Session，也不把 preimage、Binding 或原始
 Job/Target 置入公开 Outcome、审计、日志、Tool Result 或异常。
 
 P6 的唯一允许数据库位于 JUnit `@TempDir` 下的 Java-owned `memory/agent-memory.db`。每个测试关闭所有连接并删除目录；

@@ -1,6 +1,6 @@
 # R14 主动运行、自动记忆与 Peer Agent 对齐计划
 
-- 状态：P0–P5 已完成离线、默认关闭的 Contract/Fake 切片；P6 已冻结临时 SQLite NOTE 写入演练 Contract；均不等价真实自动化或 Python 全量对齐
+- 状态：P0–P5 已完成离线、默认关闭的 Contract/Fake 切片；P6 已完成仅测试生命周期的临时 SQLite NOTE 写入演练并通过阶段完整门禁；均不等价真实自动化或 Python 全量对齐
 - 日期：2026-07-19
 - Python 证据基线：`akashic-agent` 提交 `b65a5430e332c8733b981dfc2dfbc3eb1967e9ef`
 - Java 证据基线：`agent/r12-skill-catalog`，含 R8 本地 SQLite Proactive、只读 Drift 与隔离 Subagent
@@ -103,11 +103,11 @@ P5 只增加 `request_proactive_memory_capture`（`WRITE`）与 `request_local_f
 
 动态注册、Plugin/MCP 注入、后台自动推送/重试，以及任何真实 Provider/网络/进程/渠道 Smoke 都继续按操作授权执行。
 
-### P6：Java-native NOTE 写入演练（Contract 已冻结）
+### P6：Java-native NOTE 写入演练（已实现，未接线）
 
 P6 选择新的 `proactive_memory_note_write` Capability，而不是把 P3 Fake Port 静默改为生产 DML。它只准在 JUnit
 临时目录的 Java-owned `agent-memory.db` 使用 Fake Embedding 与既有 `JdbcJavaMemoryStore` 演练一个经审批的
-`FIXED_LOCAL` `NOTE` 写入、幂等、`UNKNOWN` 与事务回退；临时库在测试结束删除。它没有 Bootstrap、配置、Tool、
+`FIXED_LOCAL` `NOTE` 写入、幂等、`UNKNOWN`、`COMMIT_UNREPORTED` 与事务回退；临时库在测试结束删除。它没有 Bootstrap、配置、Tool、
 Worker、网络、真实 Workspace 或长期保留权限。详细边界见 [P6 Contract](../contracts/r14-p6-approved-proactive-memory-note-write-rehearsal.md)
 与 [实施计划](2026-07-20-r14-p6-proactive-memory-note-write-implementation.md)。
 

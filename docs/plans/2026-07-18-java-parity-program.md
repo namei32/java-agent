@@ -24,11 +24,11 @@ Tool 层不能只按“是否存在相似 Runtime”盘点：Python 注册的每
 | 功能模块 | 已具备的能力 | 当前缺口 | 当前下一步 |
 | --- | --- | --- | --- |
 | 对话与 Provider | 被动聊天、消息协议、流式投影、Prompt/Persona、受限 Provider 失败恢复 | 跨 Turn reasoning、真实 Provider 运行与完整 Python Chat Lane | 保持默认关闭；任何真实 Provider/数据保留扩展另立 Contract |
-| 记忆与上下文 | Java Native Memory、当前 Scope 检索、Context 注入、只读 `recall_memory`、已验证的 `forget_memory` 离线链 | 自动写回、Optimizer、全局管理与真实 Embedding | R14-P6 已冻结临时 SQLite `NOTE` 写入演练 Contract；C3-M0 保持无直接管理入口，P6 实现后仍须单独决定生产写入 |
+| 记忆与上下文 | Java Native Memory、当前 Scope 检索、Context 注入、只读 `recall_memory`、已验证的 `forget_memory` 离线链 | 自动写回、Optimizer、全局管理与真实 Embedding | R14-P6 已实现仅测试临时 SQLite `NOTE` 写入演练；C3-M0 保持无直接管理入口，P6 不授予生产写入 |
 | Tool 与审批安全 | Catalog、Deferred Tool、Approval Inbox、Capsule、Reservation、Ledger、Anchor、首个 `forget_memory` 链 | 其他写 Tool、真实审批操作与 Sandbox | C3-F2/F3/M0 已完成；不自动扩展为新写 API，未来入口须建立新的目标 Ref/请求/数据权限 Contract |
 | 扩展与外部资产 | 只读 MCP、Skill Catalog/Content、Plugin 生命周期 Tap | 远程 MCP、可变 Plugin、脚本/网络执行 | 维持只读和默认关闭；逐能力评审外部访问 |
 | 控制面与渠道 | Loopback 状态/取消/SSE、控制索引、零正文历史、Telegram 离线链 | 管理写入、前端、多渠道与真实渠道 Smoke | C3 已选择首项写 Capability；前端、真实 Telegram 和远程访问继续冻结 |
-| 主动运行与交付 | 受限 Scheduler/Drift/Subagent、只读主动决策、P2 Fake Delivery、P3 Fake Memory、P4 Fake Peer Pending/Recovery、P5 静态 Deferred Catalog、P6 写入演练 Contract | 外部源、真实 Memory DML/Optimizer、真实 Peer、真实生产迁移 | P2–P4 都是未接线的独立 Approval/Anchor/AES-GCM Capsule 与单次 Fake Port；P5 只是零参数 Placeholder Schema；P6 仅冻结临时 Java SQLite 的真实 DML 演练。没有生产 SQLite Adapter、网络、真实投递/进程或自动执行；先冻结每一类外部输入/副作用 Contract，再考虑接线 |
+| 主动运行与交付 | 受限 Scheduler/Drift/Subagent、只读主动决策、P2 Fake Delivery、P3 Fake Memory、P4 Fake Peer Pending/Recovery、P5 静态 Deferred Catalog、P6 测试写入演练 | 外部源、真实 Memory DML/Optimizer、真实 Peer、真实生产迁移 | P2–P4 都是未接线的独立 Approval/Anchor/AES-GCM Capsule 与单次 Fake Port；P5 只是零参数 Placeholder Schema；P6 已完成临时 Java SQLite 的单个受审批 NOTE DML/恢复演练，但无生产 SQLite Adapter、网络、真实投递/进程或自动执行；先冻结每一类外部输入/副作用 Contract，再考虑接线 |
 
 ## 阶段索引（按实施顺序）
 
@@ -38,7 +38,7 @@ Tool 层不能只按“是否存在相似 Runtime”盘点：Python 注册的每
 | R11 | Tool Catalog、审批与逐工具 Capability | `agent/tool_bundles.py`、`agent/tools/*`、`agent/tool_runtime.py` | 可用人类审批、Durable Ledger、每个副作用 Tool 的幂等/UNKNOWN/沙箱 Contract | 实施中：B1–B4 及默认关闭的 B2c 本地恢复切片已实现；B2c 包含 Scope 批量软失效、Capsule、Reservation、显式 Resume/Cancel/Status、24 Case Fixture、严格 Loopback 装配和 13 Case 受控 Pending Producer。该 Producer 只在搜索后创建 Pending，不启动 Worker、自动 Resume 或真实数据执行；其他副作用 Tool 仍无实现 |
 | R12 | Skills、MCP 扩展、Plugin 与受限 Memory Tool | `agent/skills.py`、`agent/mcp/*`、`agent/plugins/*`、`agent/tools/recall_memory.py` | 受信 Skill 指令边界、Python MCP Tool Client、Plugin 生命周期兼容、受限当前 Scope 召回 | S1、S3、S4 已通过三套门禁；S2 是 Java-owned Assets 目录。S5 已实现默认关闭的 `recall_memory` 安全替代，不声称 Python 检索等价；ADR-0029 确认 Python 没有待迁移的 Skill Runner，Skill 指令中的动作改由 R11 逐 Tool Capability 处理；远程 MCP、可变 Plugin 与任何记忆写入仍未开始 |
 | R13 | 多渠道、Dashboard 与控制面 | `infra/channels/*`、`bootstrap/dashboard_api.py` | 频道 Contract、真实渠道验收、前端/控制面完整 API 与安全边界 | R13-C0/C1、C2-A 与 C2-B 已完成：20 Case C1 Contract 已落为默认关闭的本机 `GET /api/v1/control/index`；22 Case C2-A Contract 已落为内存 `GET /api/v1/control/history`；31 Case C2-B Contract 已落为零正文 `GET /api/v1/control/history/detail`。C2-B 默认 Scope/Port 拒绝且只在临时 Java SQLite/Fake 验证，无持久化数据自动读取。C3-C0 至 F3/M0 已选择并验证既有 Scope 受限 `forget_memory` 的受审批执行边界（54 个聚焦测试通过）；M0 明确不新增 Route、Memory 目标 Ref、Worker 或真实数据执行。C4–C5 未开始；现有控制面不是 Python Dashboard、IPC/QQ/Plugin Channel 或前端对齐，远程、真实 Telegram、CLI+Web 与前端继续冻结 |
-| R14 | Peer、真实 Proactive/Drift 与 Memory 自动化 | `agent/peer_agent/*`、`agent/core/proactive_*`、`core/memory/*` | 身份/信任、外部源、写入许可、审计、预算、恢复与回退契约 | P0–P5 已完成本地 Fake/静态 Contract：P3 为固定 `NOTE` 捕获，P4 为唯一静态 Peer，P5 为两个 Deferred 空参数 Schema；P3/P4 均有 Approval/Anchor/AES-GCM Capsule/Recovery 和 `UNKNOWN`/零重放验证。P6 已冻结独立 `NOTE` 写入的临时 SQLite 演练 Contract，但尚未实现。仍无 Bootstrap/生产 SQLite Adapter/网络/真实渠道、真实进程或自动执行；不构成 Python 自动记忆、外部主动源、Peer A2A 或真实投递对齐 |
+| R14 | Peer、真实 Proactive/Drift 与 Memory 自动化 | `agent/peer_agent/*`、`agent/core/proactive_*`、`core/memory/*` | 身份/信任、外部源、写入许可、审计、预算、恢复与回退契约 | P0–P5 已完成本地 Fake/静态 Contract：P3 为固定 `NOTE` 捕获，P4 为唯一静态 Peer，P5 为两个 Deferred 空参数 Schema；P3/P4 均有 Approval/Anchor/AES-GCM Capsule/Recovery 和 `UNKNOWN`/零重放验证。P6 已实现独立 `NOTE` 写入的临时 SQLite 演练，仍无 Bootstrap/生产 SQLite Adapter/网络/真实渠道、真实进程或自动执行；不构成 Python 自动记忆、外部主动源、Peer A2A 或真实投递对齐 |
 | R15 | 生产迁移与 Python 退役 | `bootstrap/*`、部署资产 | 真实副本验证、演练、灰度、观察、回退与逐项书面授权 | 差距审计与[分阶段计划](2026-07-19-r15-production-migration-retirement-plan.md)已冻结；真实迁移未开始。R9 仅证明 sandbox 演练，不能替代 Java 部署资产、数据副本、灰度、观察或 Python 退役授权 |
 
 每个阶段都必须先写 Contract/Spec/Plan，在隔离 worktree 按 RED/GREEN 实现，并通过默认、`failure`、`compat`

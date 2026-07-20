@@ -28,7 +28,7 @@
 | R1 | Java 工程骨架 | 已完成 | JDK 21、Maven、模块化 Reactor、CI/质量门禁 |
 | R2 | 被动聊天纵向切片 | MVP 与 Minor 加固已完成，能力对齐未完成 | HTTP 非流式聊天、SQLite、模型适配、失败与并发语义 |
 | R3 | Tool Loop | 部分完成 | R3.1 与 R3.2 默认拒绝 Framework 已完成；真实审批、Durable Ledger 与副作用工具尚未实施 |
-| R4 | 上下文与记忆 | R4.1、R4.2 已完成 | Java 原生显式记忆管理与语义检索闭环已通过最终门禁；R14-P6 已冻结临时 SQLite `NOTE` 写入演练 Contract，自动写回/Optimizer 仍未实现 |
+| R4 | 上下文与记忆 | R4.1、R4.2 已完成 | Java 原生显式记忆管理与语义检索闭环已通过最终门禁；R14-P6 已实现仅测试生命周期的临时 SQLite `NOTE` 写入演练，自动写回/Optimizer 仍未实现 |
 | R5 | MCP 与外部工具 | R5.1 已完成 | 静态 stdio 只读 Client、工具发现/投影、取消、隔离和进程回收已验收；远程与副作用范围未开始 |
 | R6 | 渠道与控制面 | R6.1–R6.5 已合入 `main` | PR #9 与主分支三套 CI 均通过；前端仍待独立 Contract |
 | R7 | 插件与扩展兼容 | 已实现并验证 | Java SPI、隔离 stdio Bridge、观察型 Hook 与默认关闭配置 |
@@ -38,7 +38,7 @@
 | R11 | Tool Catalog 与审批恢复安全基础 | 实施中（首个默认关闭恢复切片完成） | Catalog、审批 Inbox、Pending Operation/Reservation/Ledger/Anchor Contract 已验证；B2c 已增加 Scope 软失效 Capability、严格本机 Resume/Cancel/Status 和 24 Case Fixture。受控 Tool/Chat Producer 仅在显式 `APPROVAL_REQUIRED`、搜索解锁和全部 Loopback 前置满足时创建 Pending；它不启动 Worker、自动 Resume 或真实数据执行 |
 | R12 | Skills、MCP 扩展、Plugin 生命周期与受限记忆召回 | S1–S5 已实现并验证 | 默认关闭的只读 Skill Catalog、API v2 生命周期 Tap、deferred `read_skill` 与当前 Scope `recall_memory` 已缩小 Python 差距；MCP Assets 是 Java-owned 扩展。经 ADR-0029 审计，Python 不存在待迁移的 Skill Runner；远程 MCP、可变生命周期和记忆写入仍未开始 |
 | R13 | 多渠道、Dashboard 与控制面 | C0–C1、C2-A、C2-B、C3-C0 至 F3/M0 已完成；C4–C5 未开始 | 20 Case Fixture 已由默认关闭的本机 `GET /api/v1/control/index` 消费；22 Case C2-A Fixture 已由 `GET /api/v1/control/history` 消费；31 Case C2-B Fixture 已由零正文 `GET /api/v1/control/history/detail` 消费。C2-B 仅投影当前 Scope 的 role/time，默认 Scope Resolver/Port 拒绝，SQLite 仅在临时 Java 数据库/Fake 验证。C3 已选择并离线验证既有 Scope 受限 `forget_memory` 的受审批执行契约（54 个聚焦测试通过）；M0 明确不新增直接创建 Route、Memory 目标 Ref、Worker、真实数据或渠道。现有能力均在既有 Loopback/Bearer 后工作；没有用户/Python/生产历史读取、IPC、QQ、Feishu、Dashboard、前端、真实渠道或 CLI+Web；它们继续冻结或待单独批准 |
-| R14 | 主动、自动记忆与 Peer | P0–P5 已完成并验证（仅离线 Fake/静态 Catalog）；P6 Contract 已冻结 | P3 已为单个 `NOTE` 捕获完成独立 Approval/Anchor/AES-GCM Capsule 与 Fake Memory Recovery；P4 固定唯一 `LOCAL_FAKE` Manifest/Card、1,024 code points/5 秒/单并发预算、Fake Port 与取消恢复；P5 仅有两个 `DEFERRED` 空参数 Placeholder Schema。P6 只准在测试 `@TempDir` 以 Fake Embedding 演练 Java SQLite `NOTE` DML，尚未实现。均无 Bootstrap、生产 SQLite Adapter、网络、进程、真实投递或自动运行；自动提取/Optimizer、真实 Peer/A2A 与生产执行仍未开始 |
+| R14 | 主动、自动记忆与 Peer | P0–P5 已完成并验证（仅离线 Fake/静态 Catalog）；P6 已实现并通过三套阶段门禁 | P3 已为单个 `NOTE` 捕获完成独立 Approval/Anchor/AES-GCM Capsule 与 Fake Memory Recovery；P4 固定唯一 `LOCAL_FAKE` Manifest/Card、1,024 code points/5 秒/单并发预算、Fake Port 与取消恢复；P5 仅有两个 `DEFERRED` 空参数 Placeholder Schema。P6 只准在测试 `@TempDir` 以固定 Fake Embedding 演练 Java SQLite `NOTE` DML、Ledger 重放/强化及 `UNKNOWN`/`COMMIT_UNREPORTED` 恢复，测试结束删除临时目录。均无 Bootstrap、生产 SQLite Adapter、网络、进程、真实投递或自动运行；自动提取/Optimizer、真实 Peer/A2A 与生产执行仍未开始 |
 | R15 | 生产迁移与 Python 退役 | 计划已冻结 | R9 只有 sandbox 演练；生产副本、灰度、回退、观察及 Python 退役均需另行授权 |
 
 ## R0：治理、契约与跨语言基线

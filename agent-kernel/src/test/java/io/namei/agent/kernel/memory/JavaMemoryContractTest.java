@@ -34,7 +34,8 @@ class JavaMemoryContractTest {
             MemoryType.PREFERENCE,
             MemoryType.PROCEDURE,
             MemoryType.EVENT);
-    assertThat(MemorySourceKind.values()).containsExactly(MemorySourceKind.EXPLICIT_API);
+    assertThat(MemorySourceKind.values())
+        .containsExactly(MemorySourceKind.EXPLICIT_API, MemorySourceKind.PROACTIVE_APPROVED);
     assertThat(MemoryWriteStatus.values())
         .containsExactly(MemoryWriteStatus.CREATED, MemoryWriteStatus.REINFORCED);
     assertThat(MemoryDeleteStatus.values())
