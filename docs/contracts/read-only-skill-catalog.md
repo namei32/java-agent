@@ -6,7 +6,6 @@
 - Python 证据：`agent/skills.py`、`agent/core/prompt_block.py`、`skills/*/SKILL.md`
 - 关联 ADR：[ADR-0020：使用项目拥有的只读 Skill Catalog](../adr/0020-use-project-owned-read-only-skill-catalog.md)
 - 设计：[R12-S1 只读 Skill Catalog 设计](../specs/2026-07-19-r12-read-only-skill-catalog-design.md)
-- 计划：[R12-S1 只读 Skill Catalog 实施计划](../plans/2026-07-19-r12-read-only-skill-catalog-implementation.md)
 
 ## 1. 目标与非目标
 

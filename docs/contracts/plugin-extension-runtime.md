@@ -6,7 +6,6 @@
 - Python 基准：`agent/plugins/`
 - 关联 ADR：[ADR-0012：使用 ServiceLoader 与隔离 stdio Plugin Bridge](../adr/0012-use-service-loader-and-isolated-stdio-plugin-bridge.md)
 - 关联设计：[R7 插件扩展运行时设计](../specs/2026-07-18-plugin-extension-runtime-design.md)
-- 实施计划：[R7 插件扩展运行时计划](../plans/2026-07-18-r7-plugin-extension-runtime-implementation.md)
 
 ## 1. 目标与非目标
 

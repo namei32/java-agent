@@ -6,7 +6,6 @@
 - 批准记录：用户已批准并要求完整实现 R6 总体计划
 - Contract：[Provider Streaming 与本地 CLI 契约](../contracts/provider-streaming-cli.md)
 - ADR：[ADR-0008：使用项目自有同步流式观察协议桥接 Provider](../adr/0008-use-project-owned-synchronous-stream-observer.md)
-- 实施计划：[Provider Streaming 与本地 CLI 工作计划](../plans/2026-07-15-provider-streaming-cli-implementation.md)
 
 ## 1. 设计目标
 

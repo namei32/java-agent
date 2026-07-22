@@ -2,7 +2,7 @@
 
 - 状态：方案 B 已选择、实现并验证
 - 阶段：R10-P1
-- 前置：[R10 Provider 协议对齐计划](../plans/2026-07-19-r10-provider-protocol-alignment-plan.md)、[R10-P0 失败分类 Contract](../contracts/r10-provider-failure-classification.md)
+- 前置：[R10-P0 失败分类 Contract](../contracts/r10-provider-failure-classification.md)
 
 ## 1. 已验证事实
 

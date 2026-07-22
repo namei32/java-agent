@@ -4,9 +4,8 @@
 - 状态：已实现并验证
 - 日期：2026-07-19
 - Python 参考：`agent/scheduler.py` 的 `list_schedules`
-- 关联：[R8 主动运行时契约](proactive-runtime.md)、[R11-B2c 候选审计](../plans/2026-07-19-r11-first-side-effect-capability-selection.md)
+- 关联：[R8 主动运行时契约](proactive-runtime.md)、R11-B2c 候选审计
 - 关联设计：[本地 Proactive Job 只读检视设计](../specs/2026-07-19-r8-read-only-proactive-job-inspection-design.md)
-- 实施计划：[本地 Proactive Job 只读检视实施计划](../plans/2026-07-19-r8-read-only-proactive-job-inspection-implementation.md)
 
 ## 1. 目的与非等价声明
 

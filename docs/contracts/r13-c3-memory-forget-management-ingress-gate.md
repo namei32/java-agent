@@ -3,7 +3,6 @@
 - 阶段：R13-C3-M0
 - 状态：已冻结；用户于 2026-07-19 批准此最小权限决策
 - 前置：[R13-C3 首项受审批管理写入：Scope 受限 Memory Forget 执行契约](r13-c3-approved-memory-forget-execution.md)
-- 实施计划：[R13-C3 Scope 受限 Memory Forget 实施计划](../plans/2026-07-19-r13-c3-memory-forget-implementation-plan.md)
 - 关联 ADR：[ADR-0039：C3-M0 不新增直接 Memory Forget 管理入口](../adr/0039-keep-c3-memory-forget-creation-behind-approved-tool-producer.md)
 
 > C3-M0 的结论是：**不新增控制面创建 Forget 请求的入口。** 已有受审批的 `forget_memory` Tool/Chat

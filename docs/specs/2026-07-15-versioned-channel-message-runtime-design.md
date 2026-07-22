@@ -6,7 +6,6 @@
 - 批准记录：用户要求完成 MCP PR 与远程 CI 后，从 R6 的版本化 Message Contract Fixture 开始连续 TDD 实现
 - Contract：[版本化渠道消息与流式运行时契约](../contracts/versioned-channel-message-runtime.md)
 - ADR：[ADR-0007：采用项目自有的有界渠道消息协议](../adr/0007-use-project-owned-bounded-channel-message-protocol.md)
-- 实施计划：[版本化渠道消息 Contract Runtime 工作计划](../plans/2026-07-15-versioned-channel-message-runtime-implementation.md)
 
 ## 1. 目标与非目标
 

@@ -3,7 +3,6 @@
 - 状态：已实现并通过离线阶段门禁
 - Fixture：`testdata/golden/provider/r10-provider-failure-v1.json`
 - ADR：[ADR-0028](../adr/0028-classify-provider-rejections-at-adapter-boundary.md)
-- 关联计划：[R10 Provider 协议对齐](../plans/2026-07-19-r10-provider-protocol-alignment-plan.md)
 
 ## 范围
 

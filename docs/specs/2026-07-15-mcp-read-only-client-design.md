@@ -6,7 +6,6 @@
 - 阶段：R5.1
 - Contract：[MCP 只读客户端与 Tool Runtime 契约](../contracts/mcp-client-tool-runtime.md)
 - ADR：[ADR-0006：采用官方 MCP Java SDK 并自持有界 stdio Transport](../adr/0006-use-official-mcp-java-sdk.md)
-- 实施计划：[MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)
 
 ## 1. 目标
 

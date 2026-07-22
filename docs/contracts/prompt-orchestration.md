@@ -6,7 +6,6 @@
 - Python 基准：`agent/persona.py`、`prompts/agent.py`、`agent/context.py`、`agent/core/prompt_block.py`、`agent/prompting/assembler.py`、`agent/prompting/budget.py`
 - 关联 ADR：[ADR-0015：使用项目拥有的版本化 Prompt Section 模型](../adr/0015-use-versioned-prompt-section-model.md)
 - 关联设计：[R10 Prompt 编排设计](../specs/2026-07-18-prompt-orchestration-design.md)
-- 实施计划：[R10 Prompt 编排计划](../plans/2026-07-18-r10-prompt-orchestration-implementation.md)
 
 ## 1. 目标与范围
 

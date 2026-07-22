@@ -135,7 +135,7 @@ Python Reference Case 必须调用 Python 生产 `PromptBlock`/`PromptAssembler`
 
 ## 9. 完成门禁
 
-- Contract、Spec 和实施计划获批。
+- Contract、Spec 和实现范围获批。
 - Python 生产 helper 生成的 Golden 确定且 Java 兼容测试通过。
 - 只读 Adapter 对缺失、空白、UTF-8、路径逃逸、超限和零写入有测试。
 - Context Frame 顺序、临时性、Tool Loop 保留和提交隔离有测试。
@@ -156,6 +156,6 @@ Python Reference Case 必须调用 Python 生产 `PromptBlock`/`PromptAssembler`
 
 截至 2026-07-14，已实现并通过阶段门禁：Kernel Profile/Retrieval 协议、严格 UTF-8 的固定 Markdown 只读 Adapter、Python 共同投影的 `ContextAssembler`、Retrieval Fake 注入闭环、Tool Loop Frame 保留、Conversation 提交隔离、默认 `DISABLED` 的 Bootstrap 装配和脱敏 `502` 映射。
 
-生产 Retrieval 明确为 NoOp；`memory2.db`、Embedding、语义排序、Memory 写入、Optimizer、记忆 Tool 和真实 Workspace 演练均未实现，也未获本契约授权。准确门禁命令与测试数见实施计划 C8。
+生产 Retrieval 明确为 NoOp；`memory2.db`、Embedding、语义排序、Memory 写入、Optimizer、记忆 Tool 和真实 Workspace 演练均未实现，也未获本契约授权。历史门禁命令与测试数从对应提交和 CI 查询。
 
 后续决定（2026-07-15）：用户已明确旧 Python 语义记忆可以丢弃。R4.2 不再实现 `memory2.db` 兼容，而采用独立 Java 原生 `agent-memory.db`；该变化不回写或改变本契约已经完成的 R4.1 行为。

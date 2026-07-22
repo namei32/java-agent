@@ -8,7 +8,6 @@
 - 未授权范围：真实 Token、真实 Telegram 网络和真实用户数据
 - Contract：[Telegram Channel Host 契约](../contracts/telegram-channel-host.md)
 - ADR：[ADR-0009：Telegram 首渠道使用 JDK HttpClient 与 Bot API 长轮询](../adr/0009-use-jdk-httpclient-for-telegram-long-polling.md)
-- 实施计划：[Telegram Channel Host 工作计划](../plans/2026-07-16-telegram-channel-host-implementation.md)
 
 ## 1. 设计目标
 

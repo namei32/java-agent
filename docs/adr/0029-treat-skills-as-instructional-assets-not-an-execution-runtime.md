@@ -3,7 +3,7 @@
 - 状态：已接受
 - 日期：2026-07-19
 - 决策者：Namei Agent Java 迁移维护者
-- 关联：[ADR-0020：只读 Skill Catalog](0020-use-project-owned-read-only-skill-catalog.md)、[ADR-0024：按需读取 Skill 正文](0024-expose-audited-skill-content-through-a-deferred-read-only-tool.md)、[R11 Tool Capability 清单](../architecture/2026-07-19-python-tool-capability-parity-inventory.md)
+- 关联：[ADR-0020：只读 Skill Catalog](0020-use-project-owned-read-only-skill-catalog.md)、[ADR-0024：按需读取 Skill 正文](0024-expose-audited-skill-content-through-a-deferred-read-only-tool.md)
 
 ## 背景
 

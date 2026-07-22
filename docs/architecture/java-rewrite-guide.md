@@ -260,4 +260,4 @@ R4.1、R4.2、R5.1 与 R6.1–R6.4 已完成批准的离线范围并合入 `main
 3. 当前等待后端 Review/合并批准；CLI 因 Non-Web 契约、同步 `/api/v1/chat` 因无 Message Runtime、`EXECUTION_UNKNOWN` 因无存活执行，均不进入 V1 可控对象；
 4. 后端合入后另写 G11 前端 Contract，决定 React/Vite 资产归属和同源托管；真实 Telegram Smoke、远程访问、CLI+Web、R5.2 远程 MCP、真实副作用和主动能力继续等待各自独立授权。
 
-R5.1 的完成边界与验证证据见 [MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)，R6.1 的完成证据见[版本化渠道消息 Contract Runtime 工作计划](../plans/2026-07-15-versioned-channel-message-runtime-implementation.md)，R6.2 的完成证据见 [Provider Streaming 与本地 CLI 工作计划](../plans/2026-07-15-provider-streaming-cli-implementation.md)，R6.3 的离线完成证据见 [Telegram Channel Host 工作计划](../plans/2026-07-16-telegram-channel-host-implementation.md)，R6.4 的本地与远程离线完成证据见 [渠道可靠投递工作计划](../plans/2026-07-16-channel-reliable-delivery-implementation.md)。
+各阶段的当前状态以 [Java 重写 Roadmap](../roadmap/java-rewrite-roadmap.md) 为准；行为边界和验收依据保留在对应 Contract、ADR 与 Spec 中，历史执行证据从 Git 提交和 PR 查询。

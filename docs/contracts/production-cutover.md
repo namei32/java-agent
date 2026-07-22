@@ -5,7 +5,6 @@
 - 日期：2026-07-18
 - 关联 ADR：[ADR-0014：Python 退役前必须完成可回退演练](../adr/0014-require-rehearsal-before-python-retirement.md)
 - 关联设计：[R9 生产切换设计](../specs/2026-07-18-production-cutover-design.md)
-- 实施计划：[R9 生产切换计划](../plans/2026-07-18-r9-production-cutover-implementation.md)
 - Runbook：[生产切换离线演练手册](../runbooks/production-cutover-dry-run.md)
 
 ## 1. 范围

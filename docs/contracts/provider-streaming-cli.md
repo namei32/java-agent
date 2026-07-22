@@ -8,7 +8,6 @@
 - 前置契约：[版本化渠道消息与流式运行时契约](versioned-channel-message-runtime.md)
 - 关联 ADR：[ADR-0008：使用项目自有同步流式观察协议桥接 Provider](../adr/0008-use-project-owned-synchronous-stream-observer.md)
 - 关联设计：[Provider Streaming 与本地 CLI 设计](../specs/2026-07-15-provider-streaming-cli-design.md)
-- 实施计划：[Provider Streaming 与本地 CLI 工作计划](../plans/2026-07-15-provider-streaming-cli-implementation.md)
 
 ## 1. 目的
 

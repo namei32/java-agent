@@ -5,12 +5,11 @@
 - 日期：2026-07-16
 - 阶段：R6.4
 - 批准日期：2026-07-16
-- 批准记录：用户明确批准本 Contract、Spec、ADR 和实施计划，并授权从 F1 开始连续 TDD
+- 批准记录：用户明确批准本 Contract、Spec、ADR 和当时任务范围，并授权从 F1 开始连续 TDD
 - 前置契约：[版本化渠道消息与流式运行时契约](versioned-channel-message-runtime.md)
 - 前置契约：[Telegram Channel Host 契约](telegram-channel-host.md)
 - 关联 ADR：[ADR-0010：使用独立 Java SQLite 渠道账本与事务 Outbox](../adr/0010-use-dedicated-sqlite-channel-ledger.md)
 - 关联设计：[渠道可靠投递、幂等与恢复设计](../specs/2026-07-16-channel-reliable-delivery-design.md)
-- 实施计划：[R6.4 渠道可靠投递工作计划](../plans/2026-07-16-channel-reliable-delivery-implementation.md)
 - 运维草案：[渠道账本备份、恢复与回退手册](../runbooks/channel-ledger-backup-rollback.md)
 
 > 本次批准只授权离线 Java/SQLite 实现和 Loopback 故障注入。它不授权真实 Telegram Token、网络、用户数据、部署、自动重放整个 Turn、人工修改 UNKNOWN、消息中间件或 Exactly Once 声明。
@@ -379,7 +378,7 @@ Java-owned V1 Fixture 必须覆盖：
 
 只有同时满足以下条件，R6.4 才能标记“离线已实现”：
 
-1. 本 Contract、Spec、ADR、实施计划和 Schema 决策已获明确批准。
+1. 本 Contract、Spec、ADR、Schema 决策和实现范围已获明确批准。
 2. F1–F13 十三个实现任务均有有效 RED/GREEN 或项目规定的纯验收例外，并以单一目的提交。
 3. 重复、并发、启动失败、每个崩溃窗口、429、永久拒绝和 `UNKNOWN` 均有确定测试。
 4. 临时 V0 数据库的 Backup/Migration/Restore 演练通过；未访问真实 Workspace。

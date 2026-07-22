@@ -11,7 +11,6 @@
 - 前置契约：[渠道可靠投递、幂等与恢复契约](channel-reliable-delivery.md)
 - 关联 ADR：[ADR-0011：Loopback 控制面事件采用认证 SSE](../adr/0011-use-authenticated-sse-for-loopback-control-events.md)
 - 关联设计：[Loopback 控制面设计](../specs/2026-07-17-loopback-control-plane-design.md)
-- 实施计划：[R6.5 Loopback 控制面工作计划](../plans/2026-07-17-r6-loopback-control-plane-implementation.md)
 
 > 本契约只定义默认关闭、单 JVM、仅 Loopback 的 Java 控制面后端。它不授权公网或局域网暴露、反向代理、TLS 终止、远程身份、RBAC、真实用户数据、数据库 Reconcile、自动重跑 Turn、修改 Tool 权限或迁移 Python Dashboard 数据接口。
 

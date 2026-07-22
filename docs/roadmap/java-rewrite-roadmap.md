@@ -17,8 +17,8 @@
 4. 数据迁移必须先备份、可验证、可回退，禁止双写真实工作区。
 5. 每个阶段必须通过默认、失败路径和兼容性门禁，才可声明完成。
 
-本 Roadmap 按交付阶段保留证据；若需要按用户可见功能理解当前能力与下一步，请先阅读
-[全量对齐计划的功能模块总览](../plans/2026-07-18-java-parity-program.md#功能模块总览)。
+本 Roadmap 按交付阶段保留证据；若需要按用户可见功能理解当前能力与下一步，请同时阅读
+[Python/Java 能力差距矩阵](../architecture/python-java-capability-matrix.md)。
 
 ## 状态总览
 
@@ -130,7 +130,7 @@ R3.2 实现依据：
 
 - [Tool 审批、副作用、幂等与沙箱安全契约](../contracts/tool-approval-side-effect-safety.md)：一次性审批、整批零执行、幂等 Ledger、未知状态和逐工具沙箱门禁。
 - [Tool Approval Framework 设计](../specs/2026-07-14-tool-approval-framework-design.md)：生产 Deny All 的 Application Framework 和测试 Fake。
-- [Tool Approval Framework 实施计划](../plans/2026-07-14-tool-approval-framework-implementation.md)：Task A1 至 A9 已完成；不包含真实 Side Effect Tool。
+- Tool Approval Framework 的 A1 至 A9 已完成；不包含真实 Side Effect Tool。
 
 后续范围：
 
@@ -163,14 +163,12 @@ R4.1 设计依据：
 
 - [只读上下文与记忆兼容契约](../contracts/read-only-context-memory.md)
 - [只读 Context/Memory 纵向切片设计](../specs/2026-07-14-read-only-context-memory-design.md)
-- [只读 Context/Memory 实施计划](../plans/2026-07-14-read-only-context-memory-implementation.md)
 
 R4.2 已批准依据：
 
 - [Java 原生语义记忆、持久化与优化器契约](../contracts/semantic-memory-persistence-optimizer.md)
 - [ADR-0005：采用 Java 原生语义记忆库](../adr/0005-use-java-native-semantic-memory-store.md)
 - [Java 原生语义记忆纵向切片设计](../specs/2026-07-15-java-native-semantic-memory-design.md)
-- [Java 原生语义记忆实施计划](../plans/2026-07-15-java-native-semantic-memory-implementation.md)
 
 ## R5：MCP 与外部工具
 
@@ -187,7 +185,6 @@ R5.1 最终门禁通过：默认 284 个测试（270 单元、14 集成）、`fa
 - [MCP 只读客户端与 Tool Runtime 契约](../contracts/mcp-client-tool-runtime.md)
 - [ADR-0006：采用官方 MCP Java SDK 并自持有界 stdio Transport](../adr/0006-use-official-mcp-java-sdk.md)
 - [MCP 只读客户端纵向切片设计](../specs/2026-07-15-mcp-read-only-client-design.md)
-- [MCP 只读客户端纵向切片工作计划](../plans/2026-07-15-mcp-read-only-client-implementation.md)
 
 后续 R5 子阶段如需 Streamable HTTP、认证、真实 Server 或副作用 Tool，必须重新冻结相应网络、身份、审批、Ledger、沙箱和数据 Contract，不能沿用 R5.1 授权。
 
@@ -197,7 +194,7 @@ R5.1 最终门禁通过：默认 284 个测试（270 单元、14 集成）、`fa
 
 状态：R6.1–R6.4 已实现、验证并合入 `main`；R6.4 合并后 CI 稳定性修复也已通过 PR #8 和主分支三套门禁；R6.5 后端 G0–G10 与本地高风险 Review 修复已通过阶段门禁，PR #9 与合并提交的主分支三套 CI 均已全绿。真实 Telegram Smoke 与前端仍待独立授权，R6 整体仍在进行中。
 
-R6.1 至 R6.6 的实施顺序见 [R6 渠道、消息总线与控制面总体工作计划](../plans/2026-07-15-r6-channel-message-control-plane-master-plan.md)。总体计划已批准并进入实施，后续子阶段仍须先分别冻结 Contract、Spec、ADR 和实施计划。
+R6.1 至 R6.5 的后端切片已经完成；后续渠道或控制面功能仍须先明确当前功能边界，并在涉及行为、架构或高风险语义时冻结相应 Contract、Spec 与 ADR。
 
 R6.1 已交付：
 

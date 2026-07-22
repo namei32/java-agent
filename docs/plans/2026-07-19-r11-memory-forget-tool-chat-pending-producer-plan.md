@@ -2,7 +2,6 @@
 
 - 状态：已完成；P0–P6 已按连续 TDD 实现，默认、`failure`、`compat` 三套阶段门禁均已通过
 - 日期：2026-07-19
-- 前置实现：[Scope 受限 Memory Forget Capability 实施计划](2026-07-19-r11-memory-forget-capability-implementation.md)
 - 前置 Contract：[获批的 Scope 受限 Memory Forget Capability](../contracts/approved-scope-bound-memory-forget.md)
 
 ## 1. 为什么这是独立阶段

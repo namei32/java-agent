@@ -4,7 +4,7 @@
 - 状态：C0 Contract/Fixture 已冻结；其 C1 活跃 Turn/渠道健康投影已完成，历史表面仍未实现
 - Fixture：`testdata/golden/control-plane/r13-read-only-control-index-v1.json`
 - 复用 ADR：[ADR-0011](../adr/0011-use-authenticated-sse-for-loopback-control-events.md)
-- 前置：[Loopback 控制面 Contract](loopback-control-plane.md)、[R13 对齐计划](../plans/2026-07-19-r13-dashboard-channel-alignment-plan.md)
+- 前置：[Loopback 控制面 Contract](loopback-control-plane.md)
 
 ## 1. 范围
 

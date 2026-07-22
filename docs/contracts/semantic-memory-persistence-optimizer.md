@@ -344,7 +344,7 @@ R4.2 不实现上述 Optimizer 类、表、Bean、API 或后台任务。
 
 ## 10. 完成门禁
 
-- Contract、ADR、Spec、HTTP API 与实施计划明确获批。
+- Contract、ADR、Spec、HTTP API 与实现范围明确获批。
 - Java Contract Test 固定 Schema、Vector 编码、Hash、幂等、删除、cosine、Hotness、Scope 和 Injection；不调用 Python。
 - Kernel 只依赖 JDK；Spring AI 和 JDBC 类型不越界。
 - 新库、迁移备份、事务回滚、Mutation 幂等和物理删除有测试。
