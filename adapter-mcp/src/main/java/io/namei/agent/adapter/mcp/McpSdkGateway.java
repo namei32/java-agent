@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 import reactor.core.publisher.Mono;
 
-/** Package-private boundary around all reactive SDK operations used by the adapter. */
+/** 封装适配器所用全部响应式 SDK 操作的包内边界。 */
 final class McpSdkGateway implements AutoCloseable {
   private final McpAsyncClient client;
 

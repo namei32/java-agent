@@ -226,7 +226,7 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
           }
           switch (processUpdate(update)) {
             case SAFE -> {
-              // Continue this already bounded response batch.
+              // 继续处理这批已有边界限制的响应。
             }
             case STOPPED -> {
               return;
@@ -379,8 +379,7 @@ public final class TelegramChannelAdapter implements ChannelAdapter {
           new ObservedOutboundMessageSink(active.buffer(), active.controlRegistration()),
           active.buffer().cancellation());
     } catch (Throwable failure) {
-      // Consumer detects an absent terminal and fails closed; exception text is deliberately
-      // dropped.
+      // Consumer 会检测缺失的终态并关闭式失败；异常正文有意丢弃。
     } finally {
       active.producerFinished();
     }

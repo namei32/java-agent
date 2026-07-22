@@ -6,7 +6,7 @@ import java.util.Optional;
 public interface SkillCatalogPort {
   SkillCatalogSnapshot snapshot();
 
-  /** Returns an already audited, available Skill body without exposing a filesystem location. */
+  /** 返回已经审计且可用的 Skill 正文，不暴露文件系统位置。 */
   default Optional<SkillContent> readAvailable(String name) {
     return Optional.empty();
   }

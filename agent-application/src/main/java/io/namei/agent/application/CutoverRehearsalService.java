@@ -9,7 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-/** Moves only an offline rehearsal to READY. No method can enter a production cutover state. */
+/** 仅将离线演练推进到 READY；任何方法都不能进入生产切换状态。 */
 public final class CutoverRehearsalService {
   private final CutoverSandboxPort sandbox;
 

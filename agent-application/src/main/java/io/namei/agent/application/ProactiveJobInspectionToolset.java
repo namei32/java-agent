@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/** Deferred, read-only inspection of hash-safe active jobs from an already active local runtime. */
+/** 对已激活本地 Runtime 中 Hash 安全 Active Job 的 Deferred 只读检视。 */
 public final class ProactiveJobInspectionToolset {
   static final String VERSION = "local-proactive-inspect-v1";
   static final int DEFAULT_LIMIT = 16;

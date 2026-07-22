@@ -2,7 +2,7 @@ package io.namei.agent.kernel.memory;
 
 import java.util.Locale;
 
-/** Explicit activation modes for the bounded, read-only Java Native memory recall tool. */
+/** 有界只读 Java Native 记忆召回 Tool 的显式激活模式。 */
 public enum MemoryRecallMode {
   DISABLED,
   CURRENT_SCOPE_READ_ONLY;

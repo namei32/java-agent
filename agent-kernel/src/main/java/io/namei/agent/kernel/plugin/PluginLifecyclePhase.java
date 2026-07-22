@@ -1,6 +1,6 @@
 package io.namei.agent.kernel.plugin;
 
-/** Versioned, observation-only subset of the Python Plugin lifecycle. */
+/** Python Plugin 生命周期中版本化、仅观察的子集。 */
 public enum PluginLifecyclePhase {
   UNSPECIFIED,
   BEFORE_TURN,

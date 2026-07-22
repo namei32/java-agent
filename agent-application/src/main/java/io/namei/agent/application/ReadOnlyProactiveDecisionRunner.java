@@ -10,10 +10,7 @@ import java.time.Clock;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * P1's local-only decision chain. It never starts a Scheduler, invokes a model, writes Memory,
- * creates an Approval request, or calls a Delivery/Transport path.
- */
+/** P1 的仅本地决策链。它绝不启动 Scheduler、调用模型、写入 Memory、创建 Approval 请求或调用 Delivery/Transport 路径。 */
 public final class ReadOnlyProactiveDecisionRunner {
   private static final int MAX_DRIFT_SUMMARY_CODE_POINTS = 512;
 

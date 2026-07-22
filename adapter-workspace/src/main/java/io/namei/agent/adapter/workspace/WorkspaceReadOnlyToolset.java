@@ -5,7 +5,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 
-/** The explicitly enabled or empty workspace tool set. Disabled construction performs no I/O. */
+/** 显式启用或为空的 Workspace Tool 集；禁用状态下构造不会执行 I/O。 */
 public final class WorkspaceReadOnlyToolset {
   private static final WorkspaceReadOnlyToolset DISABLED = new WorkspaceReadOnlyToolset(List.of());
 

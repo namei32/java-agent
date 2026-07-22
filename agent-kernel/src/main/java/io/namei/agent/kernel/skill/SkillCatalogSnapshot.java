@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/** Immutable catalog and the selected always content from one consistent read. */
+/** 由一次一致性读取产生的不可变 Catalog 和已选 Always 内容。 */
 public record SkillCatalogSnapshot(
     List<SkillDescriptor> descriptors, List<SkillContent> activeContents) {
   public SkillCatalogSnapshot {

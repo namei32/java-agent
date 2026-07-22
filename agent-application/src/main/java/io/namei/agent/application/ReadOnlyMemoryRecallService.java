@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Bounded Java Native retrieval used solely by the current-scope read-only Tool. */
+/** 仅供当前 Scope 只读 Tool 使用的有界 Java Native 检索。 */
 public final class ReadOnlyMemoryRecallService {
   private final MemoryStorePort store;
   private final EmbeddingPort embeddings;

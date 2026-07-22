@@ -1,6 +1,6 @@
 package io.namei.agent.kernel.skill;
 
-/** Full text is only available to an already selected always Skill and is never a catalog field. */
+/** 完整正文仅向已选中的 Always Skill 提供，绝不是 Catalog 字段。 */
 public record SkillContent(String name, String body) {
   public static final int MAX_BODY_CODE_POINTS = 65_536;
 

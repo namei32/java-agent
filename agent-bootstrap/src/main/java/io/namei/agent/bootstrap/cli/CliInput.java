@@ -2,6 +2,6 @@ package io.namei.agent.bootstrap.cli;
 
 @FunctionalInterface
 public interface CliInput {
-  /** Returns the next line, or {@code null} at EOF. */
+  /** 返回下一行；到达 EOF 时返回 {@code null}。 */
   String readLine();
 }

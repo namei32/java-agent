@@ -4,11 +4,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Opaque, session-local message reference exposed to the model by the read-only conversation
- * evidence tools.
+ * 只读会话证据 Tool 向模型暴露的不透明 Session 本地消息引用。
  *
- * <p>The reference deliberately contains only a sequence number. It must never encode a session
- * key, route, sender, database identifier, or a Python-compatible source reference.
+ * <p>该引用有意仅包含序号，绝不能编码 Session Key、Route、Sender、数据库标识符或 Python-compatible Source 引用。
  */
 public record ConversationEvidenceReference(long sequence) {
   private static final String PREFIX = "msg-v1:";

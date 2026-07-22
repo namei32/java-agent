@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-/** Filesystem adapter restricted to a newly created, explicitly selected rehearsal sandbox. */
+/** 仅限新建且显式选择的演练 Sandbox 使用的文件系统适配器。 */
 public final class SandboxCutoverAdapter implements CutoverSandboxPort {
   private static final long MAX_ARTIFACT_BYTES = 64L * 1024 * 1024;
   private static final String SANDBOX_MARKER = ".namei-cutover-sandbox-v1";
@@ -315,7 +315,7 @@ public final class SandboxCutoverAdapter implements CutoverSandboxPort {
     try (Stream<Path> paths = Files.walk(path)) {
       paths.sorted(Comparator.reverseOrder()).forEach(SandboxCutoverAdapter::deleteOne);
     } catch (IOException ignored) {
-      // A failed staging cleanup does not conceal the primary error and is kept inside sandbox.
+      // 暂存区清理失败不能掩盖主错误，且影响必须限制在 Sandbox 内。
     }
   }
 
@@ -323,7 +323,7 @@ public final class SandboxCutoverAdapter implements CutoverSandboxPort {
     try {
       Files.deleteIfExists(path);
     } catch (IOException ignored) {
-      // Best-effort cleanup only.
+      // 仅作尽力清理。
     }
   }
 

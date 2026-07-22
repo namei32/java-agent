@@ -1,6 +1,6 @@
 package io.namei.agent.kernel.proactive;
 
-/** The R14 P0/P1 boundary has no durable automatic memory mutation. */
+/** R14 P0/P1 边界不具备持久自动 Memory 变更。 */
 public enum ProactiveMemoryMutation {
   NONE;
 

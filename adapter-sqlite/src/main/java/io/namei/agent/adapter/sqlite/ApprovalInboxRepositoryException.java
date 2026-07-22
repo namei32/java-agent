@@ -1,6 +1,6 @@
 package io.namei.agent.adapter.sqlite;
 
-/** Stable internal signal: callers must fail closed rather than invent an inbox outcome. */
+/** 稳定的内部信号：调用方必须关闭式失败，不能臆造 Inbox 结果。 */
 public final class ApprovalInboxRepositoryException extends RuntimeException {
   private ApprovalInboxRepositoryException(String message, Throwable cause) {
     super(message, cause);

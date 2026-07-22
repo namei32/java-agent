@@ -1,6 +1,6 @@
 package io.namei.agent.kernel.mcp;
 
-/** Explicit activation boundary for MCP resource and prompt catalog discovery. */
+/** MCP Resource 与 Prompt Catalog 发现的显式激活边界。 */
 public enum McpAssetCatalogMode {
   DISABLED,
   CATALOG_ONLY;

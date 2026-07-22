@@ -5,10 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 
-/**
- * Read-only existence checks. Implementations must not execute a binary or expose environment
- * values.
- */
+/** 只读存在性检查。实现不得执行二进制文件或暴露环境变量值。 */
 public interface SkillRequirementChecker {
   boolean binaryAvailable(String name);
 
@@ -33,7 +30,7 @@ public interface SkillRequirementChecker {
               return true;
             }
           } catch (RuntimeException ignored) {
-            // An invalid PATH item is unavailable; it must not affect another item.
+            // 无效 PATH 条目视为不可用，不能影响其他条目。
           }
         }
         return false;

@@ -3,7 +3,7 @@ package io.namei.agent.bootstrap.config;
 import io.namei.agent.kernel.memory.MemoryRecallMode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/** Strict, default-disabled activation for the bounded Java Native memory recall Tool. */
+/** 有界 Java Native 记忆召回 Tool 的严格、默认禁用激活配置。 */
 @ConfigurationProperties("agent.memory-recall")
 public record MemoryRecallProperties(String mode) {
   public MemoryRecallProperties {

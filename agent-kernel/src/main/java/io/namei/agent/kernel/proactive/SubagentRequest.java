@@ -2,10 +2,7 @@ package io.namei.agent.kernel.proactive;
 
 import java.util.Objects;
 
-/**
- * A one-shot, parent-bound task. Its shape deliberately contains no tools, network, memory or
- * session.
- */
+/** 一次性、绑定父任务的 Task；其结构有意不包含 Tool、网络、Memory 或 Session。 */
 public record SubagentRequest(ProactiveJobRef parentJobRef, String task, SubagentBudget budget) {
   public SubagentRequest {
     parentJobRef = Objects.requireNonNull(parentJobRef, "parentJobRef");

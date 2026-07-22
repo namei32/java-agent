@@ -54,6 +54,12 @@ import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import tools.jackson.databind.ObjectMapper;
 
+/**
+ * 使用 Spring AI 实现核心 {@link ChatModelPort} 的模型适配器。
+ *
+ * <p>负责把核心消息和工具定义转换为 Spring AI Prompt，把供应商响应投影回核心模型，并统一处理工具参数大小、推理内容、缓存用量、流式空闲超时、协作取消和供应商异常
+ * 分类。Spring AI 与 Reactor 类型均被限制在本模块内部。
+ */
 public final class SpringAiChatModelAdapter implements ChatModelPort {
   private static final ObjectMapper JSON = new ObjectMapper();
   private static final Duration DEFAULT_STREAM_IDLE_TIMEOUT = Duration.ofSeconds(30);
@@ -126,6 +132,12 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
         Objects.requireNonNull(trustedProviderOptions, "trustedProviderOptions");
   }
 
+  /**
+   * 执行非流式模型调用，并将空响应、上下文超限、安全拒绝和超时映射为核心异常。
+   *
+   * @param request 不含供应商类型的核心模型请求
+   * @return 校验并标准化后的核心模型响应
+   */
   @Override
   public ChatModelResponse generate(ChatModelRequest request) {
     Objects.requireNonNull(request, "request");
@@ -159,6 +171,11 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     }
   }
 
+  /**
+   * 执行流式模型调用，将增量发送给观察者，并在完成时聚合文本与 Tool Call。
+   *
+   * <p>取消信号会同时终止 Reactor Subscription 和底层 OpenAI 传输注册；若流在限定时间内没有事件，则按模型超时失败。
+   */
   @Override
   public ChatModelResponse generate(
       ChatModelRequest request, ChatModelStreamObserver observer, CancellationSignal cancellation) {
@@ -308,7 +325,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     if (!matcher.find()) {
       int opening = content.indexOf(THINK_OPEN);
       if (opening >= 0) {
-        // An unclosed thought is provider-private by default. Keep only the text preceding it.
+        // 未闭合的思考内容默认属于 Provider 私有数据，只保留它之前的文本。
         return new ReasoningProjection(content.substring(0, opening), Optional.empty());
       }
       if (content.contains(THINK_CLOSE)) {
@@ -319,8 +336,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     String rawReasoning = matcher.group(1);
     int firstEnd = matcher.end();
     String visible = matcher.replaceAll("");
-    // More than one segment is not a stable continuation protocol. Suppress every segment but
-    // never concatenate or replay an ambiguous provider thought.
+    // 多于一个片段不属于稳定的续接协议，因此屏蔽所有片段，绝不拼接或回放有歧义的 Provider 思考内容。
     boolean exactlyOne = !COMPLETE_THINK_SEGMENT.matcher(content.substring(firstEnd)).find();
     return new ReasoningProjection(
         visible, exactlyOne ? ProviderReasoning.from(rawReasoning) : Optional.empty());
@@ -333,10 +349,7 @@ public final class SpringAiChatModelAdapter implements ChatModelPort {
     }
   }
 
-  /**
-   * Removes provider-private {@code <think>} content before a delta reaches any observer. It also
-   * preserves at most one bounded, fully closed segment for the in-memory Tool continuation.
-   */
+  /** 在增量到达任何观察者前移除 Provider 私有的 {@code <think>} 内容，同时最多保留一个有界且完整闭合的片段，供内存内 Tool 续接使用。 */
   private static final class ReasoningDeltaProjector {
     private static final int MAX_REASONING_CHARS = ProviderReasoning.MAX_CODE_POINTS * 2;
 

@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/** Contract definition for the bounded, read-only workspace file projection. */
+/** 有界只读 Workspace 文件投影的契约定义。 */
 public final class ReadWorkspaceFileTool implements Tool {
   private static final ToolDefinition DEFINITION =
       new ToolDefinition(

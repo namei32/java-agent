@@ -1,6 +1,6 @@
 package io.namei.agent.kernel.model;
 
-/** A content-free aggregate emitted only after an application turn has committed successfully. */
+/** 仅在 Application Turn 成功提交后发出的无内容聚合数据。 */
 public record ProviderTurnUsage(int modelCallCount, Long cachePromptTokens, Long cacheHitTokens) {
   public ProviderTurnUsage {
     if (modelCallCount < 0) {

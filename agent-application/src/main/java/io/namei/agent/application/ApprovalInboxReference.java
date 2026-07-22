@@ -4,7 +4,7 @@ import java.util.Base64;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/** Opaque, independently generated reference exposed by the local approval inbox. */
+/** 本地 Approval Inbox 暴露的、不透明且独立生成的引用。 */
 public record ApprovalInboxReference(String value) {
   private static final Pattern BASE64_URL_128_BIT = Pattern.compile("[A-Za-z0-9_-]{22}");
 

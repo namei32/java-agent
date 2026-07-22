@@ -3,7 +3,7 @@ package io.namei.agent.kernel.proactive;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/** An opaque local Fake identity; it has no URL, command, environment, or Agent Card. */
+/** 不透明的本地 Fake 身份；它没有 URL、命令、环境或 Agent Card。 */
 public record PeerIdentity(PeerTrust trust, String peerRef) {
   private static final Pattern REFERENCE = Pattern.compile("[a-z][a-z0-9-]{0,62}");
 

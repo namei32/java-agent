@@ -2,10 +2,7 @@ package io.namei.agent.kernel.proactive;
 
 import java.util.Objects;
 
-/**
- * P0 can expose a request for approval but has no route to authorize or perform delivery. Transport
- * wiring remains a later, separately approved capability.
- */
+/** P0 可以暴露 Approval 请求，但没有授权或执行投递的路径。Transport 接线仍属于后续单独批准的 Capability。 */
 public record ProactiveDeliveryBoundary(Disposition disposition) {
   public enum Disposition {
     NOT_REQUESTED,

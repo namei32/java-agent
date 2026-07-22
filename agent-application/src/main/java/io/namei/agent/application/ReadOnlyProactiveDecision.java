@@ -5,10 +5,7 @@ import io.namei.agent.kernel.proactive.ProactiveStableCode;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * Safe P1 projection. It deliberately cannot contain Source/Drift text, an approval reference,
- * target identity, message body, or a delivery capability.
- */
+/** 安全的 P1 投影。它有意禁止包含 Source/Drift 正文、Approval 引用、目标身份、消息正文或投递能力。 */
 public record ReadOnlyProactiveDecision(Kind kind, Optional<ProactiveStableCode> code) {
   public enum Kind {
     SKIPPED,
@@ -44,7 +41,7 @@ public record ReadOnlyProactiveDecision(Kind kind, Optional<ProactiveStableCode>
             : ProactiveDeliveryBoundary.Disposition.NOT_REQUESTED);
   }
 
-  /** P1 has no Memory port, so a projection cannot cause a mutation. */
+  /** P1 没有 Memory Port，因此投影不能引发变更。 */
   public int memoryMutationCount() {
     return 0;
   }

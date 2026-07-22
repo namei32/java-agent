@@ -13,6 +13,12 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.Objects;
 
+/**
+ * 从 Workspace 固定 Markdown 文件读取静态记忆画像的适配器。
+ *
+ * <p>只允许访问 {@code memory/SELF.md}、{@code MEMORY.md} 和 {@code RECENT_CONTEXT.md}，解析真实路径后再次确认目标仍位于
+ * Workspace 内，并对文件大小与 UTF-8 编码关闭式校验，从而阻止符号链接逃逸和无界读取。
+ */
 public final class MarkdownMemoryProfileAdapter implements MemoryProfilePort {
   private static final String RECENT_TURNS_MARKER = "\n## Recent Turns";
 
@@ -27,6 +33,7 @@ public final class MarkdownMemoryProfileAdapter implements MemoryProfilePort {
     this.maxFileBytes = maxFileBytes;
   }
 
+  /** 读取并组合当前记忆画像；目录或文件不存在时返回对应空段，安全校验失败时抛出统一访问异常。 */
   @Override
   public MemoryProfile load() {
     try {

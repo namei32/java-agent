@@ -3,7 +3,7 @@ package io.namei.agent.kernel.evidence;
 import java.util.List;
 import java.util.Objects;
 
-/** A bounded, ordered current-session search page plus its non-sensitive page metadata. */
+/** 有界有序的当前 Session 搜索页及其非敏感分页元数据。 */
 public record ConversationEvidencePage(
     List<ConversationEvidenceMessage> messages, int matchedCount, boolean hasMore) {
   public ConversationEvidencePage {

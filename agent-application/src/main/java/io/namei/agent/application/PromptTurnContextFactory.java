@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Objects;
 
-/** Creates channel-owned prompt metadata without inferring values from user content. */
+/** 创建 Channel 自持的 Prompt 元数据，不从用户内容推断值。 */
 public final class PromptTurnContextFactory {
   private final Clock clock;
   private final ZoneId zoneId;

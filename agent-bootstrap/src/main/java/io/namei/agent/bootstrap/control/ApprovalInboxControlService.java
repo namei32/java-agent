@@ -7,7 +7,7 @@ import io.namei.agent.application.ApprovalInboxResolution;
 import java.time.Clock;
 import java.util.Objects;
 
-/** Control-plane facade; it can decide an inbox entry but cannot resume a tool or a turn. */
+/** 控制面 Facade；它可以对 Inbox 条目作出决议，但不能恢复 Tool 或 Turn。 */
 public final class ApprovalInboxControlService {
   private static final int LIST_LIMIT = 64;
 

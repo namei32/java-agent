@@ -8,9 +8,8 @@ public interface PendingOperationCapsuleCipher {
       PendingOperation operation, EncryptedPendingOperationCapsule encrypted);
 
   /**
-   * Decrypts only after authenticating the non-sensitive persisted binding. Callers must rebuild
-   * the complete {@link PendingOperation} and invoke {@link PendingOperationCapsule#matches} before
-   * use.
+   * 仅在认证非敏感持久绑定后解密。调用方必须重建完整的 {@link PendingOperation}。 使用前必须通过 {@link
+   * PendingOperationCapsule#matches} 完成匹配校验。
    */
   PendingOperationCapsule decryptBound(
       PendingOperationCapsuleBinding binding, EncryptedPendingOperationCapsule encrypted);

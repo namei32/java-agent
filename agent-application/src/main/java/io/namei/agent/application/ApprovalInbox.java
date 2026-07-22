@@ -3,10 +3,7 @@ package io.namei.agent.application;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Durable, local-only inbox boundary. It records a decision but intentionally never executes a tool
- * or resumes a turn.
- */
+/** 仅限本地的持久 Inbox 边界。它记录决议，但有意永不执行 Tool 或恢复 Turn。 */
 public interface ApprovalInbox {
   ApprovalInboxEntry create(ApprovalInboxEntry pending);
 

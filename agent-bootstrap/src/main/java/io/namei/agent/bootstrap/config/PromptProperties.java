@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
-/** Bounded, opt-in configuration for the versioned prompt compiler. */
+/** 版本化 Prompt 编译器使用的有界、显式选择加入配置。 */
 @ConfigurationProperties("agent.prompt")
 public final class PromptProperties {
   private final PromptMode mode;

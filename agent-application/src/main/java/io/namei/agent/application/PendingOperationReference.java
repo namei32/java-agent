@@ -4,7 +4,7 @@ import java.util.Base64;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/** Opaque operation reference. It is distinct from approval, turn, and session identifiers. */
+/** 不透明的 Operation 引用，与 Approval、Turn 和 Session 标识符相互独立。 */
 public record PendingOperationReference(String value) {
   private static final Pattern BASE64_URL_128_BIT = Pattern.compile("[A-Za-z0-9_-]{22}");
 

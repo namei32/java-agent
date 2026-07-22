@@ -4,6 +4,21 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
 
+/**
+ * MCP 运行时的资源与安全预算。
+ *
+ * @param mode 启动模式
+ * @param configFile 静态只读模式使用的绝对配置路径
+ * @param maxServers Server 数量上限
+ * @param maxToolsPerServer 单个 Server 可发布的工具上限
+ * @param maxListPages 工具/资产发现允许翻页的上限
+ * @param connectTimeout Server 初始化连接期限
+ * @param requestTimeout 单次 MCP 请求期限
+ * @param shutdownTimeout 关闭单个 Server 的等待期限
+ * @param maxSchemaBytes 单个工具 Schema 字节上限
+ * @param maxWireBytes 单条协议消息字节上限
+ * @param maxConcurrentCallsPerServer 单个 Server 的并发调用上限
+ */
 public record McpSettings(
     McpMode mode,
     Path configFile,

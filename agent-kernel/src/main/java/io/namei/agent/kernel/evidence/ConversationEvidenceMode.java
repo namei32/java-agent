@@ -1,6 +1,6 @@
 package io.namei.agent.kernel.evidence;
 
-/** Strict, default-disabled bootstrap modes for current-session conversation evidence. */
+/** 当前 Session 会话证据使用的严格、默认禁用 Bootstrap 模式。 */
 public enum ConversationEvidenceMode {
   DISABLED,
   CURRENT_SESSION_READ_ONLY;

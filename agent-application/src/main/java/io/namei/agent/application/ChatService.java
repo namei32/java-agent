@@ -25,6 +25,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Agent 被动对话主流程的应用服务。
+ *
+ * <p>该类在单个会话执行门内依次完成：加载历史、组装记忆和提示词、调用模型/工具循环、处理上下文超限恢复、检查取消、原子提交完整 Turn，并发布生命周期与 Provider
+ * Usage。任何模型或工具异常都会在提交前终止，避免产生半个轮次。
+ */
 public final class ChatService implements ChatUseCase {
   private final SessionRepository sessions;
   private final ConversationHistorySelector historySelector;
@@ -87,7 +93,7 @@ public final class ChatService implements ChatUseCase {
         ToolRuntimeSettings.readOnlyDefaults());
   }
 
-  /** Test-friendly opt-in constructor for the R10-P3 local recovery path. */
+  /** 供 R10-P3 本地恢复路径测试使用的显式选择加入构造器。 */
   public ChatService(
       SessionRepository sessions,
       ChatModelPort model,
@@ -115,7 +121,7 @@ public final class ChatService implements ChatUseCase {
         ProviderUsageObserver.disabled());
   }
 
-  /** Test-friendly opt-in constructor for anonymous committed-turn provider usage observation. */
+  /** 供匿名已提交 Turn Provider Usage 观察测试使用的显式选择加入构造器。 */
   public ChatService(
       SessionRepository sessions,
       ChatModelPort model,
@@ -636,11 +642,19 @@ public final class ChatService implements ChatUseCase {
             pendingToolset);
   }
 
+  /** 使用默认的不可取消句柄执行对话。 */
   @Override
   public ChatResult chat(ChatCommand command) {
     return chat(command, TurnCancellation.none());
   }
 
+  /**
+   * 在会话级执行门内运行对话，防止同一 Session 的历史读取和提交发生竞争。
+   *
+   * @param command 用户输入及会话上下文
+   * @param cancellation 可由渠道或控制面触发的协作取消句柄
+   * @return 已成功持久化的助手结果
+   */
   @Override
   public ChatResult chat(ChatCommand command, TurnCancellation cancellation) {
     Objects.requireNonNull(command, "command");
@@ -648,6 +662,7 @@ public final class ChatService implements ChatUseCase {
     return gate.execute(command.sessionId(), () -> execute(command, cancellation));
   }
 
+  /** 执行带流式进度回调的对话。进度只用于外部展示，最终返回前仍会执行取消检查和原子持久化。 */
   @Override
   public ChatResult chat(
       ChatCommand command, TurnCancellation cancellation, ChatProgressListener progressListener) {
@@ -662,6 +677,7 @@ public final class ChatService implements ChatUseCase {
     return execute(command, cancellation, null);
   }
 
+  /** 执行门内部的完整轮次事务边界；只有模型、工具和取消检查全部成功后才写入会话。 */
   private ChatResult execute(
       ChatCommand command, TurnCancellation cancellation, ChatProgressListener progressListener) {
     lifecycle.emit(TurnLifecycleEvent.turnStarted());
@@ -711,6 +727,11 @@ public final class ChatService implements ChatUseCase {
     }
   }
 
+  /**
+   * 按恢复策略逐步缩减历史并重试上下文超限失败。
+   *
+   * <p>仅 {@link ModelContextLimitException} 可以进入下一恢复方案，其他失败保持原语义直接抛出。
+   */
   private ToolLoopCompletion completeWithContextLimitRecovery(
       ChatCommand command,
       List<ChatMessage> fullHistory,
@@ -827,7 +848,7 @@ public final class ChatService implements ChatUseCase {
     try {
       providerUsageObserver.onCommittedTurn(usageCollector.snapshot());
     } catch (RuntimeException ignored) {
-      // Observation is intentionally best effort and cannot roll back a committed turn.
+      // 观察有意仅作尽力执行，不能回滚已提交 Turn。
     }
   }
 

@@ -2,10 +2,7 @@ package io.namei.agent.kernel.proactive;
 
 import java.util.Objects;
 
-/**
- * The complete durable-state transition table. Lease recovery returns an uncommitted claim to
- * {@link ProactiveJobState#SCHEDULED}; it never reopens a terminal job.
- */
+/** 完整的持久状态转换表。Lease 恢复会将未提交 Claim 返回到 {@link ProactiveJobState#SCHEDULED}，绝不重新打开终态 Job。 */
 public final class ProactiveJobTransition {
   private ProactiveJobTransition() {}
 

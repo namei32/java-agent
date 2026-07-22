@@ -3,7 +3,7 @@ package io.namei.agent.kernel.proactive;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Only a bounded safe projection leaves the read-only diagnostic boundary. */
+/** 只有有界安全投影可以离开只读诊断边界。 */
 public record DriftResult(Status status, Optional<String> safeSummary) {
   public enum Status {
     CLEAN,

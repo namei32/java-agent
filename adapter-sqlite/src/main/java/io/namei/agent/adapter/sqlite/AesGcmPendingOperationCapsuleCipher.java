@@ -22,7 +22,7 @@ import java.util.Objects;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 
-/** AES-256-GCM adapter for the isolated pending-operation capsule boundary. */
+/** 隔离 Pending Operation 胶囊边界的 AES-256-GCM 适配器。 */
 public final class AesGcmPendingOperationCapsuleCipher implements PendingOperationCapsuleCipher {
   private static final int NONCE_BYTES = 12;
   private static final int TAG_BITS = 128;

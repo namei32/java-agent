@@ -2,7 +2,7 @@ package io.namei.agent.adapter.mcp;
 
 import java.util.Objects;
 
-/** Aggregate runtime status without server names, commands, paths, or error details. */
+/** 不包含 Server 名称、命令、路径或错误详情的聚合运行状态。 */
 public record McpRuntimeStatus(
     State state,
     int configuredServers,

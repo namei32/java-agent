@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Objects;
 
-/** Resolves a single workspace-relative object without accepting links or a changed root. */
+/** 解析单个 Workspace 相对对象，不接受链接或发生变化的 Root。 */
 final class WorkspacePathResolver {
   private final Path configuredRoot;
   private final Path realRoot;

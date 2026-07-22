@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
-/** Default-disabled configuration for the bounded Java-owned workspace read tools. */
+/** Java 自持有界 Workspace 读取 Tool 的默认禁用配置。 */
 @ConfigurationProperties("agent.workspace-tools")
 public final class WorkspaceToolProperties {
   private final WorkspaceToolMode mode;
@@ -35,7 +35,7 @@ public final class WorkspaceToolProperties {
     return mode;
   }
 
-  /** Parses a Root only after the caller has explicitly elected READ_ONLY mode. */
+  /** 仅在调用方显式选择 READ_ONLY 模式后解析 Root。 */
   public Path root() {
     if (root.isBlank()) {
       throw new IllegalArgumentException("agent.workspace-tools.root 必填");

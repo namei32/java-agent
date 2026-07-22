@@ -3,10 +3,7 @@ package io.namei.agent.application;
 import io.namei.agent.kernel.model.ChatModelResponse;
 import io.namei.agent.kernel.model.ProviderTurnUsage;
 
-/**
- * Turn-local collector; it intentionally retains no model content, identity, or provider-native
- * data.
- */
+/** Turn 本地 Collector；它有意不保留模型内容、身份或 Provider Native 数据。 */
 final class ProviderTurnUsageCollector {
   private int modelCallCount;
   private long cachePromptTokens;

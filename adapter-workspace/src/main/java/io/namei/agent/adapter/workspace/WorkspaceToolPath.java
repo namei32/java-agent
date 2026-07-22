@@ -3,7 +3,7 @@ package io.namei.agent.adapter.workspace;
 import java.nio.file.Path;
 import java.util.ArrayList;
 
-/** A normalized, root-relative POSIX path that contains no navigation or control segments. */
+/** 已规范化、相对 Root，且不含导航或控制片段的 POSIX 路径。 */
 public record WorkspaceToolPath(String value) {
   public WorkspaceToolPath {
     validate(value);

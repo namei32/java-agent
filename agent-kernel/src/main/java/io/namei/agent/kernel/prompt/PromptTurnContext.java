@@ -5,7 +5,7 @@ import java.time.ZoneId;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/** Immutable, validated metadata supplied by the channel for one prompt assembly. */
+/** Channel 为单次 Prompt 组装提供的不可变、已校验元数据。 */
 public record PromptTurnContext(
     Instant requestTime, ZoneId zoneId, String channel, String sessionId) {
   private static final String UNKNOWN = "unknown";

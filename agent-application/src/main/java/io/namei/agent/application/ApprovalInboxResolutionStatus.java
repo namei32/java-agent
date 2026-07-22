@@ -1,6 +1,6 @@
 package io.namei.agent.application;
 
-/** Stable result of an atomic approval-inbox decision attempt. */
+/** Approval Inbox 原子决议尝试的稳定结果。 */
 public enum ApprovalInboxResolutionStatus {
   RESOLVED,
   NOT_FOUND,

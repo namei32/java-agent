@@ -23,6 +23,11 @@ import java.util.concurrent.TimeoutException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+/**
+ * 使用 JDK {@link java.net.http.HttpClient} 调用 Telegram Bot API 的最小客户端。
+ *
+ * <p>客户端实现 getUpdates 长轮询和 sendMessage，禁止重定向，并分别限制连接、请求、响应体和消息长度。Bot Token 由专用值对象持有，不写入日志或异常文本。
+ */
 public final class JdkTelegramBotApi implements TelegramBotApi {
   public static final int MAX_POLL_RESPONSE_BYTES = 1024 * 1024;
   public static final int MAX_SEND_RESPONSE_BYTES = 64 * 1024;
@@ -70,6 +75,13 @@ public final class JdkTelegramBotApi implements TelegramBotApi {
             .build();
   }
 
+  /**
+   * 主动长轮询 Telegram 的 {@code getUpdates} 接口。
+   *
+   * @param offset 下一条期望 Update ID；成功处理后调用方负责推进
+   * @param longPollTimeout Telegram 服务端等待新消息的时间，必须短于 HTTP 请求超时
+   * @return 最多 20 条已经完成边界校验的更新
+   */
   @Override
   public List<TelegramUpdate> getUpdates(long offset, Duration longPollTimeout) {
     if (offset < 0) {
@@ -104,6 +116,13 @@ public final class JdkTelegramBotApi implements TelegramBotApi {
     return List.copyOf(updates);
   }
 
+  /**
+   * 向指定 Telegram Chat 发送纯文本消息。
+   *
+   * @param chatId Telegram 正整数 Chat ID
+   * @param text 不超过 Telegram 上限的消息正文
+   * @return Telegram 返回的消息回执
+   */
   @Override
   public TelegramSendReceipt sendMessage(long chatId, String text) {
     if (chatId <= 0) {
@@ -404,7 +423,7 @@ public final class JdkTelegramBotApi implements TelegramBotApi {
     try {
       input.close();
     } catch (IOException ignored) {
-      // Closing is best-effort after the public result has already been fixed.
+      // 公开结果已经确定后，关闭仅作尽力执行。
     }
   }
 

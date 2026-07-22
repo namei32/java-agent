@@ -190,7 +190,7 @@ public final class JavaMemorySchemaInitializer {
       try {
         connection.setAutoCommit(true);
       } catch (SQLException ignored) {
-        // Connection closes immediately; a prior failure remains the primary signal.
+        // 连接会立即关闭，先前失败仍作为主要信号。
       }
     }
   }

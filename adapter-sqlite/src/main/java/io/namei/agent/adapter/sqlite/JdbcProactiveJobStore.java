@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/** SQLite implementation whose short transactions never include planner or delivery execution. */
+/** 短事务中绝不包含规划器或投递执行的 SQLite 实现。 */
 public final class JdbcProactiveJobStore implements ProactiveJobStore, ProactiveJobInspectionPort {
   private final ProactiveSchemaInitializer schema;
   private final Clock clock;

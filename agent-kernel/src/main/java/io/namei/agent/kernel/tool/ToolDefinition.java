@@ -4,6 +4,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+/**
+ * 模型可见的工具契约定义。
+ *
+ * @param name 稳定工具名称，只允许安全字符且最长 64 个字符
+ * @param description 帮助模型判断调用时机的非空说明
+ * @param inputSchema 顶层类型必须为 object 的不可变 JSON Schema
+ * @param risk 工具声明的副作用风险等级
+ * @param version 参与审批指纹和兼容判断的工具版本
+ */
 public record ToolDefinition(
     String name,
     String description,

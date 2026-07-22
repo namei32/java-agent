@@ -16,7 +16,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
-/** SQLite-backed, read-only evidence projection scoped by an already-bound session key. */
+/** 由 SQLite 支持、限定在已绑定 Session Key 内的只读证据投影。 */
 public final class JdbcConversationEvidenceRepository implements ConversationEvidencePort {
   static final int MAX_SEARCH_CANDIDATES = 2_048;
 

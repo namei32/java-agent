@@ -4,7 +4,7 @@ import java.util.Locale;
 import java.util.Map;
 import org.springframework.ai.openai.OpenAiChatOptions;
 
-/** Strict Java-owned, text-only Provider options. It never accepts a free-form provider body. */
+/** Java 自持的严格纯文本 Provider 选项，绝不接受自由格式的 Provider 请求体。 */
 final class TrustedProviderOptions {
   private final Profile profile;
   private final ThinkingMode thinkingMode;

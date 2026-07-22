@@ -1,6 +1,6 @@
 package io.namei.agent.application;
 
-/** Stable fail-closed signal for an unavailable or unauthenticated pending-operation store. */
+/** Pending Operation Store 不可用或认证失败时使用的稳定关闭式失败信号。 */
 public final class PendingOperationStoreException extends RuntimeException {
   public PendingOperationStoreException() {
     super("待审批操作存储不可用");

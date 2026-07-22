@@ -5,6 +5,26 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+/**
+ * 表示一次具有副作用的工具调用审批请求。
+ *
+ * <p>请求只保存调用绑定、摘要和哈希，不保存原始参数。构造时会验证有效期、风险等级、SHA-256 字段及 Fingerprint 版本，从而保证审批决定只能绑定到同一次工具调用。
+ *
+ * @param approvalId 审批请求标识
+ * @param sessionBinding 会话标识的安全绑定值，不应使用原始会话 ID
+ * @param turnId 发起审批的轮次标识
+ * @param callId 模型工具调用标识
+ * @param toolName 工具名称
+ * @param toolVersion 工具版本
+ * @param risk 工具风险等级，只允许需要审批的非只读等级
+ * @param argumentsHash 规范化工具参数的 SHA-256
+ * @param idempotencyKey 防止副作用重复提交的幂等键
+ * @param summary 面向审批人的安全摘要
+ * @param issuedAt 审批签发时间
+ * @param expiresAt 审批失效时间，必须晚于签发时间
+ * @param fingerprintVersion 调用指纹协议版本
+ * @param fingerprint 审批关键字段计算得到的 SHA-256 指纹
+ */
 public record ApprovalRequest(
     String approvalId,
     String sessionBinding,

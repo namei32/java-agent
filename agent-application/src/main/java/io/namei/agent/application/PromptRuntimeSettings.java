@@ -5,7 +5,7 @@ import io.namei.agent.kernel.prompt.PromptMode;
 import java.time.ZoneId;
 import java.util.Objects;
 
-/** Runtime-only settings supplied by Bootstrap after strict configuration binding. */
+/** Bootstrap 完成严格配置绑定后提供的仅 Runtime 设置。 */
 public record PromptRuntimeSettings(PromptMode mode, PromptBudget budget, ZoneId zoneId) {
   public PromptRuntimeSettings {
     mode = Objects.requireNonNull(mode, "mode");

@@ -4,7 +4,7 @@ import io.namei.agent.kernel.proactive.DriftRequest;
 import io.namei.agent.kernel.proactive.DriftResult;
 import java.util.Objects;
 
-/** Enforces cancellation and safe projection around an otherwise read-only diagnostic probe. */
+/** 在只读诊断 Probe 外围强制实施取消与安全投影。 */
 public final class ReadOnlyDriftRunner {
   private final ReadOnlyDriftProbe probe;
 

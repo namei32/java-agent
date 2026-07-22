@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-/** Reads only a named, already audited and available R12 Skill body. */
+/** 只读取指定名称且已经审计、确认可用的 R12 Skill 正文。 */
 public final class ReadSkillTool implements Tool {
   private static final ToolDefinition DEFINITION =
       new ToolDefinition(

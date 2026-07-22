@@ -107,7 +107,7 @@ class ProactiveJobInspectionToolsetTest {
         case "tool" -> verifyToolFixtureCase(testCase);
         case "projection" -> verifyProjectionFixtureCase(testCase);
         default -> {
-          // Kernel, SQLite and Bootstrap tests consume their own Fixture groups.
+          // Kernel、SQLite 和 Bootstrap 测试分别消费各自的 Fixture 分组。
         }
       }
     }

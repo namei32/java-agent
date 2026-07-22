@@ -1,5 +1,21 @@
 package io.namei.agent.kernel.channel;
 
+/**
+ * 表示 Agent 发往外部渠道的有序消息事件。
+ *
+ * <p>同一轮次必须先发送序号为 0 的 Started，随后使用正数序号发送增量和唯一终态。构造器会校验消息类型与 content、code、retryable
+ * 之间的组合，避免渠道适配器收到模糊状态。
+ *
+ * @param schemaVersion 消息协议版本
+ * @param turnId 所属 Agent 轮次
+ * @param sessionId 所属内部会话
+ * @param route 渠道投递目标
+ * @param sequence 轮次内严格递增的序号
+ * @param type 消息事件类型
+ * @param content 文本载荷，仅增量和完成事件允许携带
+ * @param code 取消或失败的稳定代码
+ * @param retryable 失败是否适合重试，必须与失败代码定义一致
+ */
 public record OutboundMessage(
     int schemaVersion,
     String turnId,
@@ -30,6 +46,7 @@ public record OutboundMessage(
     validatePayload(sequence, type, content, code, retryable);
   }
 
+  /** 创建轮次开始事件；它固定使用序号 0 且不携带正文。 */
   public static OutboundMessage started(String turnId, String sessionId, MessageRoute route) {
     return new OutboundMessage(
         MessageContract.CURRENT_VERSION,
@@ -43,6 +60,7 @@ public record OutboundMessage(
         false);
   }
 
+  /** 创建一段流式正文增量；调用方负责提供严格递增的正数序号。 */
   public static OutboundMessage delta(
       String turnId, String sessionId, MessageRoute route, long sequence, String content) {
     return new OutboundMessage(
@@ -57,6 +75,7 @@ public record OutboundMessage(
         false);
   }
 
+  /** 创建成功终态；正文必须非空，发送后不得再产生该轮次事件。 */
   public static OutboundMessage completed(
       String turnId, String sessionId, MessageRoute route, long sequence, String content) {
     return new OutboundMessage(
@@ -71,6 +90,7 @@ public record OutboundMessage(
         false);
   }
 
+  /** 创建取消终态，并把内部取消原因投影为稳定渠道代码。 */
   public static OutboundMessage cancelled(
       String turnId,
       String sessionId,
@@ -92,6 +112,7 @@ public record OutboundMessage(
         false);
   }
 
+  /** 创建失败终态；可重试性由 {@link TurnFailureCode} 决定。 */
   public static OutboundMessage failed(
       String turnId, String sessionId, MessageRoute route, long sequence, TurnFailureCode code) {
     if (code == null) {

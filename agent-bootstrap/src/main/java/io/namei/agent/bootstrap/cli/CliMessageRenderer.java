@@ -19,7 +19,7 @@ final class CliMessageRenderer {
     }
     switch (message.type()) {
       case TURN_STARTED -> {
-        // Started is intentionally not rendered.
+        // STARTED 事件有意不渲染。
       }
       case CONTENT_DELTA -> {
         output.writeStdout(message.content());

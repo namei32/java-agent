@@ -14,6 +14,11 @@ import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.embedding.EmbeddingOptions;
 import org.springframework.ai.embedding.EmbeddingResponse;
 
+/**
+ * 使用 Spring AI 实现核心 {@link EmbeddingPort} 的向量化适配器。
+ *
+ * <p>适配器限制单批文本数量与 Code Point 长度，并验证供应商返回数量、索引唯一性和向量维度；任何缺失、乱序重复或维度漂移都会映射为核心层非法响应异常。
+ */
 public final class SpringAiEmbeddingAdapter implements EmbeddingPort {
   private static final int MAX_BATCH_SIZE = 10;
   private static final int DEFAULT_MAX_TEXT_CODE_POINTS = 2000;
@@ -46,6 +51,12 @@ public final class SpringAiEmbeddingAdapter implements EmbeddingPort {
     this.maxTextCodePoints = maxTextCodePoints;
   }
 
+  /**
+   * 批量生成向量，并按请求文本原始顺序返回经过校验的结果。
+   *
+   * @param request 与供应商无关的文本批次
+   * @return 包含逻辑模型名、固定维度和有序向量的结果
+   */
   @Override
   public EmbeddingResult embed(EmbeddingRequest request) {
     Objects.requireNonNull(request, "request");

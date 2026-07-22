@@ -3,7 +3,7 @@ package io.namei.agent.kernel.port;
 import io.namei.agent.kernel.cutover.CutoverBackupManifest;
 import io.namei.agent.kernel.cutover.CutoverDifferenceReport;
 
-/** A sandbox-only file boundary; production roots and process control are intentionally absent. */
+/** 仅限 Sandbox 的文件边界；有意不包含生产 Root 和进程控制。 */
 public interface CutoverSandboxPort {
   CutoverBackupManifest backup();
 

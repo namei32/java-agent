@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/** Single deferred Tool for bounded, current-scope Java Native memory recall. */
+/** 用于有界、当前 Scope Java Native 记忆召回的单个 Deferred Tool。 */
 public final class MemoryRecallToolset {
   static final String VERSION = "java-memory-recall-v1";
   static final int MAX_QUERY_CODE_POINTS = 256;

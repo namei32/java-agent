@@ -323,7 +323,7 @@ final class SideEffectBatchCoordinator {
     try {
       ledger.markUnknown(identity, errorCode);
     } catch (RuntimeException ignored) {
-      // The public outcome remains UNKNOWN even when its durable update also fails.
+      // 即使其持久更新也失败，公开结果仍保持 UNKNOWN。
     }
   }
 

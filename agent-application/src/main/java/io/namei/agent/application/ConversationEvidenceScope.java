@@ -6,7 +6,7 @@ import io.namei.agent.kernel.evidence.ConversationEvidenceReference;
 import io.namei.agent.kernel.evidence.ConversationEvidenceSearchQuery;
 import java.util.List;
 
-/** Internal, already-bound scope exposed only through {@link ToolInvocationContext}. */
+/** 仅通过 {@link ToolInvocationContext} 暴露的内部已绑定 Scope。 */
 interface ConversationEvidenceScope {
   List<ConversationEvidenceMessage> fetch(List<ConversationEvidenceReference> references);
 

@@ -1,6 +1,6 @@
 package io.namei.agent.adapter.workspace;
 
-/** Explicit opt-in mode for workspace tools; parsing is deliberately case-sensitive. */
+/** Workspace Tool 的显式选择加入模式；解析有意区分大小写。 */
 public enum WorkspaceToolMode {
   DISABLED,
   READ_ONLY;

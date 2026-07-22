@@ -3,7 +3,7 @@ package io.namei.agent.application;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/** Non-sensitive fields authenticated as AES-GCM AAD before a persisted capsule is decoded. */
+/** 解码持久胶囊前作为 AES-GCM AAD 认证的非敏感字段。 */
 public record PendingOperationCapsuleBinding(
     PendingOperationReference reference, String approvalFingerprint, String toolVersion) {
   private static final Pattern SHA_256 = Pattern.compile("[0-9a-f]{64}");

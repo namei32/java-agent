@@ -4,7 +4,7 @@ import io.namei.agent.application.ContextLimitRecoveryMode;
 import io.namei.agent.application.ContextLimitRecoveryPolicy;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/** Default-disabled binding for the narrow, local R10-P3 context-limit recovery path. */
+/** 狭窄本地 R10-P3 上下文超限恢复路径的默认禁用绑定。 */
 @ConfigurationProperties("agent.context-limit-recovery")
 public record ContextLimitRecoveryProperties(String mode) {
   public ContextLimitRecoveryProperties {

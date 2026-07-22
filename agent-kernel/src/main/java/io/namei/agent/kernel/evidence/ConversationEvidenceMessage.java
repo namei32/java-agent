@@ -2,7 +2,7 @@ package io.namei.agent.kernel.evidence;
 
 import java.util.Objects;
 
-/** A validated, current-session evidence record. No storage or route metadata is carried. */
+/** 已校验的当前 Session 证据记录，不携带存储或 Route 元数据。 */
 public record ConversationEvidenceMessage(
     ConversationEvidenceReference reference, ConversationEvidenceRole role, String content) {
   public ConversationEvidenceMessage {

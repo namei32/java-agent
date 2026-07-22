@@ -27,7 +27,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import tools.jackson.databind.ObjectMapper;
 
-/** Verifies the Spring AI metadata mapping with a local OpenAI-compatible HTTP endpoint. */
+/** 使用本地 OpenAI-compatible HTTP 端点验证 Spring AI 元数据映射。 */
 @SpringBootTest(classes = OpenAiReasoningContinuationIT.TestApplication.class)
 class OpenAiReasoningContinuationIT {
   private static final OpenAiStubServer SERVER = createServer();

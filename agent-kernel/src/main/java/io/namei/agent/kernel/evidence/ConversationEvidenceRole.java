@@ -3,7 +3,7 @@ package io.namei.agent.kernel.evidence;
 import java.util.Locale;
 import java.util.Optional;
 
-/** Only persisted user and assistant content can become model-visible conversation evidence. */
+/** 只有已持久化的 User 与 Assistant 内容可以成为模型可见的会话证据。 */
 public enum ConversationEvidenceRole {
   USER,
   ASSISTANT;

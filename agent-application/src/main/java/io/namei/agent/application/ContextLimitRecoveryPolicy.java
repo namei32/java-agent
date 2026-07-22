@@ -6,10 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Pure, bounded candidate policy for R10-P3. It does not issue a model request, read a session, or
- * decide whether retrying is safe after Tool execution.
- */
+/** R10-P3 使用的纯函数有界候选策略。它不发起模型请求、不读取 Session，也不判断 Tool 执行后重试是否安全。 */
 public final class ContextLimitRecoveryPolicy {
   private final ContextLimitRecoveryMode mode;
 

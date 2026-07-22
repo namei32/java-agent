@@ -1,6 +1,6 @@
 package io.namei.agent.application;
 
-/** Result of the one-time, non-executing handoff from an approved operation to its ledger slot. */
+/** 已批准 Operation 向其 Ledger Slot 进行一次性非执行移交的结果。 */
 public enum PendingOperationReservationStatus {
   RESERVED,
   ALREADY_RESERVED,

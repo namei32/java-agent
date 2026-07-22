@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/** Strict, read-only reader for Java-owned Skill roots. It never creates files or follows links. */
+/** Java 自持 Skill Root 的严格只读读取器，绝不创建文件或跟随链接。 */
 public final class MarkdownSkillCatalogAdapter implements SkillCatalogPort {
   private static final String SKILL_FILE = "SKILL.md";
   private static final Pattern ENVIRONMENT_NAME = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");

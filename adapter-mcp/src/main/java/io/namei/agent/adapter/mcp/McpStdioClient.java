@@ -25,7 +25,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
-/** One bounded SDK client and stdio process for a single statically configured server. */
+/** 为单个静态配置 Server 提供的有界 SDK Client 与 stdio 进程。 */
 final class McpStdioClient implements AutoCloseable {
   private static final Consumer<JSONRPCMessage> NOOP_OBSERVER = ignored -> {};
 

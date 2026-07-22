@@ -8,10 +8,9 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Read-only access to evidence already persisted for one conversation session.
+ * 对单个会话 Session 已持久化证据的只读访问。
  *
- * <p>Callers must bind the private session key before the port reaches a model-facing tool. The
- * port does not create, update, delete, or migrate data.
+ * <p>Port 到达面向模型的 Tool 之前，调用方必须绑定私有 Session Key。该 Port 不创建、更新、删除或迁移数据。
  */
 public interface ConversationEvidencePort {
   List<ConversationEvidenceMessage> fetch(

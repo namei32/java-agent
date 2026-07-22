@@ -3,7 +3,7 @@ package io.namei.agent.adapter.workspace;
 import java.util.Map;
 import java.util.Set;
 
-/** Parses direct Tool invocations defensively, independent of the model schema validator. */
+/** 独立于模型 Schema 校验器，对直接 Tool 调用进行防御性解析。 */
 final class WorkspaceToolArguments {
   private WorkspaceToolArguments() {}
 

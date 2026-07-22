@@ -1,6 +1,6 @@
 package io.namei.agent.adapter.workspace;
 
-/** Immutable output and source budgets for read-only workspace projections. */
+/** 只读 Workspace 投影使用的不可变输出与源数据预算。 */
 public record WorkspaceToolLimits(
     int maxSourceBytes,
     int maxLines,

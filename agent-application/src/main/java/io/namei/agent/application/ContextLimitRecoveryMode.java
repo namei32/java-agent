@@ -2,7 +2,7 @@ package io.namei.agent.application;
 
 import java.util.Arrays;
 
-/** Explicit runtime mode for the narrow R10-P3 local context-limit recovery path. */
+/** 狭窄本地 R10-P3 上下文超限恢复路径的显式 Runtime 模式。 */
 public enum ContextLimitRecoveryMode {
   DISABLED,
   SAFE_LOCAL;

@@ -3,9 +3,9 @@ package io.namei.agent.kernel.proactive;
 import java.util.Objects;
 
 /**
- * Hash-safe, active-only projection of a local proactive job for read-only inspection.
+ * 供只读检视使用的本地 Proactive Job Hash 安全、仅 Active 投影。
  *
- * <p>It deliberately omits target hash, idempotency key, lease, owner and revision data.
+ * <p>它有意省略目标 Hash、幂等键、Lease、Owner 和 Revision 数据。
  */
 public record ProactiveJobInspectionSnapshot(
     ProactiveJobRef jobRef,

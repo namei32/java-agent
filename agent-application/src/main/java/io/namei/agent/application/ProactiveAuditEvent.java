@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-/** Deliberately excludes prompt, model text, path, session, and raw target values. */
+/** 有意排除 Prompt、模型正文、路径、Session 和原始目标值。 */
 public record ProactiveAuditEvent(
     String targetHash, Action action, Optional<ProactiveStableCode> code, Instant occurredAt) {
   private static final Pattern HASH = Pattern.compile("[0-9a-f]{64}");

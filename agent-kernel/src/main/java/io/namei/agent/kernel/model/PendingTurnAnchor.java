@@ -5,10 +5,9 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * Versioned Session-side ordering anchor for a pending Tool operation.
+ * Pending Tool Operation 使用的版本化 Session 侧顺序 Anchor。
  *
- * <p>It contains no Tool arguments, approval binding, result or conversation content. The operation
- * reference is opaque and must never be rendered through {@link #toString()}.
+ * <p>它不包含 Tool 参数、Approval 绑定、结果或会话内容。Operation 引用不透明，绝不能通过 {@link #toString()} 渲染。
  */
 public record PendingTurnAnchor(
     int anchorVersion,

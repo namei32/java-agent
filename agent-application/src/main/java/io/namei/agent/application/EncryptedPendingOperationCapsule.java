@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/** Opaque encrypted capsule safe to persist only inside the isolated operation store. */
+/** 仅可安全持久化在隔离 Operation Store 内的不透明加密胶囊。 */
 public record EncryptedPendingOperationCapsule(
     int schemaVersion, String keyId, byte[] nonce, byte[] ciphertext) {
   public static final int SCHEMA_VERSION = 1;

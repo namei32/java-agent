@@ -4,6 +4,12 @@ import io.namei.agent.kernel.channel.InboundMessage;
 import io.namei.agent.kernel.channel.reliability.ChannelInstanceId;
 import java.util.Objects;
 
+/**
+ * 渠道适配器提交给可靠入站协调器的封闭事件协议。
+ *
+ * <p>{@link Accepted} 携带通过鉴权的用户消息，{@link Ignored} 持久记录被过滤事件，{@link Control} 表示取消等控制动作。公共字段用于外部事件去重和
+ * Cursor 推进。
+ */
 public sealed interface ReliableInboundEvent
     permits ReliableInboundEvent.Accepted,
         ReliableInboundEvent.Ignored,
@@ -42,6 +48,7 @@ public sealed interface ReliableInboundEvent
         instance, externalEventId, externalSequence, decisionCode, targetId, targetSessionId);
   }
 
+  /** 已鉴权、可以创建 Agent Turn 的普通入站消息。 */
   record Accepted(
       ChannelInstanceId instance,
       String externalEventId,
@@ -64,6 +71,7 @@ public sealed interface ReliableInboundEvent
     }
   }
 
+  /** 已被白名单、内容或协议规则过滤，但仍需要推进外部 Cursor 的事件。 */
   record Ignored(
       ChannelInstanceId instance,
       String externalEventId,
@@ -81,6 +89,7 @@ public sealed interface ReliableInboundEvent
     }
   }
 
+  /** 指向某个活动会话或 Turn 的渠道控制事件。 */
   record Control(
       ChannelInstanceId instance,
       String externalEventId,

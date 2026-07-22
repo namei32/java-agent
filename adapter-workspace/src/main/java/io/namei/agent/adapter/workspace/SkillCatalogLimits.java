@@ -1,6 +1,6 @@
 package io.namei.agent.adapter.workspace;
 
-/** Immutable I/O budgets for one read-only Skill catalog snapshot. */
+/** 单个只读 Skill Catalog 快照的不可变 I/O 预算。 */
 public record SkillCatalogLimits(int maxSkills, int maxFileBytes) {
   private static final int MAX_SKILLS = 64;
   private static final int MAX_FILE_BYTES = 1_048_576;

@@ -108,6 +108,12 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
 
+/**
+ * 应用组合根，集中把核心端口、应用服务和外部适配器装配成可运行的 Agent。
+ *
+ * <p>该配置负责模型参数门禁、SQLite Schema、会话与可靠投递仓储、工具目录、MCP、记忆、插件、主动任务和渠道能力的条件装配。Bean 方法只处理依赖选择与生命周期，不应
+ * 承载领域决策。
+ */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({
   AgentProperties.class,

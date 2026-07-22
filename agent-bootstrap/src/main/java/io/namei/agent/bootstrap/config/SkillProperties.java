@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
-/** Strict, default-off configuration for the R12-S1 read-only Skill catalog. */
+/** R12-S1 只读 Skill Catalog 的严格、默认关闭配置。 */
 @ConfigurationProperties("agent.skills")
 public final class SkillProperties {
   private static final int MAX_PROMPT_CODE_POINTS = 1_000_000;

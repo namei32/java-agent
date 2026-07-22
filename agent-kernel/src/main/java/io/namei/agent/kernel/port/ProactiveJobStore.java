@@ -8,7 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
-/** Local durable scheduler port. Job execution is deliberately outside the store transaction. */
+/** 本地持久 Scheduler Port；Job 执行有意置于 Store 事务之外。 */
 public interface ProactiveJobStore {
   void schedule(ScheduledJob job);
 

@@ -1,6 +1,6 @@
 package io.namei.agent.application;
 
-/** Decisions that a local operator may submit for a pending approval. */
+/** 本地操作员可以为待处理 Approval 提交的决议。 */
 public enum ApprovalInboxDecision {
   APPROVED,
   DENIED

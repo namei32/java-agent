@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-/** Renders only Java-owned, classpath-based Akashic Core prompt sections. */
+/** 仅渲染 Java 自持、基于 Classpath 的 Akashic Core Prompt Section。 */
 public final class AkashicCorePromptRenderer {
   private static final String IDENTITY_RESOURCE = "prompts/akashic-core-identity.md";
   private static final String BEHAVIOR_RESOURCE = "prompts/akashic-core-behavior.md";

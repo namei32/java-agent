@@ -24,10 +24,7 @@ import java.time.Clock;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * Bootstrap boundary for the default-off local scheduler. It has no provider or channel path and
- * exposes only a hash-safe read-only inspection port when active.
- */
+/** 默认关闭的本地 Scheduler Bootstrap 边界。它没有 Provider 或 Channel 路径，激活时仅暴露 Hash 安全的只读检视 Port。 */
 public final class ProactiveRuntime implements AutoCloseable {
   private final ProactiveScheduler scheduler;
   private final ProactiveJobInspectionPort inspectionPort;
@@ -97,7 +94,7 @@ public final class ProactiveRuntime implements AutoCloseable {
     return scheduler != null;
   }
 
-  /** Returns a safe inspection port only when the local scheduler has already been started. */
+  /** 仅在本地 Scheduler 已启动时返回安全检视 Port。 */
   public Optional<ProactiveJobInspectionPort> inspectionPort() {
     return Optional.ofNullable(inspectionPort);
   }

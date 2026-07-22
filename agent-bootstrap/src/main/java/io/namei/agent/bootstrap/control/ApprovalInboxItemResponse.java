@@ -4,7 +4,7 @@ import io.namei.agent.application.ApprovalInboxEntry;
 import java.time.Instant;
 import java.util.Objects;
 
-/** Public projection deliberately excludes every execution-binding field and the operator actor. */
+/** 公开投影有意排除所有执行绑定字段和操作员身份。 */
 public record ApprovalInboxItemResponse(
     String approvalRef,
     String toolName,

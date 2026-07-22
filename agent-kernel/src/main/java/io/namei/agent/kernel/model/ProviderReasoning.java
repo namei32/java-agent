@@ -3,9 +3,7 @@ package io.namei.agent.kernel.model;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * A bounded, redacted provider reasoning segment that is valid only inside the current tool loop.
- */
+/** 仅在当前 Tool Loop 内有效的有界脱敏 Provider Reasoning 片段。 */
 public final class ProviderReasoning {
   public static final int MAX_CODE_POINTS = 16_384;
 

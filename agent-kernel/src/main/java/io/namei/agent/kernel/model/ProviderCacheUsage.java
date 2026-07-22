@@ -1,10 +1,9 @@
 package io.namei.agent.kernel.model;
 
 /**
- * A trusted, content-free projection of one provider response's prompt/cache-read usage.
+ * 单个 Provider 响应 Prompt/Cache Read Usage 的可信无内容投影。
  *
- * <p>It deliberately has no provider-native payload, model identifier, request identifier, cache
- * key, or message data.
+ * <p>它有意不包含 Provider Native Payload、Model Identifier、Request Identifier、Cache Key 或消息数据。
  */
 public record ProviderCacheUsage(long promptTokens, long cacheHitTokens) {
   public ProviderCacheUsage {

@@ -25,6 +25,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * 可靠渠道入站事件的并发与幂等协调器。
+ *
+ * <p>协调器使用持久 Ledger 判定重复消息，通过 Session Key 保证同一会话只有一个活动 Turn，并用公平信号量限制全局并发。接收成功后先记录持久状态，再把 Turn
+ * 交给执行器；控制事件则只作用于已注册的活动 Turn。
+ */
 public final class ReliableInboundCoordinator {
   private static final String TURN_WORKER = "reliable-inbound-turn";
   private static final String SESSION_BUSY = "SESSION_BUSY";
@@ -75,6 +81,13 @@ public final class ReliableInboundCoordinator {
     this.permits = new Semaphore(settings.maxConcurrentTurns(), true);
   }
 
+  /**
+   * 处理一个已经由渠道适配器解析和鉴权的入站事件。
+   *
+   * @param event 普通消息、忽略事件或控制事件
+   * @return 持久化后的接收、重复、忙碌或控制处理结果
+   * @throws IllegalStateException 协调器已经停止接收新事件时抛出
+   */
   public ReliableInboundResult handle(ReliableInboundEvent event) {
     Objects.requireNonNull(event, "event");
     if (!accepting.get()) {

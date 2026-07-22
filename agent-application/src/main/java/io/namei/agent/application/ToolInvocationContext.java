@@ -3,9 +3,7 @@ package io.namei.agent.application;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * Immutable, explicit per-invocation context. It deliberately carries no raw session identifier.
- */
+/** 每次调用显式提供的不可变上下文；它有意不携带原始 Session 标识符。 */
 public final class ToolInvocationContext {
   private static final ToolInvocationContext NONE = new ToolInvocationContext(null, null);
 

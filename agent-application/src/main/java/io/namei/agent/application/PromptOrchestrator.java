@@ -16,10 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Compiles validated prompt sections into model messages without reading resources or mutable
- * state.
- */
+/** 将已校验的 Prompt Section 编译为模型消息，不读取资源或可变状态。 */
 public final class PromptOrchestrator {
   private static final String SYSTEM_SEPARATOR = "\n\n---\n\n";
   private static final String FRAME_OPEN = "<system-reminder data-system-context-frame=\"true\">";
@@ -41,10 +38,7 @@ public final class PromptOrchestrator {
     return assemble(sections, history, currentUser, budget, PromptTrimPlan.FULL);
   }
 
-  /**
-   * Compiles a prompt starting at a minimum trim plan. Earlier, less-trimmed candidates are never
-   * reconsidered, while the normal budget validation remains in force for every later candidate.
-   */
+  /** 从最小裁剪计划开始编译 Prompt。不会重新考虑更早、裁剪更少的候选；后续每个候选仍须遵守常规预算校验。 */
   public PromptAssembly assemble(
       List<PromptSection> sections,
       List<ChatMessage> history,

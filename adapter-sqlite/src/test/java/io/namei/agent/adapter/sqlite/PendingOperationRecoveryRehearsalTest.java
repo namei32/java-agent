@@ -278,10 +278,7 @@ class PendingOperationRecoveryRehearsalTest {
     return tempDir.resolve("scenario-" + scenarioIndex++);
   }
 
-  /**
-   * Test-only composition of the existing durable boundaries. It is intentionally nested in test
-   * sources so no production class, Bean, worker, route, or Tool registry can construct it.
-   */
+  /** 仅用于测试的既有持久边界组合。它有意嵌套在测试源码中，使任何生产类、Bean、Worker、Route 或 Tool Registry 都无法构造它。 */
   private static final class TestOnlyRecoveryRehearsal {
     private final JdbcPendingOperationStore operationStore;
     private final JdbcSessionRepository sessions;
@@ -343,7 +340,7 @@ class PendingOperationRecoveryRehearsalTest {
           return Outcome.COMMITTED;
         }
       } catch (RuntimeException ignored) {
-        // The side effect is already durably known; a conversation commit fault cannot retry it.
+        // 副作用已被持久化确认，会话提交故障不能重试它。
       }
       operationStore.markCommitUnreported(operation.reference(), observedAt.plusSeconds(3));
       return Outcome.COMMIT_UNREPORTED;

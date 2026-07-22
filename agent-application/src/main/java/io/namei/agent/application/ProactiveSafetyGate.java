@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** In-process safety gates; durable delivery dedupe remains owned by the channel ledger. */
+/** 进程内安全 Gate；持久投递去重仍由 Channel Ledger 自持。 */
 public final class ProactiveSafetyGate implements ProactiveGate {
   private final boolean enabled;
   private final ProactiveTargetBusyProbe busy;

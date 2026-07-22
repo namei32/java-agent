@@ -32,10 +32,7 @@ public final class SemanticMemorySearch {
     return search(request, item -> true);
   }
 
-  /**
-   * Searches the already authenticated scope and applies an optional caller-owned item filter
-   * before ranking and top-K selection.
-   */
+  /** 搜索已认证 Scope，并在排序和 Top-K 选择前应用调用方自持的可选条目过滤器。 */
   public List<MemorySearchHit> search(
       MemorySearchRequest request, Predicate<MemoryItem> itemFilter) {
     Objects.requireNonNull(request, "request");

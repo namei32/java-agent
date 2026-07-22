@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Bounded, already-normalized search request for one bound conversation session. */
+/** 面向单个已绑定会话 Session 的有界、已规范化搜索请求。 */
 public record ConversationEvidenceSearchQuery(
     List<String> terms, Optional<ConversationEvidenceRole> role, int limit, int offset) {
   public ConversationEvidenceSearchQuery {

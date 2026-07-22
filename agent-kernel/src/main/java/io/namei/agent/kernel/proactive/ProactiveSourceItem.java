@@ -3,10 +3,7 @@ package io.namei.agent.kernel.proactive;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/**
- * A bounded local test projection for the future proactive pipeline. This is not a URL, a fetch
- * request, an MCP payload, or an instruction trusted by the runtime.
- */
+/** 供未来 Proactive Pipeline 使用的有界本地测试投影。它不是 URL、Fetch 请求、MCP Payload 或 Runtime 信任的指令。 */
 public record ProactiveSourceItem(ProactiveSourceKind kind, String sourceRef, String safeText) {
   public static final int MAX_SAFE_TEXT_CODE_POINTS = 4_000;
 

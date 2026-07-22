@@ -3,10 +3,7 @@ package io.namei.agent.application;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * A repository-authoritative Reservation result. Only {@link #acquired()} may ever grant a future
- * executor the right to begin an invocation; this type itself never invokes a Tool.
- */
+/** Repository 权威的 Reservation 结果。只有 {@link #acquired()} 可以授予未来执行器开始调用的权利；该类型自身绝不调用 Tool。 */
 public record PendingOperationReservation(
     PendingOperationReservationStatus status, Optional<PendingOperation> operation) {
   public PendingOperationReservation {
@@ -36,9 +33,7 @@ public record PendingOperationReservation(
         status, Optional.of(Objects.requireNonNull(operation, "operation")));
   }
 
-  /**
-   * True exactly once, after the Approval consumption and durable Reservation committed together.
-   */
+  /** 仅在 Approval 消费与持久 Reservation 共同提交后恰好为 true 一次。 */
   public boolean acquired() {
     return status == PendingOperationReservationStatus.RESERVED;
   }

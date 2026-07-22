@@ -9,7 +9,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-/** One virtual-thread computation with inherited cancellation and hard text/time budgets. */
+/** 单次虚拟线程计算，继承取消信号并执行严格文本/时间预算。 */
 public final class BoundedSubagentRunner {
   private final SubagentTask task;
 

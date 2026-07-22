@@ -3,7 +3,7 @@ package io.namei.agent.bootstrap.config;
 import io.namei.agent.kernel.mcp.McpAssetCatalogMode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/** Strict, default-disabled activation for metadata-only MCP Resource and Prompt discovery. */
+/** 仅元数据 MCP Resource 与 Prompt 发现的严格、默认禁用激活配置。 */
 @ConfigurationProperties("agent.mcp.assets")
 public record McpAssetProperties(String mode) {
   public McpAssetProperties {

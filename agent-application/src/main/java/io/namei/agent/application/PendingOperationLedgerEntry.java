@@ -8,10 +8,9 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
- * Durable, non-executing projection of one pending operation's side-effect boundary.
+ * 单个 Pending Operation 副作用边界的持久、非执行投影。
  *
- * <p>Its result is already a capability-supplied safe projection. This type deliberately omits the
- * encrypted capsule, approval binding and any raw Tool arguments.
+ * <p>其结果已经是 Capability 提供的安全投影。该类型有意省略加密胶囊、Approval 绑定和所有原始 Tool 参数。
  */
 public record PendingOperationLedgerEntry(
     PendingOperationReference reference,

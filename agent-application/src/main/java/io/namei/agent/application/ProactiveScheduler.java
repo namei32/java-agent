@@ -12,10 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Single-JVM proactive loop. It owns the worker lifecycle, while SQLite owns all cross-restart
- * state. Planning and execution never happen under the store transaction.
- */
+/** 单 JVM 主动循环。它自持 Worker 生命周期，SQLite 自持全部跨重启状态；规划和执行绝不在 Store 事务内发生。 */
 public final class ProactiveScheduler implements AutoCloseable {
   private static final String WORKER_NAME = "proactive-scheduler";
 
@@ -72,7 +69,7 @@ public final class ProactiveScheduler implements AutoCloseable {
     }
   }
 
-  /** Performs at most one job and is intentionally public for deterministic health checks/tests. */
+  /** 最多执行一个 Job；为支持确定性的健康检查和测试而有意公开。 */
   public ProactiveSchedulerStep tick() {
     if (!accepting.get()) {
       return ProactiveSchedulerStep.CLOSED;
@@ -157,7 +154,7 @@ public final class ProactiveScheduler implements AutoCloseable {
     try {
       observer.onCommitted(lease, terminal);
     } catch (RuntimeException ignored) {
-      // Observability is post-commit and cannot alter durable state.
+      // 可观察性发生在提交后，不能改变持久状态。
     }
     return terminal == ProactiveJobState.CANCELLED
         ? ProactiveSchedulerStep.CANCELLED

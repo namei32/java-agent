@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
-/** Creates and validates the intentionally isolated approval-inbox SQLite boundary. */
+/** 创建并校验有意隔离的 Approval Inbox SQLite 边界。 */
 public final class ApprovalInboxSchemaInitializer {
   private static final String DATABASE_FILE_NAME = "approval-inbox.db";
   private static final int VERSION = 2;
@@ -330,15 +330,13 @@ public final class ApprovalInboxSchemaInitializer {
       try {
         connection.setAutoCommit(true);
       } catch (SQLException ignored) {
-        // Connection closes immediately; retain the primary failure.
+        // 连接会立即关闭，保留主要失败。
       }
     }
   }
 
   /**
-   * Starts a SQLite writer transaction before reading a state machine that will necessarily mutate.
-   * This prevents two deferred readers from both attempting the Approval consumption upgrade and
-   * turning a normal single-winner race into {@code SQLITE_BUSY}.
+   * 在读取必然发生变更的状态机之前启动 SQLite 写事务，防止两个延迟读取者同时尝试升级 Approval 消费状态，将正常的单获胜者竞争 变成 {@code SQLITE_BUSY}。
    */
   static <T> T immediateTransaction(Connection connection, SqlWork<T> work) throws SQLException {
     executeTransactionControl(connection, "BEGIN IMMEDIATE");

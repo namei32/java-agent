@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/** A persisted ownership proof. It must be presented before a worker can commit a result. */
+/** 已持久化的所有权证明；Worker 提交结果前必须提供它。 */
 public record ProactiveJobLease(
     ScheduledJob job, String ownerId, Instant expiresAt, long revision) {
   private static final Pattern OWNER = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]{0,63}");

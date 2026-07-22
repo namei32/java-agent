@@ -179,7 +179,7 @@ public final class ChannelFingerprint {
         }
       }
       case TURN_FAILED -> {
-        // retryable is derived from the already validated OutboundMessage contract.
+        // retryable 由已经校验的 OutboundMessage 契约推导。
       }
     }
   }

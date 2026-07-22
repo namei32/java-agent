@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/** Repository-owned MCP stdio reference server. It is executed only as a test child process. */
+/** 仓库自持的 MCP stdio 参考 Server，仅作为测试子进程运行。 */
 public final class McpJavaReferenceServer {
   private static final ObjectMapper JSON = new ObjectMapper();
   private static final Object WRITE_LOCK = new Object();
@@ -63,7 +63,7 @@ public final class McpJavaReferenceServer {
     switch (method) {
       case "initialize" -> initialize(scenario, id, writer);
       case "notifications/initialized" -> {
-        // Lifecycle notification has no response.
+        // 生命周期通知没有响应。
       }
       case "tools/list" -> listTools(scenario, message, id, writer);
       case "resources/list" -> listResources(scenario, message, id, writer);

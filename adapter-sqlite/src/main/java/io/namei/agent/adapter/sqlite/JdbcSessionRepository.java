@@ -20,6 +20,12 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * 基于 SQLite/JDBC 的 {@link SessionRepository} 实现。
+ *
+ * <p>普通提交在一个事务中写入 User 与 Assistant 两条消息并推进 Session Cursor；可靠恢复路径使用条件更新实现 CAS，只有序号或 Pending Anchor
+ * 仍匹配时才提交。 所有失败都会回滚事务并映射为仓储异常。
+ */
 public final class JdbcSessionRepository implements SessionRepository {
   private static final DateTimeFormatter STORAGE_TIMESTAMP =
       new DateTimeFormatterBuilder()
@@ -36,6 +42,7 @@ public final class JdbcSessionRepository implements SessionRepository {
     this.schema = Objects.requireNonNull(schema, "schema");
   }
 
+  /** 按持久序号读取消息，并连同下一可用序号构造一致性快照。 */
   @Override
   public SessionSnapshot load(String sessionId) {
     Objects.requireNonNull(sessionId, "sessionId");
@@ -58,6 +65,7 @@ public final class JdbcSessionRepository implements SessionRepository {
     }
   }
 
+  /** 在单个数据库事务中追加完整 Turn 并把 Session Cursor 推进两个位置。 */
   @Override
   public void appendTurn(String sessionId, PersistedTurn turn) {
     Objects.requireNonNull(sessionId, "sessionId");
@@ -92,6 +100,11 @@ public final class JdbcSessionRepository implements SessionRepository {
     }
   }
 
+  /**
+   * 比较下一序号后条件追加完整 Turn。
+   *
+   * @return 序号匹配并成功提交时为 {@code true}；发生并发推进时回滚并返回 {@code false}
+   */
   @Override
   public boolean appendTurnIfNextSequence(
       String sessionId, long expectedNextSequence, PersistedTurn turn) {

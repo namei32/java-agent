@@ -2,7 +2,7 @@ package io.namei.agent.bootstrap.proactive;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/** Strict, default-disabled activation for a safe view over an already active local runtime. */
+/** 已激活本地 Runtime 安全视图使用的严格、默认禁用配置。 */
 @ConfigurationProperties("agent.proactive-inspection")
 public record ProactiveInspectionProperties(String mode) {
   public ProactiveInspectionProperties {

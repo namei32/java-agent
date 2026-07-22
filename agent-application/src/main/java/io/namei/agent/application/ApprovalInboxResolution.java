@@ -4,7 +4,7 @@ import io.namei.agent.kernel.approval.ApprovalState;
 import java.util.Objects;
 import java.util.Optional;
 
-/** A repository-authoritative result; callers must not infer a decision from an update count. */
+/** Repository 权威结果；调用方不得根据更新数量推断决议。 */
 public record ApprovalInboxResolution(
     ApprovalInboxResolutionStatus status, Optional<ApprovalInboxEntry> entry) {
   public ApprovalInboxResolution {

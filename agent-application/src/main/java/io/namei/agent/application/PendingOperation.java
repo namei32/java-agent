@@ -5,10 +5,9 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Immutable, execution-free model of a precise tool operation awaiting or consuming approval.
+ * 等待或正在消费 Approval 的精确 Tool Operation 所对应的不可变、无执行模型。
  *
- * <p>Persisting a parameter capsule, consuming approval, reserving the durable ledger, and calling
- * an invoker are deliberately outside this type.
+ * <p>参数胶囊持久化、Approval 消费、持久 Ledger 预留和 Invoker 调用均有意置于该类型之外。
  */
 public record PendingOperation(
     PendingOperationReference reference,

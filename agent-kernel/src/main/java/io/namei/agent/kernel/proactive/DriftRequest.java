@@ -3,7 +3,7 @@ package io.namei.agent.kernel.proactive;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/** Read-only drift input: parent and an already-safe target reference, never a workspace path. */
+/** 只读 Drift 输入：包含 Parent 和已安全化的目标引用，绝不包含 Workspace 路径。 */
 public record DriftRequest(
     ProactiveJobRef parentJobRef, String targetHash, int maxSummaryCharacters) {
   private static final Pattern HASH = Pattern.compile("[0-9a-f]{64}");

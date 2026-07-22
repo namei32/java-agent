@@ -50,8 +50,8 @@ final class CanonicalArguments {
           }
           result.put(text, value);
         });
-    // Map.copyOf rejects null values, while JSON object values legitimately include null.
-    // Keep the parsed shape immutable without narrowing the JSON value domain.
+    // Map.copyOf 会拒绝 null 值，但 JSON Object 合法值域包含 null。
+    // 在不缩小 JSON 值域的前提下保持解析结构不可变。
     return Collections.unmodifiableMap(result);
   }
 

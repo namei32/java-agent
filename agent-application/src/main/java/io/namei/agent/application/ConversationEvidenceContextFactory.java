@@ -8,7 +8,7 @@ import io.namei.agent.kernel.port.ConversationEvidencePort;
 import java.util.List;
 import java.util.Objects;
 
-/** Creates an opaque Tool invocation context after ChatService has authenticated the session. */
+/** 在 ChatService 认证 Session 后创建不透明的 Tool 调用上下文。 */
 public final class ConversationEvidenceContextFactory {
   private static final ConversationEvidenceContextFactory DISABLED =
       new ConversationEvidenceContextFactory(ConversationEvidencePort.disabled(), false);

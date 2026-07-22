@@ -21,7 +21,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-/** SQLite implementation with database-authoritative expiry and compare-and-set resolution. */
+/** 由数据库权威判定过期并通过比较后设置完成决议的 SQLite 实现。 */
 public final class JdbcApprovalInbox implements ApprovalInbox {
   static final int MAX_ENTRIES = 64;
   private static final Pattern ACTOR_REFERENCE = Pattern.compile("[A-Za-z0-9_-]{1,128}");

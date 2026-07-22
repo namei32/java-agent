@@ -2,7 +2,7 @@ package io.namei.agent.kernel.mcp;
 
 import java.util.regex.Pattern;
 
-/** Contract constants and validation helpers for metadata-only MCP assets. */
+/** 仅元数据 MCP Asset 使用的契约常量与校验辅助方法。 */
 public final class McpAssetContract {
   public static final int CURRENT_VERSION = 1;
   static final Pattern SERVER_ID = Pattern.compile("[a-z][a-z0-9_-]{0,15}");

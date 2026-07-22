@@ -6,9 +6,7 @@ import io.namei.agent.kernel.proactive.ProactiveJobState;
 import java.time.Clock;
 import java.util.Objects;
 
-/**
- * Applies gates and planning before optional delivery. The bootstrap binds delivery to NoOp in V1.
- */
+/** 在可选投递前应用 Gate 和规划；Bootstrap 在 V1 中将投递绑定为 NoOp。 */
 public final class ProactiveJobRunner implements ProactiveJobExecutor {
   private final ProactiveGate gate;
   private final ProactivePlanner planner;

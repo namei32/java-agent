@@ -3,6 +3,24 @@ package io.namei.agent.kernel.memory;
 import java.time.Instant;
 import java.util.Objects;
 
+/**
+ * Java 原生记忆系统中的一条完整持久化记忆。
+ *
+ * @param id 不透明记忆标识
+ * @param scope 记忆可见范围
+ * @param type 事实、偏好等记忆类型
+ * @param content 规范化后的记忆正文
+ * @param contentHash 正文 SHA-256，用于去重和完整性判断
+ * @param embedding 向量表示
+ * @param embeddingModel 生成当前向量的模型标识
+ * @param reinforcement 相同记忆被强化的次数，至少为 1
+ * @param emotionalWeight 0 到 10 的情绪权重
+ * @param sourceKind 记忆来源类型
+ * @param happenedAt 被记录事件的可选发生时间
+ * @param revision 乐观并发控制使用的修订号
+ * @param createdAt 首次创建时间
+ * @param updatedAt 最近更新时间，不得早于创建时间
+ */
 public record MemoryItem(
     String id,
     MemoryScope scope,
@@ -78,6 +96,7 @@ public record MemoryItem(
         MemoryLifecycleState.ACTIVE);
   }
 
+  /** 返回向量维度，便于写入和查询前执行模型兼容校验。 */
   public int embeddingDimensions() {
     return embedding.dimensions();
   }

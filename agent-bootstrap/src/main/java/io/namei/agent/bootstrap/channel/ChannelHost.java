@@ -102,7 +102,7 @@ public final class ChannelHost implements AutoCloseable {
         return snapshot;
       }
     } catch (RuntimeException ignored) {
-      // The host still exposes its generic stable start failure when the adapter has no safe state.
+      // Adapter 没有安全状态时，Host 仍对外暴露通用的稳定启动失败。
     }
     return ChannelStatusSnapshot.failed(registration.name, "START_FAILED");
   }

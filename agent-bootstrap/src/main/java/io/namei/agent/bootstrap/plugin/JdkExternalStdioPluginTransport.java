@@ -157,7 +157,7 @@ public final class JdkExternalStdioPluginTransport implements ExternalStdioPlugi
     try {
       closeable.close();
     } catch (IOException ignored) {
-      // Best effort during a bounded shutdown.
+      // 在有界关闭期间仅作尽力执行。
     }
   }
 }

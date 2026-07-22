@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/** Sensitive, in-memory plaintext required to resume exactly one previously approved operation. */
+/** 恰好恢复一个先前已批准 Operation 所需的敏感内存明文。 */
 public record PendingOperationCapsule(
     int schemaVersion,
     String sessionId,

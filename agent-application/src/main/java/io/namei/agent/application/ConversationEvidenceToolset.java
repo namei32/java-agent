@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-/** Built-in, deferred read-only tools over the opaque current-turn evidence scope. */
+/** 基于不透明当前 Turn 证据 Scope 的内置 Deferred 只读 Tool。 */
 public final class ConversationEvidenceToolset {
   static final String VERSION = "conversation-evidence-v1";
   static final int MAX_FETCH_IDS = 16;

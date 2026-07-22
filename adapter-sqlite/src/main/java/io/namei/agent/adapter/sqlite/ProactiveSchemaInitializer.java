@@ -12,9 +12,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Owns the versioned local scheduler schema; no caller receives a connection before initialize().
- */
+/** 自持版本化本地 Scheduler Schema；在 initialize() 完成前，任何调用方都拿不到连接。 */
 public final class ProactiveSchemaInitializer {
   private static final String DATABASE_FILE_NAME = "proactive-runtime.db";
   private static final int VERSION = 1;

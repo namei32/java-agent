@@ -1,8 +1,6 @@
 package io.namei.agent.kernel.mcp;
 
-/**
- * Immutable public metadata projection; it deliberately contains no URI, body, arguments or path.
- */
+/** 不可变公开元数据投影；它有意不包含 URI、Body、Arguments 或 Path。 */
 public record McpAssetDescriptor(
     int schemaVersion,
     String serverId,

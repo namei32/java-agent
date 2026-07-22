@@ -1,6 +1,6 @@
 package io.namei.agent.bootstrap.proactive;
 
-/** Strict, default-disabled activation modes for local proactive job inspection. */
+/** 本地主动 Job 检视使用的严格、默认禁用激活模式。 */
 public enum ProactiveInspectionMode {
   DISABLED,
   ACTIVE_RUNTIME;

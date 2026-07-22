@@ -30,7 +30,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import reactor.core.publisher.Mono;
 
-/** Stdio transport with pre-deserialization wire bounds and adapter-owned cancellation. */
+/** 在反序列化前限制 Wire 大小并由适配器自持取消能力的 stdio Transport。 */
 final class BoundedStdioClientTransport implements McpClientTransport {
   private static final int MAX_PENDING_REQUESTS = 256;
   private static final TypeRef<Map<String, Object>> MAP_TYPE = new TypeRef<>() {};
@@ -175,7 +175,7 @@ final class BoundedStdioClientTransport implements McpClientTransport {
         }
       }
     } catch (RuntimeException ignored) {
-      // Cancellation is best effort once the peer or transport has already failed.
+      // 对端或 Transport 已失败时，取消只能尽力执行。
     }
   }
 
@@ -312,7 +312,7 @@ final class BoundedStdioClientTransport implements McpClientTransport {
     try (errorStream) {
       errorStream.transferTo(OutputStream.nullOutputStream());
     } catch (IOException ignored) {
-      // The stream is expected to fail or close while the process is being terminated.
+      // 终止进程期间，流按预期会失败或关闭。
     }
   }
 
@@ -378,7 +378,7 @@ final class BoundedStdioClientTransport implements McpClientTransport {
       try {
         exceptionHandler.accept(safeFailure);
       } catch (RuntimeException ignored) {
-        // A higher-layer failure hook cannot prevent process cleanup.
+        // 上层失败 Hook 不能阻止进程清理。
       }
       Process current = process;
       if (current != null && current.isAlive()) {
@@ -456,7 +456,7 @@ final class BoundedStdioClientTransport implements McpClientTransport {
     try {
       closeable.close();
     } catch (IOException ignored) {
-      // Resource is already unavailable.
+      // 资源已经不可用。
     }
   }
 

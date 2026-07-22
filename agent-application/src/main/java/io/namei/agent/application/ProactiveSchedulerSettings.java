@@ -4,6 +4,15 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+/**
+ * 主动任务调度器的租约、等待和关闭边界。
+ *
+ * @param ownerId 当前进程竞争任务租约时使用的稳定所有者标识
+ * @param leaseDuration 单次任务租约有效期
+ * @param idleWait 没有可运行任务时的最长等待时间
+ * @param recoveryBatchSize 单轮扫描的恢复任务上限
+ * @param shutdownTimeout 停止调度后等待活动任务结束的期限
+ */
 public record ProactiveSchedulerSettings(
     String ownerId,
     Duration leaseDuration,

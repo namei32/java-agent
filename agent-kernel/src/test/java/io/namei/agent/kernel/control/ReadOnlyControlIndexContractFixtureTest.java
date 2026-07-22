@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/** Freezes R13-C0 only. It deliberately creates no Controller or runtime projection. */
+/** 仅冻结 R13-C0；有意不创建 Controller 或 Runtime 投影。 */
 @Tag("compat")
 class ReadOnlyControlIndexContractFixtureTest {
   private static final ObjectMapper JSON = new ObjectMapper();

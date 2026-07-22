@@ -5,6 +5,14 @@ import io.namei.agent.kernel.tool.ToolResult;
 import io.namei.agent.kernel.tool.ToolResultStatus;
 import java.util.Objects;
 
+/**
+ * 表示一次工具调用的执行结果消息，用于把结果反馈给模型继续推理。
+ *
+ * @param toolCallId 对应模型工具调用的唯一标识
+ * @param toolName 被调用的工具名称
+ * @param status 工具执行状态
+ * @param content 提供给模型的非空结果正文，不应包含未经脱敏的内部异常
+ */
 public record ToolResultMessage(
     String toolCallId, String toolName, ToolResultStatus status, String content)
     implements ModelMessage {

@@ -12,6 +12,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * 静态只读 MCP 配置的默认运行时实现。
+ *
+ * <p>启动时逐个隔离连接已配置 Server，仅发布初始化成功且名称不冲突的工具；单个 Server 失败会使总体状态降级，但不会阻止其他 Server 可用。关闭操作通过原子生命周期和
+ * Latch 保证幂等，并等待并发关闭者完成。
+ */
 final class DefaultMcpRuntime implements McpRuntime {
   private final int configuredServers;
   private final int startupFailures;
@@ -62,11 +68,13 @@ final class DefaultMcpRuntime implements McpRuntime {
     this.tools = List.copyOf(publishedTools);
   }
 
+  /** 返回启动成功的所有 MCP 工具只读快照。 */
   @Override
   public List<Tool> tools() {
     return tools;
   }
 
+  /** 聚合各活动连接已经发现的 MCP Resource、Prompt 等只读资产。 */
   @Override
   public McpAssetCatalog assets() {
     return new McpAssetCatalog(
@@ -75,6 +83,7 @@ final class DefaultMcpRuntime implements McpRuntime {
             .toList());
   }
 
+  /** 根据连接状态实时计算 READY、DEGRADED、CLOSING 或 CLOSED 汇总状态。 */
   @Override
   public McpRuntimeStatus status() {
     Lifecycle current = lifecycle.get();
@@ -101,6 +110,7 @@ final class DefaultMcpRuntime implements McpRuntime {
     return new McpRuntimeStatus(aggregate, configuredServers, ready, stale, unavailable);
   }
 
+  /** 幂等关闭所有 Server 连接；单个连接清理失败不会阻断其余连接。 */
   @Override
   public void close() {
     if (!lifecycle.compareAndSet(Lifecycle.RUNNING, Lifecycle.CLOSING)) {
@@ -112,7 +122,7 @@ final class DefaultMcpRuntime implements McpRuntime {
         try {
           connection.close();
         } catch (RuntimeException ignored) {
-          // Closing one isolated server cannot prevent cleanup of the remaining servers.
+          // 单个隔离 Server 关闭失败不能阻止其余 Server 清理。
         }
       }
     } finally {

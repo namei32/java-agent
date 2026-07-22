@@ -21,6 +21,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * 在模型响应与工具结果之间迭代的核心编排器。
+ *
+ * <p>每轮把当前消息发送给模型；若模型返回 Tool Call，则经注册表、Schema、风险策略、审批和副作用协调器执行，再把结果作为 Tool 消息加入上下文。达到迭代或调用
+ * 上限、发生取消或模型返回非法响应时立即失败。
+ */
 final class ToolLoop {
   private final ChatModelPort model;
   private final ToolRegistry tools;

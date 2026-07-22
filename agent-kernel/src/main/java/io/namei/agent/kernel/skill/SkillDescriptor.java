@@ -3,7 +3,7 @@ package io.namei.agent.kernel.skill;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/** Safe catalog projection. It intentionally excludes physical locations and full Skill text. */
+/** 安全的 Catalog 投影，有意排除物理位置和完整 Skill 正文。 */
 public record SkillDescriptor(
     String name, String description, SkillSource source, boolean available, boolean always) {
   static final int MAX_DESCRIPTION_CODE_POINTS = 512;

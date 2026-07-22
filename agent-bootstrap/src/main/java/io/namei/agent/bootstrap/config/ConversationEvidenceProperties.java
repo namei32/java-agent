@@ -3,7 +3,7 @@ package io.namei.agent.bootstrap.config;
 import io.namei.agent.kernel.evidence.ConversationEvidenceMode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/** Strict, default-disabled activation for bounded current-session conversation evidence tools. */
+/** 有界当前 Session 会话证据 Tool 的严格、默认禁用激活配置。 */
 @ConfigurationProperties("agent.conversation-evidence")
 public record ConversationEvidenceProperties(String mode) {
   public ConversationEvidenceProperties {

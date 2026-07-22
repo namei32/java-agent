@@ -15,10 +15,7 @@ import java.util.HexFormat;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * Pre-Spring offline command surface. It has no network, configuration, provider or process-control
- * path.
- */
+/** Spring 启动前的离线命令入口。它没有网络、配置、Provider 或进程控制路径。 */
 public final class CutoverCommand {
   private static final String PLAN = "cutover-plan";
   private static final String REHEARSE = "cutover-rehearse";

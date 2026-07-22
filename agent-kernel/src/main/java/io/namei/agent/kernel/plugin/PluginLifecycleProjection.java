@@ -8,7 +8,7 @@ import java.util.HexFormat;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Maps only supported Java lifecycle events to API v2 observation events. */
+/** 仅将受支持的 Java 生命周期事件映射为 API v2 观察事件。 */
 public final class PluginLifecycleProjection {
   private PluginLifecycleProjection() {}
 

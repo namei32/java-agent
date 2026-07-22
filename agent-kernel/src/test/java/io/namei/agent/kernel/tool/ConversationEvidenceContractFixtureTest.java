@@ -68,7 +68,7 @@ class ConversationEvidenceContractFixtureTest {
     String rawToolChain = fixture.path("defaults").path("rawToolChain").asString();
     for (JsonNode testCase : cases) {
       if ("privacy".equals(testCase.path("group").asString())) {
-        // The privacy case names forbidden values as assertion metadata; it is not a projection.
+        // 隐私 Case 将禁用值作为断言元数据命名，并不构成投影。
         continue;
       }
       String expected = JSON.writeValueAsString(testCase.path("expected"));

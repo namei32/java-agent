@@ -1,6 +1,6 @@
 package io.namei.agent.kernel.proactive;
 
-/** R14 P0 deliberately represents only an injected local fixture, never a network source. */
+/** R14 P0 有意仅表示注入的本地 Fixture，绝不表示网络 Source。 */
 public enum ProactiveSourceKind {
   FIXED_LOCAL;
 

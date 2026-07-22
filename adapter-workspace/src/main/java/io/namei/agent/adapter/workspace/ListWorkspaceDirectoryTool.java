@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/** Contract definition for the one-level, read-only workspace directory projection. */
+/** 单层只读 Workspace 目录投影的契约定义。 */
 public final class ListWorkspaceDirectoryTool implements Tool {
   private static final ToolDefinition DEFINITION =
       new ToolDefinition(

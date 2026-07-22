@@ -23,10 +23,7 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.http.okhttp.OpenAiHttpClientBuilderCustomizer;
 import org.springframework.ai.openai.http.okhttp.SpringAiOpenAiHttpClient;
 
-/**
- * Supplies the cancellation propagation currently missing between Spring AI's Reactor stream and
- * the OpenAI Java SDK asynchronous response.
- */
+/** 补充 Spring AI Reactor 流与 OpenAI Java SDK 异步响应之间目前缺失的取消传播。 */
 final class OpenAiStreamCancellationRegistry implements OpenAiHttpClientBuilderCustomizer {
   static final String CORRELATION_HEADER = "X-Namei-Internal-Stream-Id";
   private static final Duration STALE_ENTRY_AGE = Duration.ofMinutes(1);

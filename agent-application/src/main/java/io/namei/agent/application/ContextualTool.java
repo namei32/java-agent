@@ -5,10 +5,9 @@ import io.namei.agent.kernel.tool.ToolResult;
 import java.util.Map;
 
 /**
- * Internal-only extension point for built-in tools that need an explicit, turn-bound context.
+ * 供需要显式 Turn 绑定上下文的内置 Tool 使用的内部扩展点。
  *
- * <p>This type is deliberately package-private: external plugins and MCP tools continue to see only
- * {@link Tool#execute(Map)} and cannot opt into a conversation scope.
+ * <p>该类型有意保持包内可见：外部 Plugin 和 MCP Tool 仍只能看到 {@link Tool#execute(Map)}，无法选择加入会话 Scope。
  */
 interface ContextualTool extends Tool {
   ToolResult execute(Map<String, Object> arguments, ToolInvocationContext context);

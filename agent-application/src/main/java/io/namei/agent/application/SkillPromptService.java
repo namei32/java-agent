@@ -8,7 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-/** Renders only the safe, read-only Skill projections admitted by the R12-S1 contract. */
+/** 仅渲染 R12-S1 契约允许的安全只读 Skill 投影。 */
 public final class SkillPromptService {
   private final SkillCatalogPort catalog;
   private final int maxCatalogCodePoints;

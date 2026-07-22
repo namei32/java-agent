@@ -3,6 +3,15 @@ package io.namei.agent.kernel.approval;
 import java.time.Instant;
 import java.util.Objects;
 
+/**
+ * 审批主体对某个精确工具调用作出的不可变决定。
+ *
+ * @param approvalId 被决定的审批请求标识
+ * @param fingerprint 与原请求一致的调用指纹，防止决定被挪用
+ * @param status 批准、拒绝、过期或取消
+ * @param decidedAt 决定发生时间
+ * @param actorReference 审批主体的安全引用，不应保存凭据
+ */
 public record ApprovalDecision(
     String approvalId,
     String fingerprint,
@@ -37,6 +46,11 @@ public record ApprovalDecision(
     return forRequest(request, ApprovalDecisionStatus.CANCELLED, decidedAt, actorReference);
   }
 
+  /**
+   * 验证该决定现在是否仍可授权指定请求。
+   *
+   * <p>只有批准状态、审批 ID 与指纹完全相同，且决定和检查时间都位于请求有效期内时才返回 {@code true}。
+   */
   public boolean isValidApprovalFor(ApprovalRequest request, Instant checkedAt) {
     Objects.requireNonNull(request, "request");
     Objects.requireNonNull(checkedAt, "checkedAt");

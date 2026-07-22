@@ -35,8 +35,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * V2 isolated SQLite store. It atomically persists a pending Inbox record/capsule and its later
- * Approval, Reservation and Ledger state changes, but deliberately never invokes a Tool.
+ * V2 隔离 SQLite Store。它原子持久化待处理 Inbox 记录/胶囊及其后续 Approval、Reservation 和 Ledger 状态变化， 但有意永不调用 Tool。
  */
 public final class JdbcPendingOperationStore implements PendingOperationStore {
   private final ApprovalInboxSchemaInitializer schema;

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-/** One immutable, deterministically ordered metadata-only snapshot. */
+/** 单个不可变、确定性排序且仅包含元数据的快照。 */
 public record McpAssetCatalog(List<McpAssetDescriptor> descriptors) {
   public McpAssetCatalog {
     if (descriptors == null) {

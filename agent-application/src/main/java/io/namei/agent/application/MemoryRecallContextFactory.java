@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Binds a Tool invocation to ChatService's already derived private session binding. */
+/** 将 Tool 调用绑定到 ChatService 已推导出的私有 Session 绑定。 */
 public final class MemoryRecallContextFactory {
   private static final MemoryRecallContextFactory DISABLED = new MemoryRecallContextFactory(null);
 

@@ -1,6 +1,6 @@
 package io.namei.agent.adapter.workspace;
 
-/** Stable, sanitized error codes exposed by the read-only workspace tools. */
+/** 只读 Workspace Tool 对外暴露的稳定脱敏错误码。 */
 public enum WorkspaceToolError {
   WORKSPACE_TOOL_UNAVAILABLE,
   WORKSPACE_PATH_REJECTED,

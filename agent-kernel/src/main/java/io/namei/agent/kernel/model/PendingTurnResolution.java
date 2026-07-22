@@ -5,11 +5,9 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * Versioned safe assistant projection that may complete a previously persisted pending turn.
+ * 可以完成先前已持久化 Pending Turn 的版本化安全 Assistant 投影。
  *
- * <p>This value deliberately contains neither Tool arguments nor an operation reference. Its text
- * is supplied only by a future capability that has already reduced a result to an approved
- * projection.
+ * <p>该值有意不包含 Tool 参数或 Operation 引用。其正文仅由未来已经将结果缩减为获批投影的 Capability 提供。
  */
 public record PendingTurnResolution(
     String projectionVersion, ChatMessage safeAssistantProjection, OffsetDateTime resolvedAt) {

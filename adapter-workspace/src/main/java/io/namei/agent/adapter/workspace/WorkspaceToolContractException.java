@@ -2,7 +2,7 @@ package io.namei.agent.adapter.workspace;
 
 import java.util.Objects;
 
-/** A contract violation whose message never contains workspace or operating-system details. */
+/** 消息中绝不包含 Workspace 或操作系统详情的契约违规异常。 */
 public final class WorkspaceToolContractException extends IllegalArgumentException {
   private final WorkspaceToolError code;
 

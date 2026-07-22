@@ -2,7 +2,7 @@ package io.namei.agent.application;
 
 import java.util.Objects;
 
-/** Safe Prompt contributions rendered from one immutable Skill catalog snapshot. */
+/** 从单个不可变 Skill Catalog 快照渲染出的安全 Prompt 内容。 */
 public record SkillPromptSections(String catalog, String active) {
   public SkillPromptSections {
     catalog = Objects.requireNonNull(catalog, "catalog").strip();

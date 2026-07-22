@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
-/** AES-256 key material used only at the pending-operation cipher boundary. */
+/** 仅在 Pending Operation Cipher 边界使用的 AES-256 Key 材料。 */
 public record PendingOperationKey(String keyId, SecretKey key) {
   private static final Pattern KEY_ID = Pattern.compile("[A-Za-z0-9._-]{1,64}");
 

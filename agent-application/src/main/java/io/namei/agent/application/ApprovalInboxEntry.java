@@ -5,7 +5,7 @@ import io.namei.agent.kernel.approval.ApprovalState;
 import java.time.Instant;
 import java.util.Objects;
 
-/** Durable approval record. Its request binding must never be rendered by public adapters. */
+/** 持久 Approval 记录；其请求绑定绝不能由公开 Adapter 渲染。 */
 public record ApprovalInboxEntry(
     ApprovalInboxReference reference,
     ApprovalRequest request,

@@ -3,10 +3,7 @@ package io.namei.agent.kernel.cutover;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/**
- * Immutable state machine. Production states are representable for reporting but never enterable
- * here.
- */
+/** 不可变状态机。生产状态可以表示以供报告，但绝不能从这里进入。 */
 public record CutoverPlan(CutoverMode mode, String sandboxHash, CutoverState state) {
   private static final Pattern HASH = Pattern.compile("[0-9a-f]{64}");
 

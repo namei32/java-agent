@@ -1,6 +1,6 @@
 package io.namei.agent.kernel.mcp;
 
-/** Metadata-only MCP catalog kinds. Their bodies are intentionally outside the Kernel model. */
+/** 仅元数据的 MCP Catalog 类型；其正文有意置于 Kernel 模型之外。 */
 public enum McpAssetKind {
   RESOURCE,
   PROMPT;

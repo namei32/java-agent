@@ -7,9 +7,7 @@ import io.namei.agent.kernel.cutover.CutoverPlan;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * Safe report: contains state, codes and hashes only; no filesystem root or content is projected.
- */
+/** 安全报告：仅包含状态、代码和 Hash；不投影文件系统 Root 或内容。 */
 public record CutoverRehearsalReport(
     CutoverPlan plan,
     CutoverEligibility eligibility,

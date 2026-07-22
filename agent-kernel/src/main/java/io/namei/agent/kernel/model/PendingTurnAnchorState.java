@@ -1,6 +1,6 @@
 package io.namei.agent.kernel.model;
 
-/** Internal lifecycle of the Session-side anchor for a previously pending Tool operation. */
+/** 先前 Pending Tool Operation 对应 Session 侧 Anchor 的内部生命周期。 */
 public enum PendingTurnAnchorState {
   PENDING_APPROVAL,
   CANCELLED,
